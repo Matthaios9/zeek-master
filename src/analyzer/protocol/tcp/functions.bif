@@ -1,0 +1,217 @@
+%gen-native
+
+%%{
+#include "zeek/File.h"
+#include "zeek/session/Manager.h"
+#include "zeek/Reporter.h"
+#include "zeek/analyzer/protocol/tcp/TCP.h"
+#include "zeek/packet_analysis/Manager.h"
+%%}
+
+## Get the originator sequence number of a TCP connection. Sequence numbers
+## are absolute (i.e., they reflect the values seen directly in packet headers;
+## they are not relative to the beginning of the connection).
+##
+## cid: The connection ID.
+##
+## Returns: The highest sequence number sent by a connection's originator, or 0
+##          if *cid* does not point to an active TCP connection.
+##
+## .. zeek:see:: get_resp_seq
+function get_orig_seq%(cid: conn_id%): count
+	%{
+	zeek::Connection* c = zeek::session_mgr->FindConnection(cid);
+	if ( ! c )
+		return 0;
+
+	if ( c->ConnTransport() != TRANSPORT_TCP )
+		return 0;
+
+	zeek::analyzer::Analyzer* tc = c->FindAnalyzer("TCP");
+	if ( tc )
+		return static_cast<zeek::packet_analysis::TCP::TCPSessionAdapter*>(tc)->OrigSeq();
+	else
+		{
+		reporter->Error("connection does not have TCP analyzer");
+		return 0;
+		}
+	%}
+
+## Get the responder sequence number of a TCP connection. Sequence numbers
+## are absolute (i.e., they reflect the values seen directly in packet headers;
+## they are not relative to the beginning of the connection).
+##
+## cid: The connection ID.
+##
+## Returns: The highest sequence number sent by a connection's responder, or 0
+##          if *cid* does not point to an active TCP connection.
+##
+## .. zeek:see:: get_orig_seq
+function get_resp_seq%(cid: conn_id%): count
+	%{
+	zeek::Connection* c = zeek::session_mgr->FindConnection(cid);
+	if ( ! c )
+		return 0;
+
+	if ( c->ConnTransport() != TRANSPORT_TCP )
+		return 0;
+
+	zeek::analyzer::Analyzer* tc = c->FindAnalyzer("TCP");
+	if ( tc )
+		return static_cast<zeek::packet_analysis::TCP::TCPSessionAdapter*>(tc)->RespSeq();
+	else
+		{
+		reporter->Error("connection does not have TCP analyzer");
+		return 0;
+		}
+	%}
+
+## Associates a file handle with a connection for writing TCP byte stream
+## contents.
+##
+## cid: The connection ID.
+##
+## direction: Controls what sides of the connection to record. The argument can
+##            take one of the four values:
+##
+##            - ``CONTENTS_NONE``: Stop recording the connection's content.
+##            - ``CONTENTS_ORIG``: Record the data sent by the connection
+##              originator (often the client).
+##            - ``CONTENTS_RESP``: Record the data sent by the connection
+##              responder (often the server).
+##            - ``CONTENTS_BOTH``: Record the data sent in both directions.
+##              Results in the two directions being intermixed in the file,
+##              in the order the data was seen by Zeek.
+##
+## f: The file handle of the file to write the contents to.
+##
+## Returns: Returns false if *cid* does not point to an active connection, and
+##          true otherwise.
+##
+## .. note::
+##
+##     The data recorded to the file reflects the byte stream, not the
+##     contents of individual packets. Reordering and duplicates are
+##     removed. If any data is missing, the recording stops at the
+##     missing data; this can happen, e.g., due to an
+##     :zeek:id:`content_gap` event.
+##
+## .. zeek:see:: get_contents_file set_record_packets contents_file_write_failure
+function set_contents_file%(cid: conn_id, direction: count, f: file%): bool
+	%{
+	zeek::Connection* c = zeek::session_mgr->FindConnection(cid);
+	if ( ! c )
+		return false;
+
+	c->GetSessionAdapter()->SetContentsFile(direction, {zeek::NewRef{}, f});
+	return true;
+	%}
+
+## Returns the file handle of the contents file of a connection.
+##
+## cid: The connection ID.
+##
+## direction: Controls what sides of the connection to record. See
+##            :zeek:id:`set_contents_file` for possible values.
+##
+## Returns: The :zeek:type:`file` handle for the contents file of the
+##          connection identified by *cid*. If the connection exists
+##          but there is no contents file for *direction*, then the function
+##          generates an error and returns a file handle to ``stderr``.
+##
+## .. zeek:see:: set_contents_file set_record_packets contents_file_write_failure
+function get_contents_file%(cid: conn_id, direction: count%): file
+	%{
+	zeek::Connection* c = zeek::session_mgr->FindConnection(cid);
+
+	if ( c )
+		{
+		auto cf = c->GetSessionAdapter()->GetContentsFile(direction);
+
+		if ( cf )
+			return zeek::make_intrusive<zeek::FileVal>(std::move(cf));
+		}
+
+	// Return some sort of error value.
+	if ( ! c )
+		zeek::emit_builtin_error("unknown connection id in get_contents_file()", cid);
+	else
+		zeek::emit_builtin_error("no contents file for given direction");
+
+	return zeek::make_intrusive<zeek::FileVal>(zeek::make_intrusive<zeek::File>(stderr, "-", "w"));
+	%}
+
+module TCP;
+
+## Returns the unparsed TCP headers present in the current packet, if any.
+##
+## stop_at_eol: If true, parsing will stop when an End of Option List extension is encountered.
+##
+## Returns: A list of present TCP options.
+##
+## .. zeek:see:: tcp_option tcp_options
+function raw_options%(stop_at_eol: bool &default=T%): TCP::RawOptionList
+	%{
+	static auto tcp_option_list = zeek::id::find_type<zeek::VectorType>("TCP::RawOptionList");
+	auto result = zeek::make_intrusive<zeek::VectorVal>(tcp_option_list);
+
+	static const auto& analyzer = zeek::packet_mgr->GetAnalyzer("TCP");
+	auto spans = zeek::packet_mgr->GetAnalyzerData(analyzer);
+
+	if ( spans.empty() || spans[0].size() < sizeof(struct tcphdr) )
+		return result;
+
+	const auto* tcp_hdr = reinterpret_cast<const struct tcphdr*>(spans[0].data());
+	size_t tcp_header_size = static_cast<size_t>(tcp_hdr->th_off) * 4;
+
+	if ( ( tcp_header_size < sizeof(struct tcphdr) ) || ( tcp_header_size > spans[0].size() ) )
+		return result;
+
+	const auto* options_start = reinterpret_cast<const std::byte*>(tcp_hdr) + sizeof(struct tcphdr);
+	const auto* options_end = reinterpret_cast<const std::byte*>(tcp_hdr) + tcp_header_size;
+
+	assert(options_start <= options_end);
+
+	std::span<const std::byte> remaining_options(options_start, options_end);
+
+	static auto tcp_option = zeek::id::find_type<zeek::RecordType>("TCP::RawOption");
+
+	while ( !remaining_options.empty() ) {
+		const auto opt = static_cast<uint8_t>(remaining_options[0]);
+		std::span<const std::byte> current_option_data = {};
+
+		size_t opt_len;
+
+		if ( opt < 2 )
+			opt_len = 1;
+		else if ( remaining_options.size() < 2 )
+			// We've run off the end, no room for the length.
+			break;
+		else
+			opt_len = static_cast<size_t>(remaining_options[1]);
+
+		if ( opt_len == 0 )
+			break; // trashed length field
+
+		if ( opt_len > remaining_options.size()  )
+			// No room for rest of option.
+			break;
+
+		if ( opt_len > 2 )
+			current_option_data = remaining_options.subspan(2, opt_len-2);
+		remaining_options = remaining_options.subspan(opt_len);
+
+		auto r = make_intrusive<RecordVal>(tcp_option);
+		r->Assign(0, opt);
+		if ( ! current_option_data.empty() )
+			r->Assign(1, zeek::make_intrusive<zeek::StringVal>(current_option_data.size(), reinterpret_cast<const char*>(current_option_data.data())));
+		else
+			r->Assign(1, zeek::val_mgr->EmptyString());
+		result->Append(r);
+
+		if ( stop_at_eol && opt == TCPOPT_EOL )
+			break;
+    }
+
+	return result;
+	%}

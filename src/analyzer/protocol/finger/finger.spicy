@@ -1,0 +1,77 @@
+# See the file "COPYING" in the main distribution directory for copyright.
+#
+# Giving the rare number of instances of this protocol these days, we err on the side of
+# rejecting sessions if they don't parse well.
+
+module Finger;
+
+import spicy;
+
+const OptionalWhiteSpace = /[ \t]*/;
+const NewLine = /\r?\n/;
+
+# Allow configuring max line length via Zeek, but don't include if building separate.
+@if HAVE_ZEEK
+import zeek;
+global _max_line_length: optional<uint64>; function max_line_length(): uint64 {
+    if (!_max_line_length) {
+        _max_line_length = zeek::get_count("Finger::max_line_length");
+        # If 0, cap at a high number.
+        #
+        # While this can technically still cap it, that threshold should be high enough
+        # that it wouldn't happen with realistic input.
+        if (*_max_line_length == 0)
+            _max_line_length = 1024 * 1024;
+    }
+    return *_max_line_length;
+}
+@else
+function max_line_length(): uint64 {
+    return 1024;
+}
+@endif
+
+public type Request = unit {
+    : OptionalWhiteSpace;
+
+    switch {
+        -> : /\/W/ {
+            self.whois = True;
+        }
+        -> : void;
+    };
+
+    : OptionalWhiteSpace;
+
+    arg: /[^\r\n]*/ &max-size=max_line_length() &convert=$$.strip().split1(b"@") {
+        # We require valid UTF-8 to weed out binary data.
+        self.user = self.arg[0].decode();
+
+        if (|self.arg[1]| > 0)
+            self.host = self.arg[1].decode();
+    }
+
+    on %done {
+        if (|self.arg[0]| > 0 || self.whois)
+            spicy::accept_input();
+    }
+
+    var user: string;
+    var host: string;
+    var whois: bool = False;
+};
+
+type ReplyLine = unit {
+    data: /[^\r\n]*/ &max-size=max_line_length() &convert=$$.decode(); # Require valid UTF-8 here as well.
+    : NewLine;
+
+    on %done {
+        if (|self.data| > 10)
+            # Require some non-trivial output to accept.
+            spicy::accept_input();
+    }
+};
+
+public type Reply = unit {
+    : ReplyLine[];
+};

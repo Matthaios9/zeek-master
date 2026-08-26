@@ -1,0 +1,10 @@
+// See the file "COPYING" in the main distribution directory for copyright.
+
+#pragma once
+
+constexpr char ZEEK_SCRIPT_INSTALL_PATH[] = "@ZEEK_SCRIPT_INSTALL_PATH@";
+constexpr char ZEEK_PLUGIN_INSTALL_PATH[] = "@ZEEK_PLUGIN_DIR@";
+constexpr char DEFAULT_ZEEKPATH[] = "@DEFAULT_ZEEKPATH@";
+constexpr char ZEEK_SPICY_MODULE_PATH[] = "@ZEEK_SPICY_MODULE_PATH@";
+constexpr char ZEEK_SPICY_LIBRARY_PATH[] = "@ZEEK_SPICY_LIBRARY_PATH@";
+constexpr char ZEEK_SPICY_DATA_PATH[] = "@ZEEK_SPICY_DATA_PATH@";

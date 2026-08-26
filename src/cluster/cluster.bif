@@ -1,0 +1,248 @@
+%gen-native
+
+%%{
+#include <string>
+#include <utility>
+
+#include "zeek/IPAddr.h"
+#include "zeek/cluster/Backend.h"
+#include "zeek/cluster/BifSupport.h"
+#include "zeek/cluster/Manager.h"
+#include "zeek/cluster/websocket/WebSocket.h"
+
+using namespace zeek::cluster::detail::bif;
+
+%%}
+
+module Cluster;
+
+type Cluster::Event: record;
+type Cluster::WebSocketTLSOptions: record;
+
+## Publishes an event to a given topic.
+##
+## topic: a topic associated with the event message.
+##
+## args: Either the event arguments as already made by
+##       :zeek:see:`Cluster::make_event` or the argument list to pass along
+##       to it.
+##
+## Returns: T if the event was accepted for sending. Depending on
+##          the selected cluster backend, an event may be dropped
+##          when a Zeek cluster is overloadede. This can happen on
+##          the sending or receiving node.
+function Cluster::publish%(topic: string, ...%): bool
+	%{
+	ScriptLocationScope scope{frame};
+
+	auto args = zeek::ArgsSpan{*@ARGS@}.subspan(1);
+	return publish_event({zeek::NewRef{}, topic}, args);
+	%}
+
+## Create a data structure that may be used to send a remote event via
+## :zeek:see:`Broker::publish`.
+##
+## args: an event, followed by a list of argument values that may be used
+##       to call it.
+##
+## Returns: A :zeek:type:`Cluster::Event` instance that can be published via
+##          :zeek:see:`Cluster::publish`, :zeek:see:`Cluster::publish_rr`
+##          or :zeek:see:`Cluster::publish_hrw`.
+function Cluster::make_event%(...%): Cluster::Event
+	%{
+	ScriptLocationScope scope{frame};
+
+	return make_event(zeek::ArgsSpan{*@ARGS@});
+	%}
+
+function Cluster::__subscribe%(topic_prefix: string%): bool
+	%{
+	ScriptLocationScope scope{@FRAME@};
+
+	return zeek::cluster::backend->Subscribe(topic_prefix->CheckString());
+	%}
+
+function Cluster::__unsubscribe%(topic_prefix: string%): bool
+	%{
+	ScriptLocationScope scope{@FRAME@};
+
+	return zeek::cluster::backend->Unsubscribe(topic_prefix->CheckString());
+	%}
+
+## Initialize the global cluster backend.
+##
+## Returns: true on success.
+function Cluster::Backend::__init%(nid: string%): bool
+	%{
+	return zeek::cluster::backend->Init(nid->ToStdString());
+	%}
+
+type Cluster::Pool: record;
+
+## Publishes an event to a node within a pool according to Round-Robin
+## distribution strategy.
+##
+## pool: the pool of nodes that are eligible to receive the event.
+##
+## key: an arbitrary string to identify the purpose for which you're
+##      distributing the event.  e.g. consider using namespacing of your
+##      script like "Intel::cluster_rr_key".
+##
+## args: Either the event arguments as already made by
+##       :zeek:see:`Cluster::make_event` or the argument list to pass along
+##       to it.
+##
+## Returns: true if the message is sent.
+function Cluster::publish_rr%(pool: Pool, key: string, ...%): bool
+	%{
+	static zeek::Func* topic_func = nullptr;
+
+	if ( ! topic_func )
+		topic_func = zeek::detail::global_scope()->Find("Cluster::rr_topic")->GetVal()->AsFunc();
+
+	if ( ! is_cluster_pool(pool) )
+		{
+		zeek::emit_builtin_error("expected type Cluster::Pool for pool");
+		return false;
+		}
+
+	zeek::Args vl{{zeek::NewRef{}, pool}, {zeek::NewRef{}, key}};
+	auto topic = topic_func->Invoke(&vl);
+
+	if ( ! topic->AsString()->Len() )
+		return false;
+
+	auto args = zeek::ArgsSpan{*@ARGS@}.subspan(2);
+	return publish_event(topic, args);
+	%}
+
+
+## Publishes an event to a node within a pool according to Rendezvous
+## (Highest Random Weight) hashing strategy.
+##
+## pool: the pool of nodes that are eligible to receive the event.
+##
+## key: data used for input to the hashing function that will uniformly
+##      distribute keys among available nodes.
+##
+## args: Either the event arguments as already made by
+##       :zeek:see:`Broker::make_event` or the argument list to pass along
+##       to it.
+##
+## Returns: true if the message is sent.
+function Cluster::publish_hrw%(pool: Pool, key: any, ...%): bool
+	%{
+	static zeek::Func* topic_func = nullptr;
+
+	if ( ! topic_func )
+		topic_func = zeek::detail::global_scope()->Find("Cluster::hrw_topic")->GetVal()->AsFunc();
+
+	if ( ! is_cluster_pool(pool) )
+		{
+		zeek::emit_builtin_error("expected type Cluster::Pool for pool");
+		return false;
+		}
+
+	zeek::Args vl{{zeek::NewRef{}, pool}, {zeek::NewRef{}, key}};
+	auto topic = topic_func->Invoke(&vl);
+
+	if ( ! topic->AsString()->Len() )
+		return false;
+
+	auto args = zeek::ArgsSpan{*@ARGS@}.subspan(2);
+
+	ScriptLocationScope scope{frame};
+	return publish_event(topic, args);
+	%}
+
+function Cluster::__listen_websocket%(options: WebSocketServerOptions%): bool
+	%{
+	using namespace zeek::cluster::websocket::detail;
+
+	const auto& server_options_type = zeek::id::find_type<zeek::RecordType>("Cluster::WebSocketServerOptions");
+	const auto& tls_options_type = zeek::id::find_type<zeek::RecordType>("Cluster::WebSocketTLSOptions");
+
+	if ( options->GetType() != server_options_type ) {
+		zeek::emit_builtin_error("expected type Cluster::WebSocketServerOptions for options");
+		return false;
+	}
+
+	auto options_rec = zeek::IntrusivePtr<zeek::RecordVal>{zeek::NewRef{}, options->AsRecordVal()};
+	auto tls_options_rec = options_rec->GetFieldOrDefault<zeek::RecordVal>("tls_options");
+
+	if ( tls_options_rec->GetType() != tls_options_type ) {
+		zeek::emit_builtin_error("expected type Cluster::WebSocketTLSOptions for tls_options");
+		return false;
+	}
+
+	bool have_cert = tls_options_rec->HasField("cert_file");
+	bool have_key = tls_options_rec->HasField("key_file");
+
+	if ( (have_cert || have_key) && ! (have_cert && have_key) ) {
+		std::string error = "Invalid tls_options: ";
+		if ( have_cert )
+			error += "No key_file field";
+		else
+			error += "No cert_file field";
+		zeek::emit_builtin_error(error.c_str());
+		return false;
+	}
+
+	struct TLSOptions tls_options = {
+		have_cert ? std::optional{tls_options_rec->GetField<zeek::StringVal>("cert_file")->ToStdString()} : std::nullopt,
+		have_key ? std::optional{tls_options_rec->GetField<zeek::StringVal>("key_file")->ToStdString()} : std::nullopt,
+		tls_options_rec->GetFieldOrDefault<zeek::BoolVal>("enable_peer_verification")->Get(),
+		tls_options_rec->GetFieldOrDefault<zeek::StringVal>("ca_file")->ToStdString(),
+		tls_options_rec->GetFieldOrDefault<zeek::StringVal>("ciphers")->ToStdString(),
+	};
+
+	std::string listen_addr;
+
+	// Backwards compat for listen_host if listen_addr isn't set.
+	if ( options_rec->HasField("listen_host") ) {
+		if ( options_rec->HasField("listen_addr") ) {
+			zeek::emit_builtin_error("cannot use both listen_addr and listen_host");
+			return false;
+		}
+
+		auto host = options_rec->GetField<zeek::StringVal>("listen_host")->ToStdString();
+		if ( ! zeek::IPAddr::IsValid(host.c_str()) ) {
+			zeek::emit_builtin_error("invalid listen_host");
+			return false;
+		}
+
+		listen_addr = std::move(host);
+
+	} else if ( options_rec->HasField("listen_addr") ) {
+		listen_addr = options_rec->GetField<zeek::AddrVal>("listen_addr")->AsAddr().AsString();
+	} else {
+		zeek::emit_builtin_error("missing listen_host field");
+		return false;
+	}
+
+	struct ServerOptions server_options{
+		std::move(listen_addr),
+		static_cast<uint16_t>(options_rec->GetField<zeek::PortVal>("listen_port")->Port()),
+	};
+
+	server_options.max_event_queue_size = options_rec->GetField<zeek::CountVal>("max_event_queue_size")->Get();
+
+	double ping_interval = options_rec->GetField<zeek::IntervalVal>("ping_interval")->Get();
+	if ( ping_interval < 0.0 )
+		server_options.ping_interval_seconds = -1;
+	else
+		server_options.ping_interval_seconds = static_cast<int>(ping_interval);
+
+	server_options.tls_options = std::move(tls_options);
+
+	return zeek::cluster::manager->ListenWebSocket(server_options);
+	%}
+
+module Cluster::Backend;
+
+## Generated on cluster backend error.
+##
+## tag: A structured tag, not further specified.
+##
+## message: A free form message with more details about the error.
+event error%(tag: string, message: string%);

@@ -1,0 +1,2090 @@
+// See the file "COPYING" in the main distribution directory for copyright.
+
+#include "zeek/supervisor/Supervisor.h"
+
+#include "zeek/zeek-config.h"
+
+#include <fcntl.h>
+#ifndef _MSC_VER
+#include <poll.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#endif
+#include <csignal>
+#include <cstdarg>
+#include <cstdio>
+#include <filesystem>
+#include <sstream>
+#include <utility>
+#include <variant>
+
+#ifdef _MSC_VER
+#include <io.h>
+#include <process.h>
+#include <tlhelp32.h>
+#include <windows.h>
+#endif
+
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+#define RAPIDJSON_HAS_STDSTRING 1
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+
+extern "C" {
+#include "zeek/3rdparty/setsignal.h"
+}
+
+#include "zeek/DebugLogger.h"
+#include "zeek/Dict.h"
+#include "zeek/Event.h"
+#include "zeek/EventHandler.h"
+#include "zeek/EventRegistry.h"
+#include "zeek/ID.h"
+#include "zeek/NetVar.h"
+#include "zeek/RE.h"
+#include "zeek/Reporter.h"
+#include "zeek/RunState.h"
+#include "zeek/Scope.h"
+#include "zeek/Val.h"
+#include "zeek/ZeekString.h"
+#include "zeek/input.h"
+#include "zeek/iosource/Manager.h"
+#include "zeek/util.h"
+#include "zeek/zeek-affinity.h"
+
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+#ifdef DEBUG
+#define DBG_STEM(...) stem->LogDebug(__VA_ARGS__);
+#else
+#define DBG_STEM(...)
+#endif
+// NOLINTEND(cppcoreguidelines-macro-usage)
+
+using namespace zeek;
+using zeek::detail::SupervisedNode;
+using zeek::detail::SupervisorNode;
+using zeek::detail::SupervisorStemHandle;
+
+std::optional<SupervisedNode> Supervisor::supervised_node;
+
+namespace {
+
+struct Stem {
+    /**
+     * State used to initialize the Stem process.
+     */
+    struct State {
+        /**
+         * Bidirectional pipes that allow the Supervisor and Stem to talk.
+         */
+        std::unique_ptr<detail::PipePair> pipe;
+        /**
+         * The Stem's parent process ID (i.e. PID of the Supervisor).
+         */
+        pid_t parent_pid = 0;
+    };
+
+    Stem(State stem_state);
+
+    ~Stem();
+
+    SupervisedNode Run();
+
+    std::optional<SupervisedNode> Poll();
+
+    std::optional<SupervisedNode> Revive();
+
+    void Reap();
+
+    /**
+     * This performs fork() to initialize the supervised-node structure.
+     * There's three possible outcomes:
+     *   - return value is SupervisedNode: we are the child process
+     *   - return value is True: we are the parent and fork() succeeded
+     *   - return value is False: we are the parent and fork() failed
+     */
+    std::variant<bool, SupervisedNode> Spawn(SupervisorNode* node);
+
+    int AliveNodeCount() const;
+
+    void KillNodes(int signal);
+
+    void KillNode(SupervisorNode* node, int signal) const;
+
+    void Destroy(SupervisorNode* node) const;
+
+    bool Wait(SupervisorNode* node, int options) const;
+
+    void Shutdown(int exit_code);
+
+    void ReportStatus(const SupervisorNode& node) const;
+
+    void Log(std::string_view type, const char* format, va_list args) const;
+
+    void LogDebug(const char* format, ...) const __attribute__((format(printf, 2, 3)));
+
+    void LogError(const char* format, ...) const __attribute__((format(printf, 2, 3)));
+
+    pid_t parent_pid;
+    int last_signal = -1;
+    std::unique_ptr<detail::Flare> signal_flare;
+    std::unique_ptr<detail::PipePair> pipe;
+    std::map<std::string, SupervisorNode> nodes;
+    // May be modified during Log() and ReportStatus() via write_msg().
+    mutable std::string msg_buffer;
+    bool shutting_down = false;
+#ifdef _MSC_VER
+    bool shutdown_complete = false;
+    std::string zeek_exe_path;
+#endif
+};
+} // namespace
+
+static Stem* stem = nullptr;
+
+#ifndef _MSC_VER
+static RETSIGTYPE stem_signal_handler(int signo) {
+    stem->last_signal = signo;
+
+    if ( stem->shutting_down )
+        return RETSIGVAL;
+
+    stem->signal_flare->Fire(true);
+
+    if ( signo == SIGTERM )
+        stem->shutting_down = true;
+
+    return RETSIGVAL;
+}
+
+static RETSIGTYPE supervisor_signal_handler(int signo) {
+    supervisor_mgr->ObserveChildSignal(signo);
+    return RETSIGVAL;
+}
+#endif
+
+static bool have_msgs(std::string* buffer, char delim) { return buffer->find(delim) != std::string::npos; }
+
+static std::vector<std::string> extract_msgs(std::string* buffer, char delim) {
+    std::vector<std::string> rval;
+
+    for ( ;; ) {
+        auto msg_end = buffer->find(delim);
+
+        if ( msg_end == std::string::npos )
+            // Don't have any full messages left
+            break;
+
+        auto msg = buffer->substr(0, msg_end);
+        rval.emplace_back(std::move(msg));
+        buffer->erase(0, msg_end + 1);
+    }
+
+    return rval;
+}
+
+// Read some bytes from the given fd and append them to buffer.
+static int read_bytes_into_buffer(int fd, std::string* buffer) {
+#ifdef _MSC_VER
+    // On Windows, pipe FDs are always blocking. Use PeekNamedPipe to
+    // check for data before reading to emulate non-blocking behavior.
+    HANDLE h = (HANDLE)_get_osfhandle(fd);
+
+    if ( h != INVALID_HANDLE_VALUE && h != (HANDLE)(intptr_t)-2 ) {
+        DWORD avail = 0;
+
+        if ( ! PeekNamedPipe(h, nullptr, 0, nullptr, &avail, nullptr) || avail == 0 )
+            return 0;
+    }
+#endif
+    constexpr auto buf_size = 256;
+    char buf[buf_size];
+
+    int bytes_read = read(fd, buf, buf_size);
+
+    if ( bytes_read <= 0 )
+        return bytes_read;
+
+    buffer->append(buf, bytes_read);
+
+    return bytes_read;
+}
+
+static std::pair<int, std::vector<std::string>> read_msgs(int fd, std::string* buffer, char delim) {
+    int bytes_read = read_bytes_into_buffer(fd, buffer);
+    if ( bytes_read < 0 && errno == EAGAIN ) // Treat EAGAIN as no bytes read.
+        bytes_read = 0;
+
+    if ( bytes_read < 0 )
+        return {bytes_read, {}};
+
+    return {bytes_read, extract_msgs(buffer, delim)};
+}
+
+// Write a message to the OutFD() of the given pipe pair.
+//
+// Should the write() fail with EAGAIN, usleep() for a tiny amount
+// and retry after draining data pending on InFD() and appending
+// it to given buffer. Draining is done in case the other side of the
+// pipe is also blocking on a write() that we're blocking.
+static bool write_msg(const std::unique_ptr<detail::PipePair>& pipe, const std::string& msg, std::string* buffer) {
+    // Send the string including its '\0'
+    int len = msg.size() + 1;
+    const char* data = msg.data();
+
+    while ( len > 0 ) {
+        int n = write(pipe->OutFD(), data, len);
+
+        if ( n < 0 ) {
+            if ( errno == EINTR )
+                continue;
+
+            // If there's no room in the pipe and we would've blocked, relax
+            // a bit, but otherwise just retry again. No fancy polling.
+            //
+            // We drain the stem's queue for a best effort preventing it
+            // running into a full pipe as well.
+            if ( errno == EAGAIN || errno == EWOULDBLOCK ) {
+                read_bytes_into_buffer(pipe->InFD(), buffer);
+                usleep(10);
+                continue;
+            }
+
+            char buf[128];
+            util::zeek_strerror_r(errno, buf, sizeof(buf));
+            fprintf(stderr, "write_msg error: %d (%s)\n", errno, buf);
+            abort();
+
+            return false;
+        }
+
+        data += n;
+        len -= n;
+    }
+
+    return true;
+}
+
+static std::string make_create_message(const Supervisor::NodeConfig& node) {
+    auto json_str = node.ToJSON();
+    return util::fmt("create %s %s", node.name.data(), json_str.data());
+}
+
+detail::ParentProcessCheckTimer::ParentProcessCheckTimer(double t, double arg_interval)
+    : Timer(t, TIMER_PPID_CHECK), interval(arg_interval) {}
+
+void detail::ParentProcessCheckTimer::Dispatch(double t, bool is_expire) {
+    // Note: only simple + portable way of detecting loss of parent
+    // process seems to be polling for change in PPID.  There's platform
+    // specific ways if we do end up needing something more responsive
+    // and/or have to avoid overhead of polling, but maybe not worth
+    // the additional complexity:
+    //   Linux:   prctl(PR_SET_PDEATHSIG, ...)
+    //   FreeBSD: procctl(PROC_PDEATHSIG_CTL)
+    // Also note the Stem process has its own polling loop with similar logic.
+#ifdef _MSC_VER
+    // On Windows, getppid() is stubbed. Check if parent process is alive.
+    auto parent_pid = Supervisor::ThisNode()->parent_pid;
+    detail::UniqueWinHandle h(OpenProcess(SYNCHRONIZE, FALSE, parent_pid));
+
+    if ( ! h ) {
+        run_state::detail::zeek_terminate_loop("supervised node was orphaned");
+    }
+    else {
+        DWORD result = WaitForSingleObject(h.get(), 0);
+
+        if ( result != WAIT_TIMEOUT )
+            run_state::detail::zeek_terminate_loop("supervised node was orphaned");
+    }
+#else
+    if ( Supervisor::ThisNode()->parent_pid != getppid() )
+        run_state::detail::zeek_terminate_loop("supervised node was orphaned");
+#endif
+
+    if ( ! is_expire )
+        timer_mgr->Add(new ParentProcessCheckTimer(run_state::network_time + interval, interval));
+}
+
+Supervisor::Supervisor(Supervisor::Config cfg, SupervisorStemHandle sh)
+    : config(std::move(cfg)), stem_pid(sh.pid), stem_pipe(std::move(sh.pipe)) {
+#ifdef _MSC_VER
+    stem_thread_handle = std::move(sh.thread_handle);
+    DBG_LOG(DBG_SUPERVISOR, "started stem thread (pid %d)", stem_pid);
+#else
+    stem_stdout.pipe = std::move(sh.stdout_pipe);
+    stem_stdout.prefix = "[supervisor:STDOUT] ";
+    stem_stdout.stream = stdout;
+    stem_stderr.pipe = std::move(sh.stderr_pipe);
+    stem_stderr.prefix = "[supervisor:STDERR] ";
+    stem_stderr.stream = stderr;
+
+    DBG_LOG(DBG_SUPERVISOR, "forked stem process %d", stem_pid);
+    setsignal(SIGCHLD, supervisor_signal_handler);
+
+    int status;
+    auto res = waitpid(stem_pid, &status, WNOHANG);
+
+    if ( res == 0 )
+        // Good, stem process is alive and the SIGCHLD handler will keep it so.
+        return;
+
+    if ( res == -1 )
+        fprintf(stderr, "Supervisor failed to get status of stem process: %s\n", strerror(errno));
+    else {
+        if ( WIFEXITED(status) )
+            fprintf(stderr, "Supervisor stem died early with exit code %d\n", WEXITSTATUS(status));
+        else if ( WIFSIGNALED(status) )
+            fprintf(stderr, "Supervisor stem died early by signal %d\n", WTERMSIG(status));
+        else
+            fprintf(stderr, "Supervisor stem died early for unknown reason\n");
+    }
+
+    exit(1);
+#endif
+}
+
+Supervisor::~Supervisor() {
+#ifndef _MSC_VER
+    setsignal(SIGCHLD, SIG_DFL);
+#endif
+
+    if ( ! stem_pid ) {
+        DBG_LOG(DBG_SUPERVISOR, "shutdown, stem process already exited");
+        return;
+    }
+
+    iosource_mgr->UnregisterFd(signal_flare.FD(), this);
+#ifndef _MSC_VER
+    iosource_mgr->UnregisterFd(stem_pipe->InFD(), this);
+#endif
+
+    DBG_LOG(DBG_SUPERVISOR, "shutdown, killing stem process %d", stem_pid);
+
+#ifdef _MSC_VER
+    // Signal stem thread to shut down via its shutting_down flag and flare.
+    if ( stem ) {
+        stem->shutting_down = true;
+        stem->signal_flare->Fire();
+    }
+
+    if ( stem_thread_handle ) {
+        WaitForSingleObject(stem_thread_handle.get(), 30000);
+        stem_thread_handle.reset();
+    }
+#else
+    auto kill_res = kill(stem_pid, SIGTERM);
+
+    if ( kill_res == -1 ) {
+        char tmp[256];
+        util::zeek_strerror_r(errno, tmp, sizeof(tmp));
+        reporter->Error("Failed to send SIGTERM to stem process: %s", tmp);
+    }
+    else {
+        int status;
+        auto wait_res = waitpid(stem_pid, &status, 0);
+
+        if ( wait_res == -1 ) {
+            char tmp[256];
+            util::zeek_strerror_r(errno, tmp, sizeof(tmp));
+            reporter->Error("Failed to wait for stem process to exit: %s", tmp);
+        }
+    }
+
+    stem_stdout.Drain();
+    stem_stderr.Drain();
+#endif
+
+    while ( ProcessMessages() != 0 )
+        ;
+}
+
+void Supervisor::ObserveChildSignal(int signo) {
+    last_signal = signo;
+    signal_flare.Fire(true);
+}
+
+void Supervisor::ReapStem() {
+#ifdef _MSC_VER
+    // On Windows, the stem is a thread. Check if it's still running.
+    if ( ! stem_pid )
+        return;
+
+    if ( stem_thread_handle ) {
+        DWORD result = WaitForSingleObject(stem_thread_handle.get(), 0);
+
+        if ( result == WAIT_OBJECT_0 ) {
+            // Stem thread exited
+            stem_pid = 0;
+            stem_thread_handle.reset();
+            DBG_LOG(DBG_SUPERVISOR, "stem thread exited");
+        }
+    }
+#else
+    if ( ! stem_pid )
+        return;
+
+    int status;
+    auto res = waitpid(stem_pid, &status, WNOHANG);
+
+    if ( res == 0 )
+        // Still alive
+        return;
+
+    if ( res == -1 ) {
+        char tmp[256];
+        util::zeek_strerror_r(errno, tmp, sizeof(tmp));
+        reporter->Error(
+            "Supervisor failed to get exit status"
+            " of stem process: %s",
+            tmp);
+        return;
+    }
+
+    stem_pid = 0;
+
+    if ( WIFEXITED(status) ) {
+        DBG_LOG(DBG_SUPERVISOR, "stem process exited with status %d", WEXITSTATUS(status));
+    }
+    else if ( WIFSIGNALED(status) ) {
+        DBG_LOG(DBG_SUPERVISOR, "stem process terminated by signal %d", WTERMSIG(status));
+    }
+    else
+        reporter->Error(
+            "Supervisor failed to get exit status"
+            " of stem process for unknown reason");
+#endif
+}
+
+#ifndef _MSC_VER
+struct ForkResult {
+    pid_t pid;
+    std::unique_ptr<detail::Pipe> stdout_pipe;
+    std::unique_ptr<detail::Pipe> stderr_pipe;
+};
+
+static ForkResult fork_with_stdio_redirect(const char* where) {
+    auto out = std::make_unique<detail::Pipe>(FD_CLOEXEC, FD_CLOEXEC, O_NONBLOCK, O_NONBLOCK);
+    auto err = std::make_unique<detail::Pipe>(FD_CLOEXEC, FD_CLOEXEC, O_NONBLOCK, O_NONBLOCK);
+    auto pid = fork();
+
+    if ( pid == 0 ) {
+        while ( dup2(out->WriteFD(), STDOUT_FILENO) == -1 ) {
+            if ( errno == EINTR )
+                continue;
+
+            fprintf(stderr, "Supervisor %s fork() stdout redirect failed: %s\n", where, strerror(errno));
+        }
+
+        while ( dup2(err->WriteFD(), STDERR_FILENO) == -1 ) {
+            if ( errno == EINTR )
+                continue;
+
+            fprintf(stderr, "Supervisor %s fork() stderr redirect failed: %s\n", where, strerror(errno));
+        }
+
+        // Default buffering for stdout may be fully-buffered if not a TTY,
+        // so set line-buffering since the Supervisor/Stem has to emit
+        // only line-buffered messages anyway.
+        setlinebuf(stdout);
+        // Default buffering for stderr may be unbuffered, but since
+        // Supervisor/Stem has to emit line-buffered messages, just set
+        // it to line-buffered as well.
+        setlinebuf(stderr);
+    }
+
+    return {pid, std::move(out), std::move(err)};
+}
+#endif
+
+void Supervisor::HandleChildSignal() {
+#ifdef _MSC_VER
+    // On Windows, stem is a thread. Just check if it's alive.
+    ReapStem();
+#else
+    if ( last_signal >= 0 ) {
+        DBG_LOG(DBG_SUPERVISOR, "Supervisor received signal %d", last_signal.load());
+        last_signal = -1;
+    }
+
+    bool had_child_signal = signal_flare.Extinguish();
+
+    if ( had_child_signal ) {
+        ReapStem();
+
+        DBG_LOG(DBG_SUPERVISOR, "Supervisor processed child signal %s", stem_pid ? "(spurious)" : "");
+    }
+
+    if ( stem_pid )
+        return;
+
+    // Revive the Stem process
+    auto stem_ppid = getpid();
+    auto fork_res = fork_with_stdio_redirect("stem revival");
+    stem_pid = fork_res.pid;
+
+    if ( stem_pid == -1 ) {
+        stem_pid = 0;
+        char tmp[256];
+        util::zeek_strerror_r(errno, tmp, sizeof(tmp));
+        reporter->Error("failed to fork Zeek supervisor stem process: %s\n", tmp);
+        signal_flare.Fire();
+        // Sleep to avoid spinning too fast in a revival-fail loop.
+        sleep(1);
+        return;
+    }
+
+    if ( stem_pid == 0 ) {
+        // Child stem process needs to exec()
+        auto stem_env = util::fmt("%d,%d,%d,%d,%d", stem_ppid, stem_pipe->In().ReadFD(), stem_pipe->In().WriteFD(),
+                                  stem_pipe->Out().ReadFD(), stem_pipe->Out().WriteFD());
+
+        if ( setenv("ZEEK_STEM", stem_env, true) == -1 ) {
+            fprintf(stderr, "setenv(ZEEK_STEM) failed: %s\n", strerror(errno));
+            exit(1);
+        }
+
+        stem_pipe->In().UnsetFlags(FD_CLOEXEC);
+        stem_pipe->Out().UnsetFlags(FD_CLOEXEC);
+
+        char** args = new char*[detail::zeek_argc + 1];
+        args[0] = config.zeek_exe_path.data();
+        args[detail::zeek_argc] = nullptr;
+
+        for ( auto i = 1; i < detail::zeek_argc; ++i )
+            args[i] = detail::zeek_argv[i];
+
+        auto res = execv(config.zeek_exe_path.data(), args);
+        fprintf(stderr, "failed to exec Zeek supervisor stem process: %s\n", strerror(errno));
+        exit(1);
+    }
+    else {
+        if ( ! iosource_mgr->UnregisterFd(stem_stdout.pipe->ReadFD(), this) )
+            reporter->FatalError(
+                "Revived supervisor stem failed to unregister "
+                "redirected stdout pipe");
+
+        if ( ! iosource_mgr->UnregisterFd(stem_stderr.pipe->ReadFD(), this) )
+            reporter->FatalError(
+                "Revived supervisor stem failed to unregister "
+                "redirected stderr pipe");
+
+        stem_stdout.Drain();
+        stem_stderr.Drain();
+        stem_stdout.pipe = std::move(fork_res.stdout_pipe);
+        stem_stderr.pipe = std::move(fork_res.stderr_pipe);
+
+        if ( ! iosource_mgr->RegisterFd(stem_stdout.pipe->ReadFD(), this) )
+            reporter->FatalError(
+                "Revived supervisor stem failed to register "
+                "redirected stdout pipe");
+
+        if ( ! iosource_mgr->RegisterFd(stem_stderr.pipe->ReadFD(), this) )
+            reporter->FatalError(
+                "Revived supervisor stem failed to register "
+                "redirected stderr pipe");
+    }
+
+    DBG_LOG(DBG_SUPERVISOR, "stem process revived, new pid: %d", stem_pid);
+
+    // Parent supervisor process resends node configurations to recreate
+    // the desired process hierarchy.
+
+    // Note: there's probably a preferred order in which to create nodes.
+    // E.g. logger, manager, proxy, worker.  However, fully synchronizing
+    // a startup order like that is slow and complicated: essentially have
+    // to wait for each process to start up and reach the point just after
+    // it starts listening (and maybe that never happens for some error case).
+    for ( const auto& n : nodes ) {
+        const auto& node = n.second;
+        auto msg = make_create_message(node.config);
+        write_msg(stem_pipe, msg, &msg_buffer);
+    }
+#endif
+}
+
+void Supervisor::InitPostScript() {
+    node_status = event_registry->Register("Supervisor::node_status");
+
+    stem_stdout.hook = id::find_func("Supervisor::stdout_hook");
+    stem_stderr.hook = id::find_func("Supervisor::stderr_hook");
+
+    iosource_mgr->Register(this);
+
+    if ( ! iosource_mgr->RegisterFd(signal_flare.FD(), this) )
+        reporter->FatalError("Supervisor stem failed to register signal_flare");
+
+#ifndef _MSC_VER
+    if ( ! iosource_mgr->RegisterFd(stem_pipe->InFD(), this) )
+        reporter->FatalError("Supervisor stem failed to register stem_pipe");
+
+    if ( ! iosource_mgr->RegisterFd(stem_stdout.pipe->ReadFD(), this) )
+        reporter->FatalError("Supervisor stem failed to register stdout pipe");
+
+    if ( ! iosource_mgr->RegisterFd(stem_stderr.pipe->ReadFD(), this) )
+        reporter->FatalError("Supervisor stem failed to register stderr pipe");
+#endif
+}
+
+double Supervisor::GetNextTimeout() {
+    // If there's any messages to be processed in the mg_buffer,
+    // let Zeek's IO loop know we are ready.
+    if ( have_msgs(&msg_buffer, '\0') )
+        return 0.0;
+
+#ifdef _MSC_VER
+    // On Windows, pipe FDs can't be registered with kqueue/select.
+    // Return 0 so the IOSource manager always considers us ready,
+    // ensuring Process() is called on every event loop iteration.
+    // During termination, return -1 so the event loop can exit.
+    return run_state::terminating ? -1 : 0.0;
+#else
+    return -1;
+#endif
+}
+
+void Supervisor::Process() {
+    HandleChildSignal();
+    stem_stdout.Process();
+    stem_stderr.Process();
+    ProcessMessages();
+}
+
+void zeek::detail::LineBufferedPipe::Emit(const char* msg) const {
+    if ( ! msg[0] )
+        // Skip empty lines.
+        return;
+
+    auto msg_start = msg;
+    auto do_print = true;
+
+    if ( hook ) {
+        auto node = "";
+        auto node_len = 0;
+
+        if ( msg[0] == '[' ) {
+            auto end = strchr(msg, ']');
+
+            if ( end ) {
+                node = msg + 1;
+                node_len = end - node;
+                msg = end + 1;
+
+                if ( msg[0] == ' ' )
+                    ++msg;
+            }
+        }
+
+        auto res = hook->Invoke(make_intrusive<StringVal>(node_len, node), make_intrusive<StringVal>(msg));
+        do_print = res->AsBool();
+    }
+
+    if ( do_print )
+        fprintf(stream, "%s%s\n", prefix.data(), msg_start);
+}
+
+void zeek::detail::LineBufferedPipe::Drain() {
+    while ( Process() != 0 )
+        ;
+
+    Emit(buffer.data());
+    buffer.clear();
+    pipe = nullptr;
+}
+
+size_t zeek::detail::LineBufferedPipe::Process() {
+    if ( ! pipe )
+        return 0;
+
+    auto [bytes_read, msgs] = read_msgs(pipe->ReadFD(), &buffer, '\n');
+
+    if ( bytes_read <= 0 )
+        return 0;
+
+    for ( const auto& msg : msgs )
+        Emit(msg.data());
+
+    return bytes_read;
+}
+
+size_t Supervisor::ProcessMessages() {
+    auto [bytes_read, msgs] = read_msgs(stem_pipe->InFD(), &msg_buffer, '\0');
+
+    for ( auto& msg : msgs ) {
+        DBG_LOG(DBG_SUPERVISOR, "read msg from Stem: %s", msg.data());
+        std::vector<std::string> msg_tokens;
+        util::tokenize_string(msg, " ", &msg_tokens);
+        const auto& type = msg_tokens[0];
+
+        if ( type == "status" ) {
+            const auto& name = msg_tokens[1];
+            auto it = nodes.find(name);
+
+            if ( it != nodes.end() )
+                it->second.pid = std::stoi(msg_tokens[2]);
+
+            if ( node_status )
+                event_mgr.Enqueue(node_status, make_intrusive<StringVal>(name),
+                                  val_mgr->Count(std::stoi(msg_tokens[2])));
+        }
+        else if ( type == "debug" ) {
+            // Already logged the unparsed message above.
+        }
+        else if ( type == "error" ) {
+            msg_tokens.erase(msg_tokens.begin());
+            auto err_msg = util::implode_string_vector(msg_tokens, " ");
+            reporter->Error("%s", err_msg.data());
+        }
+        else
+            reporter->Error("Supervisor got unknown msg: %s", msg.data());
+    }
+
+    return msgs.size();
+}
+
+Stem::Stem(State ss) : parent_pid(ss.parent_pid), signal_flare(new detail::Flare()), pipe(std::move(ss.pipe)) {
+    util::detail::set_thread_name("zeek.stem");
+    pipe->Swap();
+    stem = this;
+#ifndef _MSC_VER
+    setsignal(SIGCHLD, stem_signal_handler);
+    setsignal(SIGTERM, stem_signal_handler);
+
+    // Note: changing the process group here so that SIGINT to the supervisor
+    // doesn't also get passed to the children.  I.e. the supervisor should be
+    // in charge of initiating orderly shutdown of the process tree.
+    // Technically calling setpgid() like this is a race-condition (if we get a
+    // SIGINT in between the fork() and setpgid() calls), but can treat that as
+    // mostly be harmless since the only affected node in the process tree at
+    // the point will be this Stem process and the Supervisor *should* do the
+    // right thing if it also sees SIGINT with the Stem already having exited
+    // (since that same type of situation with the Stem dying prematurely can
+    // happen for any arbitrary reason, not just for SIGINT).
+    auto res = setpgid(0, 0);
+
+    if ( res == -1 )
+        LogError("failed to set stem process group: %s", strerror(errno));
+#endif
+}
+
+Stem::~Stem() {
+#ifndef _MSC_VER
+    setsignal(SIGCHLD, SIG_DFL);
+    setsignal(SIGTERM, SIG_DFL);
+#endif
+    stem = nullptr;
+}
+
+void Stem::Reap() {
+    for ( auto& n : nodes ) {
+        auto& node = n.second;
+
+        if ( ! node.pid )
+            continue;
+
+        Wait(&node, WNOHANG);
+    }
+}
+
+bool Stem::Wait(SupervisorNode* node, int options) const {
+    if ( node->pid <= 0 ) {
+        DBG_STEM("Stem skip waiting for node '%s' (PID %d) to terminate: already dead", node->Name().data(), node->pid);
+        return true;
+    }
+
+#ifdef _MSC_VER
+    if ( ! node->process_handle )
+        return true;
+
+    // All callers use WNOHANG (non-blocking). On Windows, always use 0ms wait.
+    DWORD result = WaitForSingleObject(node->process_handle.get(), 0);
+
+    if ( result == WAIT_TIMEOUT )
+        return false;
+
+    DWORD exit_code = 0;
+    GetExitCodeProcess(node->process_handle.get(), &exit_code);
+    node->exit_status = static_cast<int>(exit_code);
+
+    DBG_STEM("node '%s' (PID %d) exited with status %d", node->Name().data(), node->pid, node->exit_status);
+
+    if ( ! node->killed )
+        LogError("Supervised node '%s' (PID %d) exited prematurely with status %d", node->Name().data(), node->pid,
+                 node->exit_status);
+
+    node->process_handle.reset();
+    node->pid = 0;
+    node->stdout_pipe.Drain();
+    node->stderr_pipe.Drain();
+    return true;
+#else
+    int status;
+    auto res = waitpid(node->pid, &status, options);
+
+    if ( res == 0 )
+        // It's still alive.
+        return false;
+
+    if ( res == -1 ) {
+        LogError("Stem failed to get node exit status '%s' (PID %d): %s", node->Name().data(), node->pid,
+                 strerror(errno));
+        return false;
+    }
+
+    if ( WIFEXITED(status) ) {
+        node->exit_status = WEXITSTATUS(status);
+        DBG_STEM("node '%s' (PID %d) exited with status %d", node->Name().data(), node->pid, node->exit_status);
+
+        if ( ! node->killed )
+            LogError("Supervised node '%s' (PID %d) exited prematurely with status %d", node->Name().data(), node->pid,
+                     node->exit_status);
+    }
+    else if ( WIFSIGNALED(status) ) {
+        node->signal_number = WTERMSIG(status);
+        DBG_STEM("node '%s' (PID %d) terminated by signal %d", node->Name().data(), node->pid, node->signal_number);
+
+        if ( ! node->killed )
+            LogError("Supervised node '%s' (PID %d) terminated prematurely by signal %d", node->Name().data(),
+                     node->pid, node->signal_number);
+    }
+    else
+        LogError("Stem failed to get node exit status '%s' (PID %d)", node->Name().data(), node->pid);
+
+    node->pid = 0;
+    node->stdout_pipe.Drain();
+    node->stderr_pipe.Drain();
+    return true;
+#endif
+}
+
+void Stem::KillNode(SupervisorNode* node, int signal) const {
+    if ( node->pid <= 0 ) {
+        DBG_STEM("Stem skip killing node '%s' (PID %d): already dead", node->Name().data(), node->pid);
+        return;
+    }
+
+    node->killed = true;
+#ifdef _MSC_VER
+    if ( node->process_handle ) {
+        if ( signal == 0 ) {
+            // Graceful: send CTRL_BREAK_EVENT.  The node is in its own
+            // process group (CREATE_NEW_PROCESS_GROUP), so this signal
+            // targets only the node and allows zeek_done() to run.
+            GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, node->pid);
+        }
+        else {
+            // Forceful: TerminateProcess as last resort.
+            TerminateProcess(node->process_handle.get(), 1);
+        }
+    }
+#else
+    auto kill_res = kill(node->pid, signal);
+
+    if ( kill_res == -1 )
+        LogError("Failed to send signal to node '%s' (PID %d): %s", node->Name().data(), node->pid, strerror(errno));
+#endif
+}
+
+static int get_kill_signal(int attempts, int max_attempts) {
+#ifdef _MSC_VER
+    // 0 = graceful (CTRL_BREAK_EVENT), non-zero = forceful (TerminateProcess).
+    return attempts < max_attempts ? 0 : 1;
+#else
+    if ( getenv("ZEEK_SUPERVISOR_NO_SIGKILL") )
+        return SIGTERM;
+
+    if ( attempts < max_attempts )
+        return SIGTERM;
+
+    return SIGKILL;
+#endif
+}
+
+void Stem::Destroy(SupervisorNode* node) const {
+    constexpr auto max_term_attempts = 13;
+    constexpr auto kill_delay = 2;
+    auto kill_attempts = 0;
+
+    if ( node->pid <= 0 ) {
+        DBG_STEM("Stem skip killing/waiting node '%s' (PID %d): already dead", node->Name().data(), node->pid);
+        return;
+    }
+
+    for ( ;; ) {
+        auto sig = get_kill_signal(kill_attempts++, max_term_attempts);
+        KillNode(node, sig);
+#ifdef _MSC_VER
+        // On Windows, TerminateProcess is asynchronous - the process
+        // needs a moment to fully terminate before WaitForSingleObject
+        // can detect it with a 0ms timeout.
+        Sleep(100);
+#else
+        usleep(10);
+#endif
+
+        if ( Wait(node, WNOHANG) ) {
+            break;
+        }
+
+        DBG_STEM("Stem waiting to destroy node: %s (PID %d)", node->Name().data(), node->pid);
+        sleep(kill_delay);
+    }
+}
+
+std::optional<SupervisedNode> Stem::Revive() {
+    constexpr auto attempts_before_delay_increase = 3;
+    constexpr auto delay_increase_factor = 2;
+    constexpr auto reset_revival_state_after = 30;
+    auto now = std::chrono::steady_clock::now();
+    auto revival_reset = std::chrono::seconds(reset_revival_state_after);
+
+    for ( auto& n : nodes ) {
+        auto& node = n.second;
+        auto time_since_spawn = now - node.spawn_time;
+
+        if ( node.pid ) {
+            if ( time_since_spawn > revival_reset ) {
+                node.revival_attempts = 0;
+                node.revival_delay = 1;
+            }
+
+            continue;
+        }
+
+        auto delay = std::chrono::seconds(node.revival_delay);
+
+        if ( time_since_spawn < delay )
+            continue;
+
+        ++node.revival_attempts;
+
+        if ( node.revival_attempts % attempts_before_delay_increase == 0 )
+            node.revival_delay *= delay_increase_factor;
+
+        auto spawn_res = Spawn(&node);
+
+        if ( std::holds_alternative<SupervisedNode>(spawn_res) )
+            return std::get<SupervisedNode>(spawn_res);
+
+        if ( std::get<bool>(spawn_res) )
+            LogError("Supervised node '%s' (PID %d) revived after premature exit", node.Name().data(), node.pid);
+
+        ReportStatus(node);
+    }
+
+    return {};
+}
+
+std::variant<bool, SupervisedNode> Stem::Spawn(SupervisorNode* node) {
+#ifdef _MSC_VER
+    // On Windows, spawn a new zeek process via CreateProcess.
+    auto json_config = node->config.ToJSON();
+
+    // Build command line from zeek_argv.
+    std::string cmd_line;
+
+    for ( int i = 0; i < detail::zeek_argc; ++i ) {
+        if ( i > 0 )
+            cmd_line += " ";
+
+        std::string arg = detail::zeek_argv[i];
+
+        if ( arg.find(' ') != std::string::npos || arg.find('\t') != std::string::npos )
+            cmd_line += "\"" + arg + "\"";
+        else
+            cmd_line += arg;
+    }
+
+    // Build environment block with ZEEK_SUPERVISED_NODE added.
+    LPCH current_env = GetEnvironmentStrings();
+
+    if ( ! current_env ) {
+        LogError("failed to get environment for node '%s'", node->Name().data());
+        return false;
+    }
+
+    std::string env_block;
+
+    for ( LPCH p = current_env; *p; p += strlen(p) + 1 )
+        env_block.append(p, strlen(p) + 1);
+
+    FreeEnvironmentStrings(current_env);
+
+    std::string node_env = "ZEEK_SUPERVISED_NODE=" + json_config;
+    env_block.append(node_env);
+    env_block.push_back('\0');
+    env_block.push_back('\0');
+
+    // Create stdout/stderr redirect pipes.
+    SECURITY_ATTRIBUTES sa = {};
+    sa.nLength = sizeof(sa);
+    sa.bInheritHandle = TRUE;
+
+    HANDLE raw_stdout_read, raw_stdout_write;
+
+    if ( ! CreatePipe(&raw_stdout_read, &raw_stdout_write, &sa, 0) ) {
+        LogError("failed to create stdout pipe for node '%s'", node->Name().data());
+        return false;
+    }
+
+    detail::UniqueWinHandle child_stdout_read(raw_stdout_read);
+    detail::UniqueWinHandle child_stdout_write(raw_stdout_write);
+    SetHandleInformation(child_stdout_read.get(), HANDLE_FLAG_INHERIT, 0);
+
+    HANDLE raw_stderr_read, raw_stderr_write;
+
+    if ( ! CreatePipe(&raw_stderr_read, &raw_stderr_write, &sa, 0) ) {
+        LogError("failed to create stderr pipe for node '%s'", node->Name().data());
+        return false;
+    }
+
+    detail::UniqueWinHandle child_stderr_read(raw_stderr_read);
+    detail::UniqueWinHandle child_stderr_write(raw_stderr_write);
+    SetHandleInformation(child_stderr_read.get(), HANDLE_FLAG_INHERIT, 0);
+
+    // Use STARTUPINFOEX with PROC_THREAD_ATTRIBUTE_HANDLE_LIST so only the
+    // stdio pipe handles are inherited by the child. Without this, Broker
+    // listening sockets leak into every child process, preventing port
+    // reuse when a node is restarted via TerminateProcess.
+    HANDLE handles_to_inherit[3];
+    DWORD handle_count = 0;
+    handles_to_inherit[handle_count++] = child_stdout_write.get();
+    handles_to_inherit[handle_count++] = child_stderr_write.get();
+    HANDLE stdin_handle = GetStdHandle(STD_INPUT_HANDLE);
+
+    if ( stdin_handle && stdin_handle != INVALID_HANDLE_VALUE )
+        handles_to_inherit[handle_count++] = stdin_handle;
+
+    SIZE_T attr_size = 0;
+    InitializeProcThreadAttributeList(nullptr, 1, 0, &attr_size);
+    auto attr_buf = std::make_unique<char[]>(attr_size);
+    auto* attr_list = reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(attr_buf.get());
+
+    bool use_extended = InitializeProcThreadAttributeList(attr_list, 1, 0, &attr_size) &&
+                        UpdateProcThreadAttribute(attr_list, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST, handles_to_inherit,
+                                                  handle_count * sizeof(HANDLE), nullptr, nullptr);
+
+    STARTUPINFOEXA si = {};
+    si.StartupInfo.cb = use_extended ? sizeof(STARTUPINFOEXA) : sizeof(STARTUPINFOA);
+    si.StartupInfo.hStdOutput = child_stdout_write.get();
+    si.StartupInfo.hStdError = child_stderr_write.get();
+    si.StartupInfo.hStdInput = stdin_handle;
+    si.StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
+
+    if ( use_extended )
+        si.lpAttributeList = attr_list;
+
+    PROCESS_INFORMATION pi = {};
+    DWORD create_flags = CREATE_NEW_PROCESS_GROUP;
+
+    if ( use_extended )
+        create_flags |= EXTENDED_STARTUPINFO_PRESENT;
+
+    BOOL ok = CreateProcessA(nullptr, cmd_line.data(), nullptr, nullptr, TRUE, create_flags, env_block.data(), nullptr,
+                             &si.StartupInfo, &pi);
+
+    if ( use_extended )
+        DeleteProcThreadAttributeList(attr_list);
+
+    if ( ! ok ) {
+        LogError("failed to create process for node '%s': error %lu", node->Name().data(), GetLastError());
+        return false;
+    }
+
+    // Close child-side pipe handles in the parent.
+    child_stdout_write.reset();
+    child_stderr_write.reset();
+    detail::UniqueWinHandle thread_handle(pi.hThread);
+
+    // Transfer read handle ownership to _open_osfhandle (which takes over the handle).
+    int stdout_fd = _open_osfhandle((intptr_t)child_stdout_read.release(), _O_RDONLY);
+    int stderr_fd = _open_osfhandle((intptr_t)child_stderr_read.release(), _O_RDONLY);
+    int stdout_fds[2] = {stdout_fd, -1};
+    int stderr_fds[2] = {stderr_fd, -1};
+
+    node->pid = static_cast<int>(pi.dwProcessId);
+    node->process_handle.reset(pi.hProcess);
+    auto prefix = util::fmt("[%s] ", node->Name().data());
+    node->stdout_pipe.pipe = std::make_unique<detail::Pipe>(0, 0, 0, 0, stdout_fds);
+    node->stdout_pipe.prefix = prefix;
+    node->stdout_pipe.stream = stdout;
+    node->stderr_pipe.pipe = std::make_unique<detail::Pipe>(0, 0, 0, 0, stderr_fds);
+    node->stderr_pipe.prefix = prefix;
+    node->stderr_pipe.stream = stderr;
+    node->spawn_time = std::chrono::steady_clock::now();
+    DBG_STEM("Stem spawned node: %s (PID %d)", node->Name().data(), node->pid);
+    return true;
+#else
+    auto ppid = getpid();
+    auto fork_res = fork_with_stdio_redirect(util::fmt("node %s", node->Name().data()));
+    auto node_pid = fork_res.pid;
+
+    if ( node_pid == -1 ) {
+        LogError("failed to fork Zeek node '%s': %s", node->Name().data(), strerror(errno));
+        return false;
+    }
+
+    if ( node_pid == 0 ) {
+        setsignal(SIGCHLD, SIG_DFL);
+        setsignal(SIGTERM, SIG_DFL);
+        util::detail::set_thread_name(util::fmt("zeek.%s", node->Name().data()));
+        SupervisedNode rval;
+        rval.config = node->config;
+        rval.parent_pid = ppid;
+        return rval;
+    }
+
+    node->pid = node_pid;
+    auto prefix = util::fmt("[%s] ", node->Name().data());
+    node->stdout_pipe.pipe = std::move(fork_res.stdout_pipe);
+    node->stdout_pipe.prefix = prefix;
+    node->stdout_pipe.stream = stdout;
+    node->stderr_pipe.pipe = std::move(fork_res.stderr_pipe);
+    node->stderr_pipe.prefix = prefix;
+    node->stderr_pipe.stream = stderr;
+    node->spawn_time = std::chrono::steady_clock::now();
+    DBG_STEM("Stem spawned node: %s (PID %d)", node->Name().data(), node->pid);
+    return true;
+#endif
+}
+
+int Stem::AliveNodeCount() const {
+    auto rval = 0;
+
+    for ( const auto& n : nodes )
+        if ( n.second.pid )
+            ++rval;
+
+    return rval;
+}
+
+void Stem::KillNodes(int signal) {
+    for ( auto& n : nodes )
+        KillNode(&n.second, signal);
+}
+
+void Stem::Shutdown(int exit_code) {
+    DBG_STEM("Stem shutting down with exit code %d", exit_code);
+    shutting_down = true;
+    constexpr auto max_term_attempts = 13;
+    constexpr auto kill_delay = 2;
+    auto kill_attempts = 0;
+
+    for ( ;; ) {
+        auto sig = get_kill_signal(kill_attempts++, max_term_attempts);
+
+        if ( ! nodes.empty() ) {
+            KillNodes(sig);
+            DBG_STEM("Stem killed nodes with signal %d", sig);
+#ifdef _MSC_VER
+            Sleep(100);
+#else
+            usleep(10);
+#endif
+            Reap();
+        }
+
+        auto nodes_alive = AliveNodeCount();
+
+        if ( nodes_alive == 0 ) {
+#ifdef _MSC_VER
+            shutdown_complete = true;
+            return;
+#else
+            exit(exit_code);
+#endif
+        }
+
+        DBG_STEM("Stem nodes still alive %d, sleeping for %d seconds", nodes_alive, kill_delay);
+
+        auto sleep_time_left = kill_delay;
+
+        while ( sleep_time_left > 0 ) {
+            sleep_time_left = sleep(sleep_time_left);
+
+            if ( sleep_time_left > 0 ) {
+                // Interrupted by signal, so check if children exited
+                Reap();
+                nodes_alive = AliveNodeCount();
+
+                if ( nodes_alive == 0 ) {
+#ifdef _MSC_VER
+                    shutdown_complete = true;
+                    return;
+#else
+                    exit(exit_code);
+#endif
+                }
+            }
+        }
+    }
+}
+
+void Stem::ReportStatus(const SupervisorNode& node) const {
+    std::string msg = util::fmt("status %s %d", node.Name().data(), node.pid);
+    write_msg(pipe, msg, &msg_buffer);
+}
+
+void Stem::Log(std::string_view type, const char* format, va_list args) const {
+    auto raw_msg = util::vfmt(format, args);
+
+    if ( getenv("ZEEK_DEBUG_STEM_STDERR") ) {
+        // Useful when debugging a breaking change to the IPC mechanism itself.
+        fprintf(stderr, "%s\n", raw_msg);
+        return;
+    }
+
+    std::string msg{type.data(), type.size()};
+    msg += ' ';
+    msg += raw_msg;
+    write_msg(pipe, msg, &msg_buffer);
+}
+
+void Stem::LogDebug(const char* format, ...) const {
+    va_list args;
+    va_start(args, format);
+    Log("debug", format, args);
+    va_end(args);
+}
+
+void Stem::LogError(const char* format, ...) const {
+    va_list args;
+    va_start(args, format);
+    Log("error", format, args);
+    va_end(args);
+}
+
+SupervisedNode Stem::Run() {
+    for ( ;; ) {
+        auto new_node = Poll();
+
+        if ( new_node )
+            return *new_node;
+
+#ifdef _MSC_VER
+        if ( shutdown_complete )
+            return {};
+#endif
+    }
+
+    // Shouldn't be reached.
+    assert(false);
+    return {};
+}
+
+std::optional<SupervisedNode> Stem::Poll() {
+#ifdef _MSC_VER
+    // On Windows, poll() only works with sockets. We use PeekNamedPipe for
+    // pipe FDs and select() for the signal flare (which is a UDP socket).
+    // Use a short timeout so the stem responds quickly to supervisor messages
+    // and shutdown signals.
+    int poll_timeout_ms = have_msgs(&msg_buffer, '\0') ? 0 : 100;
+
+    // Check signal flare (UDP socket) via select with short timeout
+    bool flare_ready = false;
+    {
+        fd_set readfds;
+        FD_ZERO(&readfds);
+        FD_SET((SOCKET)signal_flare->FD(), &readfds);
+        struct timeval tv;
+        tv.tv_sec = poll_timeout_ms / 1000;
+        tv.tv_usec = (poll_timeout_ms % 1000) * 1000;
+        auto sel_res = select(0, &readfds, nullptr, nullptr, &tv);
+
+        if ( sel_res > 0 && FD_ISSET((SOCKET)signal_flare->FD(), &readfds) )
+            flare_ready = true;
+    }
+
+    // Check pipe from supervisor via PeekNamedPipe
+    bool pipe_ready = false;
+    {
+        HANDLE h = (HANDLE)_get_osfhandle(pipe->InFD());
+
+        if ( h != INVALID_HANDLE_VALUE ) {
+            DWORD avail = 0;
+
+            if ( PeekNamedPipe(h, nullptr, 0, nullptr, &avail, nullptr) && avail > 0 )
+                pipe_ready = true;
+        }
+    }
+
+    // Check node stdout/stderr pipes
+    for ( auto& [name, node] : nodes ) {
+        if ( node.stdout_pipe.pipe ) {
+            HANDLE h = (HANDLE)_get_osfhandle(node.stdout_pipe.pipe->ReadFD());
+
+            if ( h != INVALID_HANDLE_VALUE ) {
+                DWORD avail = 0;
+
+                if ( PeekNamedPipe(h, nullptr, 0, nullptr, &avail, nullptr) && avail > 0 )
+                    node.stdout_pipe.Process();
+            }
+        }
+
+        if ( node.stderr_pipe.pipe ) {
+            HANDLE h = (HANDLE)_get_osfhandle(node.stderr_pipe.pipe->ReadFD());
+
+            if ( h != INVALID_HANDLE_VALUE ) {
+                DWORD avail = 0;
+
+                if ( PeekNamedPipe(h, nullptr, 0, nullptr, &avail, nullptr) && avail > 0 )
+                    node.stderr_pipe.Process();
+            }
+        }
+    }
+
+    // Stem is a thread; check if supervisor (same process) signaled shutdown.
+    if ( shutting_down && ! shutdown_complete )
+        Shutdown(0);
+
+    // Periodically reap/revive child processes (no SIGCHLD on Windows).
+    Reap();
+
+    if ( ! shutting_down ) {
+        auto new_node = Revive();
+
+        if ( new_node )
+            return new_node;
+    }
+
+    if ( flare_ready ) {
+        signal_flare->Extinguish();
+
+        if ( shutting_down )
+            Shutdown(0);
+
+        Reap();
+
+        if ( ! shutting_down ) {
+            auto new_node2 = Revive();
+
+            if ( new_node2 )
+                return new_node2;
+        }
+    }
+
+    if ( ! pipe_ready && ! have_msgs(&msg_buffer, '\0') )
+        return {};
+
+#else
+    std::map<std::string, int> node_pollfd_indices;
+    constexpr auto fixed_fd_count = 2;
+    const auto total_fd_count = fixed_fd_count + (nodes.size() * 2);
+    auto pfds = std::make_unique<pollfd[]>(total_fd_count);
+    int pfd_idx = 0;
+    pfds[pfd_idx++] = {static_cast<decltype(pollfd::fd)>(pipe->InFD()), POLLIN, 0};
+    pfds[pfd_idx++] = {static_cast<decltype(pollfd::fd)>(signal_flare->FD()), POLLIN, 0};
+
+    for ( const auto& [name, node] : nodes ) {
+        node_pollfd_indices[name] = pfd_idx;
+
+        if ( node.stdout_pipe.pipe )
+            pfds[pfd_idx++] = {static_cast<decltype(pollfd::fd)>(node.stdout_pipe.pipe->ReadFD()), POLLIN, 0};
+        else
+            pfds[pfd_idx++] = {static_cast<decltype(pollfd::fd)>(-1), POLLIN, 0};
+
+        if ( node.stderr_pipe.pipe )
+            pfds[pfd_idx++] = {static_cast<decltype(pollfd::fd)>(node.stderr_pipe.pipe->ReadFD()), POLLIN, 0};
+        else
+            pfds[pfd_idx++] = {static_cast<decltype(pollfd::fd)>(-1), POLLIN, 0};
+    }
+
+    // Note: the poll timeout here is for periodically checking if the parent
+    // process died (see below).
+    int poll_timeout_ms = have_msgs(&msg_buffer, '\0') ? 0 : 1000;
+    auto res = poll(pfds.get(), total_fd_count, poll_timeout_ms);
+
+    if ( res < 0 ) {
+        if ( errno != EINTR ) {
+            LogError("Stem poll() failed: %s", strerror(errno));
+            return {};
+        }
+    }
+
+    if ( last_signal >= 0 ) {
+        DBG_STEM("Stem received signal: %d", last_signal);
+        last_signal = -1;
+    }
+
+    if ( getppid() != parent_pid ) {
+        // Note: only simple + portable way of detecting loss of parent
+        // process seems to be polling for change in PPID.  There's platform
+        // specific ways if we do end up needing something more responsive
+        // and/or have to avoid overhead of polling, but maybe not worth
+        // the additional complexity:
+        //   Linux:   prctl(PR_SET_PDEATHSIG, ...)
+        //   FreeBSD: procctl(PROC_PDEATHSIG_CTL)
+        // Also note the similar polling methodology in ParentProcessCheckTimer.
+        DBG_STEM("Stem suicide");
+        Shutdown(13);
+    }
+
+    auto new_node = Revive();
+
+    if ( new_node )
+        return new_node;
+
+    if ( res == 0 )
+        return {};
+
+    if ( signal_flare->Extinguish() ) {
+        if ( shutting_down )
+            Shutdown(0);
+
+        Reap();
+        auto new_node = Revive();
+
+        if ( new_node )
+            return new_node;
+    }
+
+    for ( auto& [name, node] : nodes ) {
+        auto idx = node_pollfd_indices[name];
+
+        if ( pfds[idx].revents )
+            node.stdout_pipe.Process();
+
+        if ( pfds[idx + 1].revents )
+            node.stderr_pipe.Process();
+    }
+#endif
+
+    // Process messages from Supervisor.
+    //
+    // Either the supervisor sent some new data and/or we already
+    // have some in msg_buffer populated during write_msg().
+    std::vector<std::string> msgs;
+#ifdef _MSC_VER
+    if ( pipe_ready ) {
+#else
+    if ( pfds[0].revents ) {
+#endif
+        // New data from Supervisor.
+        auto [bytes_read, msgs_] = read_msgs(pipe->InFD(), &msg_buffer, '\0');
+
+        if ( bytes_read == 0 ) {
+            // EOF, supervisor must have exited
+            DBG_STEM("Stem EOF");
+            Shutdown(14);
+        }
+
+        if ( bytes_read < 0 ) {
+            LogError("Stem read() failed: %s", strerror(errno));
+            return {};
+        }
+
+        msgs = std::move(msgs_);
+    }
+    else if ( have_msgs(&msg_buffer, '\0') ) {
+        // Have some pending messages.
+        msgs = extract_msgs(&msg_buffer, '\0');
+    }
+
+    for ( auto& msg : msgs ) {
+        std::vector<std::string> msg_tokens;
+        util::tokenize_string(std::move(msg), " ", &msg_tokens, 2);
+        const auto& cmd = msg_tokens[0];
+        const auto& node_name = msg_tokens[1];
+
+        if ( cmd == "create" ) {
+            const auto& node_json = msg_tokens[2];
+            assert(! nodes.contains(node_name));
+            auto node_config = Supervisor::NodeConfig::FromJSON(node_json);
+            auto it = nodes.emplace(node_name, std::move(node_config)).first;
+            auto& node = it->second;
+
+            DBG_STEM("Stem creating node: %s (PID %d)", node.Name().data(), node.pid);
+            auto spawn_res = Spawn(&node);
+
+            if ( std::holds_alternative<SupervisedNode>(spawn_res) )
+                return std::get<SupervisedNode>(spawn_res);
+
+            ReportStatus(node);
+        }
+        else if ( cmd == "destroy" ) {
+            auto it = nodes.find(node_name);
+            auto& node = it->second;
+            DBG_STEM("Stem destroying node: %s (PID %d)", node_name.data(), node.pid);
+            Destroy(&node);
+            nodes.erase(it);
+        }
+        else if ( cmd == "restart" ) {
+            auto it = nodes.find(node_name);
+            assert(it != nodes.end());
+            auto& node = it->second;
+            DBG_STEM("Stem restarting node: %s (PID %d)", node_name.data(), node.pid);
+            Destroy(&node);
+
+            auto spawn_res = Spawn(&node);
+
+            if ( std::holds_alternative<SupervisedNode>(spawn_res) )
+                return std::get<SupervisedNode>(spawn_res);
+
+            ReportStatus(node);
+        }
+        else
+            LogError("Stem got unknown supervisor message: %s", cmd.data());
+    }
+
+    return {};
+}
+
+#ifdef _MSC_VER
+struct StemThreadData {
+    Stem::State state;
+    HANDLE ready_event;
+};
+
+static unsigned __stdcall stem_thread_func(void* arg) {
+    auto* data = static_cast<StemThreadData*>(arg);
+    Stem new_stem{std::move(data->state)};
+    SetEvent(data->ready_event);
+    new_stem.Run();
+    delete data;
+    return 0;
+}
+#endif
+
+std::optional<SupervisorStemHandle> Supervisor::CreateStem(bool supervisor_mode) {
+#ifdef _MSC_VER
+    // On Windows, check if this process is a supervised node spawned
+    // via CreateProcess. The node config is passed via ZEEK_SUPERVISED_NODE.
+    auto zeek_node_env = getenv("ZEEK_SUPERVISED_NODE");
+
+    if ( zeek_node_env ) {
+        auto node_config = Supervisor::NodeConfig::FromJSON(zeek_node_env);
+        SupervisedNode sn;
+        sn.config = std::move(node_config);
+        sn.parent_pid = static_cast<int>(GetCurrentProcessId());
+
+        // Try to get the actual parent PID from the environment if available.
+        detail::UniqueWinHandle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
+
+        if ( snapshot.get() != INVALID_HANDLE_VALUE ) {
+            PROCESSENTRY32 pe = {};
+            pe.dwSize = sizeof(pe);
+
+            if ( Process32First(snapshot.get(), &pe) ) {
+                DWORD my_pid = GetCurrentProcessId();
+
+                do {
+                    if ( pe.th32ProcessID == my_pid ) {
+                        sn.parent_pid = static_cast<int>(pe.th32ParentProcessID);
+                        break;
+                    }
+                } while ( Process32Next(snapshot.get(), &pe) );
+            }
+        }
+
+        supervised_node = std::move(sn);
+        // Clear the env var so child processes of this node don't also enter this path.
+        SetEnvironmentVariableA("ZEEK_SUPERVISED_NODE", nullptr);
+        return {};
+    }
+#endif
+
+    // If the Stem needs to be re-created via fork()/exec(), then the necessary
+    // state information is communicated via ZEEK_STEM env. var.
+    auto zeek_stem_env = getenv("ZEEK_STEM");
+
+    if ( zeek_stem_env ) {
+        // Supervisor emits line-buffered messages stdout/stderr redirects
+        // so ensure they're at least not fully-buffered after doing exec()
+        setlinebuf(stdout);
+        setlinebuf(stderr);
+        std::vector<std::string> zeek_stem_nums;
+        util::tokenize_string(zeek_stem_env, ",", &zeek_stem_nums);
+
+        if ( zeek_stem_nums.size() != 5 ) {
+            fprintf(stderr, "invalid ZEEK_STEM environment variable value: '%s'\n", zeek_stem_env);
+            exit(1);
+        }
+
+#ifndef _MSC_VER
+        pid_t stem_ppid = std::stoi(zeek_stem_nums[0]);
+        int fds[4];
+
+        for ( auto i = 0; i < 4; ++i )
+            fds[i] = std::stoi(zeek_stem_nums[i + 1]);
+
+        Stem::State ss;
+        ss.pipe = std::make_unique<detail::PipePair>(FD_CLOEXEC, O_NONBLOCK, fds);
+        ss.parent_pid = stem_ppid;
+
+        Stem new_stem{std::move(ss)};
+        supervised_node = new_stem.Run();
+#endif
+        return {};
+    }
+
+    if ( ! supervisor_mode )
+        return {};
+
+#ifdef _MSC_VER
+    // On Windows, create the stem as a thread using _beginthreadex.
+    // Create the communication pipe pair.
+    auto pipe = std::make_unique<detail::PipePair>(0, 0);
+
+    // Dup FDs so the stem thread has independent copies.
+    int stem_fds[4] = {dup(pipe->In().ReadFD()), dup(pipe->In().WriteFD()), dup(pipe->Out().ReadFD()),
+                       dup(pipe->Out().WriteFD())};
+
+    auto stem_pipe = std::make_unique<detail::PipePair>(0, 0, stem_fds);
+
+    auto* data = new StemThreadData();
+    data->state.pipe = std::move(stem_pipe);
+    data->state.parent_pid = static_cast<int>(GetCurrentProcessId());
+    detail::UniqueWinHandle ready_event(CreateEvent(nullptr, TRUE, FALSE, nullptr));
+    data->ready_event = ready_event.get();
+
+    HANDLE thread_handle = (HANDLE)_beginthreadex(nullptr, 0, stem_thread_func, data, 0, nullptr);
+
+    if ( ! thread_handle ) {
+        fprintf(stderr, "failed to create Zeek supervisor stem thread\n");
+        delete data;
+        exit(1);
+    }
+
+    // Wait for the stem thread to be initialized.
+    WaitForSingleObject(ready_event.get(), INFINITE);
+
+    SupervisorStemHandle sh;
+    sh.pipe = std::move(pipe);
+    sh.pid = static_cast<int>(GetCurrentProcessId());
+    sh.thread_handle.reset(thread_handle);
+    return {std::move(sh)};
+#else
+    Stem::State ss;
+    ss.pipe = std::make_unique<detail::PipePair>(FD_CLOEXEC, O_NONBLOCK);
+    ss.parent_pid = getpid();
+    auto fork_res = fork_with_stdio_redirect("stem");
+    auto pid = fork_res.pid;
+
+    if ( pid == -1 ) {
+        fprintf(stderr, "failed to fork Zeek supervisor stem process: %s\n", strerror(errno));
+        exit(1);
+    }
+
+    if ( pid == 0 ) {
+        Stem new_stem{std::move(ss)};
+        supervised_node = new_stem.Run();
+        return {};
+    }
+
+    SupervisorStemHandle sh;
+    sh.pipe = std::move(ss.pipe);
+    sh.pid = pid;
+    sh.stdout_pipe = std::move(fork_res.stdout_pipe);
+    sh.stderr_pipe = std::move(fork_res.stderr_pipe);
+    return {std::move(sh)};
+#endif
+}
+
+static BifEnum::Supervisor::ClusterRole role_str_to_enum(std::string_view r) {
+    if ( r == "Supervisor::LOGGER" )
+        return BifEnum::Supervisor::LOGGER;
+    if ( r == "Supervisor::MANAGER" )
+        return BifEnum::Supervisor::MANAGER;
+    if ( r == "Supervisor::PROXY" )
+        return BifEnum::Supervisor::PROXY;
+    if ( r == "Supervisor::WORKER" )
+        return BifEnum::Supervisor::WORKER;
+
+    return BifEnum::Supervisor::NONE;
+}
+
+Supervisor::NodeConfig Supervisor::NodeConfig::FromRecord(const RecordVal* node) {
+    Supervisor::NodeConfig rval;
+    rval.name = node->GetFieldAs<StringVal>("name")->CheckString();
+    const auto& iface_val = node->GetField("interface");
+
+    if ( iface_val )
+        rval.interface = iface_val->AsString()->CheckString();
+
+    const auto& pcap_file_val = node->GetField("pcap_file");
+
+    if ( pcap_file_val )
+        rval.pcap_file = pcap_file_val->AsString()->CheckString();
+
+    const auto& directory_val = node->GetField("directory");
+
+    if ( directory_val )
+        rval.directory = directory_val->AsString()->CheckString();
+
+    const auto& stdout_val = node->GetField("stdout_file");
+
+    if ( stdout_val )
+        rval.stdout_file = stdout_val->AsString()->CheckString();
+
+    const auto& stderr_val = node->GetField("stderr_file");
+
+    if ( stderr_val )
+        rval.stderr_file = stderr_val->AsString()->CheckString();
+
+    const auto& affinity_val = node->GetField("cpu_affinity");
+
+    if ( affinity_val )
+        rval.cpu_affinity = static_cast<int>(affinity_val->AsInt());
+
+    const auto& bare_mode_val = node->GetField("bare_mode");
+
+    if ( bare_mode_val )
+        rval.bare_mode = bare_mode_val->AsBool();
+
+    auto addl_base_scripts_val = node->GetField("addl_base_scripts")->AsVectorVal();
+
+    for ( auto i = 0u; i < addl_base_scripts_val->Size(); ++i ) {
+        auto script = addl_base_scripts_val->StringValAt(i)->ToStdString();
+        rval.addl_base_scripts.emplace_back(std::move(script));
+    }
+
+    auto addl_user_scripts_val = node->GetField("addl_user_scripts")->AsVectorVal();
+
+    for ( auto i = 0u; i < addl_user_scripts_val->Size(); ++i ) {
+        auto script = addl_user_scripts_val->StringValAt(i)->ToStdString();
+        rval.addl_user_scripts.emplace_back(std::move(script));
+    }
+
+    auto env_table_val = node->GetField("env")->AsTableVal();
+    auto env_table = env_table_val->AsTable();
+
+    for ( const auto& ee : *env_table ) {
+        auto k = ee.GetHashKey();
+        auto* v = ee.value;
+
+        auto key = env_table_val->RecreateIndex(*k);
+        auto name = key->Idx(0)->AsStringVal()->ToStdString();
+        rval.env[name] = v->GetVal()->AsStringVal()->ToStdString();
+    }
+
+    auto cluster_table_val = node->GetField("cluster");
+    auto re = std::make_unique<RE_Matcher>("^_");
+    rval.cluster = cluster_table_val->ToJSON(false, re.get())->ToStdString();
+
+    return rval;
+}
+
+Supervisor::NodeConfig Supervisor::NodeConfig::FromJSON(std::string_view json) {
+    Supervisor::NodeConfig rval;
+    rapidjson::Document j;
+    j.Parse(json.data(), json.size());
+    rval.name = j["name"].GetString();
+
+    if ( auto it = j.FindMember("interface"); it != j.MemberEnd() )
+        rval.interface = it->value.GetString();
+
+    if ( auto it = j.FindMember("pcap_file"); it != j.MemberEnd() )
+        rval.pcap_file = it->value.GetString();
+
+    if ( auto it = j.FindMember("directory"); it != j.MemberEnd() )
+        rval.directory = it->value.GetString();
+
+    if ( auto it = j.FindMember("stdout_file"); it != j.MemberEnd() )
+        rval.stdout_file = it->value.GetString();
+
+    if ( auto it = j.FindMember("stderr_file"); it != j.MemberEnd() )
+        rval.stderr_file = it->value.GetString();
+
+    if ( auto it = j.FindMember("cpu_affinity"); it != j.MemberEnd() )
+        rval.cpu_affinity = it->value.GetInt();
+
+    if ( auto it = j.FindMember("bare_mode"); it != j.MemberEnd() )
+        rval.bare_mode = it->value.GetBool();
+
+    auto& addl_base_scripts = j["addl_base_scripts"];
+
+    for ( auto it = addl_base_scripts.Begin(); it != addl_base_scripts.End(); ++it )
+        rval.addl_base_scripts.emplace_back(it->GetString());
+
+    auto& addl_user_scripts = j["addl_user_scripts"];
+
+    for ( auto it = addl_user_scripts.Begin(); it != addl_user_scripts.End(); ++it )
+        rval.addl_user_scripts.emplace_back(it->GetString());
+
+    auto& env = j["env"];
+
+    for ( auto it = env.MemberBegin(); it != env.MemberEnd(); ++it )
+        rval.env[it->name.GetString()] = it->value.GetString();
+
+    auto& cluster = j["cluster"];
+
+    rapidjson::StringBuffer sb;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
+    cluster.Accept(writer);
+    rval.cluster = sb.GetString();
+
+    return rval;
+}
+
+std::string Supervisor::NodeConfig::ToJSON() const {
+    auto re = std::make_unique<RE_Matcher>("^_");
+    return ToRecord()->ToJSON(false, re.get())->ToStdString();
+}
+
+RecordValPtr Supervisor::NodeConfig::ToRecord() const {
+    const auto& rt = id::find_type<RecordType>("Supervisor::NodeConfig");
+    auto rval = make_intrusive<RecordVal>(rt);
+    rval->AssignField("name", name);
+
+    if ( interface )
+        rval->AssignField("interface", *interface);
+
+    if ( pcap_file )
+        rval->AssignField("pcap_file", *pcap_file);
+
+    if ( directory )
+        rval->AssignField("directory", *directory);
+
+    if ( stdout_file )
+        rval->AssignField("stdout_file", *stdout_file);
+
+    if ( stderr_file )
+        rval->AssignField("stderr_file", *stderr_file);
+
+    if ( cpu_affinity )
+        rval->AssignField("cpu_affinity", *cpu_affinity);
+
+    if ( bare_mode )
+        rval->AssignField("bare_mode", *bare_mode);
+
+    auto abs_t = rt->GetFieldType<VectorType>("addl_base_scripts");
+    auto addl_base_scripts_val = make_intrusive<VectorVal>(std::move(abs_t));
+
+    for ( const auto& s : addl_base_scripts )
+        addl_base_scripts_val->Assign(addl_base_scripts_val->Size(), make_intrusive<StringVal>(s));
+
+    rval->AssignField("addl_base_scripts", std::move(addl_base_scripts_val));
+
+    auto aus_t = rt->GetFieldType<VectorType>("addl_user_scripts");
+    auto addl_user_scripts_val = make_intrusive<VectorVal>(std::move(aus_t));
+
+    for ( const auto& s : addl_user_scripts )
+        addl_user_scripts_val->Assign(addl_user_scripts_val->Size(), make_intrusive<StringVal>(s));
+
+    rval->AssignField("addl_user_scripts", std::move(addl_user_scripts_val));
+
+    auto et = rt->GetFieldType<TableType>("env");
+    auto env_val = make_intrusive<TableVal>(std::move(et));
+    rval->AssignField("env", env_val);
+
+    for ( const auto& e : env ) {
+        auto name = make_intrusive<StringVal>(e.first);
+        auto val = make_intrusive<StringVal>(e.second);
+        env_val->Assign(std::move(name), std::move(val));
+    }
+
+    auto tt = rt->GetFieldType<TableType>("cluster");
+    auto json_res = detail::ValFromJSON(cluster, tt, Func::nil);
+    if ( json_res ) {
+        rval->AssignField("cluster", json_res.value());
+    }
+    else {
+        // This should never happen: the JSON data comes from a table[string] of
+        // ClusterEndpoint and should therefore allow instantiation. Exiting
+        // here can be hard to debug. Other JSON code (see FromJSON()) fails
+        // silently when the JSON is misformatted. We just warn:
+        fprintf(stderr, "Could not parse %s's cluster table from '%s': %s\n", name.c_str(), cluster.c_str(),
+                json_res.error().c_str());
+        rval->AssignField("cluster", make_intrusive<TableVal>(std::move(tt)));
+    }
+
+    return rval;
+}
+
+RecordValPtr SupervisorNode::ToRecord() const {
+    const auto& rt = BifType::Record::Supervisor::NodeStatus;
+    auto rval = make_intrusive<RecordVal>(rt);
+
+    rval->AssignField("node", config.ToRecord());
+
+    if ( pid )
+        rval->AssignField("pid", pid);
+
+    return rval;
+}
+
+void SupervisedNode::Init(Options* options) const {
+    const auto& node_name = config.name;
+
+    if ( config.directory ) {
+        std::error_code ec;
+        std::filesystem::current_path(config.directory->data(), ec);
+        if ( ec ) {
+            fprintf(stderr, "node '%s' failed to set working directory to %s: %s\n", node_name.data(),
+                    config.directory->data(), ec.message().c_str());
+            exit(1);
+        }
+    }
+
+    if ( config.stderr_file ) {
+        auto fd = open(config.stderr_file->data(), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND | O_CLOEXEC, 0600);
+
+        if ( fd == -1 || dup2(fd, STDERR_FILENO) == -1 ) {
+            fprintf(stderr, "node '%s' failed to create stderr file %s: %s\n", node_name.data(),
+                    config.stderr_file->data(), strerror(errno));
+            exit(1);
+        }
+
+        util::safe_close(fd);
+    }
+
+    if ( config.stdout_file ) {
+        auto fd = open(config.stdout_file->data(), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND | O_CLOEXEC, 0600);
+
+        if ( fd == -1 || dup2(fd, STDOUT_FILENO) == -1 ) {
+            fprintf(stderr, "node '%s' failed to create stdout file %s: %s\n", node_name.data(),
+                    config.stdout_file->data(), strerror(errno));
+            exit(1);
+        }
+
+        util::safe_close(fd);
+    }
+
+    if ( config.cpu_affinity ) {
+        auto res = set_affinity(*config.cpu_affinity);
+
+        if ( ! res )
+            fprintf(stderr, "node '%s' failed to set CPU affinity: %s\n", node_name.data(), strerror(errno));
+    }
+
+    if ( ! config.env.empty() ) {
+        for ( const auto& e : config.env ) {
+            if ( setenv(e.first.c_str(), e.second.c_str(), true) == -1 ) {
+                fprintf(stderr, "node '%s' failed to setenv: %s\n", node_name.data(), strerror(errno));
+                exit(1);
+            }
+        }
+    }
+
+    if ( ! config.cluster.empty() && config.cluster != "{}" ) {
+        if ( setenv("CLUSTER_NODE", node_name.data(), true) == -1 ) {
+            fprintf(stderr, "node '%s' failed to setenv: %s\n", node_name.data(), strerror(errno));
+            exit(1);
+        }
+    }
+
+    options->filter_supervised_node_options();
+
+    if ( config.bare_mode )
+        options->bare_mode = *config.bare_mode;
+
+    if ( config.interface )
+        options->interface = *config.interface;
+
+    if ( config.pcap_file )
+        options->pcap_file = *config.pcap_file;
+
+    auto& stl = options->scripts_to_load;
+
+    stl.insert(stl.begin(), config.addl_base_scripts.begin(), config.addl_base_scripts.end());
+    stl.insert(stl.end(), config.addl_user_scripts.begin(), config.addl_user_scripts.end());
+}
+
+RecordValPtr Supervisor::Status(std::string_view node_name) {
+    auto rval = make_intrusive<RecordVal>(BifType::Record::Supervisor::Status);
+    const auto& tt = BifType::Record::Supervisor::Status->GetFieldType("nodes");
+    auto node_table_val = make_intrusive<TableVal>(cast_intrusive<TableType>(tt));
+    rval->Assign(0, node_table_val);
+
+    if ( node_name.empty() ) {
+        for ( const auto& [name, node] : nodes ) {
+            auto key = make_intrusive<StringVal>(name);
+            auto val = node.ToRecord();
+            node_table_val->Assign(std::move(key), std::move(val));
+        }
+    }
+    else {
+        auto it = nodes.find(node_name);
+
+        if ( it == nodes.end() )
+            return rval;
+
+        const auto& name = it->first;
+        const auto& node = it->second;
+        auto key = make_intrusive<StringVal>(name);
+        auto val = node.ToRecord();
+        node_table_val->Assign(std::move(key), std::move(val));
+    }
+
+    return rval;
+}
+
+std::string Supervisor::Create(const RecordVal* node_val) {
+    auto node = Supervisor::NodeConfig::FromRecord(node_val);
+    return Create(node);
+}
+
+std::string Supervisor::Create(const Supervisor::NodeConfig& node) {
+    if ( node.name.empty() )
+        return "node names must not be an empty string";
+
+    if ( node.name.find(' ') != std::string::npos )
+        return util::fmt("node names must not contain spaces: '%s'", node.name.data());
+
+    if ( nodes.contains(node.name) )
+        return util::fmt("node with name '%s' already exists", node.name.data());
+
+    if ( node.interface.has_value() && node.pcap_file.has_value() )
+        return util::fmt("node with name '%s' has interface and pcap_file set", node.name.data());
+
+    if ( node.directory ) {
+        auto res = util::detail::ensure_intermediate_dirs(node.directory->data());
+
+        if ( ! res )
+            return util::fmt("failed to create working directory %s\n", node.directory->data());
+    }
+
+    auto msg = make_create_message(node);
+    write_msg(stem_pipe, msg, &msg_buffer);
+    nodes.emplace(node.name, node);
+    return "";
+}
+
+bool Supervisor::Destroy(std::string_view node_name) {
+    auto send_destroy_msg = [this](std::string_view name) {
+        std::stringstream ss;
+        ss << "destroy " << name;
+        std::string msg = ss.str();
+        write_msg(stem_pipe, msg, &msg_buffer);
+    };
+
+    if ( node_name.empty() ) {
+        for ( const auto& n : nodes )
+            send_destroy_msg(n.first);
+
+        nodes.clear();
+        return true;
+    }
+
+    auto it = nodes.find(node_name);
+
+    if ( it == nodes.end() )
+        return false;
+
+    nodes.erase(it);
+    send_destroy_msg(node_name);
+    return true;
+}
+
+bool Supervisor::Restart(std::string_view node_name) {
+    auto send_restart_msg = [this](std::string_view name) {
+        std::stringstream ss;
+        ss << "restart " << name;
+        std::string msg = ss.str();
+        write_msg(stem_pipe, msg, &msg_buffer);
+    };
+
+    if ( node_name.empty() ) {
+        for ( const auto& n : nodes )
+            send_restart_msg(n.first);
+
+        return true;
+    }
+
+    if ( ! nodes.contains(node_name) )
+        return false;
+
+    send_restart_msg(node_name);
+    return true;
+}

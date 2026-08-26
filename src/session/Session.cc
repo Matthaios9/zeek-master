@@ -1,0 +1,241 @@
+// See the file "COPYING" in the main distribution directory for copyright.
+
+#include "zeek/session/Session.h"
+
+#include "zeek/Desc.h"
+#include "zeek/Event.h"
+#include "zeek/Func.h"
+#include "zeek/Reporter.h"
+#include "zeek/Stats.h"
+#include "zeek/Val.h"
+#include "zeek/analyzer/Analyzer.h"
+#include "zeek/session/Manager.h"
+
+namespace zeek::session {
+namespace detail {
+
+void Timer::Init(Session* arg_session, timer_func arg_timer, bool arg_do_expire) {
+    session = arg_session;
+    timer = arg_timer;
+    do_expire = arg_do_expire;
+    Ref(session);
+}
+
+Timer::~Timer() {
+    if ( session->RefCnt() < 1 )
+        reporter->InternalError("reference count inconsistency in session~Timer");
+
+    session->RemoveTimer(this);
+    Unref(session);
+}
+
+void Timer::Dispatch(double t, bool is_expire) {
+    if ( is_expire && ! do_expire )
+        return;
+
+    // Remove ourselves from the session's set of timers so
+    // it doesn't try to cancel us.
+    session->RemoveTimer(this);
+
+    (session->*timer)(t);
+
+    if ( session->RefCnt() < 1 )
+        reporter->InternalError("reference count inconsistency in session::Timer::Dispatch");
+}
+
+} // namespace detail
+
+Session::Session(double t, EventHandlerPtr timeout_event, EventHandlerPtr status_update_event,
+                 double status_update_interval)
+    : start_time(t),
+      last_time(t),
+      session_timeout_event(timeout_event),
+      session_status_update_event(status_update_event),
+      session_status_update_interval(status_update_interval) {
+    in_session_table = true;
+    record_contents = record_packets = 1;
+    record_current_packet = record_current_content = 0;
+    is_active = 1;
+    timers_canceled = 0;
+    inactivity_timeout = 0;
+    installed_status_timer = 0;
+    hist_seen = 0;
+}
+
+void Session::Event(EventHandlerPtr f, analyzer::Analyzer* analyzer, const char* name) {
+    if ( ! f )
+        return;
+
+    if ( name )
+        EnqueueEvent(f, analyzer, make_intrusive<StringVal>(name), GetVal());
+    else
+        EnqueueEvent(f, analyzer, GetVal());
+}
+
+void Session::EnqueueEvent(EventHandlerPtr f, analyzer::Analyzer* a, Args args) {
+    // "this" is passed as a cookie for the event
+    event_mgr.Enqueue(f, std::move(args), util::detail::SOURCE_LOCAL, a ? a->GetID() : 0, this);
+}
+
+void Session::Describe(ODesc* d) const {
+    d->Add(start_time);
+    d->Add("(");
+    d->Add(last_time);
+    d->AddSP(")");
+}
+
+void Session::SetLifetime(double lifetime) {
+    ADD_TIMER(&Session::DeleteTimer, run_state::network_time + lifetime, 0, zeek::detail::TIMER_CONN_DELETE);
+}
+
+void Session::SetInactivityTimeout(double timeout) {
+    if ( timeout == inactivity_timeout )
+        return;
+
+    // First cancel and remove any existing inactivity timer.
+    for ( const auto& timer : timers )
+        if ( timer->Type() == zeek::detail::TIMER_CONN_INACTIVITY ) {
+            zeek::detail::timer_mgr->Cancel(timer);
+            break;
+        }
+
+    if ( timeout )
+        ADD_TIMER(&Session::InactivityTimer, last_time + timeout, 0, zeek::detail::TIMER_CONN_INACTIVITY);
+
+    inactivity_timeout = timeout;
+}
+
+void Session::EnableStatusUpdateTimer() {
+    if ( installed_status_timer )
+        return;
+
+    if ( session_status_update_event && session_status_update_interval ) {
+        ADD_TIMER(&Session::StatusUpdateTimer, run_state::network_time + session_status_update_interval, 0,
+                  zeek::detail::TIMER_CONN_STATUS_UPDATE);
+        installed_status_timer = 1;
+    }
+}
+
+void Session::CancelTimers() {
+    // We are going to cancel our timers which, in turn, may cause them to
+    // call RemoveTimer(), which would then modify the list we're just
+    // traversing. Thus, we first make a copy of the list which we then
+    // iterate through.
+    TimerPList tmp(timers.length());
+    std::ranges::copy(timers, std::back_inserter(tmp));
+
+    for ( const auto& timer : tmp )
+        zeek::detail::timer_mgr->Cancel(timer);
+
+    timers_canceled = 1;
+    timers.clear();
+}
+
+void Session::DeleteTimer(double /* t */) {
+    if ( is_active )
+        Event(session_timeout_event, nullptr);
+
+    session_mgr->Remove(this);
+}
+
+void Session::AddTimer(timer_func timer, double t, bool do_expire, zeek::detail::TimerType type) {
+    if ( timers_canceled )
+        return;
+
+    // If the key is cleared, the session isn't stored in the session table
+    // anymore and will soon be deleted. We're not installed new timers
+    // anymore then.
+    if ( ! IsInSessionTable() )
+        return;
+
+    zeek::detail::Timer* conn_timer = new detail::Timer(this, timer, t, do_expire, type);
+    zeek::detail::timer_mgr->Add(conn_timer);
+    timers.push_back(conn_timer);
+}
+
+void Session::RemoveTimer(zeek::detail::Timer* t) { timers.remove(t); }
+
+void Session::InactivityTimer(double t) {
+    auto check_inactivity_from = last_time;
+
+    if ( last_time + inactivity_timeout <= t ) {
+        static const auto timing_out_hook = zeek::id::find_func("connection_timing_out");
+        if ( ! timing_out_hook || timing_out_hook->Invoke(GetVal())->IsOne() ) {
+            Event(session_timeout_event, nullptr);
+            session_mgr->Remove(this);
+            ++zeek::detail::killed_by_inactivity;
+
+            // Do not reset the timer.
+            return;
+        }
+
+        // The hooked stopped us! Wait inactivity_timeout time until
+        // checking again from this time, not from the last packet.
+        // Schedule the next timer based on this timer's expiry rather than
+        // the Session's last_time (last packet timestamp). Otherwise, the
+        // InactivityTimer expires right away again, causing infinite
+        // spinning.
+        check_inactivity_from = t;
+    }
+
+    ADD_TIMER(&Session::InactivityTimer, check_inactivity_from + inactivity_timeout, 0,
+              zeek::detail::TIMER_CONN_INACTIVITY);
+}
+
+void Session::StatusUpdateTimer(double t) {
+    EnqueueEvent(session_status_update_event, nullptr, GetVal());
+    ADD_TIMER(&Session::StatusUpdateTimer, run_state::network_time + session_status_update_interval, 0,
+              zeek::detail::TIMER_CONN_STATUS_UPDATE);
+}
+
+void Session::RemoveConnectionTimer(double t) {
+    RemovalEvent();
+    session_mgr->Remove(this);
+}
+
+AnalyzerConfirmationState Session::AnalyzerState(const zeek::Tag& tag) const {
+    auto it = analyzer_confirmations.find(tag);
+    if ( it == analyzer_confirmations.end() )
+        return AnalyzerConfirmationState::UNKNOWN;
+
+    return it->second;
+}
+
+void Session::SetAnalyzerState(const zeek::Tag& tag, AnalyzerConfirmationState value) {
+    analyzer_confirmations.insert_or_assign(tag, value);
+}
+
+bool Session::ScaledHistoryEntry(char code, uint32_t& counter, uint32_t& scaling_threshold, uint32_t scaling_base) {
+    if ( ++counter == scaling_threshold ) {
+        AddHistory(code);
+
+        auto new_threshold = scaling_threshold * scaling_base;
+
+        if ( new_threshold <= scaling_threshold )
+            // This can happen due to wrap-around.  In that
+            // case, reset the counter but leave the threshold
+            // unchanged.
+            counter = 0;
+
+        else
+            scaling_threshold = new_threshold;
+
+        return true;
+    }
+
+    return false;
+}
+
+void Session::HistoryThresholdEvent(EventHandlerPtr e, bool is_orig, uint32_t threshold) {
+    if ( ! e )
+        return;
+
+    if ( threshold == 1 )
+        // This will be far and away the most common case,
+        // and at this stage it's not a *multiple* instance.
+        return;
+
+    EnqueueEvent(e, nullptr, GetVal(), val_mgr->Bool(is_orig), val_mgr->Count(threshold));
+}
+
+} // namespace zeek::session

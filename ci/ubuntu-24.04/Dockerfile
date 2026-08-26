@@ -1,0 +1,88 @@
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND="noninteractive" TZ="America/Los_Angeles"
+
+# A version field used by Circle to create new versions on DockerHub
+# during rebuilds.
+ENV DOCKERFILE_VERSION=20260702
+
+# This is needed before the rest of the apt installations below so that
+# the certificate for llvm.org exists.
+RUN apt-get update && apt-get -y install ca-certificates wget
+RUN update-ca-certificates
+
+# Add the official repository for LLVM 22, plus the key for the repository
+RUN echo deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main >> /etc/apt/sources.list.d/llvm.list
+RUN echo deb-src http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main >> /etc/apt/sources.list.d/llvm.list
+RUN wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+
+RUN apt-get update && apt-get -y install \
+    bc \
+    bison \
+    bsdmainutils \
+    ccache \
+    clang-22 \
+    clang++-22 \
+    clang-tidy-22 \
+    cmake \
+    cppzmq-dev \
+    curl \
+    dnsmasq \
+    flex \
+    g++ \
+    gcc \
+    git \
+    jq \
+    lcov \
+    libhiredis-dev \
+    libkrb5-dev \
+    libmaxminddb-dev \
+    libnode-dev \
+    libpcap-dev \
+    libssl-dev \
+    make \
+    python3 \
+    python3-dev \
+    python3-git \
+    python3-pip \
+    python3-semantic-version \
+    redis-server \
+    ruby \
+    sqlite3 \
+    swig \
+    unzip \
+    wget \
+    zlib1g-dev \
+    libc++-dev \
+    libc++abi-dev \
+  && apt autoclean \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install --break-system-packages websockets junit2html
+RUN gem install coveralls-lcov
+
+# Ubuntu installs clang versions with the binaries having the version number
+# appended. Create a symlink for clang-tidy so cmake finds it correctly.
+RUN update-alternatives --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-22 1000
+
+# Download a newer pre-built ccache version that recognizes -fprofile-update=atomic
+# which is used when building with --coverage.
+#
+# This extracts the tarball into /opt/ccache-<version>-<platform> and
+# symlinks the executable to /usr/local/bin/ccache.
+#
+# See: https://ccache.dev/download.html
+ENV CCACHE_VERSION=4.10.2
+ENV CCACHE_PLATFORM=linux-x86_64
+ENV CCACHE_URL=https://github.com/ccache/ccache/releases/download/v${CCACHE_VERSION}/ccache-${CCACHE_VERSION}-${CCACHE_PLATFORM}.tar.xz
+ENV CCACHE_SHA256=80cab87bd510eca796467aee8e663c398239e0df1c4800a0b5dff11dca0b4f18
+RUN cd /opt \
+    && if [ "$(uname -p)" != "x86_64" ]; then echo "cannot use ccache pre-built for x86_64!" >&2; exit 1 ; fi \
+    && curl -L --fail --max-time 30 $CCACHE_URL -o ccache.tar.xz \
+    && sha256sum ./ccache.tar.xz >&2 \
+    && echo "${CCACHE_SHA256} ccache.tar.xz" | sha256sum -c - \
+    && tar xvf ./ccache.tar.xz \
+    && ln -s $(pwd)/ccache-${CCACHE_VERSION}-${CCACHE_PLATFORM}/ccache /usr/local/bin/ccache \
+    && test "$(command -v ccache)" = "/usr/local/bin/ccache" \
+    && test "$(ccache --print-version)" = "${CCACHE_VERSION}" \
+    && rm ./ccache.tar.xz

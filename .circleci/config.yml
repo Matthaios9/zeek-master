@@ -1,0 +1,63 @@
+version: 2.1
+setup: true
+
+orbs:
+  continuation: circleci/continuation@2.0.1
+
+jobs:
+  setup_job:
+    docker:
+      - image: cimg/python:3.10
+    steps:
+      - checkout
+      - run:
+          # This could be done with the path-filtering orb, but it would require rewriting
+          # everything else about the dynamic config and skip using the continuation
+          # orb. Checking the paths as part of the setup is a more surgical way to go
+          # about it.
+          name: Skip CI for doc- and markdown-only changes
+          command: |
+            if [ -n "$CIRCLE_PULL_REQUEST" ]; then
+              FILES=$(git diff --name-only origin/master...HEAD)
+              if [ -n "$FILES" ] && echo "$FILES" | grep -qvE '(^doc/|.*\.md$)'; then
+                echo "Non-doc/markdown changes found, continuing."
+              else
+                echo "Only doc/markdown changes, halting pipeline."
+                circleci-agent step halt
+              fi
+            fi
+      - run:
+          name: Generate workflow parameters
+          command: .circleci/generate-workflow-params.py
+      - continuation/continue:
+          configuration_path: .circleci/builds.yml
+          parameters: /tmp/parameters.json
+
+workflows:
+  setup:
+    when:
+      or:
+        - equal: [ "pull_request", << pipeline.event.name >> ]
+        - and:
+          # The check for the trigger type here prevents us from doing double builds on
+          # pushes to master. We only want to do them from the oauth trigger, which
+          # covers pushes to the default branch.
+          - equal: [ master, << pipeline.git.branch >> ]
+          - equal: [ github_oauth, << pipeline.trigger.type >> ]
+        - matches:
+            pattern: "^release/.*"
+            value: << pipeline.git.branch >>
+        - and:
+          # Similar to above, we only want one build to trigger off tag pushes.
+          - matches:
+              pattern: ^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$
+              value: << pipeline.git.tag >>
+          - equal: [ github_oauth, << pipeline.trigger.type >> ]
+        - equal: [ "nightly", << pipeline.schedule.name >> ]
+        - equal: [ "weekly", << pipeline.schedule.name >> ]
+    jobs:
+      - setup_job:
+          filters:
+            tags:
+              only:
+                - /^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$/

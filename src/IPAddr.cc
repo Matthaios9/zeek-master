@@ -1,0 +1,285 @@
+// See the file "COPYING" in the main distribution directory for copyright.
+
+#include "zeek/IPAddr.h"
+
+#include <charconv>
+#include <cstdlib>
+#include <string>
+
+#include "zeek/3rdparty/zeek_inet_ntop.h"
+#include "zeek/Hash.h"
+#include "zeek/Reporter.h"
+#include "zeek/ZeekString.h"
+
+namespace zeek {
+
+const IPAddr IPAddr::v4_unspecified = IPAddr(in4_addr{});
+const IPAddr IPAddr::v6_unspecified = IPAddr();
+
+IPAddr::IPAddr(const String& s) { Init(s.CheckString()); }
+
+std::unique_ptr<detail::HashKey> IPAddr::MakeHashKey() const {
+    return std::make_unique<detail::HashKey>(in6.s6_addr, sizeof(in6.s6_addr));
+}
+
+static inline uint32_t bit_mask32(int bottom_bits) {
+    if ( bottom_bits >= 32 )
+        return 0xffffffff;
+
+    return ((static_cast<uint32_t>(1)) << bottom_bits) - 1;
+}
+
+void IPAddr::Mask(int top_bits_to_keep) {
+    if ( top_bits_to_keep < 0 || top_bits_to_keep > 128 ) {
+        reporter->Error("Bad IPAddr::Mask value %d", top_bits_to_keep);
+        return;
+    }
+
+    uint32_t mask_bits[4] = {0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff};
+    std::ldiv_t res = std::ldiv(top_bits_to_keep, 32);
+
+    if ( res.quot < 4 )
+        mask_bits[res.quot] = htonl(mask_bits[res.quot] & ~bit_mask32(32 - res.rem));
+
+    for ( size_t i = res.quot + 1; i < 4; ++i )
+        mask_bits[i] = 0;
+
+    uint32_t* p = reinterpret_cast<uint32_t*>(in6.s6_addr);
+
+    for ( unsigned int i = 0; i < 4; ++i )
+        p[i] &= mask_bits[i];
+}
+
+void IPAddr::ReverseMask(int top_bits_to_chop) {
+    if ( top_bits_to_chop < 0 || top_bits_to_chop > 128 ) {
+        reporter->Error("Bad IPAddr::ReverseMask value %d", top_bits_to_chop);
+        return;
+    }
+
+    uint32_t mask_bits[4] = {0, 0, 0, 0};
+    std::ldiv_t res = std::ldiv(top_bits_to_chop, 32);
+
+    if ( res.quot < 4 )
+        mask_bits[res.quot] = htonl(bit_mask32(32 - res.rem));
+
+    for ( size_t i = res.quot + 1; i < 4; ++i )
+        mask_bits[i] = 0xffffffff;
+
+    uint32_t* p = reinterpret_cast<uint32_t*>(in6.s6_addr);
+
+    for ( unsigned int i = 0; i < 4; ++i )
+        p[i] &= mask_bits[i];
+}
+
+bool IPAddr::ConvertString(const char* s, in6_addr* result) {
+    for ( auto p = s; *p; ++p )
+        if ( *p == ':' )
+            // IPv6
+            return (inet_pton(AF_INET6, s, result->s6_addr) == 1);
+
+    // IPv4
+    // Parse the address directly instead of using inet_pton since
+    // some platforms have more sensitive implementations than others
+    // that can't e.g. handle leading zeroes.
+    int a[4];
+    int n = 0;
+    int match_count = sscanf(s, "%d.%d.%d.%d%n", a + 0, a + 1, a + 2, a + 3, &n);
+
+    if ( match_count != 4 )
+        return false;
+
+    if ( s[n] != '\0' )
+        return false;
+
+    for ( int num : a )
+        if ( num < 0 || num > 255 )
+            return false;
+
+    uint32_t addr = (static_cast<uint32_t>(a[0]) << 24) | (static_cast<uint32_t>(a[1]) << 16) |
+                    (static_cast<uint32_t>(a[2]) << 8) | a[3];
+    addr = htonl(addr);
+    memcpy(result->s6_addr, v4_mapped_prefix, sizeof(v4_mapped_prefix));
+    memcpy(&result->s6_addr[12], &addr, sizeof(uint32_t));
+    return true;
+}
+
+void IPAddr::Init(const char* s) {
+    if ( ! ConvertString(s, &in6) ) {
+        reporter->Error("Bad IP address: %s", s);
+        memset(in6.s6_addr, 0, sizeof(in6.s6_addr));
+    }
+}
+
+std::string IPAddr::AsString() const {
+    if ( GetFamily() == IPv4 ) {
+        char s[INET_ADDRSTRLEN];
+
+        if ( ! zeek_inet_ntop(AF_INET, &in6.s6_addr[12], s, INET_ADDRSTRLEN) )
+            return "<bad IPv4 address conversion";
+        else
+            return s;
+    }
+    else {
+        char s[INET6_ADDRSTRLEN];
+
+        if ( ! zeek_inet_ntop(AF_INET6, in6.s6_addr, s, INET6_ADDRSTRLEN) )
+            return "<bad IPv6 address conversion";
+        else
+            return s;
+    }
+}
+
+std::string IPAddr::AsHexString() const {
+    char buf[33];
+
+    if ( GetFamily() == IPv4 ) {
+        const uint32_t* p = reinterpret_cast<const uint32_t*>(&in6.s6_addr[12]);
+        snprintf(buf, sizeof(buf), "%08x", static_cast<uint32_t>(ntohl(*p)));
+    }
+    else {
+        const uint32_t* p = reinterpret_cast<const uint32_t*>(in6.s6_addr);
+        snprintf(buf, sizeof(buf), "%08x%08x%08x%08x", ntohl(p[0]), ntohl(p[1]), ntohl(p[2]), ntohl(p[3]));
+    }
+
+    return buf;
+}
+
+std::string IPAddr::PtrName() const {
+    if ( GetFamily() == IPv4 ) {
+        char buf[256];
+        const uint32_t* p = reinterpret_cast<const uint32_t*>(&in6.s6_addr[12]);
+        uint32_t a = ntohl(*p);
+        uint32_t a3 = (a >> 24) & 0xff;
+        uint32_t a2 = (a >> 16) & 0xff;
+        uint32_t a1 = (a >> 8) & 0xff;
+        uint32_t a0 = a & 0xff;
+        snprintf(buf, sizeof(buf), "%u.%u.%u.%u.in-addr.arpa", a0, a1, a2, a3);
+        return buf;
+    }
+    else {
+        static const char hex_digit[] = "0123456789abcdef";
+        std::string ptr_name("ip6.arpa");
+        const uint32_t* p = reinterpret_cast<const uint32_t*>(in6.s6_addr);
+
+        for ( unsigned int i = 0; i < 4; ++i ) {
+            uint32_t a = ntohl(p[i]);
+            for ( unsigned int j = 1; j <= 8; ++j ) {
+                ptr_name.insert(0, 1, '.');
+                ptr_name.insert(0, 1, hex_digit[(a >> (32 - j * 4)) & 0x0f]);
+            }
+        }
+
+        return ptr_name;
+    }
+}
+
+IPPrefix::IPPrefix(const in4_addr& in4, uint8_t length) : prefix(in4), length(96 + length) {
+    if ( length > 32 ) {
+        reporter->Error("Bad in4_addr IPPrefix length : %d", length);
+        this->length = 0;
+    }
+
+    prefix.Mask(this->length);
+}
+
+IPPrefix::IPPrefix(const in6_addr& in6, uint8_t length) : prefix(in6), length(length) {
+    if ( length > 128 ) {
+        reporter->Error("Bad in6_addr IPPrefix length : %d", length);
+        this->length = 0;
+    }
+
+    prefix.Mask(this->length);
+}
+
+bool IPAddr::CheckPrefixLength(uint8_t length, bool len_is_v6_relative) const {
+    if ( GetFamily() == IPv4 && ! len_is_v6_relative ) {
+        if ( length > 32 )
+            return false;
+    }
+
+    else {
+        if ( length > 128 )
+            return false;
+    }
+
+    return true;
+}
+
+IPPrefix::IPPrefix(const IPAddr& addr, uint8_t length, bool len_is_v6_relative) : prefix(addr) {
+    if ( prefix.CheckPrefixLength(length, len_is_v6_relative) ) {
+        if ( prefix.GetFamily() == IPv4 && ! len_is_v6_relative )
+            this->length = length + 96;
+        else
+            this->length = length;
+    }
+    else {
+        auto vstr = prefix.GetFamily() == IPv4 ? "v4" : "v6";
+        reporter->Error("Bad IPAddr(%s) IPPrefix length : %d", vstr, length);
+        this->length = 0;
+    }
+
+    prefix.Mask(this->length);
+}
+
+std::string IPPrefix::AsString() const {
+    std::string str = prefix.AsString() + "/";
+    size_t prefix_len = str.size();
+    str.resize(prefix_len + 16);
+
+    // length should only need 3 digits
+    assert(length >= 0 && length <= 128);
+
+    char* start = str.data() + prefix_len;
+    std::to_chars_result res;
+    if ( prefix.GetFamily() == IPv4 )
+        res = std::to_chars(start, start + 16, length - 96);
+    else
+        res = std::to_chars(start, start + 16, length);
+
+    // The string comes back from to_chars without a null terminator, but res.ptr shows
+    // what character needs to be null.
+    str.resize(res.ptr - str.data());
+    return str;
+}
+
+std::unique_ptr<detail::HashKey> IPPrefix::MakeHashKey() const {
+    struct {
+        in6_addr ip;
+        uint32_t len;
+    } key;
+
+    key.ip = prefix.in6;
+    key.len = Length();
+
+    return std::make_unique<detail::HashKey>(&key, sizeof(key));
+}
+
+bool IPPrefix::ConvertString(const char* text, IPPrefix* result) {
+    std::string s(text);
+    size_t slash_loc = s.find('/');
+
+    if ( slash_loc == std::string::npos )
+        return false;
+
+    auto ip_str = s.substr(0, slash_loc);
+    auto len = atoi(s.substr(slash_loc + 1).data());
+
+    in6_addr tmp;
+
+    if ( ! IPAddr::ConvertString(ip_str.data(), &tmp) )
+        return false;
+
+    // Set len_is_v6_relative=true if this looks like an IPv6 address to behave
+    // the same as when parsing subnet literals in the scripting language.
+    bool len_is_v6_relative = s.find(':') != std::string::npos;
+
+    auto ip = IPAddr(tmp);
+
+    if ( ! ip.CheckPrefixLength(len, len_is_v6_relative) )
+        return false;
+
+    *result = IPPrefix(ip, len, len_is_v6_relative);
+    return true;
+}
+
+} // namespace zeek

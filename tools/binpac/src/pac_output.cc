@@ -1,0 +1,74 @@
+// See the file "COPYING" in the main distribution directory for copyright.
+
+#include "pac_output.h"
+
+#include <cerrno>
+#include <cstdarg>
+#include <cstdio>
+#include <cstring>
+
+OutputException::OutputException(std::string arg_msg) : msg(std::move(arg_msg)) {}
+
+Output::Output(const string& filename) {
+    fp = fopen(filename.c_str(), "w");
+    if ( ! fp )
+        throw OutputException(strerror(errno));
+    indent_ = 0;
+}
+
+Output::~Output() {
+    if ( fp )
+        fclose(fp);
+}
+
+int Output::print(const char* fmt, va_list ap) {
+    int r = vfprintf(fp, fmt, ap);
+    if ( r == -1 )
+        throw OutputException(strerror(errno));
+    return r;
+}
+
+int Output::print(const char* fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    int r = -1;
+
+    try {
+        r = print(fmt, ap);
+    }
+
+    catch ( ... ) {
+        va_end(ap);
+        throw;
+    }
+
+    va_end(ap);
+    return r;
+}
+
+int Output::println(const char* fmt, ...) {
+    if ( strlen(fmt) == 0 ) {
+        fprintf(fp, "\n");
+        return 0;
+    }
+
+    for ( int i = 0; i < indent(); ++i )
+        fprintf(fp, "    ");
+
+    va_list ap;
+    va_start(ap, fmt);
+    int r = -1;
+
+    try {
+        r = print(fmt, ap);
+    }
+
+    catch ( ... ) {
+        va_end(ap);
+        throw;
+    }
+
+    va_end(ap);
+    fprintf(fp, "\n");
+    return r;
+}

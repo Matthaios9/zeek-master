@@ -1,0 +1,14 @@
+#! /usr/bin/env bash
+
+# The ZEEK_COVERALLS_REPO_TOKEN environment variable must exist for this script to work
+# correctly. On Circle, this is provided via the Zeek context.
+
+# Only do this on the main repo to avoid having a ton of data in Coveralls.
+if [ ${ZEEK_CI_INTERNAL_BUILD:-0} -ne 1 ]; then
+    echo "Coverage upload skipped for jobs from forks"
+    exit 0
+fi
+
+cd testing/coverage
+make coverage
+make coveralls

@@ -1,0 +1,115 @@
+# ---------------------------------------------------------------------------
+# Zeek .gitignore
+# ---------------------------------------------------------------------------
+
+# --- Large non-code trees (excluded on purpose for this fork) ---------------
+# Test suite: ~8k btest baselines + pcap traces (~107 MB)
+/testing/
+# Generated / prose documentation (~1.2k files)
+/doc/
+
+# --- Build output ---------------------------------------------------------
+/build/
+/build-*/
+build*/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+CTestTestfile.cmake
+install_manifest.txt
+compile_commands.json
+*.cmake.in.stamp
+build.ninja
+.ninja_deps
+.ninja_log
+_deps/
+
+# --- Compiled objects / libraries / binaries -----------------------------
+*.o
+*.obj
+*.lo
+*.slo
+*.la
+*.a
+*.lai
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.app
+*.gch
+*.pch
+
+# --- Generated sources (bifcl / gen-zam / bison / flex) -----------------
+# These are emitted into the build tree, which is already ignored above;
+# listed here too in case anyone builds in-source.
+*.bif.cc
+*.bif.h
+*.bif.init.cc
+*.bif.register.cc
+*.bif.func_def
+*.bif.func_h
+*.bif.func_init
+*.bif.netvar_def
+*.bif.netvar_h
+*.bif.netvar_init
+zeek-config.h
+zeek.bif.*
+*.tab.cc
+*.tab.hh
+lex.yy.cc
+
+# --- Python -------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- btest / test run artifacts (in case testing/ is ever tracked) -----
+.tmp/
+.btest.failed.dat
+diag.log
+.btest/
+btest-bg-*
+
+# --- Editor / IDE ------------------------------------------------------
+*~
+*.swp
+*.swo
+.#*
+\#*#
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.kdev4
+.clangd/
+.cache/
+tags
+TAGS
+cscope.*
+
+# --- OS ---------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# --- Misc -----------------------------------------------------------
+*.log
+*.pid
+core
+core.*
+*.orig
+*.rej

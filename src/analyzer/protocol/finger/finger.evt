@@ -1,0 +1,13 @@
+# See the file "COPYING" in the main distribution directory for copyright.
+
+%doc-id= Zeek::Finger;
+%doc-description = "Finger analyzer";
+
+protocol analyzer Finger over TCP:
+    parse originator with Finger::Request,
+    parse responder with Finger::Reply;
+
+import Finger;
+
+on Finger::Request -> event finger_request($conn, self.whois, self.user, self.host);
+on Finger::ReplyLine if ( |self.data| != 0 ) -> event finger_reply($conn, self.data);

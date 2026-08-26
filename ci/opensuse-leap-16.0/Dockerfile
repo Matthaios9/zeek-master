@@ -1,0 +1,35 @@
+FROM opensuse/leap:16.0
+
+# A version field used by Circle to create new versions on DockerHub
+# during rebuilds.
+ENV DOCKERFILE_VERSION=20260515
+
+RUN zypper refresh \
+ && zypper in -y \
+    bison \
+    ccache \
+    cmake \
+    curl \
+    dnsmasq \
+    flex \
+    gcc \
+    gcc-c++ \
+    git \
+    gzip \
+    jq \
+    libopenssl-devel \
+    libpcap-devel \
+    make \
+    openssh \
+    procps \
+    python313 \
+    python313-devel \
+    python313-pip \
+    swig \
+    tar \
+    which \
+    zeromq-devel \
+    zlib-devel \
+  && rm -rf /var/cache/zypp
+
+RUN pip3 install websockets junit2html

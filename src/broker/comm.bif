@@ -1,0 +1,259 @@
+%gen-native
+
+##! Functions and events regarding broker communication mechanisms.
+
+%%{
+#include "zeek/broker/Manager.h"
+%%}
+
+module Broker;
+
+## Generated when Broker emits an internal logging event.
+##
+## lvl: the severity of the event as reported by Broker.
+##
+## id: an identifier for the event type.
+##
+## description: a message providing additional context.
+event Broker::internal_log_event%(lvl: LogSeverityLevel, id: string, description: string%);
+
+## Generated when a new peering has been established. Both sides of the peering
+## receive this event, created independently in each endpoint. For the endpoint
+## establishing the peering, the added endpoint's network information will match
+## the address and port provided to :zeek:see:`Broker::peer`; for the listening
+## endpoint it's the peer's TCP client's address and (likely ephemeral) TCP
+## port.
+##
+## endpoint: the added endpoint's Broker ID and connection information.
+##
+## msg: a message providing additional context.
+##
+## .. zeek:see:: Broker::peer_removed Broker::peer_lost
+##    Broker::endpoint_discovered Broker::endpoint_unreachable
+##    Broker::status Broker::error
+event Broker::peer_added%(endpoint: EndpointInfo, msg: string%);
+
+## Generated when the local endpoint has removed its peering with another
+## endpoint. This event can fire for multiple reasons, such as a local call to
+## :zeek:see:`Broker::unpeer`, or because Broker autonomously decides to
+## unpeer. One reason it might do this is message I/O backpressure overflow,
+## meaning that the remote peer cannot keep up with the stream of messages the
+## local endpoint sends it. Regardless of the cause, the remote endpoint will
+## locally trigger a corresponding :zeek:see:`Broker::peer_lost` event once the
+## peering ends. These events are independent of the original directionality of
+## TCP connection establishment and only reflect which endpoint terminates the
+## peering.
+##
+## endpoint: the removed endpoint's Broker ID and connection information.
+##
+## msg: a message providing additional context. If backpressure overflow
+##      caused this unpeering, the message contains the string
+##      *caf::sec::backpressure_overflow*.
+##
+## .. zeek:see:: Broker::peer_added Broker::peer_lost
+##    Broker::endpoint_discovered Broker::endpoint_unreachable
+##    Broker::status Broker::error
+event Broker::peer_removed%(endpoint: EndpointInfo, msg: string%);
+
+## Generated when the local endpoint has lost its peering with another
+## endpoint. This event fires when the other endpoint stops or removes the
+## peering for some other reason. This event is independent of the original
+## directionality of connection establishment.
+##
+## endpoint: the lost endpoint's Broker ID and connection information.
+##
+## msg: a message providing additional context.
+##
+## .. zeek:see:: Broker::peer_added Broker::peer_removed
+##    Broker::endpoint_discovered Broker::endpoint_unreachable
+##    Broker::status Broker::error
+event Broker::peer_lost%(endpoint: EndpointInfo, msg: string%);
+
+## Generated when a new Broker endpoint appeared.
+event Broker::endpoint_discovered%(endpoint: EndpointInfo, msg: string%);
+
+## Generated when the last path to a Broker endpoint has been lost.
+event Broker::endpoint_unreachable%(endpoint: EndpointInfo, msg: string%);
+
+## Generated when an unspecified change occurs in Broker. This event only fires
+## when the status change isn't covered by more specific Broker events. The
+## provided message string may be empty.
+##
+## endpoint: the Broker ID and connection information, if available,
+##           of the endpoint the update relates to.
+##
+## msg: a message providing additional context.
+##
+## .. zeek:see:: Broker::peer_added Broker::peer_removed Broker::peer_lost
+##    Broker::endpoint_discovered Broker::endpoint_unreachable Broker::error
+event Broker::status%(endpoint: EndpointInfo, msg: string%);
+
+## Generated when an error occurs in the Broker sub-system. This event
+## reports local errors in Broker, as indicated by the provided
+## :zeek:type:`Broker::ErrorCode`.
+##
+## code: the type of error that triggered this event.
+##
+## msg: a message providing additional context.
+##
+## .. zeek:see:: Broker::peer_added Broker::peer_removed Broker::peer_lost
+##    Broker::endpoint_discovered Broker::endpoint_unreachable Broker::status
+event Broker::error%(code: ErrorCode, msg: string%);
+
+## Enumerates the possible error types.
+enum ErrorCode %{
+	NO_ERROR                         =   0,
+	UNSPECIFIED                      =   1,
+	PEER_INCOMPATIBLE                =   2,
+	PEER_INVALID                     =   3,
+	PEER_UNAVAILABLE                 =   4,
+	PEER_DISCONNECT_DURING_HANDSHAKE =   5,
+	PEER_TIMEOUT                     =   6,
+	MASTER_EXISTS                    =   7,
+	NO_SUCH_MASTER                   =   8,
+	NO_SUCH_KEY                      =   9,
+	REQUEST_TIMEOUT                  =  10,
+	TYPE_CLASH                       =  11,
+	INVALID_DATA                     =  12,
+	BACKEND_FAILURE                  =  13,
+	STALE_DATA                       =  14,
+	CANNOT_OPEN_FILE                 =  15,
+	CANNOT_WRITE_FILE                =  16,
+	INVALID_TOPIC_KEY                =  17,
+	END_OF_FILE                      =  18,
+	INVALID_TAG                      =  19,
+	INVALID_STATUS                   =  20,
+	CAF_ERROR                        = 100,
+%}
+
+enum PeerStatus %{
+	INITIALIZING,
+	CONNECTING,
+	CONNECTED,
+	PEERED,
+	DISCONNECTED,
+	RECONNECTING,
+%}
+
+function Broker::__listen%(a: string, p: port%): port
+	%{
+	zeek::Broker::Manager::ScriptScopeGuard ssg;
+
+	if ( ! p->IsTCP() )
+		{
+		zeek::emit_builtin_error("listen port must use tcp");
+		return zeek::val_mgr->Port(0, TRANSPORT_UNKNOWN);
+		}
+
+	auto rval = broker_mgr->Listen(a->Len() ? a->CheckString() : "", p->Port());
+	return zeek::val_mgr->Port(rval, TRANSPORT_TCP);
+	%}
+
+function Broker::__peer%(a: string, p: port, retry: interval%): bool
+	%{
+	zeek::Broker::Manager::ScriptScopeGuard ssg;
+
+	if ( ! p->IsTCP() )
+		{
+		zeek::emit_builtin_error("remote connection port must use tcp");
+		return false;
+		}
+
+	broker_mgr->Peer(a->CheckString(), p->Port(), retry);
+	return true;
+	%}
+
+function Broker::__peer_no_retry%(a: string, p: port%): bool
+	%{
+	zeek::Broker::Manager::ScriptScopeGuard ssg;
+
+	if ( ! p->IsTCP() )
+		{
+		zeek::emit_builtin_error("remote connection port must use tcp");
+		return false;
+		}
+
+	broker_mgr->PeerNoRetry(a->CheckString(), p->Port());
+	return true;
+	%}
+
+function Broker::__unpeer%(a: string, p: port%): bool
+	%{
+	zeek::Broker::Manager::ScriptScopeGuard ssg;
+
+	if ( ! p->IsTCP() )
+		{
+		zeek::emit_builtin_error("remote connection port must use tcp");
+		return false;
+		}
+
+	broker_mgr->Unpeer(a->CheckString(), p->Port());
+	return true;
+	%}
+
+function Broker::__is_outbound_peering%(a: string, p: port%): bool
+	%{
+	zeek::Broker::Manager::ScriptScopeGuard ssg;
+	return broker_mgr->IsOutboundPeering(a->CheckString(), p->Port());
+	%}
+
+function Broker::__peers%(%): PeerInfos
+	%{
+	zeek::Broker::Manager::ScriptScopeGuard ssg;
+	auto rval = zeek::make_intrusive<zeek::VectorVal>(zeek::id::find_type<VectorType>("Broker::PeerInfos"));
+	auto i = 0;
+
+	for ( auto& p : broker_mgr->Peers() )
+		{
+		const auto& pi = zeek::id::find_type<RecordType>("Broker::PeerInfo");
+		const auto& ei = zeek::id::find_type<RecordType>("Broker::EndpointInfo");
+		const auto& ni = zeek::id::find_type<RecordType>("Broker::NetworkInfo");
+		auto peer_info = zeek::make_intrusive<zeek::RecordVal>(pi);
+		auto endpoint_info = zeek::make_intrusive<zeek::RecordVal>(ei);
+		auto network_info = zeek::make_intrusive<zeek::RecordVal>(ni);
+		auto n = p.peer.network;
+
+		if ( n )
+			{
+			network_info->Assign(0, zeek::make_intrusive<zeek::StringVal>(n->address));
+			network_info->Assign(1, zeek::val_mgr->Port(n->port, TRANSPORT_TCP));
+			}
+		else
+			{
+			network_info->Assign(0, zeek::make_intrusive<zeek::StringVal>("0.0.0.0"));
+			network_info->Assign(1, zeek::val_mgr->Port(0, TRANSPORT_TCP));
+			}
+
+		endpoint_info->Assign(0, to_string(p.peer.node));
+		endpoint_info->Assign(1, std::move(network_info));
+
+		auto ps = static_cast<BifEnum::Broker::PeerStatus>(p.status);
+		peer_info->Assign(0, std::move(endpoint_info));
+		peer_info->Assign(1, zeek::BifType::Enum::Broker::PeerStatus->GetEnumVal(ps));
+
+		// Broker has an existing concept of peer flags, see the broker::peer_info
+		// and broker::peer_flags structs. They currently aren't currently, but
+		// we can update the following logic once they are.
+
+		if ( p.peer.network.has_value() )
+			peer_info->Assign(2, zeek::val_mgr->Bool(broker_mgr->IsOutboundPeering(p.peer.network.value())));
+		else
+			peer_info->Assign(2, zeek::val_mgr->False());
+
+		rval->Assign(i, std::move(peer_info));
+		++i;
+		}
+
+	return rval;
+	%}
+
+function Broker::__node_id%(%): string
+	%{
+	zeek::Broker::Manager::ScriptScopeGuard ssg;
+	return zeek::make_intrusive<zeek::StringVal>(broker_mgr->NodeId());
+	%}
+
+function Broker::__peering_stats%(%): BrokerPeeringStatsTable
+	%{
+	return broker_mgr->GetPeeringStatsTable();
+	%}

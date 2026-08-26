@@ -1,0 +1,46 @@
+// See the file "COPYING" in the main distribution directory for copyright.
+
+#include "zeek/packet_analysis/protocol/snap/SNAP.h"
+
+using namespace zeek::packet_analysis::SNAP;
+
+SNAPAnalyzer::SNAPAnalyzer() : zeek::packet_analysis::Analyzer("SNAP") {}
+
+bool SNAPAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* packet) {
+    // The first part of the header is an LLC header, which we need to determine the
+    // length of the full header. Check to see if the shorter 3-byte version will fit.
+    if ( len < 3 ) {
+        Weird("truncated_snap_llc_header", packet);
+        return false;
+    }
+
+    // If the control field doesn't have an unnumbered PDU, the header is actually 4
+    // bytes long. Whether this is unnumbered is denoted by the last two bits being
+    // set.
+    size_t llc_header_len = 3;
+    if ( (data[2] & 0x03) != 0x03 )
+        llc_header_len++;
+
+    // Check the full length of the SNAP header, which is the LLC header plus 5 bytes.
+    if ( len < llc_header_len + 5 ) {
+        Weird("truncated_snap_header", packet);
+        return false;
+    }
+
+    data += llc_header_len;
+    len -= llc_header_len;
+
+    int oui = (static_cast<uint32_t>(data[0]) << 16u) | (static_cast<uint32_t>(data[1]) << 8u) | data[2];
+    int protocol = (static_cast<uint32_t>(data[3]) << 8u) | data[4];
+
+    data += 5;
+    len -= 5;
+
+    // Protocol values for SNAP can differ based what OUI publishes them, so use a
+    // combination of them for the identifier used to forward.
+    int64_t identifier = oui;
+    identifier <<= 16;
+    identifier |= protocol;
+
+    return ForwardPacket(len, data, packet, identifier);
+}

@@ -1,0 +1,600 @@
+# See the file "COPYING" in the main distribution directory for copyright.
+#
+# Handle any Redis-specific "parsing"
+
+module Redis;
+
+import RESP;
+
+# Max size we will stringify into. This can limit logs output size and copies.
+# Allow configuring max size via Zeek, but don't include if building separate.
+@if HAVE_ZEEK
+import zeek;
+global _max_value_size: optional<uint64>; function max_value_size(): uint64 {
+    if (!_max_value_size) {
+        _max_value_size = zeek::get_count("Redis::max_value_size");
+        # If 0, cap at where the RESP parser would stop.
+        # While this can technically still cap it, that threshold should be high enough
+        # that it wouldn't happen with realistic input.
+        if (*_max_value_size == 0)
+            _max_value_size = RESP::MAX_SIZE;
+    }
+    return *_max_value_size;
+}
+@else
+function max_value_size(): uint64 {
+    return 250;
+}
+@endif
+
+public type RedisCommand = enum {
+    APPEND,
+    AUTH,
+    BITCOUNT,
+    BITFIELD,
+    BITFIELD_RO,
+    BITOP,
+    BITPOS,
+    BLMPOP,
+    BLPOP,
+    BRPOP,
+    CLIENT,
+    COPY,
+    DECR,
+    DECRBY,
+    DEL,
+    DUMP,
+    EXISTS,
+    EXPIRE,
+    EXPIREAT,
+    EXPIRETIME,
+    GET,
+    GETBIT,
+    GETDEL,
+    GETEX,
+    GETRANGE,
+    GETSET,
+    HDEL,
+    HELLO,
+    HGET,
+    HSET,
+    INCR,
+    INCRBY,
+    KEYS,
+    MGET,
+    MOVE,
+    MSET,
+    PERSIST,
+    PSUBSCRIBE,
+    PUNSUBSCRIBE,
+    QUIT,
+    RENAME,
+    RESET,
+    SET,
+    STRLEN,
+    SUBSCRIBE,
+    SSUBSCRIBE,
+    SUNSUBSCRIBE,
+    TTL,
+    TYPE,
+    UNSUBSCRIBE,
+};
+
+type Command = struct {
+    raw: vector<bytes>;
+    name: bytes;
+    key: optional<bytes>;
+    value: optional<bytes>;
+    known: optional<RedisCommand>;
+};
+
+# This just assumes all elements in the array is a bulk string and puts them in a vector
+public function make_command(command: RESP::ClientData): Command {
+    if (command?.multibulk)
+        return bulk_command(command);
+    else
+        return inline_command(command);
+}
+
+public function bulk_command(command: RESP::ClientData): Command {
+    local v: vector<bytes>;
+    for (ele in command.multibulk.elements) {
+        v.push_back(ele.content.sub(0, max_value_size()));
+    }
+    return parse_command(v);
+}
+
+public function inline_command(command: RESP::ClientData): Command {
+    # Only call this if it's inline :)
+    assert command?.inline;
+
+    local tokenized: vector<bytes>;
+    local it = command.inline.at(0);
+    # Redis whitespace characters are null, tab, LF, CR, and space
+    local whitespace = set<uint8>(0, 9, 10, 13, 32);
+    # Note: this logic is a bit different from Redis. Hopefully it doesn't matter
+    while (True) {
+        while (it != end(command.inline) && ((*it) in whitespace))
+            it++;
+
+        # Get a token
+        local start = it;
+        if (it != end(command.inline)) {
+            local double_quotes = False;
+            local single_quotes = False;
+            local done = False;
+            while (!done) {
+                if (double_quotes) {
+                    if (*it == '\' && it + 1 != end(command.inline) && *(it + 1) == '"') {
+                        # Skip one, then later we skip another
+                        it++;
+                    } else if (*it == '"') {
+                        double_quotes = False;
+                    }
+
+                    it++;
+                } else if (single_quotes) {
+                    if (*it == '\' && it + 1 != end(command.inline) && *(it + 1) == ''') {
+                        # Skip one, then later we skip another
+                        it++;
+                    } else if (*it == ''') {
+                        single_quotes = False;
+                    }
+
+                    it++;
+                } else {
+                    if (it != end(command.inline)) {
+                        switch (*it) {
+                            case '"': double_quotes = True;
+                            case ''': single_quotes = True;
+                            default: {
+                                if ((*it) in whitespace)
+                                    done = True;
+                            }
+                        }
+
+                        if (!done)
+                            it++;
+                    }
+                }
+
+                if (it == end(command.inline))
+                    done = True;
+            }
+        } else
+            break;
+
+        # Cap each element of the raw command at max_value_size()
+        tokenized.push_back(command.inline.sub(start, it).sub(0, max_value_size()));
+    }
+    return parse_command(tokenized);
+}
+
+# Parses the vector of bytes to get a Command object
+function parse_command(raw: vector<bytes>): Command {
+    assert |raw| >= 1;
+    local cmd = command_from(raw[0]);
+    local parsed: Command = [$raw = raw, $name = raw[0], $key = Null, $value = Null, $known = cmd];
+    if (!cmd)
+        return parsed;
+
+    if (|raw| >= 2) {
+        switch (*cmd) {
+            case RedisCommand::KEYS:
+                parsed.key = raw[1];
+            case RedisCommand::APPEND,
+                 RedisCommand::BITCOUNT,
+                 RedisCommand::BITFIELD,
+                 RedisCommand::BITFIELD_RO,
+                 RedisCommand::BITPOS,
+                 RedisCommand::BLPOP,
+                 RedisCommand::BRPOP,
+                 RedisCommand::COPY,
+                 RedisCommand::DECR,
+                 RedisCommand::DECRBY,
+                 RedisCommand::DEL,
+                 RedisCommand::DUMP,
+                 RedisCommand::EXISTS,
+                 RedisCommand::EXPIRE,
+                 RedisCommand::EXPIREAT,
+                 RedisCommand::EXPIRETIME,
+                 RedisCommand::GET,
+                 RedisCommand::GETBIT,
+                 RedisCommand::GETDEL,
+                 RedisCommand::GETEX,
+                 RedisCommand::GETRANGE,
+                 RedisCommand::GETSET,
+                 RedisCommand::HDEL,
+                 RedisCommand::HGET,
+                 RedisCommand::HSET,
+                 RedisCommand::INCR,
+                 RedisCommand::INCRBY,
+                 RedisCommand::MGET,
+                 RedisCommand::MOVE,
+                 RedisCommand::MSET,
+                 RedisCommand::PERSIST,
+                 RedisCommand::RENAME,
+                 RedisCommand::SET,
+                 RedisCommand::STRLEN,
+                 RedisCommand::TTL,
+                 RedisCommand::TYPE:
+                parsed.key = raw[1];
+            default: ();
+        }
+    }
+
+    if (|raw| >= 3) {
+        switch (*cmd) {
+            case RedisCommand::SET,
+                 RedisCommand::APPEND,
+                 RedisCommand::DECRBY,
+                 RedisCommand::EXPIRE,
+                 RedisCommand::EXPIREAT,
+                 RedisCommand::GETBIT,
+                 RedisCommand::GETSET,
+                 RedisCommand::HDEL,
+                 RedisCommand::HGET,
+                 RedisCommand::INCRBY,
+                 RedisCommand::MOVE,
+                 RedisCommand::MSET,
+                 RedisCommand::RENAME:
+                parsed.value = raw[2];
+            # Op first, destination second, then a list of keys. Just log dest
+            case RedisCommand::BITOP: parsed.key = raw[2];
+            default: ();
+        }
+    }
+
+    if (|raw| >= 4) {
+        switch (*cmd) {
+            # timeout, numkeys, then key
+            case RedisCommand::BLMPOP: parsed.key = raw[3];
+            default: ();
+        }
+    }
+
+    return parsed;
+}
+
+function command_from(cmd_bytes: bytes): optional<RedisCommand> {
+    local cmd: optional<RedisCommand> = Null;
+    switch (cmd_bytes.lower()) {
+        case b"append": cmd = RedisCommand::APPEND;
+        case b"auth": cmd = RedisCommand::AUTH;
+        case b"bitcount": cmd = RedisCommand::BITCOUNT;
+        case b"bitfield": cmd = RedisCommand::BITFIELD;
+        case b"bitfield_ro": cmd = RedisCommand::BITFIELD_RO;
+        case b"bitop": cmd = RedisCommand::BITOP;
+        case b"bitpos": cmd = RedisCommand::BITPOS;
+        case b"blmpop": cmd = RedisCommand::BLMPOP;
+        case b"blpop": cmd = RedisCommand::BLPOP;
+        case b"brpop": cmd = RedisCommand::BRPOP;
+        case b"client": cmd = RedisCommand::CLIENT;
+        case b"copy": cmd = RedisCommand::COPY;
+        case b"decr": cmd = RedisCommand::DECR;
+        case b"decrby": cmd = RedisCommand::DECRBY;
+        case b"del": cmd = RedisCommand::DEL;
+        case b"dump": cmd = RedisCommand::DUMP;
+        case b"exists": cmd = RedisCommand::EXISTS;
+        case b"expire": cmd = RedisCommand::EXPIRE;
+        case b"expireat": cmd = RedisCommand::EXPIREAT;
+        case b"expiretime": cmd = RedisCommand::EXPIRETIME;
+        case b"get": cmd = RedisCommand::GET;
+        case b"getbit": cmd = RedisCommand::GETBIT;
+        case b"getdel": cmd = RedisCommand::GETDEL;
+        case b"getex": cmd = RedisCommand::GETEX;
+        case b"getrange": cmd = RedisCommand::GETRANGE;
+        case b"getset": cmd = RedisCommand::GETSET;
+        case b"hdel": cmd = RedisCommand::HDEL;
+        case b"hello": cmd = RedisCommand::HELLO;
+        case b"hget": cmd = RedisCommand::HGET;
+        case b"hset": cmd = RedisCommand::HSET;
+        case b"incr": cmd = RedisCommand::INCR;
+        case b"incrby": cmd = RedisCommand::INCRBY;
+        case b"keys": cmd = RedisCommand::KEYS;
+        case b"mget": cmd = RedisCommand::MGET;
+        case b"move": cmd = RedisCommand::MOVE;
+        case b"mset": cmd = RedisCommand::MSET;
+        case b"persist": cmd = RedisCommand::PERSIST;
+        case b"psubscribe": cmd = RedisCommand::PSUBSCRIBE;
+        case b"punsubscribe": cmd = RedisCommand::PUNSUBSCRIBE;
+        case b"quit": cmd = RedisCommand::QUIT;
+        case b"rename": cmd = RedisCommand::RENAME;
+        case b"reset": cmd = RedisCommand::RESET;
+        case b"set": cmd = RedisCommand::SET;
+        case b"strlen": cmd = RedisCommand::STRLEN;
+        case b"ssubscribe": cmd = RedisCommand::SSUBSCRIBE;
+        case b"subscribe": cmd = RedisCommand::SUBSCRIBE;
+        case b"sunsubscribe": cmd = RedisCommand::SUNSUBSCRIBE;
+        case b"ttl": cmd = RedisCommand::TTL;
+        case b"type": cmd = RedisCommand::TYPE;
+        case b"unsubscribe": cmd = RedisCommand::UNSUBSCRIBE;
+        default: cmd = Null;
+    }
+
+    return cmd;
+}
+
+type Set = struct {
+    key: bytes;
+    value: bytes;
+    nx: bool &default=False;
+    xx: bool &default=False;
+    get: bool &default=False;
+    ex: optional<uint64> &default=Null;
+    px: optional<uint64> &default=Null;
+    exat: optional<uint64> &default=Null;
+    pxat: optional<uint64> &default=Null;
+    keep_ttl: bool &default=False;
+};
+
+public function make_set(command: Command): Set {
+    assert |command.raw| >= 3 : "Must have at least 3 elements in SET";
+    assert command.key : "SET must validate a key";
+    assert command.value : "SET must validate a value";
+    local parsed: Set = [$key = *command.key, $value = *command.value];
+    local i = 3;
+    while (i < |command.raw|) {
+        switch (command.raw[i].lower()) {
+            case b"nx": parsed.nx = True;
+            case b"xx": parsed.xx = True;
+            case b"get": parsed.get = True;
+            case b"ex": {
+                ++i;
+                if (i >= |command.raw|)
+                    break;
+                parsed.ex = command.raw[i].to_uint();
+            }
+            case b"px": {
+                ++i;
+                if (i >= |command.raw|)
+                    break;
+                parsed.px = command.raw[i].to_uint();
+            }
+            case b"exat": {
+                ++i;
+                if (i >= |command.raw|)
+                    break;
+                parsed.exat = command.raw[i].to_uint();
+            }
+            case b"pxat": {
+                ++i;
+                if (i >= |command.raw|)
+                    break;
+                parsed.pxat = command.raw[i].to_uint();
+            }
+            case b"keepttl": parsed.keep_ttl = True;
+            default: ();
+        }
+
+        ++i;
+    }
+    return parsed;
+}
+
+public function is_set(data: RESP::ClientData): bool {
+    return data.command.known && *(data.command.known) == RedisCommand::SET && data.command.key && data.command.value;
+}
+
+type Get = struct {
+    key: bytes;
+};
+
+public function make_get(command: Command): Get {
+    assert command.key : "GET must validate a key";
+    return [$key = *command.key];
+}
+
+public function is_get(data: RESP::ClientData): bool {
+    return data.command.known && *(data.command.known) == RedisCommand::GET && |data.command.raw| >= 2;
+}
+
+type Auth = struct {
+    username: optional<bytes>;
+    password: bytes;
+};
+
+public function make_auth(command: Command): Auth {
+    assert |command.raw| >= 2 : "AUTH must have arguments";
+    if (|command.raw| == 2) {
+        return [$username = Null, $password = command.raw[1]];
+    }
+
+    return [$username = command.raw[1], $password = command.raw[2]];
+}
+
+public function is_auth(data: RESP::ClientData): bool {
+    return data.command.known && *(data.command.known) == RedisCommand::AUTH && |data.command.raw| >= 2;
+}
+
+type Hello = struct {
+    requested_resp_version: optional<bytes>;
+};
+
+public function make_hello(command: Command): Hello {
+    local hi: Hello = [$requested_resp_version = Null];
+    if (|command.raw| > 1)
+        hi.requested_resp_version = command.raw[1];
+    return hi;
+}
+
+public function is_hello(data: RESP::ClientData): bool {
+    return data.command.known && *(data.command.known) == RedisCommand::HELLO;
+}
+
+type ReplyData = struct {
+    attributes: optional<bytes>;
+    value: bytes;
+    min_protocol_version: uint8;
+};
+
+public type ReplyType = enum {
+    Reply, # A response to a command
+    Error, # An error response to a command
+    Push, # A server message that is not responding to a command
+};
+
+public function classify(server_data: RESP::ServerData): ReplyType {
+    if (server_data.data?.simple_error || server_data.data?.bulk_error)
+        return ReplyType::Error;
+
+    # We can tell with RESP3 this is push here, but RESP2 relies on scripts
+    if (server_data.data?.push)
+        return ReplyType::Push;
+
+    return ReplyType::Reply;
+}
+
+# Appends bytes to an inout param, not exceeding a given amount.
+# Returns whether more can be appended.
+function append(inout res: bytes, chunk: bytes): bool {
+    local current_len = |res|;
+    if (current_len >= max_value_size())
+        return False;
+
+    if (current_len + |chunk| > max_value_size()) {
+        res += chunk.sub(0, max_value_size() - current_len);
+        return False;
+    } else
+        res += chunk;
+
+    return True;
+}
+
+function bulk_string_content(bulk: RESP::BulkString): bytes {
+    if (bulk?.content)
+        return bulk.content;
+    else
+        return b"";
+}
+
+function stringify_map(inout res: bytes, data: RESP::Map&): bool {
+    append(res, b"{");
+    local first = True;
+    local i = 0;
+    # num_elements refers to the number of map entries, each with 2 entries
+    # in the raw data
+    while (i < data.num_elements) {
+        local room_available = True;
+        if (!first)
+            room_available = append(res, b", ");
+
+        room_available = stringify(res, data.raw_data[i * 2]);
+        room_available = append(res, b": ");
+        room_available = stringify(res, data.raw_data[(i * 2) + 1]);
+        i += 1;
+        first = False;
+        if (!room_available)
+            return False;
+    }
+
+    return append(res, b"}");
+}
+
+# Returns the bytes string value of this, or Null if it cannot.
+function stringify(inout res: bytes, data: RESP::Data&): bool {
+    if (data?.simple_string)
+        return append(res, data.simple_string.content);
+    else if (data?.simple_error)
+        return append(res, data.simple_error.content);
+    else if (data?.integer)
+        return append(res, data.integer.val);
+    else if (data?.bulk_string)
+        return append(res, bulk_string_content(data.bulk_string));
+    else if (data?.array) {
+        append(res, b"[");
+        local first = True;
+        for (ele in data.array.elements) {
+            local room_available = True;
+            if (!first)
+                room_available = append(res, b", ");
+
+            room_available = stringify(res, ele);
+
+            if (!room_available)
+                return False;
+
+            first = False;
+        }
+        return append(res, b"]");
+    } else if (data?.null)
+        return append(res, b"null");
+    else if (data?.boolean)
+        return append(res, data.boolean.val ? b"T" : b"F");
+    else if (data?.double)
+        return append(res, data.double.val);
+    else if (data?.big_num)
+        return append(res, data.big_num.val);
+    else if (data?.bulk_error)
+        return append(res, bulk_string_content(data.bulk_error));
+    else if (data?.verbatim_string)
+        return append(res, bulk_string_content(data.verbatim_string));
+    else if (data?.map_) {
+        return stringify_map(res, data.map_);
+    } else if (data?.set_) {
+        append(res, b"(");
+        local first = True;
+        for (ele in data.set_.elements) {
+            local room_available = True;
+            if (!first)
+                room_available = append(res, b", ");
+
+            room_available = stringify(res, ele);
+
+            if (!room_available)
+                return False;
+
+            first = False;
+        }
+
+        return append(res, b")");
+    } else if (data?.push) {
+        append(res, b"[");
+        local first = True;
+        for (ele in data.push.elements) {
+            local room_available = True;
+            if (!first)
+                room_available = append(res, b", ");
+
+            room_available = stringify(res, ele);
+
+            if (!room_available)
+                return False;
+
+            first = False;
+        }
+
+        return append(res, b"]");
+    }
+
+    throw "unknown RESP type";
+}
+
+# Gets the server reply in a simpler form
+public function make_server_reply(data: RESP::ServerData): ReplyData {
+    local min_protocol_version: uint8 = 2;
+    switch (data.data.ty) {
+        case RESP::DataType::NULL,
+             RESP::DataType::BOOLEAN,
+             RESP::DataType::DOUBLE,
+             RESP::DataType::BIG_NUM,
+             RESP::DataType::BULK_ERROR,
+             RESP::DataType::VERBATIM_STRING,
+             RESP::DataType::MAP,
+             RESP::DataType::SET,
+             RESP::DataType::PUSH: min_protocol_version = 3;
+        default: min_protocol_version = 2;
+    }
+
+    local opt_attributes: optional<bytes> = Null;
+    if (data.data?.attributes) {
+        local attributes = b"";
+        min_protocol_version = 3;
+        stringify_map(attributes, data.data.attributes);
+        opt_attributes = attributes;
+    }
+
+    local data_str = b"";
+    stringify(data_str, data.data);
+    return [$attributes = opt_attributes, $value = data_str, $min_protocol_version = min_protocol_version];
+}
