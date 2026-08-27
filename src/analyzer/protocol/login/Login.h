@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -7,20 +7,20 @@
 namespace zeek::analyzer::login {
 
 enum login_state : uint8_t {
-    LOGIN_STATE_AUTHENTICATE, // trying to authenticate
-    LOGIN_STATE_LOGGED_IN,    // successful authentication
-    LOGIN_STATE_SKIP,         // skip any further processing
-    LOGIN_STATE_CONFUSED,     // we're confused
+    LOGIN_STATE_AUTHENTICATE,
+    LOGIN_STATE_LOGGED_IN,
+    LOGIN_STATE_SKIP,
+    LOGIN_STATE_CONFUSED,
 };
 
-// If no action by this many lines, we're definitely confused.
+
 constexpr int MAX_AUTHENTICATE_LINES = 50;
 
-// Maximum # lines look after login for failure.
+
 constexpr int MAX_LOGIN_LOOKAHEAD = 10;
 
-// If we have more user text than this unprocessed, we complain about
-// excessive typeahead.
+
+
 constexpr int MAX_USER_TEXT = 12;
 
 class Login_Analyzer : public analyzer::tcp::TCP_ApplicationAnalyzer {
@@ -49,16 +49,16 @@ protected:
 
     bool IsPloy(const char* line);
     bool IsSkipAuthentication(const char* line) const;
-    const char* IsLoginPrompt(const char* line) const; // nil if not
+    const char* IsLoginPrompt(const char* line) const;
     bool IsDirectLoginPrompt(const char* line) const;
     bool IsFailureMsg(const char* line) const;
     bool IsSuccessMsg(const char* line) const;
     bool IsTimeout(const char* line) const;
     bool IsEmpty(const char* line) const;
 
-    void AddUserText(const char* line); // complains on overflow
-    char* PeekUserText();               // internal warning on underflow
-    char* PopUserText();                // internal warning on underflow
+    void AddUserText(const char* line);
+    char* PeekUserText();
+    char* PopUserText();
     Val* PopUserTextVal();
 
     bool MatchesTypeahead(const char* line) const;
@@ -66,11 +66,11 @@ protected:
     void FlushEmptyTypeahead();
 
     char* user_text[MAX_USER_TEXT] = {nullptr};
-    int user_text_first, user_text_last; // indices into user_text
-    int num_user_text;                   // number of entries in user_text
+    int user_text_first, user_text_last;
+    int num_user_text;
 
-    Val* username;    // last username reported
-    Val* client_name; // rlogin client name (or nil if none)
+    Val* username;
+    Val* client_name;
 
     login_state state;
     int lines_scanned;
@@ -83,4 +83,4 @@ protected:
     bool saw_ploy;
 };
 
-} // namespace zeek::analyzer::login
+}

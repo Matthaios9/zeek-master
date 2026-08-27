@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/CPP/Compile.h"
 
@@ -18,7 +18,7 @@ shared_ptr<CPP_InitInfo> CPPCompile::RegisterAttributes(const AttributesPtr& att
 
     attributes.AddKey(attrs, pfs->HashAttrs(attrs));
 
-    // The cast is just so we can make an IntrusivePtr.
+
     auto a_rep = const_cast<Attributes*>(attributes.GetRep(attrs));
     if ( a_rep != a ) {
         AttributesPtr a_rep_ptr = {NewRef{}, a_rep};
@@ -47,8 +47,8 @@ shared_ptr<CPP_InitInfo> CPPCompile::RegisterAttr(const AttrPtr& attr) {
     if ( e && ! IsSimpleInitExpr(e) && obj_matches_opt_files(e) != AnalyzeDecision::SHOULD_NOT ) {
         auto h = p_hash(e);
 
-        // Include the type in the hash, otherwise expressions
-        // like "vector()" are ambiguous.
+
+
         h = merge_p_hashes(h, p_hash(e->GetType()));
 
         init_exprs.AddKey(e, h);
@@ -114,4 +114,4 @@ const char* CPPCompile::AttrName(AttrTag t) {
     }
 }
 
-} // namespace zeek::detail
+}

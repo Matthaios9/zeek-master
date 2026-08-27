@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/iosource/af_packet/RX_Ring.h"
 
@@ -6,10 +6,10 @@
 #include <utility>
 
 extern "C" {
-#include <linux/if_packet.h> // AF_PACKET, etc.
-#include <sys/mman.h>        // mmap
-#include <sys/socket.h>      // socketopt consts
-#include <unistd.h>          // sysconf
+#include <linux/if_packet.h>
+#include <sys/mman.h>
+#include <sys/socket.h>
+#include <unistd.h>
 }
 
 using namespace zeek::iosource::af_packet;
@@ -18,7 +18,7 @@ RX_Ring::RX_Ring(int sock, size_t bufsize, size_t blocksize, int blocktimeout_ms
     if ( sock < 0 )
         throw RX_RingException("invalid socket");
 
-    // Configure socket
+
     int ver = TPACKET_VERSION;
     if ( setsockopt(sock, SOL_PACKET, PACKET_VERSION, &ver, sizeof(ver)) != 0 )
         throw RX_RingException("unable to set TPacket version");
@@ -27,7 +27,7 @@ RX_Ring::RX_Ring(int sock, size_t bufsize, size_t blocksize, int blocktimeout_ms
     if ( setsockopt(sock, SOL_PACKET, PACKET_RX_RING, reinterpret_cast<uint8_t*>(&layout), sizeof(layout)) != 0 )
         throw RX_RingException("unable to set ring layout");
 
-    // Map memory
+
     size = static_cast<size_t>(layout.tp_block_size) * layout.tp_block_nr;
     ring = reinterpret_cast<uint8_t*>(mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, sock, 0));
     if ( ring == MAP_FAILED )
@@ -36,7 +36,7 @@ RX_Ring::RX_Ring(int sock, size_t bufsize, size_t blocksize, int blocktimeout_ms
     block_num = packet_num = 0;
     packet = nullptr;
 
-    // Init block mapping
+
     blocks = new tpacket_block_desc*[layout.tp_block_nr];
     for ( size_t i = 0; i < layout.tp_block_nr; i++ )
         blocks[i] = reinterpret_cast<tpacket_block_desc*>(ring + i * layout.tp_block_size);
@@ -59,7 +59,7 @@ bool RX_Ring::GetNextPacket(tpacket3_hdr** hdr) {
         return false;
 
     if ( packet == nullptr ) {
-        // New block
+
         packet_num = block_hdr->num_pkts;
         if ( packet_num == 0 ) {
             NextBlock();
@@ -69,7 +69,7 @@ bool RX_Ring::GetNextPacket(tpacket3_hdr** hdr) {
                                                  block_hdr->offset_to_first_pkt);
     }
     else
-        // Continue with block
+
         packet = reinterpret_cast<tpacket3_hdr*>(reinterpret_cast<uint8_t*>(packet) + packet->tp_next_offset);
 
     *hdr = packet;
@@ -85,7 +85,7 @@ void RX_Ring::ReleasePacket() {
 void RX_Ring::InitLayout(size_t bufsize, size_t blocksize, int blocktimeout_msec) {
     memset(&layout, 0, sizeof(layout));
     layout.tp_block_size = blocksize;
-    layout.tp_frame_size = TPACKET_ALIGNMENT << 7; // Seems to be irrelevant for V3
+    layout.tp_frame_size = TPACKET_ALIGNMENT << 7;
     layout.tp_block_nr = bufsize / layout.tp_block_size;
     layout.tp_frame_nr = (layout.tp_block_size / layout.tp_frame_size) * layout.tp_block_nr;
     layout.tp_retire_blk_tov = blocktimeout_msec;

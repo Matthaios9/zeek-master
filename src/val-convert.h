@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -7,12 +7,12 @@
 
 namespace zeek::detail {
 
-// Conversion helper functions used by both BiFs and cast_value_to_type().
-// Functions with an err parameter will set it to a non-empty error message
-// on failure.
 
-// These return native C++ types, or, if the optional value is missing,
-// an error occurred and has been populated in `err`.
+
+
+
+
+
 extern std::optional<double> convert_string_to_native_double(const StringVal* sv, std::string& err);
 extern std::optional<zeek_int_t> convert_string_to_native_int(const StringVal* sv, std::string& err, int base);
 extern std::optional<zeek_uint_t> convert_string_to_native_count(const StringVal* sv, std::string& err, int base);
@@ -55,4 +55,4 @@ extern ValPtr convert_port_to_count(uint32_t port);
 
 extern ValPtr convert_counts_to_addr(const VectorVal* vv, std::string& err);
 
-} // namespace zeek::detail
+}

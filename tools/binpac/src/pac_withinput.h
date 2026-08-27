@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_withinput_h
 #define pac_withinput_h
@@ -16,15 +16,15 @@ public:
 
     void Prepare(Env* env) override;
 
-    // void GenPubDecls(Output* out, Env* env);
-    // void GenPrivDecls(Output* out, Env* env);
 
-    // void GenInitCode(Output* out, Env* env);
-    // void GenCleanUpCode(Output* out, Env* env);
+
+
+
+
 
     void GenParseCode(Output* out, Env* env);
 
-    // Instantiate the Evaluatable interface
+
     void GenEval(Output* out, Env* env) override;
 
     bool RequiresAnalyzerContext() const override;
@@ -36,4 +36,4 @@ protected:
     InputBuffer* input_;
 };
 
-#endif // pac_withinput_h
+#endif

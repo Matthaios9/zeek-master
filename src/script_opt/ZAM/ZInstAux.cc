@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/ZAM/ZInstAux.h"
 
@@ -107,8 +107,8 @@ TraversalCode ZInstAux::Traverse(TraversalCallback* cb) const {
         HANDLE_TC_STMT_PRE(tc);
     }
 
-    // Don't traverse the "func" field, as if it's a recursive function
-    // we can wind up right back here.
+
+
 
     if ( lambda ) {
         tc = lambda->Traverse(cb);
@@ -158,4 +158,4 @@ TraversalCode ZInstAux::Traverse(TraversalCallback* cb) const {
     return TC_CONTINUE;
 }
 
-} // namespace zeek::detail
+}

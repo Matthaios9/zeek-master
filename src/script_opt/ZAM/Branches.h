@@ -1,9 +1,9 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Methods for managing low-level ZAM control flow, which is implemented
-// using go-to branches.
-//
-// This file is included by Compile.h to insert into the ZAMCompiler class.
+
+
+
+
+
 
 void PushNexts() { PushGoTos(nexts); }
 void PushBreaks() { PushGoTos(breaks); }
@@ -29,13 +29,13 @@ InstLabel GoToTargetBeyond(const ZAMStmt s);
 
 void SetTarget(ZInstI* inst, const InstLabel l, int slot);
 
-// Given a GoTo target, find its live equivalent (first instruction
-// at that location or beyond that's live).
+
+
 ZInstI* FindLiveTarget(ZInstI* goto_target);
 
-// Given an instruction that has a slot associated with the
-// given target, updates the slot to correspond with the current
-// instruction number of the target.
+
+
+
 void ConcretizeBranch(ZInstI* inst, ZInstI* target, int target_slot);
 
 void SetV(ZAMStmt s, const InstLabel l, int v) {

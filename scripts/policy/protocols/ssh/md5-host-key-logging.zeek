@@ -1,4 +1,4 @@
-##! Adds MD5 host_key field to ssh.log
+
 
 @load base/protocols/ssh
 
@@ -6,7 +6,7 @@ module SSH;
 
 export {
 	redef record Info += {
-		## The server's key fingerprint
+
 		host_key:        string       &log &optional;
 	};
 }

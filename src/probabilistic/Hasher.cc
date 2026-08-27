@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/probabilistic/Hasher.h"
 
@@ -33,7 +33,7 @@ Hasher::seed_t Hasher::MakeSeed(const void* data, size_t size) {
     }
 
     zeek::detail::hash_final(ctx, buf);
-    memcpy(&tmpseed, buf, sizeof(tmpseed)); // Use the first bytes as seed.
+    memcpy(&tmpseed, buf, sizeof(tmpseed));
     return tmpseed;
 }
 
@@ -73,9 +73,9 @@ std::unique_ptr<Hasher> Hasher::Unserialize(BrokerDataView data) {
         default: break;
     }
 
-    // Note that the derived classed don't hold any further state of
-    // their own. They reconstruct all their information from their
-    // constructors' arguments.
+
+
+
 
     return hasher;
 }
@@ -84,9 +84,9 @@ UHF::UHF() { memset(&seed, 0, sizeof(seed)); }
 
 UHF::UHF(Hasher::seed_t arg_seed) { seed = arg_seed; }
 
-// This function is almost equivalent to HashKey::HashBytes except that it
-// does not depend on global state and that we mix in the seed multiple
-// times.
+
+
+
 Hasher::digest UHF::hash(const void* x, size_t n) const {
     static_assert(std::is_same_v<highwayhash::SipHashState::Key, decltype(seed.h)>,
                   "Seed value is not the same type as highwayhash key");
@@ -144,4 +144,4 @@ bool DoubleHasher::Equals(const Hasher* other) const {
     return h1 == o->h1 && h2 == o->h2;
 }
 
-} // namespace zeek::probabilistic::detail
+}

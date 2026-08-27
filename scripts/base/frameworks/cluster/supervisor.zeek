@@ -1,15 +1,15 @@
-##! Cluster-related functionality specific to running under the Supervisor
-##! framework.
+
+
 
 @load base/frameworks/supervisor/api
 
 module Cluster::Supervisor;
 
 export {
-	## Populates the current node's :zeek:id:`Cluster::nodes` table from the
-	## supervisor's node configuration in :zeek:id:`Supervisor::NodeConfig`.
-	##
-	## Returns: true if initialization completed, false otherwise.
+
+
+
+
 	global __init_cluster_nodes: function(): bool;
 }
 

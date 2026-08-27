@@ -1,8 +1,8 @@
-##! This script loads everything in the base/ script directory.  If you want
-##! to run Zeek without all of these scripts loaded by default, you can use
-##! the ``-b`` (``--bare-mode``) command line argument.  You can also copy the
-##! "@load" lines from this script to your own script to load only the scripts
-##! that you actually want.
+
+
+
+
+
 
 @load base/utils/site
 @load base/utils/active-http
@@ -26,9 +26,9 @@
 @load base/utils/time
 @load base/utils/urls
 
-# This has some deep interplay between types and BiFs so it's
-# loaded in base/init-bare.zeek
-#@load base/frameworks/logging
+
+
+
 @load base/frameworks/notice
 @load base/frameworks/analyzer
 @load base/frameworks/signatures

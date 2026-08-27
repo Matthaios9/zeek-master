@@ -1,9 +1,9 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_state_h
 #define pac_state_h
 
-// Classes representing analyzer states.
+
 
 #include "pac_common.h"
 
@@ -25,4 +25,4 @@ private:
     Type* type_;
 };
 
-#endif // pac_state_h
+#endif

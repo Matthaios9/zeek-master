@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/probabilistic/CardinalityCounter.h"
 
@@ -17,8 +17,8 @@ int CardinalityCounter::OptimalB(double error, double confidence) const {
     double initial_estimate = 2 * (log(1.04) - log(error)) / std::numbers::ln2;
     int answer = static_cast<int>(floor(initial_estimate));
 
-    // k is the number of standard deviations that we have to go to have
-    // a confidence level of conf.
+
+
 
     double k = 0;
 
@@ -33,8 +33,8 @@ int CardinalityCounter::OptimalB(double error, double confidence) const {
 void CardinalityCounter::Init(uint64_t size) {
     m = size;
 
-    // The following magic values are taken directly out of the
-    // description of the HyperLogLog algorithm.
+
+
 
     if ( m == 16 )
         alpha_m = 0.673;
@@ -125,15 +125,15 @@ void CardinalityCounter::AddElement(uint64_t hash) {
         buckets[index] = temp;
 }
 
-/**
- * Estimate the size by using the "raw" HyperLogLog estimate. Then,
- * check if it's too "large" or "small" because the raw estimate doesn't
- * do well in those cases.
- * Thus, we correct for those errors as specified in the paper.
- *
- * Note - we deviate from the HLL algorithm in the paper here, because
- * of our 64-bit hashes.
- **/
+
+
+
+
+
+
+
+
+
 double CardinalityCounter::Size() const {
     double answer = 0;
 
@@ -223,42 +223,42 @@ std::unique_ptr<CardinalityCounter> CardinalityCounter::Unserialize(BrokerDataVi
     return cc;
 }
 
-/**
- * The following function is copied from libc/string/flsll.c from the FreeBSD source
- * tree. Original copyright message follows
- */
-/*-
- * Copyright (c) 1990, 1993
- *      The Regents of the University of California.  All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the University nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
- */
 
-/*
- * Find Last Set bit
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 int CardinalityCounter::flsll(uint64_t mask) {
     int bit;
 
@@ -269,4 +269,4 @@ int CardinalityCounter::flsll(uint64_t mask) {
     return (bit);
 }
 
-} // namespace zeek::probabilistic::detail
+}

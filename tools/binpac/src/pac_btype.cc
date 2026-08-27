@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_btype.h"
 
@@ -19,7 +19,7 @@ bool BuiltInType::CompatibleBuiltInTypes(BuiltInType* type1, BuiltInType* type2)
 }
 
 static const char* basic_pactype_name[] = {
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+
 #define TYPE_DEF(name, pactype, ctype, size) pactype,
 #include "pac_type.def"
 #undef TYPE_DEF
@@ -41,7 +41,7 @@ int BuiltInType::LookUpByName(const char* name) {
 }
 
 static const char* basic_ctype_name[] = {
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+
 #define TYPE_DEF(name, pactype, ctype, size) ctype,
 #include "pac_type.def"
 #undef TYPE_DEF
@@ -52,9 +52,9 @@ bool BuiltInType::DefineValueVar() const { return bit_type_ != EMPTY; }
 
 string BuiltInType::DataTypeStr() const { return basic_ctype_name[bit_type_]; }
 
-int BuiltInType::StaticSize(Env* /* env */) const {
+int BuiltInType::StaticSize(Env* ) const {
     static const size_t basic_type_size[] = {
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+
 #define TYPE_DEF(name, pactype, ctype, size) size,
 #include "pac_type.def"
 #undef TYPE_DEF
@@ -76,7 +76,7 @@ void BuiltInType::GenInitCode(Output* out_cc, Env* env) {
 }
 
 void BuiltInType::GenDynamicSize(Output* out_cc, Env* env, const DataPtr& data) {
-    /* should never be called */
+
     ASSERT(0);
 }
 
@@ -84,8 +84,8 @@ void BuiltInType::DoGenParseCode(Output* out_cc, Env* env, const DataPtr& data, 
     if ( bit_type_ == EMPTY )
         return;
 
-    // There is no need to generate the size variable
-    // out_cc->println("%s = sizeof(%s);", size_var(), DataTypeStr().c_str());
+
+
 
     GenBoundaryCheck(out_cc, env, data);
 
@@ -94,7 +94,7 @@ void BuiltInType::DoGenParseCode(Output* out_cc, Env* env, const DataPtr& data, 
 
     switch ( bit_type_ ) {
         case EMPTY:
-            // do nothing
+
             break;
 
         case INT8:

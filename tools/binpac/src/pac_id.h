@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_id_h
 #define pac_id_h
@@ -12,18 +12,18 @@ using namespace std;
 #include "pac_dbg.h"
 #include "pac_utils.h"
 
-// Classes handling identifiers.
-//
-// ID -- name and location of definition of an ID
-//
-// IDRecord -- association of an ID, its definition type (const, global, temp,
-//   member, or union member), and its evaluation method.
-//
-// Evaluatable -- interface for a variable or a field that needs be evaluated
-//   before referenced.
-//
-// Env -- a mapping from ID names to their L/R-value expressions and evaluation
-//   methods.
+
+
+
+
+
+
+
+
+
+
+
+
 
 enum IDType : uint8_t {
     CONST,
@@ -69,7 +69,7 @@ private:
     static int anonymous_id_seq;
 };
 
-// A comparison operator for pointers to ID's.
+
 class ID_ptr_cmp {
 public:
     bool operator()(const ID* const& id1, const ID* const& id2) const {
@@ -125,7 +125,7 @@ protected:
     Expr* macro;
 
     bool evaluated;
-    bool in_evaluation; // to detect cyclic dependence
+    bool in_evaluation;
     Evaluatable* eval;
 };
 
@@ -150,26 +150,26 @@ public:
     void AddConstID(const ID* id, const int c, Type* type = nullptr);
     void AddMacro(const ID* id, Expr* expr);
 
-    // Generate a temp ID with a unique name
+
     ID* AddTempID(Type* type);
 
     IDType GetIDType(const ID* id) const;
     const char* RValue(const ID* id) const;
     const char* LValue(const ID* id) const;
-    // const char *SetFunc(const ID *id) const;
 
-    // Set evaluation method for the ID
+
+
     void SetEvalMethod(const ID* id, Evaluatable* eval);
 
-    // Evaluate the ID according to the evaluation method. It
-    // assumes the ID has an evaluation emthod. It does nothing
-    // if the ID has already been evaluated.
+
+
+
     void Evaluate(Output* out, const ID* id);
 
-    // Whether the ID has already been evaluated.
+
     bool Evaluated(const ID* id) const;
 
-    // Set the ID as evaluated (or not).
+
     void SetEvaluated(const ID* id, bool v = true);
 
     void SetField(const ID* id, Field* field);
@@ -213,8 +213,8 @@ extern const ID* analyzer_context_id;
 extern const ID* context_macro_id;
 extern const ID* this_id;
 extern const ID* sourcedata_id;
-// extern const ID *sourcedata_begin_id;
-// extern const ID *sourcedata_end_id;
+
+
 extern const ID* connection_id;
 extern const ID* upflow_id;
 extern const ID* downflow_id;
@@ -232,4 +232,4 @@ extern Env* global_env();
 
 extern string set_function(const ID* id);
 
-#endif // pac_id_h
+#endif

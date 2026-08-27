@@ -9,73 +9,73 @@ module SMTP;
 export {
 	redef enum Log::ID += { LOG };
 
-	## Well-known ports for SMTP.
+
 	const ports = { 25/tcp, 587/tcp } &redef;
 
 	global log_policy: Log::PolicyHook;
 
 	type Info: record {
-		## Time when the message was first seen.
+
 		ts:                time            &log;
-		## Unique ID for the connection.
+
 		uid:               string          &log;
-		## The connection's 4-tuple of endpoint addresses/ports.
+
 		id:                conn_id         &log;
-		## A count to represent the depth of this message transaction in
-		## a single connection where multiple messages were transferred.
+
+
 		trans_depth:       count           &log;
-		## Contents of the HELO/EHLO SMTP command.
+
 		helo:              string          &log &optional;
-		## Email address found in the MAIL FROM SMTP command.
+
 		mailfrom:          string          &log &optional;
-		## Email addresses found in the RCPT TO SMTP commands.
+
 		rcptto:            set[string]     &log &optional;
-		## Contents of the Date header.
+
 		date:              string          &log &optional;
-		## Contents of the From header.
+
 		from:              string          &log &optional;
-		## Contents of the To header.
+
 		to:                set[string]     &log &optional;
-		## Contents of the CC header.
+
 		cc:                set[string]     &log &optional;
-		## Contents of the Reply-To header.
+
 		reply_to:          string          &log &optional;
-		## Contents of the Message-ID header.
+
 		msg_id:            string          &log &optional;
-		## Contents of the In-Reply-To header.
+
 		in_reply_to:       string          &log &optional;
-		## Contents of the Subject header.
+
 		subject:           string          &log &optional;
-		## Contents of the X-Originating-IP header.
+
 		x_originating_ip:  addr            &log &optional;
-		## Contents of the first Received header.
+
 		first_received:    string          &log &optional;
-		## Contents of the second Received header.
+
 		second_received:   string          &log &optional;
-		## The last message that the server sent to the client.
+
 		last_reply:        string          &log &optional;
-		## The message transmission path, as extracted from the headers.
+
 		path:              vector of addr  &log &optional;
-		## Value of the User-Agent header from the client.
+
 		user_agent:        string          &log &optional;
 
-		## Indicates that the connection has switched to using TLS.
+
 		tls:               bool            &log &default=F;
-		## Indicates if the "Received: from" headers should still be
-		## processed.
+
+
 		process_received_from: bool        &default=T;
-		## Indicates if client activity has been seen, but not yet logged.
+
 		has_client_activity:  bool            &default=F;
-		## Indicates if the SMTP headers should still be processed.
+
 		process_smtp_headers:  bool        &default=T;
 		entity_count:	       count	   &default=0;
 	};
 
 	type State: record {
 		helo:                     string    &optional;
-		## Count the number of individual messages transmitted during
-		## this SMTP session.  Note, this is not the number of
-		## recipients, but the number of message bodies transferred.
+
+
+
 		messages_transferred:     count     &default=0;
 
 		pending_messages:         set[Info] &optional;
@@ -87,29 +87,29 @@ export {
 		analyzer_id:              count     &optional;
 	};
 
-	## Direction to capture the full "Received from" path.
-	##    REMOTE_HOSTS - only capture the path until an internal host is found.
-	##    LOCAL_HOSTS - only capture the path until the external host is discovered.
-	##    ALL_HOSTS - always capture the entire path.
-	##    NO_HOSTS - never capture the path.
+
+
+
+
+
 	option mail_path_capture = ALL_HOSTS;
 
-	## Create an extremely shortened representation of a log line.
+
 	global describe: function(rec: Info): string;
 
 	global log_smtp: event(rec: Info);
 
-	## SMTP finalization hook.  Remaining SMTP info may get logged when it's called.
+
 	global finalize_smtp: Conn::RemovalHook;
 
-	## When seeing a RCPT TO or DATA command, validate that it has been
-	## preceded by a MAIL FROM or RCPT TO command, respectively, else
-	## log a weird and possibly disable the SMTP analyzer upon too
-	## many invalid transactions.
+
+
+
+
 	option mail_transaction_validation = T;
 
-	## Disable the SMTP analyzer when that many invalid transactions
-	## have been observed in an SMTP session.
+
+
 	option max_invalid_mail_transactions = 25;
 }
 
@@ -127,13 +127,13 @@ event zeek_init() &priority=5
 function find_address_in_smtp_header(header: string): string
 	{
 	local ips = extract_ip_addresses(header, T);
-	# If there are more than one IP address found, return the second.
+
 	if ( |ips| > 1 )
 		return ips[1];
-	# Otherwise, return the first.
+
 	else if ( |ips| > 0 )
 		return ips[0];
-	# Otherwise, there wasn't an IP address found.
+
 	else
 		return "";
 	}
@@ -144,15 +144,15 @@ function new_smtp_log(c: connection): Info
 	l$ts=network_time();
 	l$uid=c$uid;
 	l$id=c$id;
-	# The messages_transferred count isn't incremented until the message is
-	# finished so we need to increment the count by 1 here.
+
+
 	l$trans_depth = c$smtp_state$messages_transferred+1;
 
 	if ( c$smtp_state?$helo )
 		l$helo = c$smtp_state$helo;
 
-	# The path will always end with the hosts involved in this connection.
-	# The lower values in the vector are the end of the path.
+
+
 	l$path = vector(c$id$resp_h, c$id$orig_h);
 
 	Conn::register_removal_hook(c, finalize_smtp);
@@ -237,7 +237,7 @@ event smtp_request(c: connection, is_orig: bool, command: string, arg: string) &
 
 	else if ( upper_command == "MAIL" && /^[fF][rR][oO][mM]:/ in arg )
 		{
-		# Flush last message in case we didn't see the server's acknowledgement.
+
 		smtp_message(c);
 
 		local mailfrom = extract_first_email_addr(arg);
@@ -246,20 +246,20 @@ event smtp_request(c: connection, is_orig: bool, command: string, arg: string) &
 		c$smtp$has_client_activity = T;
 
 		c$smtp_state$trans_mail_from_seen = T;
-		c$smtp_state$trans_rcpt_to_seen = F;  # Reset state on MAIL FROM
+		c$smtp_state$trans_rcpt_to_seen = F;
 		}
 	else if ( upper_command == "DATA" || upper_command == "BDAT" )
 		{
 		if ( mail_transaction_validation )
 			{
-			if ( ! c$smtp_state$trans_rcpt_to_seen )  # mail from checked in rctp to
+			if ( ! c$smtp_state$trans_rcpt_to_seen )
 				mail_transaction_invalid(c, "data missing rcpt to");
 			}
 
 		if ( upper_command == "BDAT" && ends_with(arg, " LAST") )
 			{
-			# Reset state mail transaction state when we're seeing
-			# the last BDAT command.
+
+
 			c$smtp_state$trans_mail_from_seen = F;
 			c$smtp_state$trans_rcpt_to_seen = F;
 			c$smtp_state$bdat_last_observed = T;
@@ -267,7 +267,7 @@ event smtp_request(c: connection, is_orig: bool, command: string, arg: string) &
 		}
 	else if ( upper_command == "." )
 		{
-		# Reset state when we're seeing a .
+
 		c$smtp_state$trans_mail_from_seen = F;
 		c$smtp_state$trans_rcpt_to_seen = F;
 		}
@@ -278,8 +278,8 @@ event smtp_reply(c: connection, is_orig: bool, code: count, cmd: string,
 	{
 	set_smtp_session(c);
 
-	# This continually overwrites, but we want the last reply,
-	# so this actually works fine.
+
+
 	c$smtp$last_reply = fmt("%d %s", code, msg);
 	}
 
@@ -288,7 +288,7 @@ event smtp_reply(c: connection, is_orig: bool, code: count, cmd: string,
 	{
 	if ( cmd == "." || (!cont_resp && cmd == "BDAT" && c$smtp_state$bdat_last_observed ) )
 		{
-		# Track the number of messages seen in this session.
+
 		++c$smtp_state$messages_transferred;
 		c$smtp_state$bdat_last_observed = F;
 		smtp_message(c);
@@ -360,13 +360,13 @@ event mime_one_header(c: connection, h: mime_header_rec) &priority=5
 		c$smtp$user_agent = h$value;
 	}
 
-# This event handler builds the "Received From" path by reading the
-# headers in the mail
+
+
 event mime_one_header(c: connection, h: mime_header_rec) &priority=3
 	{
-	# If we've decided that we're done watching the received headers for
-	# whatever reason, we're done.  Could be due to only watching until
-	# local addresses are seen in the received from headers.
+
+
+
 	if ( ! c?$smtp || h$name != "RECEIVED" || ! c$smtp$process_received_from ||
 	     ! c$smtp$process_smtp_headers )
 		return;
@@ -385,8 +385,8 @@ event mime_one_header(c: connection, h: mime_header_rec) &priority=3
 		c$smtp$path += ip;
 	}
 
-# This event handler sets the flag to stop processing SMTP headers if
-# any sub-entity is found.
+
+
 event mime_begin_entity(c: connection) &priority=5
 	{
 	if ( c?$smtp )

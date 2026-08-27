@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/input/readers/config/Config.h"
 
@@ -29,7 +29,7 @@ Config::Config(ReaderFrontend* frontend) : ReaderBackend(frontend) {
     ino = 0;
     fail_on_file_problem = false;
 
-    // find all option names and their types.
+
     const auto& globals = zeek::detail::global_scope()->Vars();
 
     for ( const auto& entry : globals ) {
@@ -90,7 +90,7 @@ bool Config::GetLine(std::string& str) {
         if ( str.empty() )
             continue;
 
-        if ( str.back() == '\r' ) // deal with \r\n by removing \r
+        if ( str.back() == '\r' )
             str.pop_back();
 
         if ( str[0] != '#' )
@@ -100,14 +100,14 @@ bool Config::GetLine(std::string& str) {
     return false;
 }
 
-// read the entire file and send appropriate thingies back to InputMgr
+
 bool Config::DoUpdate() {
     if ( ! OpenFile() )
         return ! fail_on_file_problem;
 
     switch ( Info().mode ) {
         case MODE_REREAD: {
-            // check if the file has changed
+
             struct stat sb;
             if ( stat(Info().source, &sb) == -1 ) {
                 FailWarn(fail_on_file_problem, Fmt("Could not get stat for %s", Info().source), true);
@@ -119,28 +119,28 @@ bool Config::DoUpdate() {
             file_ino_t current_ino = reliable_inode(Info().source, sb.st_ino);
 
             if ( current_ino == ino && sb.st_mtime == mtime ) {
-                // no change
+
                 return true;
             }
 
-            // Warn again in case of trouble if the file changes. The comparison to 0
-            // is to suppress an extra warning that we'd otherwise get on the initial
-            // inode assignment.
+
+
+
             if ( ino != 0 )
                 StopWarningSuppression();
 
             mtime = sb.st_mtime;
             ino = current_ino;
-            // File changed. Fall through to re-read.
+
         }
 
         case MODE_MANUAL:
         case MODE_STREAM: {
-            // dirty, fix me. (well, apparently after trying seeking, etc
-            // - this is not that bad)
+
+
             if ( file.is_open() ) {
                 if ( Info().mode == MODE_STREAM ) {
-                    file.clear(); // remove end of file evil bits
+                    file.clear();
                     break;
                 }
 
@@ -158,8 +158,8 @@ bool Config::DoUpdate() {
     std::string line;
     file.sync();
 
-    // keep a list of options to remove because they were no longer in the input file.
-    // Start out with all element and removes while going along
+
+
     std::unordered_set<std::string> unseen_options;
     for ( const auto& i : option_values ) {
         unseen_options.insert(i.first);
@@ -214,9 +214,9 @@ bool Config::DoUpdate() {
 
         unseen_options.erase(key);
 
-        // we only send the event if the underlying value has changed. Let's check that.
-        // (Yes, this means we keep all configuration options in memory twice - once here in
-        // the reader and once in memory in Zeek; that is difficult to change.
+
+
+
         auto search = option_values.find(key);
         if ( search != option_values.end() && search->second == value ) {
             delete eventval;
@@ -266,7 +266,7 @@ bool Config::DoUpdate() {
     if ( Info().mode != MODE_STREAM )
         EndCurrentSend();
 
-    // clean up all options we did not see
+
     for ( const auto& i : unseen_options )
         option_values.erase(i);
 
@@ -276,13 +276,13 @@ bool Config::DoUpdate() {
 bool Config::DoHeartbeat(double network_time, double current_time) {
     switch ( Info().mode ) {
         case MODE_MANUAL:
-            // yay, we do nothing :)
+
             break;
 
         case MODE_REREAD:
         case MODE_STREAM:
-            Update(); // Call Update, not DoUpdate, because Update
-                      // checks the "disabled" flag.
+            Update();
+
             break;
 
         default: assert(false);
@@ -291,4 +291,4 @@ bool Config::DoHeartbeat(double network_time, double current_time) {
     return true;
 }
 
-} // namespace zeek::input::reader::detail
+}

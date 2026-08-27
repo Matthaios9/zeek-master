@@ -1,8 +1,8 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
-#include <ctime> // for time_t
+#include <ctime>
 #include <string>
 #include <vector>
 
@@ -10,23 +10,23 @@
 
 namespace zeek::zeekygen::detail {
 
-/**
- * Information about a Zeek script package.
- */
+
+
+
 class PackageInfo : public Info {
 public:
-    /**
-     * Ctor.
-     * @param name The name of the Zeek script package (relative path from a
-     * component within ZEEKPATH).
-     */
+
+
+
+
+
     explicit PackageInfo(std::string name);
 
-    /**
-     * @return The content of the package's README file, each line being
-     * an element in the returned vector.  If the package has no README, the
-     * vector is empty.
-     */
+
+
+
+
+
     std::vector<std::string> GetReadme() const { return readme; }
 
 private:
@@ -40,4 +40,4 @@ private:
     std::vector<std::string> readme;
 };
 
-} // namespace zeek::zeekygen::detail
+}

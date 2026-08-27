@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Desc.h"
 
@@ -154,7 +154,7 @@ void ODesc::Add(double d, bool no_exp) {
         AddBytes(tmp, res);
 
         if ( util::approx_equal(d, nearbyint(d), 1e-9) && std::isfinite(d) && (strchr(tmp, 'e') == nullptr) )
-            // disambiguate from integer
+
             Add(".0");
     }
 }
@@ -299,8 +299,8 @@ void ODesc::AddBytesRaw(const void* bytes, size_t n) {
 
         if ( ! f->Write(reinterpret_cast<const char*>(bytes), n) ) {
             if ( ! write_failed )
-                // Most likely it's a "disk full" so report
-                // subsequent failures only once.
+
+
                 reporter->Error("error writing to %s: %s", f->Name(), strerror(errno));
 
             write_failed = true;
@@ -315,7 +315,7 @@ void ODesc::AddBytesRaw(const void* bytes, size_t n) {
         memcpy(&(reinterpret_cast<char*>(base))[offset], bytes, n);
         offset += n;
 
-        (reinterpret_cast<char*>(base))[offset] = '\0'; // ensure that always NUL-term.
+        (reinterpret_cast<char*>(base))[offset] = '\0';
     }
 }
 
@@ -333,7 +333,7 @@ void ODesc::Grow(size_t n) {
 void ODesc::Clear() {
     offset = 0;
 
-    // If we've allocated an exceedingly large amount of space, free it.
+
     constexpr size_t too_large = 10l * 1024 * 1024;
     if ( size > too_large ) {
         free(base);
@@ -393,4 +393,4 @@ std::string obj_desc_short(const Obj* o) {
     return d.Description();
 }
 
-} // namespace zeek
+}

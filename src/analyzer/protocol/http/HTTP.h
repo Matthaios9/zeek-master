@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -64,8 +64,8 @@ protected:
     bool deliver_body;
     bool is_partial_content;
     uint64_t offset;
-    int64_t instance_length; // total length indicated by content-range
-    bool send_size;          // whether to send size indication to FAF
+    int64_t instance_length;
+    bool send_size;
     bool expect_100_cont = false;
     std::string precomputed_file_id;
 
@@ -88,16 +88,16 @@ enum : uint8_t {
     HTTP_BODY_MAYBE,
 };
 
-// Finishing HTTP Messages:
-//
-// HTTP_Entity::SubmitAllHeaders	-> EndOfData (no body)
-// HTTP_Entity::Deliver	-> EndOfData (end of body)
-// HTTP_Analyzer::Done	-> {Request,Reply}Made (connection terminated)
-// {Request,Reply}Made	-> HTTP_Message::Done
-// HTTP_Message::Done	-> MIME_Message::Done, EndOfData, HTTP_MessageDone
-// MIME_Entity::EndOfData	-> Message::EndEntity
-// HTTP_Message::EndEntity	-> Message::Done
-// HTTP_MessageDone	-> {Request,Reply}Made
+
+
+
+
+
+
+
+
+
+
 
 class HTTP_Message final : public analyzer::mime::MIME_Message {
     friend class HTTP_Entity;
@@ -111,16 +111,16 @@ public:
 
     bool Undelivered(int64_t len);
 
-    void BeginEntity(analyzer::mime::MIME_Entity* /* entity */) override;
+    void BeginEntity(analyzer::mime::MIME_Entity* ) override;
     void EndEntity(analyzer::mime::MIME_Entity* entity) override;
     void SubmitHeader(analyzer::mime::MIME_Header* h) override;
-    void SubmitAllHeaders(analyzer::mime::MIME_HeaderList& /* hlist */) override;
+    void SubmitAllHeaders(analyzer::mime::MIME_HeaderList& ) override;
     void SubmitData(int len, const char* buf) override;
     bool RequestBuffer(int* plen, char** pbuf) override;
     void SubmitAllData();
     void SubmitEvent(int event_type, const char* detail) override;
 
-    void SubmitTrailingHeaders(analyzer::mime::MIME_HeaderList& /* hlist */);
+    void SubmitTrailingHeaders(analyzer::mime::MIME_HeaderList& );
     void SetPlainDelivery(int64_t length);
     void SetDeliverySize(int64_t length);
     void SkipEntityData();
@@ -139,11 +139,11 @@ protected:
 
     double start_time;
 
-    int64_t body_length;   // total length of entity bodies
-    int64_t header_length; // total length of headers, including the request/reply line
+    int64_t body_length;
+    int64_t header_length;
 
-    // Total length of content gaps that are "successfully" skipped.
-    // Note: this might NOT include all content gaps!
+
+
     int64_t content_gap_length;
 
     HTTP_Entity* current_entity;
@@ -166,13 +166,13 @@ public:
     bool IsConnectionClose() { return connection_close; }
     int HTTP_ReplyCode() const { return reply_code; };
 
-    // Overridden from Analyzer.
+
     void Done() override;
     void DeliverStream(int len, const u_char* data, bool orig) override;
     void Undelivered(uint64_t seq, int len, bool orig) override;
     void FlipRoles() override;
 
-    // Overridden from analyzer::tcp::TCP_ApplicationAnalyzer
+
     void EndpointEOF(bool is_orig) override;
     void ConnectionFinished(bool half_finished) override;
     void ConnectionReset() override;
@@ -248,21 +248,21 @@ protected:
 
     bool connect_request;
     analyzer::pia::PIA_TCP* pia;
-    // set to true after a connection was upgraded
+
     bool upgraded;
-    // set to true when encountering an "connection" header in a reply.
+
     bool upgrade_connection;
-    // set to the protocol string when encountering an "upgrade" header
-    // in a reply.
+
+
     std::string upgrade_protocol;
 
     StringValPtr request_method;
 
-    // request_URI is in the original form (may contain '%<hex><hex>'
-    // sequences).
+
+
     StringValPtr request_URI;
 
-    // unescaped_URI does not contain escaped sequences.
+
     StringValPtr unescaped_URI;
 
     std::queue<StringValPtr> unanswered_requests;
@@ -282,4 +282,4 @@ extern bool is_unreserved_URI_char(unsigned char ch);
 extern void escape_URI_char(unsigned char ch, unsigned char*& p);
 extern String* unescape_URI(const u_char* line, const u_char* line_end, analyzer::Analyzer* analyzer);
 
-} // namespace zeek::analyzer::http
+}

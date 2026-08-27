@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/file_analysis/analyzer/x509/X509.h"
 
@@ -29,7 +29,7 @@ X509::X509(RecordValPtr args, file_analysis::File* file)
 }
 
 bool X509::DeliverStream(const u_char* data, uint64_t len) {
-    // just add it to the data we have so far, since we cannot do anything else anyways...
+
     cert_data.append(reinterpret_cast<const char*>(data), len);
     return true;
 }
@@ -39,7 +39,7 @@ bool X509::Undelivered(uint64_t offset, uint64_t len) { return false; }
 bool X509::EndOfFile() {
     const unsigned char* cert_char = reinterpret_cast<const unsigned char*>(cert_data.data());
     if ( certificate_cache ) {
-        // first step - let's see if the certificate has been cached.
+
         unsigned char buf[SHA256_DIGEST_LENGTH];
         auto ctx = zeek::detail::hash_init(zeek::detail::Hash_SHA256);
         zeek::detail::hash_update(ctx, cert_char, cert_data.size());
@@ -49,36 +49,36 @@ bool X509::EndOfFile() {
         const auto& entry = certificate_cache->Find(index);
 
         if ( entry )
-        // in this case, the certificate is in the cache and we do not
-        // do any further processing here. However, if there is a callback, we execute it.
+
+
         {
             if ( ! cache_hit_callback )
                 return false;
-            // yup, let's call the callback.
+
 
             cache_hit_callback->Invoke(GetFile()->ToVal(), entry, make_intrusive<StringVal>(cert_sha256));
             return false;
         }
     }
 
-    // ok, now we can try to parse the certificate with openssl. Should
-    // be rather straightforward...
+
+
     ::X509* ssl_cert = d2i_X509(nullptr, &cert_char, cert_data.size());
     if ( ! ssl_cert ) {
         reporter->Weird(GetFile(), "x509_cert_parse_error");
         return false;
     }
 
-    X509Val* cert_val = new X509Val(ssl_cert); // cert_val takes ownership of ssl_cert
+    X509Val* cert_val = new X509Val(ssl_cert);
 
-    // parse basic information into record.
+
     auto cert_record = ParseCertificate(cert_val, GetFile());
 
-    // and send the record on to scriptland
+
     if ( x509_certificate )
         event_mgr.Enqueue(x509_certificate, GetFile()->ToVal(), IntrusivePtr{NewRef{}, cert_val}, cert_record);
 
-    // after parsing the certificate - parse the extensions...
+
 
     int num_ext = X509_get_ext_count(ssl_cert);
     for ( int k = 0; k < num_ext; ++k ) {
@@ -89,12 +89,12 @@ bool X509::EndOfFile() {
         ParseExtension(ex, x509_extension, false);
     }
 
-    // X509_free(ssl_cert); We do _not_ free the certificate here. It is refcounted
-    // inside the X509Val that is sent on in the cert record to scriptland.
-    //
-    // The certificate will be freed when the last X509Val is Unref'd.
 
-    Unref(cert_val); // Same for cert_val
+
+
+
+
+    Unref(cert_val);
 
     return false;
 }
@@ -102,14 +102,14 @@ bool X509::EndOfFile() {
 RecordValPtr X509::ParseCertificate(X509Val* cert_val, file_analysis::File* f) {
     ::X509* ssl_cert = cert_val->GetCertificate();
 
-    char buf[2048]; // we need a buffer for some of the openssl functions
+    char buf[2048];
     memset(buf, 0, sizeof(buf));
 
     auto pX509Cert = make_intrusive<RecordVal>(BifType::Record::X509::Certificate);
     BIO* bio = BIO_new(BIO_s_mem());
 
-    // The cast here is intentional to force it into a specific version of Assign()
-    // NOLINTNEXTLINE(bugprone-misplaced-widening-cast)
+
+
     pX509Cert->Assign(0, static_cast<uint64_t>(X509_get_version(ssl_cert) + 1));
 
     i2a_ASN1_INTEGER(bio, X509_get_serialNumber(ssl_cert));
@@ -123,7 +123,7 @@ RecordValPtr X509::ParseCertificate(X509Val* cert_val, file_analysis::File* f) {
     BIO_reset(bio);
 
     auto* subject_name = X509_get_subject_name(ssl_cert);
-    // extract the most specific (last) common name from the subject
+
     int namepos = -1;
     for ( ;; ) {
         int j = X509_NAME_get_index_by_NID(subject_name, NID_commonName, namepos);
@@ -134,7 +134,7 @@ RecordValPtr X509::ParseCertificate(X509Val* cert_val, file_analysis::File* f) {
     }
 
     if ( namepos != -1 ) {
-        // we found a common name
+
         ASN1_STRING_print(bio, X509_NAME_ENTRY_get_data(X509_NAME_get_entry(subject_name, namepos)));
         len = BIO_gets(bio, buf, sizeof(buf));
         pX509Cert->Assign(4, make_intrusive<StringVal>(len, buf));
@@ -149,9 +149,9 @@ RecordValPtr X509::ParseCertificate(X509Val* cert_val, file_analysis::File* f) {
     pX509Cert->AssignTime(5, GetTimeFromAsn1(X509_get_notBefore(ssl_cert), f, reporter));
     pX509Cert->AssignTime(6, GetTimeFromAsn1(X509_get_notAfter(ssl_cert), f, reporter));
 
-    // we only read 255 bytes because byte 256 is always 0.
-    // if the string is longer than 255, that will be our null-termination,
-    // otherwise i2t does null-terminate.
+
+
+
     ASN1_OBJECT* algorithm;
     const unsigned char* pub_key_bytes;
     int pub_key_len;
@@ -173,12 +173,12 @@ RecordValPtr X509::ParseCertificate(X509Val* cert_val, file_analysis::File* f) {
 
     pX509Cert->Assign(8, buf);
 
-    // Things we can do when we have the key...
+
     EVP_PKEY* pkey = nullptr;
-    // Special case for RDP server certificates. For some reason some (all?) RDP server
-    // certificates like to specify their key algorithm as md5WithRSAEncryption, which
-    // is wrong on so many levels. We catch this special case here and decode the raw
-    // SubjectPublicKey bytes directly as RSA, bypassing the OID,
+
+
+
+
     if ( OBJ_obj2nid(algorithm) == NID_md5WithRSAEncryption )
         pkey = d2i_PublicKey(EVP_PKEY_RSA, nullptr, &pub_key_bytes, pub_key_len);
     else
@@ -194,8 +194,8 @@ RecordValPtr X509::ParseCertificate(X509Val* cert_val, file_analysis::File* f) {
             BIGNUM* e = nullptr;
             EVP_PKEY_get_bn_param(pkey, OSSL_PKEY_PARAM_RSA_E, &e);
             char* exponent = BN_bn2dec(e);
-            // the OpenSSL 3.0 API allocates a new bignum; earlier APIs give a direct pointer
-            // to the internal data structure that should not be freed.
+
+
             BN_free(e);
             e = nullptr;
             if ( exponent != nullptr ) {
@@ -212,7 +212,7 @@ RecordValPtr X509::ParseCertificate(X509Val* cert_val, file_analysis::File* f) {
 #endif
         else {
             auto* type_name = EVP_PKEY_get0_type_name(pkey);
-            if ( type_name ) // nullptr if no name found
+            if ( type_name )
                 pX509Cert->Assign(9, type_name);
         }
 
@@ -227,14 +227,14 @@ RecordValPtr X509::ParseCertificate(X509Val* cert_val, file_analysis::File* f) {
 }
 
 X509_STORE* X509::GetRootStore(TableVal* root_certs) {
-    // If this certificate store was built previously, just reuse the old one.
+
     if ( x509_stores.contains(root_certs) )
         return x509_stores[root_certs];
 
     X509_STORE* ctx = X509_STORE_new();
     auto idxs = root_certs->ToPureListVal();
 
-    // Build the validation store
+
     for ( int i = 0; i < idxs->Length(); ++i ) {
         const auto& key = idxs->Idx(i);
         auto val = root_certs->FindOrDefault(key);
@@ -251,7 +251,7 @@ X509_STORE* X509::GetRootStore(TableVal* root_certs) {
         X509_free(x);
     }
 
-    // Save the newly constructed certificate store into the caching map.
+
     x509_stores[root_certs] = ctx;
 
     return ctx;
@@ -286,16 +286,16 @@ void X509::ParseBasicConstraints(openssl_x509_ext_t* ex) {
 }
 
 void X509::ParseExtensionsSpecific(openssl_x509_ext_t* ex, bool global, openssl_asn1_obj_t* ext_asn, const char* oid) {
-    // look if we have a specialized handler for this event...
+
     if ( OBJ_obj2nid(ext_asn) == NID_basic_constraints )
         ParseBasicConstraints(ex);
 
     else if ( OBJ_obj2nid(ext_asn) == NID_subject_alt_name )
         ParseSAN(ex);
 
-    // In OpenSSL 1.0.2+, we can get the extension by using NID_ct_precert_scts.
-    // In OpenSSL <= 1.0.1, this is not yet defined yet, so we have to manually
-    // look it up by performing a string comparison on the oid.
+
+
+
 #ifdef NID_ct_precert_scts
     else if ( OBJ_obj2nid(ext_asn) == NID_ct_precert_scts )
 #else
@@ -380,8 +380,8 @@ void X509::ParseSAN(openssl_x509_ext_t* ext) {
         }
 
         else {
-            // reporter->Error("Subject alternative name contained unsupported fields. fuid %s",
-            // GetFile()->GetID().c_str()); This happens quite often - just mark it
+
+
             otherfields = true;
             continue;
         }
@@ -411,11 +411,11 @@ StringValPtr X509::KeyCurve(EVP_PKEY* key) {
     assert(key != nullptr);
 
 #ifdef OPENSSL_NO_EC
-    // well, we do not have EC-Support...
+
     return nullptr;
 #else
     if ( EVP_PKEY_base_id(key) != EVP_PKEY_EC ) {
-        // no EC-key - no curve name
+
         return nullptr;
     }
 
@@ -424,7 +424,7 @@ StringValPtr X509::KeyCurve(EVP_PKEY* key) {
         return nullptr;
 
     return make_intrusive<StringVal>(buf);
-#endif /* OPENSSL_NO_EC */
+#endif
 }
 
 unsigned int X509::KeyLength(EVP_PKEY* key) {
@@ -432,7 +432,7 @@ unsigned int X509::KeyLength(EVP_PKEY* key) {
 
     int bits = EVP_PKEY_bits(key);
 
-    if ( bits < 0 ) // error case
+    if ( bits < 0 )
         return 0;
 
     return bits;
@@ -483,4 +483,4 @@ bool X509Val::DoUnserializeData(BrokerDataView data) {
     return certificate != nullptr;
 }
 
-} // namespace zeek::file_analysis::detail
+}

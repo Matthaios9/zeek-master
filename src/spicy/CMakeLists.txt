@@ -1,4 +1,4 @@
-# See the file "COPYING" in the main distribution directory for copyright.
+
 
 zeek_add_subdir_library(
     spicy
@@ -16,8 +16,8 @@ zeek_add_subdir_library(
     BIFS
     spicy.bif)
 
-# For bundled Spicy, top-level CMake links final Zeek targets against the
-# appropriate in-tree HILTI/Spicy libraries for each platform.
+
+
 if (SPICY_ROOT_DIR)
     target_link_libraries(zeek_spicy_obj PRIVATE hilti spicy)
 endif ()

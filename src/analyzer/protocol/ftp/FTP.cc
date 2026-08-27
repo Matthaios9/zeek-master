@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/ftp/FTP.h"
 
@@ -36,7 +36,7 @@ void FTP_Analyzer::Done() {
     if ( TCP() ) {
         if ( nvt_orig->HasPartialLine() && (TCP()->OrigState() == analyzer::tcp::TCP_ENDPOINT_CLOSED ||
                                             TCP()->OrigPrevState() == analyzer::tcp::TCP_ENDPOINT_CLOSED) )
-            // ### should include the partial text
+
             Weird("partial_ftp_request");
     }
 }
@@ -48,8 +48,8 @@ static uint32_t get_reply_code(int len, const char* line) {
         return 0;
 }
 
-// The minimal length of an FTP command is 3 characters (PWD, MKD,
-// RMD, ...) and should only contain printable ascii.
+
+
 static bool is_ftp_cmd(int len, const char* s) {
     if ( len < 3 )
         return false;
@@ -72,12 +72,12 @@ void FTP_Analyzer::DeliverStream(int length, const u_char* data, bool orig) {
     if ( (orig && ! ftp_request) || (! orig && ! ftp_reply) )
         return;
 
-    // const char* orig_line = line;
+
     const char* line = reinterpret_cast<const char*>(data);
     const char* end_of_line = line + length;
 
     if ( length == 0 )
-        // Could emit "ftp empty request/reply" weird, but maybe not worth it.
+
         return;
 
     Args vl;
@@ -96,14 +96,14 @@ void FTP_Analyzer::DeliverStream(int length, const u_char* data, bool orig) {
             if ( AnalyzerConfirmed() )
                 Weird("FTP_invalid_command");
 
-            // Ignore the whole line.
+
             return;
         }
         else if ( BifConst::FTP::max_command_length > 0 &&
                   static_cast<zeek_uint_t>(cmd_len) > BifConst::FTP::max_command_length ) {
-            // If the FTP command is unusually long, log a weird if the analyzer
-            // has previously been confirmed, but otherwise just ignore the whole
-            // line and move on to the next.
+
+
+
             if ( AnalyzerConfirmed() )
                 LimitReachedWeird("FTP_max_command_length_exceeded", cmd_len, BifConst::FTP::max_command_length);
 
@@ -135,17 +135,17 @@ void FTP_Analyzer::DeliverStream(int length, const u_char* data, bool orig) {
 
         if ( pending_reply ) {
             if ( reply_code == pending_reply && length > 3 && line[3] == ' ' ) {
-                // This is the end of the reply.
+
                 line = util::skip_whitespace(line + 3, end_of_line);
                 pending_reply = 0;
                 cont_resp = 0;
             }
             else {
-                cont_resp = 1;  // not the end
-                reply_code = 0; // flag as intermediary
+                cont_resp = 1;
+                reply_code = 0;
             }
         }
-        else { // a new reply
+        else {
             cont_resp = 0;
 
             if ( reply_code == 0 ) {
@@ -156,18 +156,18 @@ void FTP_Analyzer::DeliverStream(int length, const u_char* data, bool orig) {
                 AnalyzerViolation("invalid reply code", reinterpret_cast<const char*>(data), length);
                 return;
             }
-            else if ( length > 3 && line[3] == '-' ) { // a continued reply
+            else if ( length > 3 && line[3] == '-' ) {
                 pending_reply = reply_code;
                 line = util::skip_whitespace(line + 4, end_of_line);
                 cont_resp = 1;
             }
             else if ( length > 3 && line[3] != ' ' ) {
-                // This is a proper reply code, but there's no space after
-                // the reply code even though the line is long enough.
+
+
                 AnalyzerViolation("invalid reply line", reinterpret_cast<const char*>(data), length);
                 return;
             }
-            else { // a self-contained reply
+            else {
                 line += 3;
 
                 if ( line < end_of_line )
@@ -189,9 +189,9 @@ void FTP_Analyzer::DeliverStream(int length, const u_char* data, bool orig) {
         }
 
         if ( reply_code == 334 && ! auth_requested.empty() && auth_requested == "GSSAPI" ) {
-            // Server wants to proceed with an ADAT exchange and we
-            // know how to analyze the GSI mechanism, so attach analyzer
-            // to look for that.
+
+
+
             Analyzer* ssl = analyzer_mgr->InstantiateAnalyzer("SSL", Conn());
             if ( ssl ) {
                 ssl->AddSupportAnalyzer(new FTP_ADAT_Analyzer(Conn(), true));
@@ -213,8 +213,8 @@ void FTP_Analyzer::DeliverStream(int length, const u_char* data, bool orig) {
 }
 
 void FTP_ADAT_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
-    // Don't know how to parse anything but the ADAT exchanges of GSI GSSAPI,
-    // which is basically just TLS/SSL.
+
+
     if ( ! Parent()->IsAnalyzer("SSL") ) {
         Parent()->Remove();
         return;
@@ -238,11 +238,11 @@ void FTP_ADAT_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
             decoded_adat = detail::decode_base64(encoded.AsString(), nullptr, Conn());
 
             if ( first_token ) {
-                // RFC 2743 section 3.1 specifies a framing format for tokens
-                // that includes an identifier for the mechanism type.  The
-                // framing is supposed to be required for the initial context
-                // token, but GSI doesn't do that and starts right in on a
-                // TLS/SSL handshake, so look for that to identify it.
+
+
+
+
+
                 const u_char* msg = nullptr;
                 int msg_len = 0;
 
@@ -253,13 +253,13 @@ void FTP_ADAT_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
                 else
                     Weird("ftp_adat_bad_first_token_encoding");
 
-                // Just check that it looks like a viable TLS/SSL handshake
-                // record from the first byte (content type of 0x16) and
-                // that the fourth and fifth bytes indicating the length of
-                // the record match the length of the decoded data.
+
+
+
+
                 if ( msg_len < 5 || msg[0] != 0x16 ||
                      msg_len - 5 != ntohs(*reinterpret_cast<const uint16_t*>(msg + 3)) ) {
-                    // Doesn't look like TLS/SSL, so done analyzing.
+
                     done = true;
                     delete decoded_adat;
                     decoded_adat = nullptr;
@@ -270,7 +270,7 @@ void FTP_ADAT_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
         }
 
         else if ( strncmp(cmd, "AUTH", cmd_len) == 0 )
-            // Security state will be reset by a reissued AUTH.
+
             done = true;
     }
 
@@ -280,22 +280,22 @@ void FTP_ADAT_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
         switch ( reply_code ) {
             case 232:
             case 234:
-                // Indicates security data exchange is complete, but nothing
-                // more to decode in replies.
+
+
                 done = true;
                 break;
 
             case 235:
-                // Security data exchange complete, but may have more to decode
-                // in the reply (same format at 334 and 335).
+
+
                 done = true;
 
-                // Fall-through.
+
 
             case 334:
             case 335:
-                // Security data exchange still in progress, and there could be data
-                // to decode in the reply.
+
+
                 line += 3;
                 if ( len > 3 && line[0] == '-' )
                     line++;
@@ -310,8 +310,8 @@ void FTP_ADAT_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
 
                 break;
 
-            // Server isn't going to accept named security mechanism.
-            // Client has to restart back at the AUTH.
+
+
             case 421:
             case 431:
             case 500:
@@ -319,9 +319,9 @@ void FTP_ADAT_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
             case 503:
             case 535:
 
-            // If the server is sending protected replies, the security
-            // data exchange must have already succeeded.  It does have
-            // encoded data in the reply, but 632 and 633 are also encrypted.
+
+
+
             case 631:
             case 632:
             case 633: done = true; break;
@@ -339,4 +339,4 @@ void FTP_ADAT_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
         Parent()->Remove();
 }
 
-} // namespace zeek::analyzer::ftp
+}

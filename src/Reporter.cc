@@ -1,6 +1,6 @@
-//
-// See the file "COPYING" in the main distribution directory for copyright.
-//
+
+
+
 
 #include "zeek/Reporter.h"
 
@@ -41,10 +41,10 @@ Reporter::Reporter(bool arg_abort_on_scripting_errors) {
     via_events = false;
     in_error_handler = 0;
 
-    // Always use stderr at startup/init before scripts have been fully parsed
-    // and zeek_init() processed.
-    // Messages may otherwise be missed if an error occurs that prevents events
-    // from ever being dispatched.
+
+
+
+
     info_to_stderr = true;
     warnings_to_stderr = true;
     errors_to_stderr = true;
@@ -114,7 +114,7 @@ void Reporter::FatalError(const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
 
-    // Always log to stderr.
+
     DoLog("fatal error", nullptr, stderr, nullptr, nullptr, true, false, nullptr, fmt, ap);
 
     va_end(ap);
@@ -129,7 +129,7 @@ void Reporter::FatalErrorWithCore(const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
 
-    // Always log to stderr.
+
     DoLog("fatal error", nullptr, stderr, nullptr, nullptr, true, false, nullptr, fmt, ap);
 
     va_end(ap);
@@ -213,7 +213,7 @@ void Reporter::InternalError(const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
 
-    // Always log to stderr.
+
     DoLog("internal error", nullptr, stderr, nullptr, nullptr, true, false, nullptr, fmt, ap);
 
     va_end(ap);
@@ -228,8 +228,8 @@ void Reporter::AnalyzerError(analyzer::Analyzer* a, const char* fmt, ...) {
 
     va_list ap;
     va_start(ap, fmt);
-    // Always log to stderr.
-    // TODO: would be nice to also log a call stack.
+
+
     DoLog("analyzer error", reporter_error, stderr, nullptr, nullptr, true, true, nullptr, fmt, ap);
     va_end(ap);
 }
@@ -238,7 +238,7 @@ void Reporter::InternalWarning(const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
     FILE* out = EmitToStderr(warnings_to_stderr) ? stderr : nullptr;
-    // TODO: would be nice to also log a call stack.
+
     DoLog("internal warning", reporter_warning, out, nullptr, nullptr, true, true, nullptr, fmt, ap);
     va_end(ap);
 }
@@ -317,7 +317,7 @@ Reporter::PermitWeird Reporter::CheckGlobalWeirdLists(const char* name) {
         return PermitWeird::Allow;
 
     if ( WeirdOnGlobalList(name) )
-        // We track weirds on the global list through the "net_weird" table.
+
         return PermitNetWeird(name) ? PermitWeird::Allow : PermitWeird::Deny;
 
     return PermitWeird::Unknown;
@@ -513,7 +513,7 @@ void Reporter::DoLog(const char* prefix, EventHandlerPtr event, FILE* out, Conne
         }
 
         else if ( filename && *filename ) {
-            // Take from globals.
+
             loc_str = filename;
             char tmp[32];
             snprintf(tmp, 32, "%d", line_number);
@@ -521,7 +521,7 @@ void Reporter::DoLog(const char* prefix, EventHandlerPtr event, FILE* out, Conne
         }
     }
 
-    // Figure out how big of a buffer is needed here.
+
     va_list ap_copy;
     va_copy(ap_copy, ap);
     int req_buffer_size = vsnprintf(nullptr, 0, fmt, ap_copy);
@@ -536,7 +536,7 @@ void Reporter::DoLog(const char* prefix, EventHandlerPtr event, FILE* out, Conne
     if ( postfix && *postfix )
         new_buffer_size += strlen(postfix) + 10;
 
-    // Add one byte for a null terminator.
+
     new_buffer_size++;
 
     if ( new_buffer_size > DEFAULT_BUFFER_SIZE ) {
@@ -556,8 +556,8 @@ void Reporter::DoLog(const char* prefix, EventHandlerPtr event, FILE* out, Conne
         FatalError("out of memory in Reporter");
 
     if ( postfix && *postfix )
-        // Note, if you change this fmt string, adjust the additional
-        // buffer size above.
+
+
         snprintf(buffer + strlen(buffer), size - strlen(buffer), " (%s)", postfix);
 
     bool raise_event = true;
@@ -615,13 +615,13 @@ void Reporter::DoLog(const char* prefix, EventHandlerPtr event, FILE* out, Conne
     if ( out ) {
         std::string s = "";
 
-        // Prefix reporter messages that go to stdout/stderr with network time if
-        // network time has been initialized and this process's network time is either
-        // explicitly controlled (allow_network_time_forward=F), or the process is a
-        // worker that updates its network time from a packet source (interface or pcap).
-        //
-        // In other words, reporter messages to stdout/stderr from non-worker processes
-        // are not prefixed with the timestamp unless allow_network_time_forward=F.
+
+
+
+
+
+
+
         if ( (run_state::reading_live || run_state::reading_traces || ! BifConst::allow_network_time_forward) &&
              run_state::zeek_start_network_time != 0.0 ) {
             char tmp[32];
@@ -648,8 +648,8 @@ void Reporter::DoLog(const char* prefix, EventHandlerPtr event, FILE* out, Conne
             try {
                 MESSAGE(s);
             } catch ( const doctest::detail::TestFailureException& e ) {
-                // If doctest throws an exception, just write the string out to stdout
-                // like normal, just so it's captured somewhere.
+
+
                 fprintf(out, "%s\n", s.c_str());
             }
         }
@@ -662,7 +662,7 @@ void Reporter::DoLog(const char* prefix, EventHandlerPtr event, FILE* out, Conne
 #endif
     }
 
-    // If the buffer got reallocated because it was too small, free the reallocated one.
+
     if ( allocated )
         free(allocated);
 }
@@ -675,4 +675,4 @@ ScriptLocationScope::ScriptLocationScope(const zeek::detail::Frame* frame) {
 
 ScriptLocationScope::~ScriptLocationScope() { zeek::reporter->PopLocation(); }
 
-} // namespace zeek
+}

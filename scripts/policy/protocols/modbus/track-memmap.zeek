@@ -1,7 +1,7 @@
-##! This script tracks the memory map of holding (read/write) registers and logs
-##! changes as they are discovered.
-##!
-##! .. todo:: Not all register read and write functions are supported yet.
+
+
+
+
 
 @load base/protocols/modbus
 @load base/utils/directions-and-hosts
@@ -13,24 +13,24 @@ export {
 
 	global log_policy_register_change: Log::PolicyHook;
 
-	## The hosts that should have memory mapping enabled.
+
 	option track_memmap: Host = ALL_HOSTS;
 
 	type MemmapInfo: record {
-		## Timestamp for the detected register change.
+
 		ts:        time     &log;
-		## Unique ID for the connection.
+
 		uid:       string   &log;
-		## Connection ID.
+
 		id:        conn_id  &log;
-		## The device memory offset.
+
 		register:  count    &log;
-		## The old value stored in the register.
+
 		old_val:   count    &log;
-		## The new value stored in the register.
+
 		new_val:   count    &log;
-		## The time delta between when the *old_val* and *new_val* were
-		## seen.
+
+
 		delta:     interval &log;
 	};
 
@@ -39,14 +39,14 @@ export {
 		value:    count;
 	};
 
-	## Indexed on the device register value and yielding the register value.
+
 	type Registers: table[count] of RegisterValue;
 
-	## The memory map of slaves is tracked with this variable.
+
 	global device_registers: table[addr] of Registers;
 
-	## This event is generated every time a register is seen to be different
-	## than it was previously seen to be.
+
+
 	global changed_register: event(c: connection, register: count, old_val: count, new_val: count, delta: interval);
 }
 

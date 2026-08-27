@@ -1,5 +1,5 @@
 
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Func.h"
 
@@ -16,7 +16,7 @@
 #include <cstdlib>
 #include <ranges>
 
-// Most of these includes are needed for code included from bif files.
+
 #include "zeek/Base64.h"
 #include "zeek/Debug.h"
 #include "zeek/Desc.h"
@@ -42,9 +42,9 @@
 #include "zeek/plugin/Manager.h"
 #include "zeek/session/Manager.h"
 
-// Ignore clang-format's reordering of include files here so that it doesn't
-// break what symbols are available when, which keeps the build from breaking.
-// clang-format off
+
+
+
 #include "zeek.bif.func_h"
 #include "communityid.bif.func_h"
 #include "stats.bif.func_h"
@@ -68,7 +68,7 @@
 #include "CPP-load.bif.func_def"
 #include "mmdb.bif.func_def"
 #include "telemetry_functions.bif.func_def"
-// clang-format on
+
 
 extern RETSIGTYPE sig_handler(int signo);
 
@@ -79,7 +79,7 @@ std::vector<void (*)()> bif_initializers;
 static const std::pair<bool, zeek::ValPtr> empty_hook_result(false, nullptr);
 
 uint64_t max_recursion_depth = 1000;
-} // namespace zeek::detail
+}
 
 namespace zeek {
 
@@ -146,7 +146,7 @@ void Func::AddBody(Func::Body&& new_body, const std::vector<detail::IDPtr>& new_
     Internal("Func::AddBody called");
 }
 
-// Deprecated interfaces.
+
 void Func::AddBody(detail::StmtPtr new_body, const std::vector<detail::IDPtr>& new_inits, size_t new_frame_size,
                    int priority) {
     AddBody(Func::Body{.stmts = std::move(new_body), .priority = priority}, new_inits, new_frame_size);
@@ -158,16 +158,16 @@ void Func::AddBody(detail::StmtPtr new_body, size_t new_frame_size) {
     AddBody({.stmts = std::move(new_body)}, no_inits, new_frame_size);
 }
 
-void Func::AddBody(detail::StmtPtr /* new_body */, const std::vector<detail::IDPtr>& /* new_inits */,
-                   size_t /* new_frame_size */, int /* priority */, const std::set<EventGroupPtr>& /* groups */) {
+void Func::AddBody(detail::StmtPtr , const std::vector<detail::IDPtr>& ,
+                   size_t , int , const std::set<EventGroupPtr>& ) {
     Internal("Func::AddBody called");
 }
 
 void Func::SetScope(detail::ScopePtr newscope) { scope = std::move(newscope); }
 
 FuncPtr Func::DoClone() {
-    // By default, ok just to return a reference. Func does not have any state
-    // that is different across instances.
+
+
     return {NewRef{}, this};
 }
 
@@ -180,7 +180,7 @@ void Func::DescribeDebug(ODesc* d, const Args* args) const {
         auto num_fields = static_cast<size_t>(func_args->NumFields());
 
         for ( auto i = 0u; i < args->size(); ++i ) {
-            // Handle varargs case (more args than formals).
+
             if ( i >= num_fields ) {
                 d->Add("vararg");
                 int va_num = i - num_fields;
@@ -203,14 +203,14 @@ void Func::DescribeDebug(ODesc* d, const Args* args) const {
 }
 
 detail::TraversalCode Func::Traverse(detail::TraversalCallback* cb) const {
-    // FIXME: Make a fake scope for builtins?
+
     auto old_scope = cb->current_scope;
     cb->current_scope = scope;
 
     detail::TraversalCode tc = cb->PreFunction(this);
     HANDLE_TC_STMT_PRE(tc);
 
-    // FIXME: Traverse arguments to builtin functions, too.
+
     if ( kind == SCRIPT_FUNC && scope ) {
         tc = scope->Traverse(cb);
         HANDLE_TC_STMT_PRE(tc);
@@ -238,15 +238,15 @@ void Func::CopyStateInto(Func* other) const {
 }
 
 void Func::CheckPluginResult(bool handled, const ValPtr& hook_result, FunctionFlavor flavor) const {
-    // Helper function factoring out this code from ScriptFunc:Call() for
-    // better readability.
+
+
 
     if ( ! handled ) {
         if ( hook_result )
             reporter->InternalError("plugin set processed flag to false but actually returned a value");
 
-        // The plugin result hasn't been processed yet (read: fall
-        // into ::Call method).
+
+
         return;
     }
 
@@ -333,14 +333,14 @@ ValPtr ScriptFunc::Invoke(zeek::Args* args, Frame* parent) const {
         return hook_result;
 
     if ( bodies.empty() ) {
-        // Can only happen for events and hooks.
+
         assert(Flavor() == FUNC_FLAVOR_EVENT || Flavor() == FUNC_FLAVOR_HOOK);
         return Flavor() == FUNC_FLAVOR_HOOK ? val_mgr->True() : nullptr;
     }
 
     Frame f{static_cast<int>(frame_size), this, args};
 
-    // Hand down any trigger.
+
     if ( parent ) {
         f.SetTrigger({NewRef{}, parent->GetTrigger()});
         f.SetTriggerAssoc(parent->GetTriggerAssoc());
@@ -349,10 +349,10 @@ ValPtr ScriptFunc::Invoke(zeek::Args* args, Frame* parent) const {
     const CallExpr* call_expr = parent ? parent->GetCall() : nullptr;
     call_stack.emplace_back(call_expr, &f);
 
-    // If a script function is ever invoked with more arguments than it has
-    // parameters log an error and return. Most likely a "variadic function"
-    // that only has a single any parameter and is excluded from static type
-    // checking is involved. This should otherwise not be possible to hit.
+
+
+
+
     auto num_params = static_cast<size_t>(GetType()->Params()->NumFields());
     if ( args->size() > num_params ) {
         emit_builtin_exception("too many arguments for function call");
@@ -376,12 +376,12 @@ ValPtr ScriptFunc::Invoke(zeek::Args* args, Frame* parent) const {
         if ( body.disabled )
             continue;
 
-        // Fill in the rest of the frame with the function's arguments.
+
         for ( auto j = 0u; j < args->size(); ++j ) {
             const auto& arg = (*args)[j];
 
             if ( f.GetElement(j) != arg )
-                // Either not yet set, or somebody reassigned the frame slot.
+
                 f.SetElement(j, arg);
         }
 
@@ -395,14 +395,14 @@ ValPtr ScriptFunc::Invoke(zeek::Args* args, Frame* parent) const {
         }
 
         catch ( InterpreterException& e ) {
-            // Already reported, but now determine whether to unwind further.
+
             if ( Flavor() == FUNC_FLAVOR_FUNCTION ) {
                 call_stack.pop_back();
-                // Result not set b/c exception was thrown
+
                 throw;
             }
 
-            // Continue exec'ing remaining bodies of hooks/events.
+
             continue;
         }
 
@@ -417,12 +417,12 @@ ValPtr ScriptFunc::Invoke(zeek::Args* args, Frame* parent) const {
         }
 
         if ( Flavor() == FUNC_FLAVOR_HOOK ) {
-            // Ignore any return values of hook bodies, final return value
-            // depends on whether a body returns as a result of break statement.
+
+
             result = nullptr;
 
             if ( flow == FLOW_BREAK ) {
-                // Short-circuit execution of remaining hook handler bodies.
+
                 result = val_mgr->False();
                 break;
             }
@@ -437,10 +437,10 @@ ValPtr ScriptFunc::Invoke(zeek::Args* args, Frame* parent) const {
     else if ( event_trace_mgr && Flavor() == FUNC_FLAVOR_EVENT )
         event_trace_mgr->EndEvent(this, args);
 
-    // Warn if the function returns something, but we returned from
-    // the function without an explicit return, or without a value.
+
+
     else if ( GetType()->Yield() && GetType()->Yield()->Tag() != TYPE_VOID && ! GetType()->ExpressionlessReturnOkay() &&
-              (flow != FLOW_RETURN /* we fell off the end */ || ! result /* explicit return with no result */) &&
+              (flow != FLOW_RETURN  || ! result ) &&
               ! f.HasDelayed() )
         reporter->Warning("non-void function returning without a value: %s", GetName().c_str());
 
@@ -462,10 +462,10 @@ void ScriptFunc::CreateCaptures(Frame* f) {
     if ( ! captures )
         return;
 
-    // Create *either* a private Frame to hold the values of captured
-    // variables, and a mapping from those variables to their offsets
-    // in the Frame; *or* a ZVal frame if this script has a ZAM-compiled
-    // body.
+
+
+
+
     ASSERT(bodies.size() == 1);
 
     if ( bodies[0].stmts->Tag() == STMT_ZAM )
@@ -486,8 +486,8 @@ void ScriptFunc::CreateCaptures(Frame* f) {
                 v = v->Clone();
 
             if ( captures_vec )
-                // Don't use v->GetType() here, as that might
-                // be "any" and we need to convert.
+
+
                 captures_vec->push_back(ZVal(v, c.Id()->GetType()));
             else
                 captures_frame->SetElement(offset, std::move(v));
@@ -552,7 +552,7 @@ void ScriptFunc::AddBody(Func::Body&& new_body, const std::vector<IDPtr>& new_in
     new_body.stmts = AddInits(new_body.stmts, new_inits);
 
     if ( Flavor() == FUNC_FLAVOR_FUNCTION ) {
-        // For functions, we replace the old body with the new one.
+
         assert(bodies.size() <= 1);
         bodies.clear();
     }
@@ -563,7 +563,7 @@ void ScriptFunc::AddBody(Func::Body&& new_body, const std::vector<IDPtr>& new_in
     std::ranges::stable_sort(bodies, std::ranges::greater(), &Body::priority);
 }
 
-// Deprecated interface.
+
 void ScriptFunc::AddBody(StmtPtr new_body, const std::vector<IDPtr>& new_inits, size_t new_frame_size, int priority,
                          const std::set<EventGroupPtr>& groups) {
     if ( new_frame_size > frame_size )
@@ -577,7 +577,7 @@ void ScriptFunc::AddBody(StmtPtr new_body, const std::vector<IDPtr>& new_inits, 
     new_body = AddInits(std::move(new_body), new_inits);
 
     if ( Flavor() == FUNC_FLAVOR_FUNCTION ) {
-        // For functions, we replace the old body with the new one.
+
         assert(bodies.size() <= 1);
         bodies.clear();
     }
@@ -634,11 +634,11 @@ bool ScriptFunc::DeserializeCaptures(BrokerListView data) {
 }
 
 FuncPtr ScriptFunc::DoClone() {
-    // ScriptFunc could hold a closure. In this case a clone of it must
-    // store a copy of this closure.
-    //
-    // We don't use make_intrusive<> directly because we're accessing
-    // a protected constructor.
+
+
+
+
+
     auto other = IntrusivePtr{AdoptRef{}, new ScriptFunc()};
 
     CopyStateInto(other.get());
@@ -656,7 +656,7 @@ FuncPtr ScriptFunc::DoClone() {
         auto cv_i = captures_vec->begin();
         other->captures_vec = std::make_unique<std::vector<ZVal>>();
         for ( auto& c : *type->GetCaptures() ) {
-            // Need to clone cv_i.
+
             auto& t_i = c.Id()->GetType();
             auto cv_i_val = cv_i->ToVal(t_i)->Clone();
             other->captures_vec->push_back(ZVal(std::move(cv_i_val), t_i));
@@ -685,7 +685,7 @@ std::optional<BrokerData> ScriptFunc::SerializeCaptures() const {
     if ( captures_frame )
         return captures_frame->Serialize();
 
-    // No captures, return an empty vector.
+
     return BrokerListBuilder{}.Build();
 }
 
@@ -786,8 +786,8 @@ bool check_built_in_call(BuiltinFunc* f, CallExpr* call) {
 
     const ExprPList& args = call->Args()->Exprs();
     if ( args.empty() ) {
-        // Empty calls are allowed, since you can't just
-        // use "print;" to get a blank line.
+
+
         return true;
     }
 
@@ -813,7 +813,7 @@ bool check_built_in_call(BuiltinFunc* f, CallExpr* call) {
             }
 
             if ( *(fmt_str++) != '%' )
-                // Not a "%%" escape.
+
                 ++num_fmt;
         }
 
@@ -826,8 +826,8 @@ bool check_built_in_call(BuiltinFunc* f, CallExpr* call) {
     return true;
 }
 
-// Gets a function's priority from its Scope's attributes. Errors if it sees any
-// problems.
+
+
 static int get_func_priority(const std::vector<AttrPtr>& attrs) {
     int priority = 0;
 
@@ -861,9 +861,9 @@ static int get_func_priority(const std::vector<AttrPtr>& attrs) {
     return priority;
 }
 
-// Get a function's groups from its Scope's attributes. Errors if it sees any
-// problems with the group tag.  get_func_priority() checks for illegal
-// attributes, so we don't do this here.
+
+
+
 static std::set<EventGroupPtr> get_func_groups(const std::vector<AttrPtr>& attrs) {
     std::set<EventGroupPtr> groups;
 
@@ -913,14 +913,14 @@ FunctionIngredients::FunctionIngredients(ScopePtr _scope, StmtPtr _body, const s
                 ATTR_NO_ZAM_OPT,
             };
             if ( assoc_with_id.contains(a->Tag()) )
-                // Associate this with the identifier, too.
+
                 id->AddAttr(make_intrusive<Attr>(a->Tag()));
         }
     }
     else
         priority = 0;
 
-    // Implicit module event groups for events and hooks.
+
     auto flavor = id->GetType<zeek::FuncType>()->Flavor();
     if ( flavor == FUNC_FLAVOR_EVENT || flavor == FUNC_FLAVOR_HOOK ) {
         auto module_group = event_registry->RegisterGroup(EventGroupKind::Module, module_name);
@@ -953,16 +953,16 @@ zeek::VectorValPtr get_current_script_backtrace() {
 
     auto rval = make_intrusive<VectorVal>(backtrace_type);
 
-    // The body of the following loop can wind up adding items to
-    // the call stack (because MakeCallArgumentVector() evaluates
-    // default arguments, which can in turn involve calls to script
-    // functions), so we work from a copy of the current call stack
-    // to prevent problems with iterator invalidation.
+
+
+
+
+
     auto cs_copy = zeek::detail::call_stack;
 
     for ( const auto& ci : std::ranges::reverse_view(cs_copy) ) {
         if ( ! ci.frame->GetFunction() )
-            // This happens for compiled code and BIFs.
+
             continue;
 
         const auto& params = ci.frame->GetFunction()->GetType()->Params();
@@ -1008,8 +1008,8 @@ static void emit_builtin_error_common(const char* msg, Obj* arg, bool unwind) {
     };
 
     if ( call_stack.empty() ) {
-        // Shouldn't happen unless someone (mistakenly) calls builtin_error()
-        // from somewhere that's not even evaluating script-code.
+
+
         emit(nullptr);
         return;
     }
@@ -1017,7 +1017,7 @@ static void emit_builtin_error_common(const char* msg, Obj* arg, bool unwind) {
     const auto& last_call = call_stack.back();
 
     if ( call_stack.size() < 2 ) {
-        // Don't need to check for wrapper function like "<module>::__<func>"
+
         emit(last_call.call);
         return;
     }
@@ -1107,7 +1107,7 @@ void init_primary_bifs() {
     did_builtin_init = true;
 }
 
-} // namespace detail
+}
 
 void emit_builtin_error(const char* msg) { zeek::detail::emit_builtin_error_common(msg, nullptr, false); }
 
@@ -1117,4 +1117,4 @@ void emit_builtin_error(const char* msg, const zeek::ValPtr& arg) {
 
 void emit_builtin_error(const char* msg, Obj* arg) { zeek::detail::emit_builtin_error_common(msg, arg, false); }
 
-} // namespace zeek
+}

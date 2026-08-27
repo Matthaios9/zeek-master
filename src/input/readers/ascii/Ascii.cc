@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/input/readers/ascii/Ascii.h"
 
@@ -82,7 +82,7 @@ bool Ascii::DoInit(const ReaderInfo& info, int num_fields, const Field* const* f
     path_prefix.assign(reinterpret_cast<const char*>(BifConst::InputAscii::path_prefix->Bytes()),
                        BifConst::InputAscii::path_prefix->Len());
 
-    // Set per-filter configuration options.
+
     for ( const auto& [k, v] : info.config ) {
         if ( strcmp(k, "separator") == 0 )
             separator.assign(v);
@@ -119,14 +119,14 @@ bool Ascii::OpenFile() {
     if ( file.is_open() )
         return true;
 
-    // Handle path-prefixing. See similar logic in Binary::DoInit().
+
     fname = Info().source;
 
     if ( ! is_absolute_path(fname) && ! path_prefix.empty() ) {
         std::size_t last = path_prefix.find_last_not_of('/');
 
         string path;
-        if ( last == string::npos ) // Nothing but slashes -- weird but ok...
+        if ( last == string::npos )
             path = "/";
         else
             path = path_prefix.substr(0, last + 1);
@@ -159,7 +159,7 @@ bool Ascii::OpenFile() {
 }
 
 bool Ascii::ReadHeader(bool useCached) {
-    // try to read the header line...
+
     string line;
 
     if ( ! useCached ) {
@@ -175,10 +175,10 @@ bool Ascii::ReadHeader(bool useCached) {
     else
         line = headerline;
 
-    // construct list of field names.
+
     auto ifields = util::split(std::move(line), separator[0]);
 
-    // printf("Updating fields from description %s\n", line.c_str());
+
     columnMap.clear();
 
     const auto* fields = Fields();
@@ -189,8 +189,8 @@ bool Ascii::ReadHeader(bool useCached) {
         auto fit = std::ranges::find(ifields, field->name);
         if ( fit == ifields.end() ) {
             if ( field->optional ) {
-                // we do not really need this field. mark it as not present and always send an undef
-                // back.
+
+
                 FieldMapping f(field->name, field->type, field->subtype, -1);
                 f.present = false;
                 columnMap.push_back(f);
@@ -223,7 +223,7 @@ bool Ascii::ReadHeader(bool useCached) {
         columnMap.push_back(f);
     }
 
-    // well, that seems to have worked...
+
     return true;
 }
 
@@ -236,7 +236,7 @@ bool Ascii::GetLine(string& str) {
         if ( str.empty() )
             continue;
 
-        if ( str.back() == '\r' ) // deal with \r\n by removing \r
+        if ( str.back() == '\r' )
             str.pop_back();
 
         if ( str[0] != '#' )
@@ -251,7 +251,7 @@ bool Ascii::GetLine(string& str) {
     return false;
 }
 
-// read the entire file and send appropriate thingies back to InputMgr
+
 bool Ascii::DoUpdate() {
     if ( ! OpenFile() )
         return ! fail_on_file_problem;
@@ -261,7 +261,7 @@ bool Ascii::DoUpdate() {
 
     switch ( Info().mode ) {
         case MODE_REREAD: {
-            // check if the file has changed
+
             struct stat sb;
             if ( stat(fname.c_str(), &sb) == -1 ) {
                 FailWarn(fail_on_file_problem, Fmt("Could not get stat for %s", fname.c_str()), true);
@@ -273,30 +273,30 @@ bool Ascii::DoUpdate() {
             file_ino_t current_ino = reliable_inode(fname.c_str(), sb.st_ino);
 
             if ( current_ino == ino && sb.st_mtime == mtime ) {
-                // no change
+
                 return true;
             }
 
-            // Warn again in case of trouble if the file changes. The comparison to 0
-            // is to suppress an extra warning that we'd otherwise get on the initial
-            // inode assignment.
+
+
+
             if ( ino != 0 )
                 StopWarningSuppression();
 
             mtime = sb.st_mtime;
             ino = current_ino;
-            // File changed. Fall through to re-read.
+
         }
 
         case MODE_MANUAL:
         case MODE_STREAM: {
-            // dirty, fix me. (well, apparently after trying seeking, etc
-            // - this is not that bad)
+
+
             if ( file.is_open() ) {
                 if ( Info().mode == MODE_STREAM ) {
-                    file.clear(); // remove end of file evil bits
+                    file.clear();
                     if ( ! ReadHeader(true) ) {
-                        return ! fail_on_file_problem; // header reading failed
+                        return ! fail_on_file_problem;
                     }
 
                     break;
@@ -318,11 +318,11 @@ bool Ascii::DoUpdate() {
     file.sync();
 
     while ( GetLine(line) ) {
-        // split on tabs
+
         bool error = false;
         auto stringfields = util::split(line, separator[0]);
 
-        // This needs to be a signed value or the comparisons below will fail.
+
         int pos = static_cast<int>(stringfields.size() - 1);
 
         Value** fields = new Value*[NumFields()];
@@ -330,7 +330,7 @@ bool Ascii::DoUpdate() {
         int fpos = 0;
         for ( const auto& fit : columnMap ) {
             if ( ! fit.present ) {
-                // add non-present field
+
                 fields[fpos] = new Value(fit.type, false);
                 if ( read_location )
                     fields[fpos]->SetFileLineNumber(read_location->FirstLine());
@@ -372,7 +372,7 @@ bool Ascii::DoUpdate() {
                 val->SetFileLineNumber(read_location->FirstLine());
 
             if ( fit.secondary_position != -1 ) {
-                // we have a port definition :)
+
                 assert(val->type == TYPE_PORT);
                 val->val.port_val.proto = formatter->ParseProto(stringfields[fit.secondary_position]);
             }
@@ -383,9 +383,9 @@ bool Ascii::DoUpdate() {
         }
 
         if ( error ) {
-            // Encountered non-fatal error, ignoring line. But
-            // first, delete all successfully read fields and the
-            // array structure.
+
+
+
 
             for ( int i = 0; i < fpos; i++ )
                 delete fields[i];
@@ -393,7 +393,7 @@ bool Ascii::DoUpdate() {
             delete[] fields;
             continue;
         }
-        // If there's no error, then it makes sense to report the next error.
+
         else
             StopWarningSuppression();
 
@@ -418,13 +418,13 @@ bool Ascii::DoHeartbeat(double network_time, double current_time) {
 
     switch ( Info().mode ) {
         case MODE_MANUAL:
-            // yay, we do nothing :)
+
             break;
 
         case MODE_REREAD:
         case MODE_STREAM:
-            Update(); // Call Update, not DoUpdate, because Update
-                      // checks the "disabled" flag.
+            Update();
+
             break;
 
         default: assert(false);
@@ -433,4 +433,4 @@ bool Ascii::DoHeartbeat(double network_time, double current_time) {
     return true;
 }
 
-} // namespace zeek::input::reader::detail
+}

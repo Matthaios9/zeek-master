@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_btype_h
 #define pac_btype_h
@@ -10,7 +10,7 @@
 class BuiltInType : public Type {
 public:
     enum BITType : uint8_t {
-    // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+
 #define TYPE_DEF(name, pactype, ctype, size) name,
 #include "pac_type.def"
 #undef TYPE_DEF
@@ -50,4 +50,4 @@ public:
     static bool CompatibleBuiltInTypes(BuiltInType* type1, BuiltInType* type2);
 };
 
-#endif // pac_btype_h
+#endif

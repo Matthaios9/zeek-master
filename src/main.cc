@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include <unistd.h>
 #include <cinttypes>
@@ -13,13 +13,13 @@
 #include "const.bif.netvar_h"
 
 #ifdef _MSC_VER
-#include <fcntl.h> // For _O_BINARY.
+#include <fcntl.h>
 
-// By default, Windows only looks in the System32 directory for dlls. Npcap installs
-// into System32\Npcap, so we have to add that path to the search path for DLLs or
-// the process won't find it. This is annoying, but it's how the Npcap project
-// recommends we do it. See https://npcap.com/guide/npcap-devguide.html#npcap-feature-native
-// for further info.
+
+
+
+
+
 static void init_npcap_dll_path() {
 #ifdef HAVE_WPCAP
     BOOL(WINAPI * SetDllDirectory)(LPCTSTR);
@@ -31,7 +31,7 @@ static void init_npcap_dll_path() {
         fprintf(stderr, "Error in SetDllDirectory");
     }
     else {
-        len = GetSystemDirectory(sysdir_name, 480); //	be safe
+        len = GetSystemDirectory(sysdir_name, 480);
         if ( ! len )
             fprintf(stderr, "Error in GetSystemDirectory (%d)", GetLastError());
         strcat(sysdir_name, "\\Npcap");
@@ -48,9 +48,9 @@ int main(int argc, char** argv) {
     _setmode(_fileno(stdout), _O_BINARY);
     _setmode(_fileno(stderr), _O_BINARY);
 
-    // Disable stdout buffering so printf output from dynamically loaded
-    // plugin DLLs appears in the correct order relative to zeek's own
-    // output when stdout is redirected to a file.
+
+
+
     setvbuf(stdout, nullptr, _IONBF, 0);
 
     init_npcap_dll_path();

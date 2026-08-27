@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/input/ReaderBackend.h"
 
@@ -123,11 +123,11 @@ public:
 
     bool Process() override {
         Object()->SetDisable();
-        // And - because we do not need disabled objects any more -
-        // there is no way to re-enable them, so simply delete them.
-        // This avoids the problem of having to periodically check if
-        // there are any disabled readers out there. As soon as a
-        // reader disables itself, it deletes itself.
+
+
+
+
+
         input_mgr->RemoveStream(Object());
         return true;
     }
@@ -148,7 +148,7 @@ bool ReaderErrorMessage::Process() {
 using namespace input;
 
 ReaderBackend::ReaderBackend(ReaderFrontend* arg_frontend) : MsgThread() {
-    disabled = true; // disabled will be set correctly in init.
+    disabled = true;
     frontend = arg_frontend;
     info = new ReaderInfo(frontend->Info());
     num_fields = 0;
@@ -182,7 +182,7 @@ bool ReaderBackend::Init(const int arg_num_fields, const threading::Field* const
     num_fields = arg_num_fields;
     fields = arg_fields;
 
-    // disable if DoInit returns error.
+
     int success = DoInit(*info, arg_num_fields, arg_fields);
 
     if ( ! success ) {
@@ -197,7 +197,7 @@ bool ReaderBackend::OnFinish(double network_time) {
     if ( ! Failed() )
         DoClose();
 
-    disabled = true; // frontend disables itself when it gets the Close-message.
+    disabled = true;
     SendOut(new ReaderClosedMessage(frontend));
 
     if ( fields ) {
@@ -222,17 +222,17 @@ bool ReaderBackend::Update() {
     if ( ! success )
         DisableFrontend();
 
-    return ! disabled; // always return failure if we have been disabled in the meantime
+    return ! disabled;
 }
 
 void ReaderBackend::DisableFrontend() {
-    // We might already have been disabled - e.g., due to a call to
-    // error. In that case, ignore this...
+
+
     if ( disabled )
         return;
 
-    // We also set disabled here, because there still may be other
-    // messages queued and we will dutifully ignore these from now.
+
+
     disabled = true;
     SendOut(new DisableMessage(frontend));
 }
@@ -280,8 +280,8 @@ void ReaderBackend::Error(const char* msg) {
     SendOut(new ReaderErrorMessage(frontend, ReaderErrorMessage::ERROR, msg));
     MsgThread::Error(msg);
 
-    // Force errors to be fatal.
+
     DisableFrontend();
 }
 
-} // namespace zeek::input
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/cluster/backend/zeromq/ZeroMQ.h"
 
@@ -58,7 +58,7 @@ enum class InprocTag : uint8_t {
 
 constexpr DebugFlag operator&(uint8_t x, DebugFlag y) { return static_cast<DebugFlag>(x & static_cast<uint8_t>(y)); }
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+
 
 #define ZEROMQ_DEBUG(...) PLUGIN_DBG_LOG(zeek::plugin::Zeek_Cluster_Backend_ZeroMQ::plugin, __VA_ARGS__)
 
@@ -74,12 +74,12 @@ constexpr DebugFlag operator&(uint8_t x, DebugFlag y) { return static_cast<Debug
         }                                                                                                              \
     } while ( 0 )
 
-// NOLINTEND(cppcoreguidelines-macro-usage)
 
 
-/**
- * Enum for the values used for the opaque BackendMessage.
- */
+
+
+
+
 enum class ZeroMQBackendMessageTag : uint8_t {
     Unsubscription = 0,
     Subscription = 1,
@@ -89,8 +89,8 @@ enum class ZeroMQBackendMessageTag : uint8_t {
 constexpr bool operator==(int x, ZeroMQBackendMessageTag tag) { return x == static_cast<int>(tag); }
 
 ZeekProxyTelemetry::ZeekProxyTelemetry(zmq::socket_t&& arg_req) : req(std::move(arg_req)) {
-    // Register telemetry metric callbacks with the manager. The callbacks run when someone
-    // scrapes the Prometheus endpoint.
+
+
     zeek::telemetry_mgr->CounterInstance("zeek", "cluster_zeromq_proxy_frontend_messages_received", {},
                                          "Number of messages received by the frontend socket", "1", [this]() -> double {
                                              RefreshStatisticsIfNeeded();
@@ -136,7 +136,7 @@ ZeekProxyTelemetry::ZeekProxyTelemetry(zmq::socket_t&& arg_req) : req(std::move(
 }
 
 void ZeekProxyTelemetry::RefreshStatisticsIfNeeded() {
-    // Closed? A bit weird, but lets cover this.
+
     if ( ! req )
         return;
 
@@ -153,20 +153,20 @@ void ZeekProxyTelemetry::RefreshStatistics() {
     zmq::message_t msg;
     bool more = true;
 
-    // I guess we'll see if can hang if someone queries at the wrong time during
-    // shutdown. This code runs on the main thread, so it'd lockup the whole node
-    // after it received SIGERM. It should be easily recognizable on the stack when
-    // attaching via gdb or sending SIGABRT to dump a core. A reasonable process
-    // supervisor will also forcefully kill the process after a certain timeout
-    // after sending SIGTERM.
-    //
-    // The REQ/REP socket is inproc:// so it should be reliable and the zmq::proxy_steerable()
-    // shouldn't just go away without req being closes, so this should all be safe.
+
+
+
+
+
+
+
+
+
     try {
-        // Request.
+
         req.send(buf);
 
-        // Read reply.
+
         for ( size_t i = 0; more; i++ ) {
             zmq::recv_result_t recv_result = req.recv(msg, zmq::recv_flags::none);
 
@@ -201,7 +201,7 @@ void CurveConfig::InitZap(zmq::context_t& ctx, ZapArgs& args) const {
         zeek::reporter->FatalError("ZeroMQ: Failed to bind ZAP socket: %s", err.what());
     }
 
-    // Prepare the allowed public key from the CurveConfig
+
     if ( client_publickey.size() == 40 ) {
         std::string raw_client_publickey(32, '\0');
         zmq_z85_decode(reinterpret_cast<uint8_t*>(raw_client_publickey.data()), client_publickey.c_str());
@@ -238,10 +238,10 @@ struct CurveConfig load_curve_config() {
     curve_config_env.server_publickey = load_from_env("SERVER_PUBLICKEY");
     curve_config_env.server_secretkey = load_from_env("SERVER_SECRETKEY");
 
-    // Do not allow mixing environment variables and script configuration for the encryption
-    // configuration. Due to the possibility to redef on the command-line there's no clear
-    // preference for which one to prefer (or it might be confusing), so simply disallow
-    // combining both approaches.
+
+
+
+
     bool have_script = ! curve_config_script.client_publickey.empty() ||
                        ! curve_config_script.client_secretkey.empty() ||
                        ! curve_config_script.server_publickey.empty() || ! curve_config_script.server_secretkey.empty();
@@ -271,7 +271,7 @@ ZeroMQBackend::ZeroMQBackend(std::unique_ptr<EventSerializer> es, std::unique_pt
                       new zeek::detail::OnLoopProcess<ThreadedBackend, QueueMessage>(this, "ZeroMQ", onloop_queue_hwm)),
       main_inproc(zmq::socket_t(ctx, zmq::socket_type::pair)),
       child_inproc(zmq::socket_t(ctx, zmq::socket_type::pair)),
-      // Counters for block and drop metrics.
+
       total_xpub_drops(
           zeek::telemetry_mgr->CounterInstance("zeek", "cluster_zeromq_xpub_drops", {},
                                                "Number of published events dropped due to XPUB socket HWM.")),
@@ -281,19 +281,19 @@ ZeroMQBackend::ZeroMQBackend(std::unique_ptr<EventSerializer> es, std::unique_pt
       total_msg_errors(
           zeek::telemetry_mgr->CounterInstance("zeek", "cluster_zeromq_msg_errors", {},
                                                "Number of events with the wrong number of message parts.")) {
-    // Establish the socket connection between main thread and child thread
-    // already in the constructor. This allows Subscribe() and Unsubscribe()
-    // calls to be delayed until DoInit() was called.
+
+
+
     main_inproc.bind("inproc://inproc-bridge");
     child_inproc.connect("inproc://inproc-bridge");
 }
 
 ZeroMQBackend::~ZeroMQBackend() {
     try {
-        // DoTerminate is idempotent.
+
         DoTerminate();
     } catch ( ... ) {
-        // This should never happen.
+
         abort();
     }
 }
@@ -327,13 +327,13 @@ void ZeroMQBackend::DoInitPostScript() {
     event_subscription = zeek::event_registry->Register("Cluster::Backend::ZeroMQ::subscription");
     event_monitoring_event = zeek::event_registry->Register("Cluster::Backend::ZeroMQ::monitoring_event");
 
-    // xpub/xsub hwm configuration
+
     xpub_sndhwm = static_cast<int>(zeek::id::find_val<zeek::IntVal>("Cluster::Backend::ZeroMQ::xpub_sndhwm")->AsInt());
     xpub_sndbuf = static_cast<int>(zeek::id::find_val<zeek::IntVal>("Cluster::Backend::ZeroMQ::xpub_sndbuf")->AsInt());
     xsub_rcvhwm = static_cast<int>(zeek::id::find_val<zeek::IntVal>("Cluster::Backend::ZeroMQ::xsub_rcvhwm")->AsInt());
     xsub_rcvbuf = static_cast<int>(zeek::id::find_val<zeek::IntVal>("Cluster::Backend::ZeroMQ::xsub_rcvbuf")->AsInt());
 
-    // log push/pull socket configuration
+
     log_immediate =
         static_cast<int>(zeek::id::find_val<zeek::BoolVal>("Cluster::Backend::ZeroMQ::log_immediate")->AsBool());
     log_sndhwm = static_cast<int>(zeek::id::find_val<zeek::IntVal>("Cluster::Backend::ZeroMQ::log_sndhwm")->AsInt());
@@ -341,13 +341,13 @@ void ZeroMQBackend::DoInitPostScript() {
     log_rcvhwm = static_cast<int>(zeek::id::find_val<zeek::IntVal>("Cluster::Backend::ZeroMQ::log_rcvhwm")->AsInt());
     log_rcvbuf = static_cast<int>(zeek::id::find_val<zeek::IntVal>("Cluster::Backend::ZeroMQ::log_rcvbuf")->AsInt());
 
-    // load curve configuration from script and environment.
+
     curve_config = load_curve_config();
 }
 
 void ZeroMQBackend::DoTerminate() {
-    // If self_thread is running, notify it to shutdown via the inproc
-    // socket, then wait for it to terminate.
+
+
     if ( self_thread.joinable() && ! self_thread_shutdown_requested ) {
         ZEROMQ_DEBUG("Sending terminate request via inproc socket");
         auto tag = InprocTag::Terminate;
@@ -364,29 +364,29 @@ void ZeroMQBackend::DoTerminate() {
     ZEROMQ_DEBUG("Shutting down ctx");
     ctx.shutdown();
 
-    // Close the sockets that are used from the main thread,
-    // the remaining sockets except for the child_inproc one
-    // were closed by self_thread during shutdown already.
+
+
+
     log_push.close();
     main_inproc.close();
     child_inproc.close();
 
-    // If running the proxy thread, terminate it, too.
+
     if ( proxy_thread ) {
         ZEROMQ_DEBUG("Shutting down proxy thread");
         proxy_thread->Shutdown();
         proxy_thread.reset();
     }
 
-    // The ZAP handler thread will have observed the ctx
-    // shutdown and terminate itself.
+
+
     if ( zap_thread.joinable() )
         zap_thread.join();
 
-    // Shutdown REQ socket for proxy telemetry, this
-    // needs to be done after shutting down the proxy
-    // thread, but before closing the main context,
-    // otherwise ctx.close() below blocks.
+
+
+
+
     if ( proxy_telemetry ) {
         ZEROMQ_DEBUG("Shutting down proxy telemetry");
         proxy_telemetry->Shutdown();
@@ -395,13 +395,13 @@ void ZeroMQBackend::DoTerminate() {
     ZEROMQ_DEBUG("Closing ctx");
     ctx.close();
 
-    // ThreadedBackend::DoTerminate() cleans up the onloop instance.
+
     ThreadedBackend::DoTerminate();
     ZEROMQ_DEBUG("Terminated");
 }
 
 bool ZeroMQBackend::DoInit() {
-    // Enable IPv6 support for all subsequently created sockets, if configured.
+
     ctx.set(zmq::ctxopt::ipv6, ipv6);
 
     xsub = zmq::socket_t(ctx, zmq::socket_type::xsub);
@@ -411,10 +411,10 @@ bool ZeroMQBackend::DoInit() {
 
     xpub.set(zmq::sockopt::linger, linger_ms);
 
-    // Enable XPUB_VERBOSE unconditional to enforce nodes receiving
-    // notifications about any new subscriptions, even if they have
-    // seen them before. This is needed to for the subscribe callback
-    // functionality to work reliably.
+
+
+
+
     xpub.set(zmq::sockopt::xpub_nodrop, connect_xpub_nodrop);
     xpub.set(zmq::sockopt::xpub_verbose, 1);
 
@@ -429,8 +429,8 @@ bool ZeroMQBackend::DoInit() {
         curve_config.ConfigureClientCurveSockOpts(xsub);
     }
 
-    // Create monitoring sockets for xpub, xsub and log_push sockets. For now,
-    // there'll only be three client sockets.
+
+
     constexpr int events_to_monitor = ZMQ_EVENT_ALL;
 
     struct SocketMonitorParam {
@@ -457,7 +457,7 @@ bool ZeroMQBackend::DoInit() {
             return false;
         }
 
-        // Create and connect the other end of the PAIR socket for listening for the events.
+
         monitoring_sockets[i] = zmq::socket_t(ctx, zmq::socket_type::pair);
         try {
             monitoring_sockets[i].connect(addr);
@@ -499,13 +499,13 @@ bool ZeroMQBackend::DoInit() {
     log_pull.set(zmq::sockopt::rcvhwm, log_rcvhwm);
     log_pull.set(zmq::sockopt::rcvbuf, log_rcvbuf);
 
-    // Logger processes also become CURVE servers for the log PULL sockets
-    // if encryption is enabled.
+
+
     if ( curve_config.IsServerEnabled() ) {
         ZEROMQ_DEBUG("Enabling encryption on server log PULL socket");
         curve_config.ConfigureServerCurveSockOpts(log_pull);
 
-        // Also launch a ZAP handler thread for the PULL socket.
+
         curve_config.InitZap(ctx, zap_args);
         zap_thread = std::thread(zeek::cluster::zeromq::zap_thread_fun, &zap_args);
     }
@@ -520,11 +520,11 @@ bool ZeroMQBackend::DoInit() {
         }
     }
 
-    // The connect_log_endpoints variable may be modified by zeek_init(), so
-    // need to look it up here rather than during DoInitPostScript().
-    //
-    // We should've probably introduced a configuration record similar to the
-    // storage framework, too. Hmm. Maybe in the future.
+
+
+
+
+
     const auto& log_endpoints = zeek::id::find_val<zeek::VectorVal>("Cluster::Backend::ZeroMQ::connect_log_endpoints");
     for ( unsigned int i = 0; i < log_endpoints->Size(); i++ )
         connect_log_endpoints.push_back(log_endpoints->StringValAt(i)->ToStdString());
@@ -539,34 +539,34 @@ bool ZeroMQBackend::DoInit() {
         }
     }
 
-    // At this point we've connected xpub/xsub and any logging endpoints.
-    // However, we cannot tell if we're connected to anything as ZeroMQ does
-    // not trivially expose this information.
-    //
-    // There is the zmq_socket_monitor() API that we could use to get some
-    // more low-level events in the future for logging and possibly script
-    // layer eventing: http://api.zeromq.org/4-2:zmq-socket-monitor
 
 
-    // As of now, message processing happens in a separate thread that is
-    // started below. If we wanted to integrate ZeroMQ as a selectable IO
-    // source rather than going through ThreadedBackend and its flare, the
-    // following post might be useful:
-    //
-    // https://funcptr.net/2012/09/10/zeromq---edge-triggered-notification/
 
-    // Thread is joined in backend->DoTerminate(), backend outlives it.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     self_thread = std::thread([](auto* backend) { backend->Run(); }, this);
 
-    // After connecting, call ThreadedBackend::DoInit() to register
-    // the IO source with the loop.
+
+
     return ThreadedBackend::DoInit();
 }
 
 bool ZeroMQBackend::SpawnZmqProxyThread() {
-    // Create a inproc REQ/REP connection for use by ProxyTelmeetry so that
-    // we can request statistics telemetry callbacks from the zmq::proxy_steerable()
-    // invocation running in a separate thread.
+
+
+
     std::string control_endpoint = "inproc://proxy-control";
     zmq::socket_t req(zmq::socket_t(ctx, zmq::socket_type::req));
     zmq::socket_t rep(zmq::socket_t(ctx, zmq::socket_type::rep));
@@ -594,12 +594,12 @@ bool ZeroMQBackend::SpawnZmqProxyThread() {
 }
 
 bool ZeroMQBackend::DoPublishEvent(const std::string& topic, const std::string& format, const byte_buffer& buf) {
-    // Publishing an event happens as a multipart message with 4 parts:
-    //
-    // * The topic to publish to - this is required by XPUB/XSUB
-    // * The node's identifier - see Cluster::node_id().
-    // * The format used to serialize the event.
-    // * The serialized event itself.
+
+
+
+
+
+
     std::array<zmq::const_buffer, 4> parts = {
         zmq::const_buffer(topic.data(), topic.size()),
         zmq::const_buffer(NodeId().data(), NodeId().size()),
@@ -614,17 +614,17 @@ bool ZeroMQBackend::DoPublishEvent(const std::string& topic, const std::string& 
         if ( i < parts.size() - 1 )
             flags = flags | zmq::send_flags::sndmore;
 
-        // This never returns EAGAIN. A pair socket blocks whenever the hwm
-        // is reached, regardless of passing any dontwait flag.
-        //
-        // This can result in blocking on Cluster::publish() if the inner
-        // thread does not consume from child_inproc.
+
+
+
+
+
         try {
             main_inproc.send(parts[i], flags);
         } catch ( const zmq::error_t& err ) {
-            // If send() was interrupted and Zeek caught an interrupt or term signal,
-            // fail the publish as we're about to shutdown. There's nothing the user
-            // can do, but it indicates an overload situation as send() was blocking.
+
+
+
             if ( err.num() == EINTR && (signal_val == SIGINT || signal_val == SIGTERM) ) {
                 zeek::reporter->Error("Failed publish() using ZeroMQ backend at shutdown: %s (signal_val=%d)",
                                       err.what(), signal_val);
@@ -642,12 +642,12 @@ bool ZeroMQBackend::DoPublishEvent(const std::string& topic, const std::string& 
 bool ZeroMQBackend::DoSubscribe(const std::string& topic_prefix, SubscribeCallback cb) {
     ZEROMQ_DEBUG("Subscribing to %s", topic_prefix.c_str());
     try {
-        // Prepend 0x01 byte to indicate subscription to XSUB socket
-        // This is the XSUB API instead of setsockopt(ZMQ_SUBSCRIBE).
+
+
         std::string msg = "\x01" + topic_prefix;
 
-        // Send two message parts. The first part is a single byte tagging the
-        // message as a XSUB update. The second part the payload for the XSUB socket.
+
+
         auto tag = InprocTag::XsubUpdate;
         main_inproc.send(zmq::const_buffer(&tag, 1), zmq::send_flags::sndmore);
         main_inproc.send(zmq::const_buffer(msg.data(), msg.size()));
@@ -659,7 +659,7 @@ bool ZeroMQBackend::DoSubscribe(const std::string& topic_prefix, SubscribeCallba
         return false;
     }
 
-    // Store the callback for later.
+
     if ( cb )
         subscription_callbacks.insert({topic_prefix, cb});
 
@@ -669,12 +669,12 @@ bool ZeroMQBackend::DoSubscribe(const std::string& topic_prefix, SubscribeCallba
 bool ZeroMQBackend::DoUnsubscribe(const std::string& topic_prefix) {
     ZEROMQ_DEBUG("Unsubscribing %s", topic_prefix.c_str());
     try {
-        // Prepend 0x00 byte to indicate unsubscription to XSUB socket.
-        // This is the XSUB API instead of setsockopt(ZMQ_SUBSCRIBE).
+
+
         std::string msg = '\0' + topic_prefix;
 
-        // Send two message parts. The first part is a single byte tagging the
-        // message as a XSUB update. The second part the payload for the XSUB socket.
+
+
         auto tag = InprocTag::XsubUpdate;
         main_inproc.send(zmq::const_buffer(&tag, 1), zmq::send_flags::sndmore);
         main_inproc.send(zmq::const_buffer(msg.data(), msg.size()));
@@ -690,12 +690,12 @@ bool ZeroMQBackend::DoPublishLogWrites(const logging::detail::LogWriteHeader& he
                                        byte_buffer& buf) {
     static std::string message_type = "log-write";
 
-    // Publishing a log write is done using 4 parts
-    //
-    // * A constant "log-write" string
-    // * The node's identifier - see Cluster::node_id().
-    // * The format used to serialize the log write.
-    // * The serialized log write itself.
+
+
+
+
+
+
     std::array<zmq::const_buffer, 4> parts = {
         zmq::const_buffer{message_type.data(), message_type.size()},
         zmq::const_buffer(NodeId().data(), NodeId().size()),
@@ -703,7 +703,7 @@ bool ZeroMQBackend::DoPublishLogWrites(const logging::detail::LogWriteHeader& he
         zmq::const_buffer{buf.data(), buf.size()},
     };
 
-    // If the log_push socket isn't yet initialized or has been closed, just return.
+
     if ( ! log_push ) {
         ZEROMQ_DEBUG("Skipping log write - log_push socket not open");
         return false;
@@ -725,17 +725,17 @@ bool ZeroMQBackend::DoPublishLogWrites(const logging::detail::LogWriteHeader& he
         }
 
         if ( ! result ) {
-            // XXX: Not  exactly clear what we should do if we reach HWM.
-            //      we could block and hope a logger comes along that empties
-            //      our internal queue, or discard messages and log very loudly
-            //      and have metrics about it. However, this may happen regularly
-            //      at shutdown.
-            //
-            //      Maybe that should be configurable?
 
-            // If no logging endpoints were configured, that almost seems on
-            // purpose (and there's a warning elsewhere about this), so skip
-            // logging an error when sending fails.
+
+
+
+
+
+
+
+
+
+
             if ( connect_log_endpoints.empty() )
                 return true;
 
@@ -747,11 +747,11 @@ bool ZeroMQBackend::DoPublishLogWrites(const logging::detail::LogWriteHeader& he
     return true;
 }
 
-// Forward messages from the inprocess bridge.
-//
-// Either it's 2 parts (tag and payload) for controlling subscriptions
-// or terminating the thread, or it is 4 parts in which case all the parts
-// are forwarded to the XPUB socket directly for publishing.
+
+
+
+
+
 void ZeroMQBackend::HandleInprocMessages(std::vector<MultipartMessage>& msgs) {
     for ( auto& msg : msgs ) {
         if ( msg.size() == 2 ) {
@@ -781,25 +781,25 @@ void ZeroMQBackend::HandleInprocMessages(std::vector<MultipartMessage>& msgs) {
                     if ( err.num() == ETERM )
                         return;
 
-                    // XXX: What other error can happen here? How should we react?
+
                     ZEROMQ_THREAD_PRINTF("xpub: Failed to publish with error %s (%d)\n", err.what(), err.num());
                     break;
                 }
 
-                // Empty result means xpub.send() returned EAGAIN. The socket reached
-                // its high-water-mark and we drop this message.
+
+
                 if ( ! result ) {
                     total_xpub_drops->Inc();
 
-                    // Warn once about a dropped message.
-                    //
-                    // TODO: warn every n seconds?
+
+
+
                     if ( xpub_drop_last_warn_at == 0.0 ) {
                         ZEROMQ_THREAD_PRINTF("xpub: warn: dropped a message due to hwm\n");
                         xpub_drop_last_warn_at = util::current_time(true);
                     }
 
-                    break; // Skip the whole message.
+                    break;
                 }
             }
         }
@@ -812,7 +812,7 @@ void ZeroMQBackend::HandleInprocMessages(std::vector<MultipartMessage>& msgs) {
 
 void ZeroMQBackend::HandleLogMessages(const std::vector<MultipartMessage>& msgs) {
     for ( const auto& msg : msgs ) {
-        // sender, format, type,  payload
+
         if ( msg.size() != 4 ) {
             ZEROMQ_THREAD_PRINTF("log: error: expected 4 parts, have %zu!\n", msg.size());
             total_msg_errors->Inc();
@@ -822,10 +822,10 @@ void ZeroMQBackend::HandleLogMessages(const std::vector<MultipartMessage>& msgs)
         byte_buffer payload{msg[3].data<std::byte>(), msg[3].data<std::byte>() + msg[3].size()};
         LogMessage lm{.format = std::string(msg[2].data<const char>(), msg[2].size()), .payload = std::move(payload)};
 
-        // Always enqueue log messages for processing, they are important.
-        //
-        // Hmm, we could also consider bypassing Zeek's event loop completely and
-        // just go to the log_mgr directly in the future.
+
+
+
+
         OnLoop()->QueueForProcessing(std::move(lm), zeek::detail::QueueFlag::Force);
     }
 }
@@ -838,8 +838,8 @@ void ZeroMQBackend::HandleXPubMessages(const std::vector<MultipartMessage>& msgs
             continue;
         }
 
-        // Check if the messages starts with \x00 or \x01 to understand if it's
-        // a subscription or unsubscription message.
+
+
         auto first = *reinterpret_cast<const uint8_t*>(msg[0].data());
         if ( first == 0 || first == 1 ) {
             QueueMessage qm;
@@ -857,11 +857,11 @@ void ZeroMQBackend::HandleXPubMessages(const std::vector<MultipartMessage>& msgs
                 continue;
             }
 
-            // Always enqueue subscription messages from other nodes as events.
-            //
-            // There shouldn't be all that many, unless some script calls Cluster::subscribe() and
-            // Cluster::unsubscribe() a lot, so assume we can afford the extra memory rather than
-            // missing these low-frequency events.
+
+
+
+
+
             OnLoop()->QueueForProcessing(std::move(qm), zeek::detail::QueueFlag::Force);
         }
     }
@@ -875,7 +875,7 @@ void ZeroMQBackend::HandleXSubMessages(const std::vector<MultipartMessage>& msgs
             continue;
         }
 
-        // Filter out messages that are coming from this node.
+
         std::string sender(msg[1].data<const char>(), msg[1].size());
         if ( sender == NodeId() )
             continue;
@@ -886,14 +886,14 @@ void ZeroMQBackend::HandleXSubMessages(const std::vector<MultipartMessage>& msgs
                         .payload = std::move(payload)};
 
 
-        // If queueing the event message for Zeek's main loop doesn't work due to reaching the onloop hwm,
-        // drop the message.
-        //
-        // This is sort of a suicidal snail pattern but without exiting the node.
+
+
+
+
         if ( ! OnLoop()->QueueForProcessing(std::move(em), zeek::detail::QueueFlag::DontBlock) ) {
             total_onloop_drops->Inc();
 
-            // Warn once about a dropped message.
+
             if ( onloop_drop_last_warn_at == 0.0 ) {
                 ZEROMQ_THREAD_PRINTF("warn: dropped a message due to onloop queue full\n");
                 onloop_drop_last_warn_at = util::current_time(true);
@@ -905,9 +905,9 @@ void ZeroMQBackend::HandleXSubMessages(const std::vector<MultipartMessage>& msgs
 void ZeroMQBackend::HandleMonitoringMessages(const std::vector<MultipartMessage>& msgs) {
     for ( const auto& msg : msgs ) {
         if ( msg.size() == 2 ) {
-            // Concatenate the frames of the monitoring event into a single string
-            // and copy its content into the BackendMessage payload. The DoProcessBackendMessage()
-            // implementation understands how to unpack this again.
+
+
+
             std::string str = msg[0].to_string() + msg[1].to_string();
             byte_buffer payload{reinterpret_cast<std::byte*>(str.data()),
                                 reinterpret_cast<std::byte*>(str.data()) + str.size()};
@@ -924,7 +924,7 @@ void ZeroMQBackend::HandleMonitoringMessages(const std::vector<MultipartMessage>
 }
 
 void ZeroMQBackend::Run() {
-    char name[4 + 2 + 16 + 1]{}; // zmq-0x<8byte pointer in hex><nul>
+    char name[4 + 2 + 16 + 1]{};
     snprintf(name, sizeof(name), "zmq-%p", static_cast<void*>(this));
     util::detail::set_thread_name(name);
     ZEROMQ_DEBUG_THREAD_PRINTF(DebugFlag::THREAD, "Thread starting (%p)\n", static_cast<void*>(this));
@@ -951,7 +951,7 @@ void ZeroMQBackend::Run() {
          .handler = [this](const auto& msgs) { HandleMonitoringMessages(msgs); }},
     };
 
-    // Called when Run() terminates.
+
     auto deferred_close = util::Deferred([this]() {
         xpub.close();
         xsub.close();
@@ -969,7 +969,7 @@ void ZeroMQBackend::Run() {
         for ( size_t i = 0; i < sockets.size(); i++ )
             poll_items[i] = {.socket = sockets[i].socket.handle(), .fd = 0, .events = ZMQ_POLLIN | ZMQ_POLLERR};
 
-        // Awkward.
+
         std::vector<std::vector<MultipartMessage>> rcv_messages(sockets.size());
         try {
             try {
@@ -977,7 +977,7 @@ void ZeroMQBackend::Run() {
                 ZEROMQ_DEBUG_THREAD_PRINTF(DebugFlag::POLL, "poll: r=%d", r);
             } catch ( const zmq::error_t& err ) {
                 ZEROMQ_DEBUG_THREAD_PRINTF(DebugFlag::POLL, "poll exception: what=%s num=%d", err.what(), err.num());
-                // Retry interrupted zmq::poll() calls.
+
                 if ( err.num() == EINTR )
                     continue;
 
@@ -991,26 +991,26 @@ void ZeroMQBackend::Run() {
                                            item.revents & ZMQ_POLLERR ? "err" : "");
 
                 if ( item.revents & ZMQ_POLLERR ) {
-                    // What should we be doing? Re-open sockets? Terminate?
+
                     ZEROMQ_THREAD_PRINTF("poll: error: POLLERR on socket %zu %s %p revents=%x\n", i,
                                          sockets[i].name.c_str(), item.socket, item.revents);
                 }
 
-                // Nothing to do?
+
                 if ( (item.revents & ZMQ_POLLIN) == 0 )
                     continue;
 
                 bool consumed_one = false;
 
-                // Read messages from the socket.
+
                 do {
                     zmq::message_t msg;
-                    rcv_messages[i].emplace_back(); // make room for a multipart message
+                    rcv_messages[i].emplace_back();
                     auto& into = rcv_messages[i].back();
 
-                    // Only receive up to poll_max_messages from an individual
-                    // socket. Move on to the next when exceeded. The last pushed
-                    // message (empty) is popped at the end of the loop.
+
+
+
                     if ( poll_max_messages > 0 && rcv_messages[i].size() > poll_max_messages ) {
                         ZEROMQ_DEBUG_THREAD_PRINTF(DebugFlag::POLL, "poll: %s rcv_messages[%zu] full!\n",
                                                    sockets[i].name.c_str(), i);
@@ -1020,13 +1020,13 @@ void ZeroMQBackend::Run() {
                     consumed_one = false;
                     bool more = false;
 
-                    // Read a multi-part message.
+
                     do {
                         zmq::recv_result_t recv_result;
                         try {
                             recv_result = sockets[i].socket.recv(msg, zmq::recv_flags::dontwait);
                         } catch ( const zmq::error_t& err ) {
-                            // Retry interrupted recv() calls.
+
                             if ( err.num() == EINTR )
                                 continue;
 
@@ -1039,7 +1039,7 @@ void ZeroMQBackend::Run() {
                             into.emplace_back(std::move(msg));
                         }
                         else {
-                            // EAGAIN and more flag set? Try again!
+
                             if ( more )
                                 continue;
                         }
@@ -1053,13 +1053,13 @@ void ZeroMQBackend::Run() {
             if ( err.num() != ETERM )
                 throw;
 
-            // Shutdown.
+
             ZEROMQ_DEBUG_THREAD_PRINTF(DebugFlag::THREAD, "Thread terminating (%p)\n", static_cast<void*>(this));
             break;
         }
 
-        // At this point, we've received anything that was readable from the sockets.
-        // Now interpret and enqueue it into messages.
+
+
         for ( size_t i = 0; i < sockets.size(); i++ ) {
             if ( rcv_messages[i].empty() )
                 continue;
@@ -1075,8 +1075,8 @@ bool ZeroMQBackend::DoProcessBackendMessage(int tag, byte_buffer_span payload) {
         zeek::EventHandlerPtr eh;
 
         if ( tag == ZeroMQBackendMessageTag::Subscription ) {
-            // If this is the first time the subscription was observed, raise
-            // the ZeroMQ internal event.
+
+
             if ( ! xpub_subscriptions.contains(topic) ) {
                 eh = event_subscription;
                 xpub_subscriptions.insert(topic);
@@ -1102,7 +1102,7 @@ bool ZeroMQBackend::DoProcessBackendMessage(int tag, byte_buffer_span payload) {
         return true;
     }
     else if ( tag == ZeroMQBackendMessageTag::MonitoringEvent && payload.size() >= 6 ) {
-        // https://libzmq.readthedocs.io/en/latest/zmq_socket_monitor.html
+
         uint16_t event_number = *reinterpret_cast<const uint16_t*>(payload.data());
         uint32_t event_value = *reinterpret_cast<const uint32_t*>(payload.data() + 2);
         const char* addr_ptr = reinterpret_cast<const char*>(payload.data() + 6);
@@ -1123,19 +1123,19 @@ bool ZeroMQBackend::DoProcessBackendMessage(int tag, byte_buffer_span payload) {
 }
 
 void ZeroMQBackend::DoReadyToPublishCallback(ReadyCallback cb) {
-    // Setup an ephemeral subscription for a topic produced with the internal
-    // topic prefix, this backend's node identifier and an incrementing counter.
-    // When the SubscribeCallback for the subscription is invoked, meaning it
-    // has become visible on the XPUB socket, call the provided ready callback
-    // and cancel the subscription by unsubscribing from the topic again.
-    //
-    // The heuristic here is that seeing a subscription created by the node itself
-    // also leads to the XPUB/XSUB proxy having sent all subscriptions from other
-    // nodes in the cluster.
-    //
-    // Without this heuristic, short-lived WebSocket clients may fail to publish
-    // messages as ZeroMQ implements sender-side subscription filtering and simply
-    // discards messages to topics for which it hasn't seen any subscriptions yet.
+
+
+
+
+
+
+
+
+
+
+
+
+
     static int ready_topic_counter = 0;
     ++ready_topic_counter;
 
@@ -1143,7 +1143,7 @@ void ZeroMQBackend::DoReadyToPublishCallback(ReadyCallback cb) {
         Backend::ReadyCallbackInfo info{sinfo.status, sinfo.message};
         cb(info);
 
-        // Unsubscribe again, we're not actually interested in this topic.
+
         Unsubscribe(topic_prefix);
     };
 
@@ -1151,5 +1151,5 @@ void ZeroMQBackend::DoReadyToPublishCallback(ReadyCallback cb) {
     Subscribe(topic, std::move(scb));
 }
 
-} // namespace cluster::zeromq
-} // namespace zeek
+}
+}

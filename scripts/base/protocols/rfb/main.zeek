@@ -7,46 +7,46 @@ export {
 
 	global log_policy: Log::PolicyHook;
 
-	## The record type which contains the fields of the RFB log.
+
 	type Info: record {
-		## Timestamp for when the event happened.
+
 		ts:     time    &log;
-		## Unique ID for the connection.
+
 		uid:    string  &log;
-		## The connection's 4-tuple of endpoint addresses/ports.
+
 		id:     conn_id &log;
 
-		## Major version of the client.
+
 		client_major_version: string &log &optional;
-		## Minor version of the client.
+
 		client_minor_version: string &log &optional;
-		## Major version of the server.
+
 		server_major_version: string &log &optional;
-		## Minor version of the server.
+
 		server_minor_version: string &log &optional;
 
-		## Identifier of authentication method used.
+
 		authentication_method: string &log &optional;
-		## Whether or not authentication was successful.
+
 		auth: bool &log &optional;
 
-		## Whether the client has an exclusive or a shared session.
+
 		share_flag: bool &log &optional;
-		## Name of the screen that is being shared.
+
 		desktop_name: string &log &optional;
-		## Width of the screen that is being shared.
+
 		width: count &log &optional;
-		## Height of the screen that is being shared.
+
 		height: count &log &optional;
 
-		## Internally used value to determine if this connection
-		## has already been logged.
+
+
 		done: bool  &default=F;
 	};
 
 	global log_rfb: event(rec: Info);
 
-	## RFB finalization hook.  Remaining RFB info may get logged when it's called.
+
 	global finalize_rfb: Conn::RemovalHook;
 }
 

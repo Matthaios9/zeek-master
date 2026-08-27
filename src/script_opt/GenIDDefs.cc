@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/GenIDDefs.h"
 
@@ -20,7 +20,7 @@ GenIDDefs::GenIDDefs(std::shared_ptr<ProfileFunc> _pf, const FuncPtr& f, ScopePt
 void GenIDDefs::TraverseFunction(const FuncPtr& f, ScopePtr scope, StmtPtr body) {
     func_flavor = f->Flavor();
 
-    // Establish the outermost set of identifiers.
+
     modified_IDs.emplace_back();
 
     for ( const auto& g : pf->Globals() ) {
@@ -28,8 +28,8 @@ void GenIDDefs::TraverseFunction(const FuncPtr& f, ScopePtr scope, StmtPtr body)
         TrackID(g);
     }
 
-    // Clear the locals before processing the arguments, since
-    // they're included among the locals.
+
+
     for ( const auto& l : pf->Locals() )
         l->GetOptInfo()->Clear();
 
@@ -49,7 +49,7 @@ void GenIDDefs::TraverseFunction(const FuncPtr& f, ScopePtr scope, StmtPtr body)
         TrackID(o_id);
     }
 
-    stmt_num = 0; // 0 = "before the first statement"
+    stmt_num = 0;
 
     body->Traverse(this);
 }
@@ -68,20 +68,20 @@ TraversalCode GenIDDefs::PreStmt(const Stmt* s) {
 
             cr_active.push_back(confluence_blocks.size());
 
-            // Confluence for the bodies of catch-return's is a bit complex.
-            // We would like any expressions computed at the outermost level
-            // of the body to be available for script optimization *outside*
-            // the catch-return; this in particular is helpful in optimizing
-            // coalesced event handlers, but has other benefits as well.
-            //
-            // However, if one of the outermost statements executes a "return",
-            // then any outermost expressions computed after it might not
-            // be available. Put another way, the potentially-returning
-            // statement starts a confluence region that runs through the end
-            // of the body.
-            //
-            // To deal with this, we start off without a new confluence block,
-            // but create one upon encountering a statement that could return.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
             bool did_confluence = false;
 
@@ -98,13 +98,13 @@ TraversalCode GenIDDefs::PreStmt(const Stmt* s) {
                 }
             }
             else {
-                // If there's just a single statement then there are two
-                // possibilities. If the statement is atomic (no sub-statements)
-                // then given that it's in reduced form, it's not going to have
-                // any expressions that we can leverage. OTOH, if it's compound
-                // (if/for/while/switch) then there's no safe re-using of
-                // expressions within it since they may-or-may-not wind up
-                // being computed. So we should always start a new block.
+
+
+
+
+
+
+
                 StartConfluenceBlock(s);
                 did_confluence = true;
                 block->Traverse(this);
@@ -196,11 +196,11 @@ TraversalCode GenIDDefs::PreStmt(const Stmt* s) {
             if ( cond_pred_stmt )
                 cond_pred_stmt->Traverse(this);
 
-            // Important to traverse the condition in its version
-            // interpreted as a statement, so that when evaluating
-            // its variable usage, that's done in the context of
-            // *after* cond_pred_stmt executes, rather than as
-            // part of that execution.
+
+
+
+
+
             auto cond_stmt = w->ConditionAsStmt();
             cond_stmt->Traverse(this);
 
@@ -223,11 +223,11 @@ void GenIDDefs::AnalyzeSwitch(const SwitchStmt* sw) {
     sw->StmtExpr()->Traverse(this);
 
     for ( const auto& c : *sw->Cases() ) {
-        // Important: the confluence block is the switch statement
-        // itself, not the case body.  This is needed so that variable
-        // assignments made inside case bodies that end with
-        // "fallthrough" are correctly propagated to the next case
-        // body.
+
+
+
+
+
         StartConfluenceBlock(sw);
 
         auto body = c->Body();
@@ -257,7 +257,7 @@ TraversalCode GenIDDefs::PostStmt(const Stmt* s) {
             for ( const auto& id : inits ) {
                 auto id_t = id->GetType();
 
-                // Only aggregates get initialized.
+
                 if ( zeek::IsAggr(id->GetType()->Tag()) )
                     TrackID(id);
             }
@@ -283,8 +283,8 @@ TraversalCode GenIDDefs::PostStmt(const Stmt* s) {
             break;
         }
 
-        // No need to do anything, the work all occurs
-        // with NoFlowAfter.
+
+
         case STMT_FALLTHROUGH:
         default: break;
     }
@@ -302,29 +302,29 @@ TraversalCode GenIDDefs::PreExpr(const Expr* e) {
             auto lhs = e->GetOp1();
 
             if ( lhs->Tag() == EXPR_LIST && in_table_constructor > 0 )
-                // This is the index portion of a table constructor, process as
-                // that rather than as a compound assignment to an "any" value.
+
+
                 return TC_CONTINUE;
 
             auto op2 = e->GetOp2();
             op2->Traverse(this);
 
             if ( ! CheckLHS(lhs, op2) )
-                // Not a simple assignment (or group of assignments),
-                // so analyze the accesses to check for use of
-                // possibly undefined values.
+
+
+
                 lhs->Traverse(this);
 
             return TC_ABORTSTMT;
         }
 
         case EXPR_COND:
-            // Special hack.  We turn off checking for usage issues
-            // inside conditionals.  This is because we use them heavily
-            // to deconstruct logical expressions for which the actual
-            // operand access is safe (guaranteed not to access a value
-            // that hasn't been undefined), but the flow analysis has
-            // trouble determining that.
+
+
+
+
+
+
             ++suppress_usage;
             e->GetOp1()->Traverse(this);
             e->GetOp2()->Traverse(this);
@@ -340,8 +340,8 @@ TraversalCode GenIDDefs::PreExpr(const Expr* e) {
             for ( auto& id : ids )
                 CheckVarUsage(e, id);
 
-            // Don't descend into the lambda body - we'll analyze and
-            // optimize it separately, as its own function.
+
+
             return TC_ABORTSTMT;
         }
 
@@ -354,11 +354,11 @@ TraversalCode GenIDDefs::PreExpr(const Expr* e) {
 }
 
 TraversalCode GenIDDefs::PostExpr(const Expr* e) {
-    // Attend to expressions that reflect assignments after
-    // execution, but for which the assignment target was
-    // also an accessed value (so if we analyzed them
-    // in PreExpr then we'd have had to do manual traversals
-    // of their operands).
+
+
+
+
+
 
     auto t = e->Tag();
     if ( t == EXPR_INCR || t == EXPR_DECR || t == EXPR_ADD_TO || t == EXPR_REMOVE_FROM ) {
@@ -382,12 +382,12 @@ bool GenIDDefs::CheckLHS(const ExprPtr& lhs, const ExprPtr& rhs) {
             return true;
         }
 
-        case EXPR_LIST: { // look for [a, b, c] = any_val
+        case EXPR_LIST: {
             auto l = lhs->AsListExpr();
             for ( const auto& expr : l->Exprs() ) {
                 if ( expr->Tag() != EXPR_NAME )
-                    // This will happen for table initializers,
-                    // for example.
+
+
                     return false;
 
                 auto n = expr->AsNameExpr();
@@ -397,12 +397,12 @@ bool GenIDDefs::CheckLHS(const ExprPtr& lhs, const ExprPtr& rhs) {
             return true;
         }
 
-        // If we want to track record field initializations,
-        // we'd handle that here.
+
+
         case EXPR_FIELD:
 
-        // If we wanted to track potential alterations of
-        // aggregates, we'd do that here.
+
+
         case EXPR_INDEX: return false;
 
         default: reporter->InternalError("bad tag in GenIDDefs::CheckLHS");
@@ -495,9 +495,9 @@ const Stmt* GenIDDefs::FindBreakTarget() {
 }
 
 void GenIDDefs::ReturnAt(const Stmt* s) {
-    // If we're right at a catch-return then we don't want to make the
-    // identifier as encountering a scope-ending "return" here.  By avoiding
-    // that, we're able to do optimization across catch-return blocks.
+
+
+
     if ( cr_active.empty() || cr_active.back() != confluence_blocks.size() )
         for ( const auto& id : modified_IDs.back() )
             id->GetOptInfo()->ReturnAt(s);
@@ -506,25 +506,25 @@ void GenIDDefs::ReturnAt(const Stmt* s) {
 void GenIDDefs::TrackID(const IDPtr& id, const ExprPtr& e) {
     auto oi = id->GetOptInfo();
 
-    // The 4th argument here is hardwired to 0, meaning "assess across all
-    // confluence blocks". If we want definitions inside catch-return bodies
-    // to not propagate outside those bodies, we'd instead create new
-    // confluence blocks for catch-return statements, and use their identifier
-    // here to set the lowest limit for definitions. For now we leave
-    // DefinedAfter as capable of supporting that distinction in case we
-    // find need to revive it in the future.
+
+
+
+
+
+
+
     oi->SetDefinedAfter(last_stmt_traversed, e, confluence_blocks, 0);
 
-    // Ensure we track this identifier across all relevant
-    // confluence regions.
+
+
     for ( auto i = 0U; i < confluence_blocks.size(); ++i )
-        // Add one because modified_IDs includes outer non-confluence
-        // block.
+
+
         modified_IDs[i + 1].insert(id);
 
     if ( confluence_blocks.empty() )
-        // This is a definition at the outermost level.
+
         modified_IDs[0].insert(id);
 }
 
-} // namespace zeek::detail
+}

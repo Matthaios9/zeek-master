@@ -1,10 +1,10 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
 #include "zeek/zeek-config.h"
 
-#include <sys/types.h> // for u_char
+#include <sys/types.h>
 #include <tuple>
 
 #include "zeek/IPAddr.h"
@@ -50,9 +50,9 @@ protected:
     u_char* proto_hdr;
     std::shared_ptr<IP_Hdr> reassembled_pkt;
     session::Manager* s;
-    uint64_t frag_size; // size of fully reassembled fragment
+    uint64_t frag_size;
     FragReassemblerKey key;
-    uint16_t next_proto; // first IPv6 fragment header's next proto field
+    uint16_t next_proto;
     uint16_t proto_hdr_len;
 
     FragTimer* expire_timer;
@@ -65,7 +65,7 @@ public:
 
     void Dispatch(double t, bool is_expire) override;
 
-    // Break the association between this timer and its creator.
+
     void ClearReassembler() { f = nullptr; }
 
 protected:
@@ -102,5 +102,5 @@ private:
     FragReassembler* frag_reassembler;
 };
 
-} // namespace detail
-} // namespace zeek
+}
+}

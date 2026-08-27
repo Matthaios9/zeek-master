@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_analyzer_h
 #define pac_analyzer_h
@@ -11,7 +11,7 @@
 
 class AnalyzerElement;
 class AnalyzerState;
-class AnalyzerAction; // defined in pac_action.h
+class AnalyzerAction;
 class AnalyzerHelper;
 class AnalyzerFlow;
 class AnalyzerDataUnit;
@@ -30,47 +30,47 @@ public:
 
     void Prepare() override;
     void GenForwardDeclaration(Output* out_h) override;
-    // void GenCode(Output *out_h, Output *out_cc);
+
 
     void GenInitCode(Output* out_cc) override;
     void GenCleanUpCode(Output* out_cc) override;
 
     string class_name() const override;
-    // string cookie_name() const;
+
 
 protected:
     virtual void ProcessFlowElement(AnalyzerFlow* flow_elem) = 0;
     virtual void ProcessDataUnitElement(AnalyzerDataUnit* dataunit_elem) = 0;
 
-    // Generate public/private declarations for member functions and
-    // variables
+
+
     void GenPubDecls(Output* out_h, Output* out_cc) override;
     void GenPrivDecls(Output* out_h, Output* out_cc) override;
 
-    // Generate the NewData() function
+
     virtual void GenProcessFunc(Output* out_h, Output* out_cc) = 0;
 
-    // Generate the NewGap() function
+
     virtual void GenGapFunc(Output* out_h, Output* out_cc) = 0;
 
-    // Generate the FlowEOF() function
+
     virtual void GenEOFFunc(Output* out_h, Output* out_cc) = 0;
 
-    // Generate the functions
+
     void GenFunctions(Output* out_h, Output* out_cc);
 
-    // Generate the action functions
+
     void GenActions(Output* out_h, Output* out_cc);
 
-    // Generate the helper code segments
+
     void GenHelpers(Output* out_h, Output* out_cc);
 
-    // Generate declarations for state variables and their set functions
+
     void GenStateVarDecls(Output* out_h);
     void GenStateVarSetFunctions(Output* out_h);
 
-    // Generate code for initializing and cleaning up (including
-    // memory de-allocating) state variables
+
+
     void GenStateVarInitCode(Output* out_cc);
     void GenStateVarCleanUpCode(Output* out_cc);
 
@@ -95,7 +95,7 @@ private:
     ElementType type_;
 };
 
-// A collection of variables representing analyzer states.
+
 class AnalyzerState : public AnalyzerElement {
 public:
     AnalyzerState(StateVarList* statevars) : AnalyzerElement(STATE), statevars_(statevars) {}
@@ -107,7 +107,7 @@ private:
     StateVarList* statevars_;
 };
 
-// A collection of embedded C++ code
+
 class AnalyzerHelper : public AnalyzerElement {
 public:
     enum Type : uint8_t {
@@ -131,7 +131,7 @@ private:
     EmbeddedCode* code_;
 };
 
-// The type and parameters of (uni-directional) flows of a connection.
+
 
 class FlowField : public Field {
 public:
@@ -157,4 +157,4 @@ private:
     FlowDecl* flow_decl_;
 };
 
-#endif // pac_analyzer_h
+#endif

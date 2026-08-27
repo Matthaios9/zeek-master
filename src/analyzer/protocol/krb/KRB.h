@@ -1,8 +1,8 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
-// This is needed for USE_KRB5 below.
+
 #include "zeek/zeek-config.h"
 
 #ifdef USE_KRB5
@@ -40,4 +40,4 @@ private:
 #endif
 };
 
-} // namespace zeek::analyzer::krb
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -16,8 +16,8 @@ public:
     void UniqueChar(int sym);
     void CCL_Use(CCL* ccl);
 
-    // All done adding character usage info - generate equivalence
-    // classes.  Returns number of classes.
+
+
     int BuildECs();
 
     void ConvertCCL(CCL* ccl);
@@ -34,14 +34,14 @@ public:
     int Size() const;
 
 protected:
-    int size;         // size of character set
-    int num_ecs;      // size of equivalence classes
-    int* fwd;         // forward list of different classes
-    int* bck;         // backward list
-    int* equiv_class; // symbol's equivalence class
-    int* rep;         // representative for symbol's equivalence class
+    int size;
+    int num_ecs;
+    int* fwd;
+    int* bck;
+    int* equiv_class;
+    int* rep;
     int* ccl_flags;
     int ec_nil, no_class, no_rep;
 };
 
-} // namespace zeek::detail
+}

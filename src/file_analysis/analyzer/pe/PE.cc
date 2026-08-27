@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/file_analysis/analyzer/pe/PE.h"
 
@@ -34,4 +34,4 @@ bool PE::DeliverStream(const u_char* data, uint64_t len) {
 
 bool PE::EndOfFile() { return false; }
 
-} // namespace zeek::file_analysis::detail
+}

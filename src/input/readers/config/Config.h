@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -14,14 +14,14 @@
 
 namespace zeek::input::reader::detail {
 
-/**
- * Reader for Configuration files.
- */
+
+
+
 class Config : public ReaderBackend {
 public:
     explicit Config(ReaderFrontend* frontend);
 
-    // prohibit copying and moving
+
     Config(const Config&) = delete;
     Config(Config&&) = delete;
     Config& operator=(const Config&) = delete;
@@ -53,4 +53,4 @@ private:
     std::unordered_map<std::string, std::string> option_values;
 };
 
-} // namespace zeek::input::reader::detail
+}

@@ -16,7 +16,7 @@ function (set_zmq_version)
 endfunction ()
 
 function (set_cppzmq_version)
-    # Extract the version from
+
     file(STRINGS "${ZeroMQ_CPP_INCLUDE_DIR}/zmq.hpp" CPPZMQ_MAJOR_VERSION_H
          REGEX "^#define CPPZMQ_VERSION_MAJOR [0-9]+$")
     file(STRINGS "${ZeroMQ_CPP_INCLUDE_DIR}/zmq.hpp" CPPZMQ_MINOR_VERSION_H
@@ -49,7 +49,7 @@ if (ZeroMQ_CPP_INCLUDE_DIR)
 endif ()
 
 if (NOT ZeroMQ_CPP_VERSION)
-    # Probably no zmq.hpp file, use the version from auxil
+
     set(ZeroMQ_CPP_INCLUDE_DIR ${AUXIL_CPPZMQ_DIR} CACHE FILEPATH "Include path for cppzmq" FORCE)
     set_cppzmq_version()
 elseif (ZeroMQ_CPP_VERSION VERSION_LESS "4.9.0")

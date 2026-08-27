@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/iosource/Component.h"
 
@@ -125,4 +125,4 @@ void PktDumperComponent::DoDescribe(ODesc* d) const {
     d->Add(prefs);
 }
 
-} // namespace zeek::iosource
+}

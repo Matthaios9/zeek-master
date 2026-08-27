@@ -1,4 +1,4 @@
-##! File input for the configuration framework using the input framework.
+
 
 @load ./main
 @load base/frameworks/cluster
@@ -6,16 +6,16 @@
 module Config;
 
 export {
-	## Configuration files that will be read off disk. Files are reread
-	## every time they are updated so updates should be atomic with "mv"
-	## instead of writing the file in place.
-	##
-	## If the same configuration option is defined in several files with
-	## different values, behavior is unspecified.
+
+
+
+
+
+
 	const config_files: set[string] = {} &redef;
 
-	## Read specified configuration file and apply values; updates to file
-	## are not tracked.
+
+
 	global read_config: function(filename: string);
 }
 
@@ -60,8 +60,8 @@ event InputConfig::new_value(name: string, source: string, id: string, value: an
 
 function read_config(filename: string)
 	{
-	# Only read the configuration on the manager. The other nodes are being fed
-	# from the manager.
+
+
 	if ( Cluster::is_enabled() && Cluster::local_node_type() != Cluster::MANAGER )
 		return;
 

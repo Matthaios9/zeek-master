@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -9,18 +9,18 @@
 
 namespace zeek::analyzer::websocket {
 
-/**
- * A WebSocket analyzer to be used directly on top of HTTP.
- */
+
+
+
 class WebSocket_Analyzer : public analyzer::tcp::TCP_ApplicationAnalyzer {
 public:
     WebSocket_Analyzer(zeek::Connection* conn);
 
-    /**
-     * Allows script land to configure the WebSocket analyzer before analysis.
-     *
-     * @param config Zeek value of type WebSocket::AnalyzerConfig
-     */
+
+
+
+
+
     bool Configure(zeek::RecordValPtr config);
 
     void Init() override;
@@ -34,4 +34,4 @@ private:
     bool had_gap = false;
 };
 
-} // namespace zeek::analyzer::websocket
+}

@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Provides some very limited but fast packet filter mechanisms
+
+
 
 #pragma once
 
@@ -21,22 +21,22 @@ public:
     explicit PacketFilter(bool arg_default);
     ~PacketFilter() = default;
 
-    // Drops all packets from a particular source (which may be given
-    // as an AddrVal or a SubnetVal) which hasn't any of TCP flags set
-    // (TH_*) with the given probability (from 0..MAX_PROB).
+
+
+
     void AddSrc(const IPAddr& src, uint32_t tcp_flags, double probability);
     void AddSrc(Val* src, uint32_t tcp_flags, double probability);
     void AddDst(const IPAddr& src, uint32_t tcp_flags, double probability);
     void AddDst(Val* src, uint32_t tcp_flags, double probability);
 
-    // Removes the filter entry for the given src/dst
-    // Returns false if filter doesn not exist.
+
+
     bool RemoveSrc(const IPAddr& src);
     bool RemoveSrc(Val* dst);
     bool RemoveDst(const IPAddr& dst);
     bool RemoveDst(Val* dst);
 
-    // Returns true if packet matches a drop filter
+
     bool Match(const std::shared_ptr<IP_Hdr>& ip, int len, int caplen);
 
 private:
@@ -54,5 +54,5 @@ private:
     PrefixTable dst_filter;
 };
 
-} // namespace detail
-} // namespace zeek
+}
+}

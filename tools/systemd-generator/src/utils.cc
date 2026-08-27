@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "utils.h"
 
@@ -46,21 +46,21 @@ std::optional<int> parse_int(std::string_view sv) {
 }
 
 
-// Split \a v by \a delim into a vector of string views.
+
 std::vector<std::string_view> split(std::string_view v, char delim) {
     std::vector<std::string_view> result;
     size_t pos = 0;
 
     do {
         size_t end = v.find(delim, pos);
-        // if npos, npos-pos still means till end of string.
+
         result.emplace_back(v.substr(pos, end - pos));
         if ( end == std::string_view::npos )
             break;
 
         pos = end + 1;
 
-        // Trailing delimiter? Add empty entry.
+
         if ( pos >= v.size() )
             result.emplace_back(v.substr(pos, 0));
     } while ( pos < v.size() );
@@ -68,7 +68,7 @@ std::vector<std::string_view> split(std::string_view v, char delim) {
     return result;
 }
 
-// " ".join(...) in C++, meh.
+
 std::string join(std::span<const std::string> args, const std::string& sep) {
     std::string result;
 
@@ -100,9 +100,9 @@ std::optional<std::string> substitute_vars(const std::string& s, const std::map<
             result += s.substr(pos);
             break;
         }
-        // std::fprintf(stderr, "found needle at %zu in %s\n", needle, s.c_str());
 
-        // Check for escaped $, don't include the \\, but include the ${
+
+
         if ( needle > 0 && s[needle - 1] == '\\' ) {
             result += s.substr(pos, needle - (pos + 1));
             result += "${";
@@ -113,12 +113,12 @@ std::optional<std::string> substitute_vars(const std::string& s, const std::map<
         if ( needle > pos )
             result += s.substr(pos, needle - pos);
 
-        // Skip the ${
+
         pos = needle + 2;
 
         std::size_t close_needle = s.find('}', pos);
 
-        // Missing closing } - it's an error.
+
         if ( close_needle == std::string::npos )
             return std::nullopt;
 
@@ -139,7 +139,7 @@ std::optional<std::string> substitute_vars(const std::string& s, const std::map<
 }
 
 bool is_valid_ip(const std::string& s) {
-    // 1.2.3.4 or [::1]
+
     if ( s.size() < 5 )
         return false;
 
@@ -154,8 +154,8 @@ bool is_valid_ip(const std::string& s) {
 }
 
 CpuList::CpuList(const std::string& list) {
-    // Split gives us a single empty entry for an empty list,
-    // just handle that here upfront.
+
+
     if ( list.empty() ) {
         is_valid = true;
         return;
@@ -167,11 +167,11 @@ CpuList::CpuList(const std::string& list) {
         auto parts = split(number_or_range, '-');
 
         if ( parts.size() == 2 ) {
-            // Parse the l-r[:stride] format.
+
             int stride = 1;
             std::optional<int> l, r;
 
-            // Any stride in the range?
+
             auto stride_parts = split(parts[1], ':');
             if ( stride_parts.size() == 2 ) {
                 auto maybe_stride = parse_int(stride_parts[1]);
@@ -200,12 +200,12 @@ CpuList::CpuList(const std::string& list) {
                 return;
             }
 
-            // Expand range with strides.
+
             for ( int i = *l; i <= *r; i += stride )
                 cpus.push_back(i);
         }
         else if ( parts.size() == 1 ) {
-            // Not a range, just a single number expected.
+
             auto n = parse_int(parts[0]);
             if ( ! n ) {
                 is_valid = false;
@@ -214,7 +214,7 @@ CpuList::CpuList(const std::string& list) {
             cpus.push_back(*n);
         }
         else {
-            is_valid = list.empty(); // no parts and empty input: valid.
+            is_valid = list.empty();
             return;
         }
     }
@@ -242,4 +242,4 @@ std::string CpuList::IndicesSetString(const std::string& sep) const {
     return join(cpus_str_vec, sep);
 }
 
-} // namespace zeek::detail
+}

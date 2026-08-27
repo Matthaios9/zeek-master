@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -13,7 +13,7 @@ public:
     void Init() override;
     void Done() override;
 
-    // from Analyzer.h
+
     void UpdateConnVal(RecordVal* conn_val) override;
     void FlipRoles() override;
 
@@ -25,11 +25,11 @@ public:
 
     static analyzer::Analyzer* Instantiate(Connection* conn) { return new ConnSize_Analyzer(conn); }
 
-    /**
-     * Update the generic packet thresholds.
-     *
-     * @param thresholds The generic packet thresholds to set.
-     */
+
+
+
+
+
     static void SetGenericPacketThresholds(std::vector<uint64_t> thresholds) {
         generic_pkt_thresholds = std::move(thresholds);
     };
@@ -60,7 +60,7 @@ protected:
     static std::vector<uint64_t> generic_pkt_thresholds;
 };
 
-// Exposed to make it available to script optimization.
+
 extern zeek::analyzer::Analyzer* GetConnsizeAnalyzer(zeek::Val* cid);
 
-} // namespace zeek::analyzer::conn_size
+}

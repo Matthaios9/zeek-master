@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/login/Rlogin.h"
 
@@ -25,8 +25,8 @@ void Contents_Rlogin_Analyzer::DoDeliver(int len, const u_char* data) {
     if ( auto* tcp = static_cast<analyzer::tcp::TCP_ApplicationAnalyzer*>(Parent())->TCP() )
         endp_state = IsOrig() ? tcp->OrigState() : tcp->RespState();
     else
-        endp_state = tcp::TCP_ENDPOINT_ESTABLISHED; // no TCP parent, assume somebody's feeding us a
-                                                    // legitimate stream
+        endp_state = tcp::TCP_ENDPOINT_ESTABLISHED;
+
 
     for ( ; len > 0; --len, ++data ) {
         if ( offset >= buf_len ) {
@@ -44,11 +44,11 @@ void Contents_Rlogin_Analyzer::DoDeliver(int len, const u_char* data) {
         switch ( state ) {
             case RLOGIN_FIRST_NULL:
                 if ( endp_state == analyzer::tcp::TCP_ENDPOINT_PARTIAL ||
-                     // We can be in closed if the data's due to
-                     // a dataful FIN being the first thing we see.
+
+
                      endp_state == analyzer::tcp::TCP_ENDPOINT_CLOSED ) {
                     state = RLOGIN_UNKNOWN;
-                    ++len, --data; // put back c and reprocess
+                    ++len, --data;
                     continue;
                 }
 
@@ -84,11 +84,11 @@ void Contents_Rlogin_Analyzer::DoDeliver(int len, const u_char* data) {
 
             case RLOGIN_SERVER_ACK:
                 if ( endp_state == analyzer::tcp::TCP_ENDPOINT_PARTIAL ||
-                     // We can be in closed if the data's due to
-                     // a dataful FIN being the first thing we see.
+
+
                      endp_state == analyzer::tcp::TCP_ENDPOINT_CLOSED ) {
                     state = RLOGIN_UNKNOWN;
-                    ++len, --data; // put back c and reprocess
+                    ++len, --data;
                     continue;
                 }
 
@@ -102,11 +102,11 @@ void Contents_Rlogin_Analyzer::DoDeliver(int len, const u_char* data) {
                 if ( c == 255 )
                     state = RLOGIN_WINDOW_CHANGE_S1;
                 else {
-                    // Put back the \ff that took us into
-                    // this state.
+
+
                     buf[offset++] = 255;
                     state = save_state;
-                    ++len, --data; // put back c and reprocess
+                    ++len, --data;
                     continue;
                 }
                 break;
@@ -122,8 +122,8 @@ void Contents_Rlogin_Analyzer::DoDeliver(int len, const u_char* data) {
                     }
                 }
                 else {
-                    // Unknown control, or we're confused.
-                    // Put back what we've consumed.
+
+
                     unsigned char unknown_buf[64];
                     int n = 0;
                     unknown_buf[n++] = '\xff';
@@ -152,10 +152,10 @@ void Contents_Rlogin_Analyzer::DoDeliver(int len, const u_char* data) {
                     state = RLOGIN_UNKNOWN;
                 }
 
-                if ( c == '\n' || c == '\r' ) // CR or LF (RFC 1282)
+                if ( c == '\n' || c == '\r' )
                 {
                     if ( c == '\n' && last_char == '\r' )
-                        // Compress CRLF to just 1 termination.
+
                         ;
                     else {
                         buf[offset] = '\0';
@@ -217,4 +217,4 @@ void Rlogin_Analyzer::TerminalType(const char* s) {
         EnqueueConnEvent(login_terminal, ConnVal(), make_intrusive<StringVal>(s));
 }
 
-} // namespace zeek::analyzer::login
+}

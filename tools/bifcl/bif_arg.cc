@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "include/bif_arg.h"
 
@@ -7,7 +7,7 @@
 #include <cstring>
 
 const bif_type_info bif_types[] = {
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+
 #define DEFINE_BIF_TYPE(id, bif_type, zeek_type, c_type, c_type_smart, accessor, accessor_smart, cast_smart,           \
                         constructor, ctor_smart, native_return_type, native_to_val)                                    \
     {#id,         bif_type,   zeek_type,          c_type,       c_type_smart, accessor, accessor_smart, cast_smart,    \
@@ -61,12 +61,12 @@ void BuiltinFuncArg::PrintZeek(std::string& out) {
 }
 
 void BuiltinFuncArg::PrintCDef(std::string& out, int n, bool runtime_type_check) {
-    // For most BiFs, script-level type-checking already guarantees that the
-    // argument types match the declared signature, so the generated code does
-    // a typed cast without re-checking. Variadic BiFs are the exception:
-    // their fixed-position arguments aren't type-checked, so invoking these
-    // requires runtime tag-checking on those. TYPE_OTHER and TYPE_ANY don't
-    // have a single fixed TypeTag.
+
+
+
+
+
+
     if ( runtime_type_check && type != TYPE_OTHER && type != TYPE_ANY ) {
         appendf(out, "\t\t{\n");
         appendf(out, "\t\t// Runtime type check for %s argument\n", name);
@@ -85,7 +85,7 @@ void BuiltinFuncArg::PrintCDef(std::string& out, int n, bool runtime_type_check)
 
     char buf[1024];
     snprintf(buf, sizeof(buf), "(*%s)[%d].get()", arg_list_name, n);
-    // Print the accessor expression.
+
     appendf(out, bif_types[type].accessor, buf);
 
     appendf(out, "); // NOLINT(cppcoreguidelines-pro-type-cstyle-cast,modernize-avoid-c-style-cast)\n");
@@ -102,10 +102,10 @@ void BuiltinFuncArg::PrintCImplCallArg(std::string& out) { appendf(out, "%s", na
 const char* BuiltinFuncArg::NativeReturnType() const { return bif_types[type].native_return_type; }
 const char* BuiltinFuncArg::NativeToVal() const { return bif_types[type].native_to_val; }
 
-// A helper that takes a lambda that formats elements of a BuiltinFuncArg
-// into a string, and then prints that string to the given FILE*. This gives
-// us a convenient way to retarget the purely-string-oriented BuiltinFuncArg
-// formatting member functions.
+
+
+
+
 template<typename F>
 static void to_file(FILE* fp, F&& fn) {
     std::string s;

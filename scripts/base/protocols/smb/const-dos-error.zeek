@@ -1,4 +1,4 @@
-# DOS error codes.
+
 @load ./consts
 
 module SMB;

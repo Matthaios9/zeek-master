@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/cluster/Event.h"
 
@@ -32,7 +32,7 @@ bool Event::AddMetadata(const EnumValPtr& id, zeek::ValPtr val) {
     if ( ! meta )
         meta = std::make_unique<zeek::detail::EventMetadataVector>();
 
-    // Internally stored as zeek_uint_t for serializers.
+
     meta->emplace_back(desc->Id(), std::move(val));
 
     return true;

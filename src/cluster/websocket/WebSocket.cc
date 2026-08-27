@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Implement Broker's WebSocket client handling in Zeek.
+
+
 
 #include "zeek/cluster/websocket/WebSocket.h"
 
@@ -30,7 +30,7 @@
 #include "rapidjson/document.h"
 #include "rapidjson/rapidjson.h"
 
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+
 #define WS_DEBUG(...) PLUGIN_DBG_LOG(zeek::plugin::Cluster_WebSocket::plugin, __VA_ARGS__)
 
 namespace zeek {
@@ -47,28 +47,28 @@ public:
         : wsc(std::move(ws)), dispatcher(dispatcher) {}
 
 private:
-    /**
-     * Any received remote event is encoded into Broker's JSON v1 format and
-     * send over to the WebSocket client.
-     *
-     * We leverage low-level Broker encoding functions here directly. This
-     * will need some abstractions if client's can opt to use different encodings
-     * of events in the future.
-     */
+
+
+
+
+
+
+
+
     bool DoProcessEvent(std::string_view topic, zeek::cluster::Event e) override {
-        // If the client has left, no point in sending it any pending event.
+
         if ( wsc->IsTerminated() )
             return true;
 
 
-        // Any events received from the backend before an Ack was sent
-        // are discarded.
+
+
         if ( ! wsc->IsAcked() )
             return true;
 
-        // XXX The serialization is somewhat slow, it would be good to offload
-        // it to a thread, or try to go from Val's directly to JSON and see
-        // if that's faster.
+
+
+
         auto ev = zeek::cluster::detail::to_broker_event(e);
         if ( ! ev ) {
             fprintf(stderr, "[ERROR] Unable to go from cluster::Event to broker::event\n");
@@ -83,17 +83,17 @@ private:
         return true;
     }
 
-    /**
-     * Events from backends aren't enqueued into the event loop when
-     * running for WebSocket clients.
-     */
+
+
+
+
     void DoProcessLocalEvent(zeek::EventHandlerPtr h, zeek::Args args) override {}
 
-    /**
-     * Send errors directly to the client.
-     */
+
+
+
     void DoProcessError(std::string_view tag, std::string_view message) override {
-        // Just send out the error.
+
         wsc->SendError(tag, message);
     }
 
@@ -134,10 +134,10 @@ private:
     WebSocketReply work;
 };
 
-} // namespace
+}
 
 
-// Inspired by broker/internal/json_client.cc
+
 WebSocketClient::SendInfo WebSocketClient::SendError(std::string_view tag, std::string_view message) {
     std::string buf;
     buf.reserve(tag.size() + message.size() + 32);
@@ -152,7 +152,7 @@ WebSocketClient::SendInfo WebSocketClient::SendError(std::string_view tag, std::
     return SendText(buf);
 }
 
-// Inspired by broker/internal/json_client.cc
+
 WebSocketClient::SendInfo WebSocketClient::SendAck(std::string_view endpoint, std::string_view version) {
     std::string buf;
     buf.reserve(endpoint.size() + version.size() + 32);
@@ -221,7 +221,7 @@ WebSocketEventDispatcher::WebSocketEventDispatcher(const std::string& ident, siz
         new zeek::detail::OnLoopProcess<WebSocketEventDispatcher, WebSocketEvent>(this,
                                                                                   "WebSocketEventDispatcher:" + ident,
                                                                                   queue_size);
-    // Register the onloop instance the IO loop. Lifetime will be managed by the loop.
+
     onloop->Register(false);
 
     reply_msg_thread = new ReplyMsgThread();
@@ -229,7 +229,7 @@ WebSocketEventDispatcher::WebSocketEventDispatcher(const std::string& ident, siz
 }
 
 WebSocketEventDispatcher::~WebSocketEventDispatcher() {
-    // Freed by threading manager.
+
     reply_msg_thread = nullptr;
 }
 
@@ -252,23 +252,23 @@ void WebSocketEventDispatcher::Terminate() {
 
     onloop->Close();
 
-    // Wait for the reply_msg_thread to process any outstanding
-    // WebSocketReply messages before returning.
+
+
     reply_msg_thread->SignalStop();
     reply_msg_thread->WaitForStop();
 }
 
 void WebSocketEventDispatcher::QueueForProcessing(WebSocketEvent&& event) {
-    // Just delegate to onloop. The work will be done in Process()
+
     onloop->QueueForProcessing(std::move(event));
 }
 
 void WebSocketEventDispatcher::QueueReply(WebSocketReply&& reply) {
-    // Delegate to the reply thread.
+
     reply_msg_thread->SendIn(new ReplyInputMessage(std::move(reply)));
 }
 
-// Process a WebSocketEvent message on the Zeek IO loop.
+
 void WebSocketEventDispatcher::Process(const WebSocketEvent& event) {
     std::visit([this](auto&& arg) { Process(arg); }, event);
 }
@@ -278,25 +278,25 @@ void WebSocketEventDispatcher::Process(const WebSocketOpen& open) {
     const auto& id = open.id;
     const auto& it = clients.find(id);
     if ( it != clients.end() ) {
-        // This shouldn't happen!
+
         reporter->Error("Open for existing WebSocket client with id %s!", id.c_str());
         QueueReply(WebSocketCloseReply{wsc, 1001, "Internal error"});
         return;
     }
 
-    // As of now, terminate clients coming to anything other than /v1/messages/json.
+
     if ( open.uri != "/v1/messages/json" ) {
         open.wsc->SendError("invalid_uri", "Invalid URI - use /v1/messages/json");
         open.wsc->Close(1008, "Invalid URI - use /v1/messages/json");
 
-        // Still create an entry as we might see messages and close events coming in.
+
         clients[id] = WebSocketClientEntry{id, wsc, nullptr};
         return;
     }
 
     std::string application_name = open.application_name.value_or("unknown");
 
-    // A bit ad-hoc
+
     bool good_application_name = std::ranges::all_of(application_name, [](auto c) {
         return std::isalnum(c) || c == '/' || c == '_' || c == '-' || c == '.' || c == '=' || c == ':' || c == '*' ||
                c == '@';
@@ -306,18 +306,18 @@ void WebSocketEventDispatcher::Process(const WebSocketOpen& open) {
         open.wsc->SendError("invalid_application_name", "Invalid X-Application-Name");
         open.wsc->Close(1008, "Invalid X-Application-Name");
 
-        // Still create an entry as we might see messages and close events coming in.
+
         clients[id] = WebSocketClientEntry{id, wsc, nullptr};
         return;
     }
 
-    // Generate an ID for this client.
+
     auto ws_id = cluster::backend->NodeId() + "-websocket-" + id;
 
-    // If the globally configured backend is CLUSTER_BACKEND_BROKER, then switch
-    // the WebSocket client's backend to CLUSTER_BACKEND_BROKER_WEBSOCKET_SHIM
-    // so that pub/sub is using the local broker endpoint via its hub functionality
-    // instead of instantiating a new Broker manager.
+
+
+
+
     static const auto& event_serializer_val = id::find_val<zeek::EnumVal>("Cluster::event_serializer");
     auto event_serializer = cluster::manager->InstantiateEventSerializer(event_serializer_val);
     static const auto& cluster_backend_val = id::find_val<zeek::EnumVal>("Cluster::backend");
@@ -346,7 +346,7 @@ void WebSocketEventDispatcher::Process(const WebSocketOpen& open) {
     WS_DEBUG("New WebSocket client %s (%s:%d) - using id %s backend=%p", id.c_str(), wsc->getRemoteIp().c_str(),
              wsc->getRemotePort(), ws_id.c_str(), backend.get());
 
-    // XXX: We call InitPostScript to populate member vars required for connectivity.
+
     backend->InitPostScript();
     backend->Init(std::move(ws_id));
 
@@ -368,13 +368,13 @@ void WebSocketEventDispatcher::Process(const WebSocketClose& close) {
     WS_DEBUG("Close from client %s (%s:%d) backend=%p", wsc->getId().c_str(), wsc->getRemoteIp().c_str(),
              wsc->getRemotePort(), backend.get());
 
-    // If the client doesn't have a backend, it wasn't ever properly instantiated.
+
     if ( backend ) {
         backend->Terminate();
 
-        // Raise Cluster::websocket_client_lost() after the backend has terminated.
-        // In case any messages/events were still pending, Cluster::websocket_client_lost()
-        // should be the last event related to this WebSocket client.
+
+
+
         auto rec =
             zeek::cluster::detail::bif::make_endpoint_info(backend->NodeId(), wsc->getRemoteIp(), wsc->getRemotePort(),
                                                            TRANSPORT_TCP, it->second.application_name);
@@ -385,7 +385,7 @@ void WebSocketEventDispatcher::Process(const WebSocketClose& close) {
     clients.erase(it);
 }
 
-// SubscribeFinished is produced internally.
+
 void WebSocketEventDispatcher::Process(const WebSocketSubscribeFinished& fin) {
     const auto& it = clients.find(fin.id);
     if ( it == clients.end() ) {
@@ -398,12 +398,12 @@ void WebSocketEventDispatcher::Process(const WebSocketSubscribeFinished& fin) {
     entry.wsc->SetSubscriptionActive(fin.topic_prefix);
 
     if ( ! entry.wsc->AllSubscriptionsActive() ) {
-        // More subscriptions to come.
+
         return;
     }
 
     if ( ! entry.ready_to_publish ) {
-        // Still waiting for the backend to be ready.
+
         return;
     }
 
@@ -422,7 +422,7 @@ void WebSocketEventDispatcher::Process(const WebSocketBackendReadyToPublish& rea
     entry.ready_to_publish = true;
 
     if ( ! entry.wsc->AllSubscriptionsActive() ) {
-        // More subscriptions to come!
+
         return;
     }
 
@@ -456,7 +456,7 @@ void WebSocketEventDispatcher::HandleSubscriptions(WebSocketClientEntry& entry, 
         if ( info.status == Backend::CallbackStatus::Error ) {
             zeek::reporter->Error("Subscribe for WebSocket client failed!");
 
-            // Is this going to work out?
+
             QueueReply(WebSocketCloseReply{wsc, 1011, "Could not subscribe. Something bad happened!"});
         }
         else {
@@ -471,10 +471,10 @@ void WebSocketEventDispatcher::HandleSubscriptions(WebSocketClientEntry& entry, 
         }
     }
 
-    // Register a callback to be invoked when the backend is ready for publishing.
+
     entry.backend->ReadyToPublishCallback([this, id = entry.id](const auto& info) {
-        // Ready callbacks are supposed to  run on the main thread,
-        // so we can just start processing a WebSocketBackendReady.
+
+
         Process(WebSocketBackendReadyToPublish{id});
     });
 }
@@ -493,7 +493,7 @@ void WebSocketEventDispatcher::HandleSubscriptionsActive(const WebSocketClientEn
     WS_DEBUG("Sent Ack to client %s (%s:%d) %s\n", entry.id.c_str(), wsc->getRemoteIp().c_str(), wsc->getRemotePort(),
              entry.backend->NodeId().c_str());
 
-    // Process any queued messages now.
+
     for ( auto& msg : entry.queue ) {
         assert(entry.msg_count > 1);
         Process(msg);
@@ -501,7 +501,7 @@ void WebSocketEventDispatcher::HandleSubscriptionsActive(const WebSocketClientEn
 }
 
 void WebSocketEventDispatcher::HandleEvent(WebSocketClientEntry& entry, std::string_view buf) {
-    // Unserialize the message as an event.
+
     broker::variant res;
     auto err = broker::format::json::v1::decode(buf, res);
     if ( err ) {
@@ -518,32 +518,32 @@ void WebSocketEventDispatcher::HandleEvent(WebSocketClientEntry& entry, std::str
 
     broker::zeek::Event broker_ev(std::move(res));
 
-    // This is not guaranteed to work! If the node running the WebSocket
-    // API does not have the declaration of the event that another node
-    // is sending, it cannot instantiate the zeek::cluster::Event for
-    // re-publishing to a cluster backend.
-    //
-    // Does that make conceptional sense? Basically the WebSocket API
-    // has Zeek-script awareness.
-    //
-    // It works with Broker today because Broker treats messages opaquely.
-    // It knows how to convert from JSON into Broker binary format as these
-    // are compatible.
-    //
-    // However, the broker format is under specified (vectors are used for various
-    // types without being tagged explicitly), so it's not possible to determine
-    // the final Zeek type without having access to the script-layer.
-    //
-    // I'm not sure this is a real problem, other than it being unfortunate that
-    // the Zeek process running the WebSocket API requires access to all declarations
-    // of events being transmitted via WebSockets. Though this might be a given anyhow.
-    //
-    // See broker/Data.cc for broker::vector conversion to see the collisions:
-    // vector, list, func, record, pattern, opaque are all encoded using
-    // broker::vector rather than dedicated types.
-    //
-    // Switching to a JSON v2 format that ensures all Zeek types are represented
-    // explicitly would help.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     auto zeek_ev = cluster::detail::to_zeek_event(broker_ev);
     if ( ! zeek_ev ) {
         entry.wsc->SendError(broker::enum_str(broker::ec::deserialization_failed), "failed to create Zeek event");
@@ -554,10 +554,10 @@ void WebSocketEventDispatcher::HandleEvent(WebSocketClientEntry& entry, std::str
     entry.backend->PublishEvent(topic, *zeek_ev);
 }
 
-// Process a WebSocket message from a client.
-//
-// If it's the first message, the code is expecting a subscriptions
-// array, otherwise it'll be a remote event.
+
+
+
+
 void WebSocketEventDispatcher::Process(const WebSocketMessage& msg) {
     const auto& id = msg.id;
 
@@ -567,7 +567,7 @@ void WebSocketEventDispatcher::Process(const WebSocketMessage& msg) {
         return;
     }
 
-    // Client without backend wasn't accepted, just discard its message.
+
     if ( ! it->second.backend )
         return;
 
@@ -578,7 +578,7 @@ void WebSocketEventDispatcher::Process(const WebSocketMessage& msg) {
     WS_DEBUG("Message %" PRIu64 " size=%zu from client %s (%s:%d) backend=%p", entry.msg_count, msg.msg.size(),
              wsc->getId().c_str(), wsc->getRemoteIp().c_str(), wsc->getRemotePort(), entry.backend.get());
 
-    // First message is the subscription message.
+
     if ( entry.msg_count == 1 ) {
         WS_DEBUG("Subscriptions from client %s: (%s:%d)", id.c_str(), wsc->getRemoteIp().c_str(), wsc->getRemotePort());
         HandleSubscriptions(entry, msg.msg);

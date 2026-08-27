@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Structures and methods for implementing watches in the Zeek debugger.
+
+
 
 #pragma once
 
@@ -23,4 +23,4 @@ protected:
     Expr* expr;
 };
 
-} // namespace zeek::detail
+}

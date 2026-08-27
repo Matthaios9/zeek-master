@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -9,17 +9,17 @@
 #include <string>
 #include <utility>
 
-// Force these files to stay in this order. Normally, clang-format
-// wants to move sys/types.h to the end of this block, but that
-// breaks FreeBSD builds.
-// clang-format off
+
+
+
+
 #include <sys/types.h>
 #include <arpa/inet.h>
 #include <cassert>
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
-// clang-format on
+
 #ifdef HAVE_LINUX
 #define __FAVOR_BSD
 #endif
@@ -35,30 +35,30 @@ struct ip6_opt {
     uint8_t ip6o_type;
     uint8_t ip6o_len;
 };
-#endif // HAVE_IP6_OPT
+#endif
 
 #ifndef HAVE_IP6_EXT
 struct ip6_ext {
     uint8_t ip6e_nxt;
     uint8_t ip6e_len;
 };
-#endif // HAVE_IP6_EXT
+#endif
 
 #else
 
 struct ip6_hdr {
     union {
         struct ip6_hdrctl {
-            uint32_t ip6_un1_flow; /* 4 bits version, 8 bits TC, 20 bits
-                                      flow-ID */
-            uint16_t ip6_un1_plen; /* payload length */
-            uint8_t ip6_un1_nxt;   /* next header */
-            uint8_t ip6_un1_hlim;  /* hop limit */
+            uint32_t ip6_un1_flow;
+
+            uint16_t ip6_un1_plen;
+            uint8_t ip6_un1_nxt;
+            uint8_t ip6_un1_hlim;
         } ip6_un1;
-        uint8_t ip6_un2_vfc; /* 4 bits version, top 4 bits tclass */
+        uint8_t ip6_un2_vfc;
     } ip6_ctlun;
-    struct in6_addr ip6_src; /* source address */
-    struct in6_addr ip6_dst; /* destination address */
+    struct in6_addr ip6_src;
+    struct in6_addr ip6_dst;
 };
 
 #define ip6_vfc ip6_ctlun.ip6_un2_vfc
@@ -79,34 +79,34 @@ struct ip6_ext {
 };
 
 struct ip6_frag {
-    uint8_t ip6f_nxt;      /* next header */
-    uint8_t ip6f_reserved; /* reserved field */
-    uint16_t ip6f_offlg;   /* offset, reserved, and flag */
-    uint32_t ip6f_ident;   /* identification */
+    uint8_t ip6f_nxt;
+    uint8_t ip6f_reserved;
+    uint16_t ip6f_offlg;
+    uint32_t ip6f_ident;
 };
 
 struct ip6_hbh {
-    uint8_t ip6h_nxt; /* next header */
-    uint8_t ip6h_len; /* length in units of 8 octets */
-    /* followed by options */
+    uint8_t ip6h_nxt;
+    uint8_t ip6h_len;
+
 };
 
 struct ip6_dest {
-    uint8_t ip6d_nxt; /* next header */
-    uint8_t ip6d_len; /* length in units of 8 octets */
-    /* followed by options */
+    uint8_t ip6d_nxt;
+    uint8_t ip6d_len;
+
 };
 
 struct ip6_rthdr {
-    uint8_t ip6r_nxt;     /* next header */
-    uint8_t ip6r_len;     /* length in units of 8 octets */
-    uint8_t ip6r_type;    /* routing type */
-    uint8_t ip6r_segleft; /* segments left */
-    /* followed by routing type specific data */
-};
-#endif // HAVE_NETINET_IP6_H
+    uint8_t ip6r_nxt;
+    uint8_t ip6r_len;
+    uint8_t ip6r_type;
+    uint8_t ip6r_segleft;
 
-// For Solaris.
+};
+#endif
+
+
 #if ! defined(TCPOPT_WINDOW) && defined(TCPOPT_WSCALE)
 #define TCPOPT_WINDOW TCPOPT_WSCALE
 #endif
@@ -115,7 +115,7 @@ struct ip6_rthdr {
 #define TCPOPT_TIMESTAMP TCPOPT_TSTAMP
 #endif
 
-// Define first.
+
 enum TransportProto : uint8_t {
     TRANSPORT_UNKNOWN,
     TRANSPORT_TCP,
@@ -173,9 +173,9 @@ inline uint16_t ip_in_cksum(bool is_ipv4, const IPAddr& src, const IPAddr& dst, 
     return ip6_in_cksum(src, dst, next_proto, data, len);
 }
 
-} // namespace detail
+}
 
-// Returns the ones-complement checksum of a chunk of 'b' bytes.
+
 extern int ones_complement_checksum(const void* p, int b, uint32_t sum);
 
 extern int ones_complement_checksum(const IPAddr& a, uint32_t sum);
@@ -185,8 +185,8 @@ extern int icmp_checksum(const struct icmp* icmpp, int len);
 
 extern int mobility_header_checksum(const IP_Hdr* ip);
 
-// True if sequence # a is between b and c (b <= a <= c).  It must be true
-// that b <= c in the sequence space.
+
+
 inline bool seq_between(uint32_t a, uint32_t b, uint32_t c) {
     if ( b <= c )
         return a >= b && a <= c;
@@ -194,52 +194,52 @@ inline bool seq_between(uint32_t a, uint32_t b, uint32_t c) {
         return a >= b || a <= c;
 }
 
-// Returns a - b, adjusted for sequence wraparound.
+
 inline int32_t seq_delta(uint32_t a, uint32_t b) { return a - b; }
 
-// Returns 'A', 'B', 'C' or 'D'
+
 extern char addr_to_class(uint32_t addr);
 
 extern const char* fmt_conn_id(const IPAddr& src_addr, uint32_t src_port, const IPAddr& dst_addr, uint32_t dst_port);
 extern const char* fmt_conn_id(const uint32_t* src_addr, uint32_t src_port, const uint32_t* dst_addr,
                                uint32_t dst_port);
 
-/**
- * Given a MAC address, formats it in hex as 00:de:ad:be:ef.
- * Supports both EUI-48 and EUI-64. If it's neither, returns
- * an empty string.
- *
- * @param m EUI-48 or EUI-64 MAC address to format, as a char array
- * @param len Number of bytes valid starting at *m*. This must be at
- *            least 6 for a valid address.
- * @return A string of the formatted MAC. Passes ownership to caller.
- */
+
+
+
+
+
+
+
+
+
+
 extern std::string fmt_mac(const unsigned char* m, int len);
 
-/**
- * Given a MAC address, formats it in hex as 00:de:ad:be:ef.
- * Supports both EUI-48 and EUI-64. If it's neither, returns
- * an empty buffer.
- *
- * This method returns a unique pointer to a buffer that is
- * null terminated. It can, for example, be directly passed
- * to a zeek::String instance.
- *
- * @param m EUI-48 or EUI-64 MAC address to format, as a char array
- * @param len Number of bytes valid starting at *m*. This must be at
- *            least 6 for a valid address.
- * @return A pair consisting of a uint8_t buffer and its string length.
- *         The buffer is null terminated and its actual length is + 1.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 extern std::pair<std::unique_ptr<uint8_t[]>, int> fmt_mac_bytes(const unsigned char* m, int len);
 
-// Read 4 bytes from data and return in network order.
+
 extern uint32_t extract_uint32(const u_char* data);
 
-// Endian conversions for double.
-// This is certainly not a very clean solution but should work on the
-// major platforms. Alternatively, we could use a string format or the
-// XDR library.
+
+
+
+
 
 #ifdef WORDS_BIGENDIAN
 
@@ -323,4 +323,4 @@ inline uint64_t htonll(uint64_t i) { return ntohll(i); }
 
 #endif
 
-} // namespace zeek
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/protocol/teredo/Teredo.h"
 
@@ -26,9 +26,9 @@ bool TeredoEncapsulation::DoParse(const u_char* data, size_t& len, bool found_or
     uint16_t tag = ntohs(*reinterpret_cast<const uint16_t*>(data));
 
     if ( tag == 0 ) {
-        // Origin Indication
+
         if ( found_origin )
-            // can't have multiple origin indications
+
             return false;
 
         if ( len < 8 ) {
@@ -43,10 +43,10 @@ bool TeredoEncapsulation::DoParse(const u_char* data, size_t& len, bool found_or
     }
 
     else if ( tag == 1 ) {
-        // Authentication
+
         if ( found_origin || found_auth )
-            // can't have multiple authentication headers and can't come after
-            // an origin indication
+
+
             return false;
 
         if ( len < 4 ) {
@@ -70,15 +70,15 @@ bool TeredoEncapsulation::DoParse(const u_char* data, size_t& len, bool found_or
     }
 
     else if ( ((tag & 0xf000) >> 12) == 6 ) {
-        // IPv6
+
         if ( len < 40 ) {
             Weird("truncated_IPv6_in_Teredo");
             return false;
         }
 
-        // There's at least a possible IPv6 header, we'll decide what to do
-        // later if the payload length field doesn't match the actual length
-        // of the packet.
+
+
+
         inner_ip = data;
         return true;
     }
@@ -119,16 +119,16 @@ RecordValPtr TeredoEncapsulation::BuildVal(const std::shared_ptr<IP_Hdr>& inner)
     return teredo_hdr;
 }
 
-} // namespace detail
+}
 
 TeredoAnalyzer::TeredoAnalyzer() : zeek::packet_analysis::Analyzer("TEREDO") {
-    // The pattern matching below is based on this old DPD signature
-    // signature dpd_teredo {
-    // 	ip-proto = udp
-    // 	payload
-    // /^(\x00\x00)|(\x00\x01)|([\x60-\x6f].{7}((\x20\x01\x00\x00)).{28})|([\x60-\x6f].{23}((\x20\x01\x00\x00))).{12}/
-    // 	enable "teredo"
-    // 	}
+
+
+
+
+
+
+
 
     pattern_re = std::make_unique<zeek::detail::Specific_RE_Matcher>(zeek::detail::MATCH_EXACTLY, true);
     pattern_re->AddPat(
@@ -138,10 +138,10 @@ TeredoAnalyzer::TeredoAnalyzer() : zeek::packet_analysis::Analyzer("TEREDO") {
 }
 
 bool TeredoAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* packet) {
-    // Teredo always comes from a UDP connection, which means that session should always
-    // be valid and always be a connection. Store this off for the span of the
-    // processing so that it can be used for other things. Return a weird if we didn't
-    // have a session stored.
+
+
+
+
     if ( ! packet->session ) {
         Analyzer::Weird("teredo_missing_connection");
         return false;
@@ -163,15 +163,15 @@ bool TeredoAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* pack
         return false;
     }
 
-    // TODO: i'm not sure about this. on the one hand, we do some error checking with the result
-    // but on the other hand we duplicate this work here. maybe this header could just be stored
-    // and reused in the IP analyzer somehow?
+
+
+
     std::shared_ptr<IP_Hdr> inner = nullptr;
     auto result = packet_analysis::IP::ParsePacket(len, te.InnerIP(), IPPROTO_IPV6, inner);
     if ( result == packet_analysis::IP::ParseResult::CAPLEN_TOO_LARGE ) {
         if ( inner->NextProto() == IPPROTO_NONE && inner->PayloadLen() == 0 )
-            // Teredo bubbles having data after IPv6 header isn't strictly a
-            // violation, but a little weird.
+
+
             Weird(conn, "Teredo_bubble_with_payload", true);
         else {
             AnalyzerViolation("Teredo payload length", conn, reinterpret_cast<const char*>(data), len);
@@ -190,12 +190,12 @@ bool TeredoAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* pack
     auto sk = k.SessionKey();
     OrigRespMap::iterator or_it = orig_resp_map.find(sk);
 
-    // The first time a teredo packet is parsed successfully, insert
-    // state into orig_resp_map so we can confirm when both sides
-    // see valid Teredo packets. Further, raise an event so that script
-    // layer can install a connection removal hooks to cleanup later.
+
+
+
+
     if ( or_it == orig_resp_map.end() ) {
-        sk.CopyData(); // Copy key data to store in map.
+        sk.CopyData();
         auto [it, inserted] = orig_resp_map.emplace(std::move(sk), OrigResp{});
         assert(inserted);
         or_it = it;
@@ -247,8 +247,8 @@ bool TeredoAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* pack
 }
 
 bool TeredoAnalyzer::DetectProtocol(size_t len, const uint8_t* data, Packet* packet) {
-    // Do some fast checks that must be true before moving to more complicated ones.
-    // Mostly this avoids doing the regex below if we can help it.
+
+
     if ( (len < 40) ||
          ((len > 8) && ((data[0] >> 4) != 6) && ((data[0] != 0x00) || (data[1] != 0x00 && data[1] != 0x01))) )
         return false;
@@ -259,10 +259,10 @@ bool TeredoAnalyzer::DetectProtocol(size_t len, const uint8_t* data, Packet* pac
     uint16_t val = data[1];
 
     if ( val == 1 ) {
-        // If the second byte is 0x01, this is an authentication header. Grab
-        // the length of the client identifier and the length of the
-        // authentication block, and make sure that we have enough data to
-        // include them with an IPv6 header.
+
+
+
+
 
         uint8_t client_id_length = data[2];
         uint8_t auth_length = data[3];
@@ -270,17 +270,17 @@ bool TeredoAnalyzer::DetectProtocol(size_t len, const uint8_t* data, Packet* pac
         if ( len < (static_cast<size_t>(13) + client_id_length + auth_length) )
             return false;
 
-        // There's 9 bytes at the end of the header for a nonce value and a
-        // confirmation byte. That plus the 4 bytes we've looked at already
-        // makes 13 bytes.
+
+
+
         data += 13 + client_id_length + auth_length;
         len -= 13 + client_id_length + auth_length;
 
         if ( len < 40 )
             return false;
 
-        // Get the next two octets after the authentication header, which
-        // should be an origin identification header.
+
+
         val = htons(*(reinterpret_cast<const uint16_t*>(data)));
     }
 
@@ -288,17 +288,17 @@ bool TeredoAnalyzer::DetectProtocol(size_t len, const uint8_t* data, Packet* pac
         if ( len < 8 )
             return false;
 
-        // If the second byte is zero (or we're coming out of an authentication
-        // header), we're in an origin identification header. Skip over it, and
-        // verify there's enough data after it to find an IPv6 header.
+
+
+
         data += 8;
         len -= 8;
 
         if ( len < 40 )
             return false;
 
-        // Double check that the next byte in the header contains an IPv6
-        // version number.
+
+
         val = data[0] >> 4;
         if ( val == 6 )
             return true;
@@ -307,4 +307,4 @@ bool TeredoAnalyzer::DetectProtocol(size_t len, const uint8_t* data, Packet* pac
     return false;
 }
 
-} // namespace zeek::packet_analysis::teredo
+}

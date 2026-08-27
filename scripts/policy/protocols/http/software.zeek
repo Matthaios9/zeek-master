@@ -1,4 +1,4 @@
-##! Software identification and extraction for HTTP traffic.
+
 
 @load base/frameworks/software
 
@@ -6,15 +6,15 @@ module HTTP;
 
 export {
 	redef enum Software::Type += {
-		## Identifier for web servers in the software framework.
+
 		SERVER,
-		## Identifier for app servers in the software framework.
+
 		APPSERVER,
-		## Identifier for web browsers in the software framework.
+
 		BROWSER,
 	};
 
-	## The pattern of HTTP User-Agents which you would like to ignore.
+
 	option ignored_user_agents = /NO_DEFAULT/;
 }
 

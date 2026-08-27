@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/ScriptOpt.h"
 
@@ -28,28 +28,28 @@ std::unordered_set<const Func*> non_recursive_funcs;
 
 void (*CPP_init_hook)() = nullptr;
 
-// Tracks all of the loaded functions (including event handlers and hooks).
+
 static std::vector<FuncInfo> funcs;
 
 using ZBodyPtr = IntrusivePtr<ZBody>;
 
-// Tracks all of the compiled-to-ZAM bodies.
+
 static std::vector<ZBodyPtr> zam_bodies;
 
-// Maps a module name to all of the ZAM bodies relevant for it.
+
 static std::unordered_map<std::string, std::unordered_set<ZBodyPtr>> module_bodies;
 
 static bool generating_CPP = false;
-static std::string CPP_dir; // where to generate C++ code
+static std::string CPP_dir;
 
 static std::unordered_map<const ScriptFunc*, LambdaExpr*> lambdas;
 static std::unordered_set<const ScriptFunc*> when_lambdas;
 static ScriptFuncPtr global_stmts;
-static size_t global_stmts_ind; // index into Funcs corresponding to global_stmts
+static size_t global_stmts_ind;
 
 void analyze_func(ScriptFuncPtr f) {
-    // Even if we're analyzing only a subset of the scripts, we still
-    // track all functions here because the inliner will need the full list.
+
+
     ASSERT(f->GetScope());
     funcs.emplace_back(f, f->GetScope(), f->CurrentBody());
 }
@@ -81,9 +81,9 @@ void analyze_global_stmts(Stmt* stmts) {
         reporter->FatalError("cannot include global statements with -O gen-standalone-C++: %s",
                              obj_desc(stmts).c_str());
 
-    // We ignore analysis_options.only_{files,funcs} - if they're in use, later
-    // logic will keep this function from being compiled, but it's handy
-    // now to enter it into "funcs" so we have a FuncInfo to return.
+
+
+
 
     auto id = install_ID("<global-stmts>", GLOBAL_MODULE_NAME, true, false);
     auto empty_args_t = make_intrusive<RecordType>(nullptr);
@@ -140,33 +140,33 @@ bool should_analyze(const ScriptFuncPtr& f, const StmtPtr& body) {
     bool have_onlies = ! ofiles.empty() || ! ofuncs.empty();
 
     if ( ! have_onlies && sfiles.empty() && sfuncs.empty() )
-        // It's the default of compile-everything.
+
         return true;
 
     auto file_decision = obj_matches_opt_files(body.get());
     if ( file_decision == AnalyzeDecision::SHOULD_NOT )
         return false;
 
-    // Even if the file decision is SHOULD, that can be overridden by
-    // a function decision of "skip".
+
+
 
     const auto& fun = f->GetName();
     for ( auto& s : sfuncs )
         if ( std::regex_match(fun, s) )
-            return false; // matches a "skip" function
+            return false;
 
     if ( file_decision == AnalyzeDecision::SHOULD )
-        // It matches a specified file, and there's no "skip" for the function.
+
         return true;
 
     for ( auto& o : ofuncs )
         if ( std::regex_match(fun, o) )
-            return true; // matches an "only" function
+            return true;
 
-    // If we get here, neither the file nor the function has an "only"
-    // or "skip" decision. If our sole directives were for skip's, then
-    // we should analyze this function. If we have any only's, then we
-    // shouldn't.
+
+
+
+
     return ! have_onlies;
 }
 
@@ -231,7 +231,7 @@ static void optimize_func(ScriptFuncPtr f, std::shared_ptr<ProfileFunc> pf, cons
         printf("Original: %s\n", obj_desc(body.get()).c_str());
 
     if ( body->Tag() == STMT_CPP )
-        // We're not able to optimize this.
+
         return;
 
     const char* reason;
@@ -275,10 +275,10 @@ static void optimize_func(ScriptFuncPtr f, std::shared_ptr<ProfileFunc> pf, cons
         return;
     }
 
-    // Profile the new body.
+
     pf = std::make_shared<ProfileFunc>(f.get(), body);
 
-    // Compute its reaching definitions.
+
     GenIDDefs ID_defs(pf, f, scope, body);
 
     rc->SetReadyToOptimize();
@@ -333,7 +333,7 @@ static void init_options() {
     if ( cppd )
         CPP_dir = std::string(cppd) + "/";
 
-    // ZAM-related options.
+
     check_env_opt("ZEEK_DUMP_XFORM", analysis_options.dump_xform);
     check_env_opt("ZEEK_DUMP_UDS", analysis_options.dump_uds);
     check_env_opt("ZEEK_INLINE", analysis_options.inliner);
@@ -352,7 +352,7 @@ static void init_options() {
     check_env_opt("ZEEK_DUMP_FINAL_ZAM", analysis_options.dump_final_ZAM);
     check_env_opt("ZEEK_PROFILE", analysis_options.profile_ZAM);
 
-    // Compile-to-C++-related options.
+
     check_env_opt("ZEEK_GEN_CPP", analysis_options.gen_CPP);
     check_env_opt("ZEEK_GEN_STANDALONE_CPP", analysis_options.gen_standalone_CPP);
     check_env_opt("ZEEK_COMPILE_ALL", analysis_options.compile_all);
@@ -415,8 +415,8 @@ static void init_options() {
             }
         }
 
-        // If no ZAM generation options have been specified, default to
-        // the usual "-O ZAM" profile. But if they have, honor those.
+
+
         if ( ! analysis_options.gen_ZAM_code )
             analysis_options.gen_ZAM = true;
 
@@ -505,12 +505,12 @@ static void use_CPP() {
 
             auto b = s->second.body;
 
-            // We may have already updated the body if we're using code
-            // compiled for standalone.
+
+
             if ( f.Body()->Tag() != STMT_CPP ) {
                 auto func = f.Func();
                 if ( added_bodies[func->GetName()].contains(hash) )
-                    // We've already added the replacement.  Delete orig.
+
                     func->ReplaceBody(f.Body(), nullptr);
                 else
                     func->ReplaceBody(f.Body(), b);
@@ -562,14 +562,14 @@ static void analyze_scripts_for_ZAM(const std::shared_ptr<ProfileFuncs>& pfs) {
         inl = std::make_unique<Inliner>(funcs, report_recursive);
 
     if ( ! analysis_options.activate )
-        // Some --optimize options stop short of AST transformations,
-        // for development/debugging purposes.
+
+
         return;
 
-    // The following tracks inlined functions that are also used
-    // indirectly, and thus should be compiled even if they were
-    // inlined.  We don't bother populating this if we're not inlining,
-    // since it won't be consulted in that case.
+
+
+
+
     std::unordered_set<Func*> func_used_indirectly;
 
     if ( inl ) {
@@ -598,11 +598,11 @@ static void analyze_scripts_for_ZAM(const std::shared_ptr<ProfileFuncs>& pfs) {
 
         if ( ! analysis_options.compile_all && ! is_lambda && inl && inl->WasFullyInlined(func.get()) &&
              ! func_used_indirectly.contains(func.get()) ) {
-            // No need to compile as it won't be called directly.  We'd
-            // like to zero out the body to recover the memory, but a *few*
-            // such functions do get called, such as by the event engine
-            // reaching up, or BiFs looking for them, so we can't safely
-            // zero them.
+
+
+
+
+
             f.SetSkip(true);
             continue;
         }
@@ -629,20 +629,20 @@ void clear_script_analysis() {
 
     IDOptInfo::ClearGlobalInitExprs();
 
-    // We need to explicitly clear out the optimization information
-    // associated with identifiers.  They have reference loops with
-    // the parent identifier that will prevent reclamation of the
-    // identifiers (and the optimization information) upon Unref'ing
-    // when discarding the scopes and ASTs.
+
+
+
+
+
     for ( auto& f : funcs )
         for ( auto& id : f.Scope()->OrderedVars() )
             id->ClearOptInfo();
 
-    // Clear out optimization info for global variables, too.
+
     for ( auto& g : global_scope()->OrderedVars() )
         g->ClearOptInfo();
 
-    // Keep ZAM bodies around so we can loop over them for profiling.
+
     for ( auto& f : funcs )
         if ( f.Body()->Tag() == STMT_ZAM ) {
             auto zb = cast_intrusive<ZBody>(f.Body());
@@ -667,8 +667,8 @@ void analyze_scripts(bool no_unused_warnings) {
         return;
     }
 
-    // Any standalone compiled scripts have already been instantiated
-    // at this point, but may require post-loading-of-scripts finalization.
+
+
     for ( auto cb : standalone_finalizations )
         (*cb)();
 
@@ -680,7 +680,7 @@ void analyze_scripts(bool no_unused_warnings) {
     auto& ofiles = analysis_options.only_files;
 
     if ( ! analysis_options.activate && ! analysis_options.inliner && ! generating_CPP &&
-         ! analysis_options.report_CPP && ! analysis_options.use_CPP ) { // No work to do, avoid profiling overhead.
+         ! analysis_options.report_CPP && ! analysis_options.use_CPP ) {
         if ( ! ofuncs.empty() )
             reporter->FatalError("--optimize-funcs used but no optimization specified");
         if ( ! ofiles.empty() )
@@ -703,9 +703,9 @@ void analyze_scripts(bool no_unused_warnings) {
     if ( CPP_init_hook ) {
         (*CPP_init_hook)();
         if ( compiled_scripts.empty() )
-            // The initialization failed to produce any
-            // script bodies.  Make this easily available
-            // to subsequent checks.
+
+
+
             CPP_init_hook = nullptr;
     }
 
@@ -807,14 +807,14 @@ void profile_script_execution() {
 
 void finish_script_execution() { profile_script_execution(); }
 
-// For now, we have equivalent concerns between ZAM and compile-to-C++.
-bool has_AST_node_unknown_to_script_opt(const ProfileFunc* prof, bool /* is_ZAM */) {
-    // Note that the following sets are not comprehensive across the
-    // standard tags, because some tags are only generated *by* script
-    // optimization
-    // clang-format off
+
+bool has_AST_node_unknown_to_script_opt(const ProfileFunc* prof, bool ) {
+
+
+
+
     static const std::set<StmtTag> known_stmts = {
-        // STMT_ALARM
+
         STMT_PRINT,
         STMT_EVENT,
         STMT_EXPR,
@@ -826,38 +826,38 @@ bool has_AST_node_unknown_to_script_opt(const ProfileFunc* prof, bool /* is_ZAM 
         STMT_BREAK,
         STMT_RETURN,
         STMT_LIST,
-        // STMT_EVENT_BODY_LIST,
+
         STMT_INIT,
         STMT_FALLTHROUGH,
         STMT_WHILE,
-        // STMT_CATCH_RETURN,
-        // STMT_CHECK_ANY_LEN,
-        // STMT_CPP,
-        // STMT_ZAM,
+
+
+
+
         STMT_NULL,
         STMT_ASSERT,
-        // STMT_EXTERN,
-        // STMT_STD_FUNCTION,
+
+
     };
 
-    // This should be the total number of entries in the set above, including
-    // the commented values.
+
+
     constexpr int SCRIPT_OPT_NUM_STMTS = 24;
 
-    // clang-format on
 
-    // Fail compilation if NUM_STMT in StmtEnums.h changes.
-    // Update known_stmts list above appropriately after adding
-    // support and increase SCRIPT_OPT_NUM_STMTS.
+
+
+
+
     static_assert(NUM_STMTS == SCRIPT_OPT_NUM_STMTS);
 
     for ( auto& s : prof->Stmts() )
         if ( ! known_stmts.contains(s->Tag()) )
             return true;
 
-    // clang-format off
+
     static const std::set<ExprTag> known_exprs = {
-        // EXPR_ANY,
+
         EXPR_NAME,
         EXPR_CONST,
         EXPR_CLONE,
@@ -916,29 +916,29 @@ bool has_AST_node_unknown_to_script_opt(const ProfileFunc* prof, bool /* is_ZAM 
         EXPR_CAST,
         EXPR_CAN_CONVERT,
         EXPR_IS,
-        // EXPR_INDEX_SLICE_ASSIGN,
+
         EXPR_INLINE,
-        // EXPR_APPEND_TO,
-        // EXPR_INDEX_ASSIGN,
-        // EXPR_FIELD_LHS_ASSIGN,
-        // EXPR_REC_ASSIGN_FIELDS,
-        // EXPR_REC_ADD_FIELDS,
-        // EXPR_REC_CONSTRUCT_WITH_REC,
-        // EXPR_FROM_ANY_VEC_COERCE,
-        // EXPR_ANY_INDEX,
-        // EXPR_SCRIPT_OPT_BUILTIN,
-        // EXPR_NOP,
+
+
+
+
+
+
+
+
+
+
     };
 
-    // This should be the total number of entries in the set above, including
-    // the commented values.
+
+
     constexpr int SCRIPT_OPT_NUM_EXPRS = 71;
 
-    // clang-format on
 
-    // Fail compilation if NUM_EXPRS in Expr.h changes.
-    // Update known_exprs list above appropriately after
-    // adding support and increase SCRIPT_OPT_NUM_STMTS.
+
+
+
+
     static_assert(NUM_EXPRS == SCRIPT_OPT_NUM_EXPRS);
 
     for ( auto& e : prof->Exprs() )
@@ -948,4 +948,4 @@ bool has_AST_node_unknown_to_script_opt(const ProfileFunc* prof, bool /* is_ZAM 
     return false;
 }
 
-} // namespace zeek::detail
+}

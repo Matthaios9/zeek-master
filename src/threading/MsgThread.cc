@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/threading/MsgThread.h"
 
@@ -13,15 +13,15 @@
 #include "zeek/iosource/Manager.h"
 #include "zeek/threading/Manager.h"
 
-// Set by Zeek's main signal handler.
+
 extern int signal_val;
 
 namespace zeek::threading {
 namespace detail {
 
-////// Messages.
 
-// Signals child thread to shutdown operation.
+
+
 class FinishMessage final : public InputMessage<MsgThread> {
 public:
     FinishMessage(MsgThread* thread, double network_time)
@@ -39,7 +39,7 @@ private:
     double network_time;
 };
 
-// Signals main thread that operations shut down.
+
 class FinishedMessage final : public OutputMessage<MsgThread> {
 public:
     FinishedMessage(MsgThread* thread) : OutputMessage<MsgThread>("FinishedMessage", thread) {}
@@ -50,7 +50,7 @@ public:
     }
 };
 
-/// Sends a heartbeat to the child thread.
+
 class HeartbeatMessage final : public InputMessage<MsgThread> {
 public:
     HeartbeatMessage(MsgThread* thread, double arg_network_time, double arg_current_time)
@@ -66,7 +66,7 @@ private:
     double current_time;
 };
 
-// A message from the child to be passed on to the Reporter.
+
 class ReporterMessage final : public OutputMessage<MsgThread> {
 public:
     enum Type : uint8_t { INFO, WARNING, ERROR, FATAL_ERROR, FATAL_ERROR_WITH_CORE, INTERNAL_WARNING, INTERNAL_ERROR };
@@ -86,7 +86,7 @@ private:
     Type type;
 };
 
-// A message from the child to the main process, requesting suicide.
+
 class KillMeMessage final : public OutputMessage<MsgThread> {
 public:
     KillMeMessage(MsgThread* thread) : OutputMessage<MsgThread>("ReporterMessage", thread) {}
@@ -99,7 +99,7 @@ public:
     }
 };
 
-// A debug message from the child to be passed on to the DebugLogger.
+
 class DebugMessage final : public OutputMessage<MsgThread> {
 public:
     DebugMessage(DebugStream arg_stream, MsgThread* thread, std::string_view arg_msg)
@@ -120,7 +120,7 @@ private:
     DebugStream stream;
 };
 
-// An event that the child wants to pass into the main event queue
+
 class SendEventMessage final : public OutputMessage<MsgThread> {
 public:
     SendEventMessage(MsgThread* thread, const char* name, const int num_vals, Value** val)
@@ -134,7 +134,7 @@ public:
         if ( ! success )
             reporter->Error("SendEvent for event %s failed", name);
 
-        return true; // We do not want to die if sendEvent fails because the event did not return.
+        return true;
     }
 
 private:
@@ -165,12 +165,12 @@ bool ReporterMessage::Process() {
     return true;
 }
 
-// This is the IO source used by MsgThread.
-//
-// The lifetime of the IO source is decoupled from
-// the thread. The thread may be terminated prior
-// to the IO source being properly unregistered and
-// removed by the IO manager.
+
+
+
+
+
+
 class IOSource : public iosource::IOSource {
 public:
     explicit IOSource(MsgThread* thread) : thread(thread) {
@@ -209,9 +209,9 @@ private:
     zeek::detail::Flare flare;
 };
 
-} // namespace detail
+}
 
-////// Methods.
+
 
 Message::~Message() { delete[] name; }
 
@@ -227,14 +227,14 @@ MsgThread::MsgThread() : BasicThread(), queue_in(this, nullptr), queue_out(nullp
 
     io_source = new detail::IOSource(this);
 
-    // Register IOSource as non-counting lifetime managed IO source.
+
     iosource_mgr->Register(io_source, true);
 }
 
 MsgThread::~MsgThread() {
-    // Unregister this thread from the IO source so we don't
-    // get Process() callbacks anymore. The IO source itself
-    // is life-time managed by the IO manager.
+
+
+
     if ( io_source ) {
         io_source->Close();
         io_source = nullptr;
@@ -246,7 +246,7 @@ void MsgThread::OnSignalStop() {
         return;
 
     child_sent_finish = true;
-    // Signal thread to terminate.
+
     SendIn(new detail::FinishMessage(this, run_state::network_time), true);
 }
 
@@ -260,19 +260,19 @@ void MsgThread::OnWaitForStop() {
     uint64_t cur_size = 0;
 
     while ( ! main_finished ) {
-        // Terminate if we get another kill signal.
+
         if ( signal_val == SIGTERM || signal_val == SIGINT ) {
             ++signal_count;
 
             if ( signal_count == 1 ) {
-                // Abort all threads here so that we won't hang next
-                // on another one.
+
+
                 fprintf(stderr, "received signal while waiting for thread %s, aborting all ...\n", Name());
                 thread_mgr->KillThreads();
             }
             else {
-                // More than one signal. Abort processing
-                // right away. on another one.
+
+
                 fprintf(stderr, "received another signal while waiting for thread %s, aborting processing\n", Name());
                 exit(1);
             }
@@ -301,17 +301,17 @@ void MsgThread::OnWaitForStop() {
 }
 
 void MsgThread::OnKill() {
-    // Ensure the IO source is closed and won't call Process() on this
-    // thread anymore. The thread got killed, so the threading manager will
-    // remove it forcefully soon.
+
+
+
     if ( io_source ) {
         io_source->Close();
         io_source = nullptr;
     }
 
-    // Send a message to unblock the reader if its currently waiting for
-    // input. This is just an optimization to make it terminate more
-    // quickly, even without the message it will eventually time out.
+
+
+
     queue_in.WakeUp();
 }
 
@@ -445,18 +445,18 @@ void MsgThread::Run() {
         if ( ! result ) {
             Error("terminating thread");
 
-            // This will eventually kill this thread, but only
-            // after all other outgoing messages (in particular
-            // error messages have been processed by then main
-            // thread).
+
+
+
+
             SendOut(new detail::KillMeMessage(this));
             failed = true;
         }
     }
 
-    // In case we haven't sent the finish method yet, do it now. Reading
-    // global network_time here should be fine, it isn't changing
-    // anymore.
+
+
+
     if ( ! child_finished && ! Killed() ) {
         OnFinish(run_state::network_time);
         Finished();
@@ -486,4 +486,4 @@ void MsgThread::Process() {
     }
 }
 
-} // namespace zeek::threading
+}

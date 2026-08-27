@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/ncp/NCP.h"
 
@@ -32,7 +32,7 @@ void NCP_Session::DeliverFrame(const binpac::NCP::ncp_frame* frame) {
     if ( frame->is_orig() ) {
         req_frame_type = frame->frame_type();
         req_func = frame->request()->function();
-        if ( req_func == 0x57 ) // enhanced FILE_DIR services
+        if ( req_func == 0x57 )
         {
             req_func = (req_func << 8) | frame->request()->subfunction();
         }
@@ -60,7 +60,7 @@ FrameBuffer::FrameBuffer(size_t header_length) {
 FrameBuffer::~FrameBuffer() { delete[] msg_buf; }
 
 void FrameBuffer::Reset() {
-    // Allocate space for header.
+
     if ( ! msg_buf ) {
         buf_len = hdr_len;
         msg_buf = new u_char[buf_len];
@@ -125,7 +125,7 @@ void NCP_FrameBuffer::compute_msg_length() {
         msg_len = (msg_len << 8) | data[4 + i];
 }
 
-} // namespace detail
+}
 
 Contents_NCP_Analyzer::Contents_NCP_Analyzer(Connection* conn, bool orig, detail::NCP_Session* arg_session)
     : analyzer::tcp::TCP_SupportAnalyzer("CONTENTS_NCP", conn, orig) {
@@ -152,8 +152,8 @@ void Contents_NCP_Analyzer::DeliverStream(int len, const u_char* data, bool orig
         return;
 
     if ( buffer.empty() && resync ) {
-        // Assume NCP frames align with packet boundary.
-        if ( (IsOrig() && len < 22) || (! IsOrig() && len < 16) ) { // ignore small fragments
+
+        if ( (IsOrig() && len < 22) || (! IsOrig() && len < 16) ) {
             return;
         }
 
@@ -162,7 +162,7 @@ void Contents_NCP_Analyzer::DeliverStream(int len, const u_char* data, bool orig
 
         if ( frame_type != 0x1111 && frame_type != 0x2222 && frame_type != 0x3333 && frame_type != 0x5555 &&
              frame_type != 0x7777 && frame_type != 0x9999 )
-            // Skip this packet
+
             return;
 
         resync = false;
@@ -179,8 +179,8 @@ void Contents_NCP_Analyzer::DeliverStream(int len, const u_char* data, bool orig
             buffer.Reset();
         }
         else {
-            // The rest of the data available in this delivery will
-            // be discarded and will need to resync to a new frame header.
+
+
             Conn()->CheckHistory(zeek::session::detail::HIST_UNKNOWN_PKT, 'X');
             Weird("ncp_large_frame");
             buffer.Reset();
@@ -207,4 +207,4 @@ NCP_Analyzer::NCP_Analyzer(Connection* conn) : analyzer::tcp::TCP_ApplicationAna
 
 NCP_Analyzer::~NCP_Analyzer() { delete session; }
 
-} // namespace zeek::analyzer::ncp
+}

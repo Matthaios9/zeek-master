@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/cluster/Manager.h"
 
@@ -28,8 +28,8 @@ void detail::report_non_functional_broker_tables(const zeek::EnumValPtr& cluster
         if ( ! id->HasVal() )
             continue;
 
-        // Remove in v9.1: This one is only used when a deprecated option is
-        // set that will only work with Broker anyhow. Not overthinking this.
+
+
         if ( id->Name() == x509_known_log_certs_with_broker )
             continue;
 
@@ -53,8 +53,8 @@ Manager::Manager()
       event_serializers(plugin::ComponentManager<EventSerializerComponent>("Cluster", "EventSerializerTag")),
       log_serializers(plugin::ComponentManager<LogSerializerComponent>("Cluster", "LogSerializerTag")) {}
 
-// Force destructor definition into compilation unit to avoid needing the
-// full websocket::Server declaration in cluster/Manager.h.
+
+
 Manager::~Manager() = default;
 
 void Manager::Terminate() {

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/Component.h"
 
@@ -20,8 +20,8 @@ void Component::Initialize() {
 void Component::SetEnabled(bool arg_enabled) {
     auto analyzer = packet_mgr->GetAnalyzer(Tag().AsVal().get());
     if ( analyzer ) {
-        // We can only toggle the analyzer if it's not replacing another one,
-        // otherwise our dispatching tables would be wrong.
+
+
         if ( packet_mgr->ProvidesComponentMapping(Tag()) ) {
             reporter->Warning(
                 "attempt to toggle packet analyzer %s, which replaces another one; toggling replacement analyzers is "
@@ -30,7 +30,7 @@ void Component::SetEnabled(bool arg_enabled) {
             return;
         }
 
-        // Update the existing analyzer's state.
+
         analyzer->SetEnabled(arg_enabled);
     }
 

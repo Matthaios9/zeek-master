@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Low-level support utilities/globals for ZAM compilation.
+
+
 
 #include "zeek/script_opt/ZAM/Support.h"
 
@@ -64,7 +64,7 @@ bool conn_size_set_bytes_threshold(zeek_uint_t threshold, Val* cid, bool is_orig
     return false;
 }
 
-// File analysis wrappers
+
 void file_mgr_set_handle(StringVal* h) { zeek::file_mgr->SetHandle(h->ToStdString()); }
 
 bool file_mgr_add_analyzer(StringVal* file_id, EnumVal* tag, RecordVal* args) {
@@ -93,7 +93,7 @@ bool file_mgr_analyzer_enabled(zeek::EnumVal* v) {
 }
 
 zeek::StringVal* file_mgr_analyzer_name(EnumVal* v) {
-    // to be placed into a ZVal
+
     return file_mgr->GetComponentNameVal({NewRef{}, v}).release();
 }
 
@@ -112,12 +112,12 @@ bool file_mgr_set_reassembly_buffer(StringVal* file_id, uint64_t max) {
     return zeek::file_mgr->SetReassemblyBuffer(fid, max);
 }
 
-} // namespace ZAM
+}
 
 bool ZAM_error = false;
 
 bool is_ZAM_compilable(const ProfileFunc* pf, const char** reason) {
-    auto func = pf->ProfiledFunc(); // can be nil for lambdas
+    auto func = pf->ProfiledFunc();
 
     if ( func ) {
         auto& scope_id = pf->ProfiledScope()->GetID();
@@ -194,7 +194,7 @@ StringVal* ZAM_to_lower(const StringVal* sv) {
 
 StringVal* ZAM_sub_bytes(const StringVal* s, zeek_uint_t start, zeek_int_t n) {
     if ( start > 0 )
-        --start; // make it 0-based
+        --start;
 
     auto ss = s->AsString()->GetSubstring(start, n);
 
@@ -202,7 +202,7 @@ StringVal* ZAM_sub_bytes(const StringVal* s, zeek_uint_t start, zeek_int_t n) {
 }
 
 StringValPtr ZAM_val_cat(const ValPtr& v) {
-    // Quite similar to cat(), but for only one value.
+
     zeek::ODesc d;
     d.SetStyle(RAW_STYLE);
 
@@ -247,4 +247,4 @@ void ZAM_run_time_warning(const std::shared_ptr<ZAMLocInfo>& loc, const char* ms
     reporter->Warning("%s: %s", d.Description(), msg);
 }
 
-} // namespace zeek::detail
+}

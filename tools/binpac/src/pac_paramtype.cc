@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_paramtype.h"
 
@@ -57,13 +57,13 @@ void ParameterizedType::DoMarkIncrementalInput() {
 }
 
 Type::BufferMode ParameterizedType::buffer_mode() const {
-    // Note that the precedence is on attributes (&oneline or &length)
-    // specified on the parameterized type directly than on the type
-    // declaration.
-    //
-    // If both &oneline and &length are specified at the same place,
-    // use &length.
-    //
+
+
+
+
+
+
+
     BufferMode mode = Type::buffer_mode();
     Type* ty = ReferredDataType(true);
 
@@ -100,7 +100,7 @@ bool ParameterizedType::RequiresAnalyzerContext() {
     checking_requires_analyzer_context_ = true;
 
     bool ret = false;
-    // If any argument expression refers to analyzer context
+
     foreach (i, ExprList, args_)
         if ( (*i)->RequiresAnalyzerContext() ) {
             ret = true;
@@ -186,7 +186,7 @@ void ParameterizedType::DoGenParseCode(Output* out_cc, Env* env, const DataPtr& 
     }
 
     string call_parse_func = strfmt("%s->%s(%s)",
-                                    lvalue(), // parse() needs an LValue
+                                    lvalue(),
                                     parse_func, parse_params.c_str());
 
     if ( incremental_input() ) {
@@ -198,8 +198,8 @@ void ParameterizedType::DoGenParseCode(Output* out_cc, Env* env, const DataPtr& 
             ASSERT(parsing_complete_var());
             out_cc->println("%s = %s;", env->LValue(parsing_complete_var()), call_parse_func.c_str());
 
-            // parsing_complete_var might have been already
-            // evaluated when set to false
+
+
             if ( ! env->Evaluated(parsing_complete_var()) )
                 env->SetEvaluated(parsing_complete_var());
         }

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/plugin/Component.h"
 
@@ -85,15 +85,15 @@ void Component::SetEnabled(bool arg_enabled) {
         case component::PACKET_ANALYZER:
         case component::FILE_ANALYZER:
         case component::SESSION_ADAPTER:
-            // For these types we have logic in place to ignore the component
-            // if disabled.
+
+
             enabled = arg_enabled;
             break;
 
         default:
-            // It wouldn't be hard to add support for other component types. We
-            // just need to make sure the enabled flag is checked somewhere to
-            // skip using the component if off.
+
+
+
             ODesc d;
             Describe(&d);
             reporter->InternalError("SetEnabled() called on unsupported component (%s)", d.Description());
@@ -103,4 +103,4 @@ void Component::SetEnabled(bool arg_enabled) {
 
 StringValPtr Component::CanonicalNameVal() const { return canon_name_val; }
 
-} // namespace zeek::plugin
+}

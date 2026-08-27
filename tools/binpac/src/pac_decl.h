@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_decl_h
 #define pac_decl_h
@@ -10,8 +10,8 @@
 
 class Decl : public Object {
 public:
-    // Note: ANALYZER is not for AnalyzerDecl (which is an
-    // abstract class) , but for AnalyzerContextDecl.
+
+
     enum DeclType : uint8_t { ENUM, LET, TYPE, FUNC, CONN, FLOW, ANALYZER, HELPER, REGEX };
 
     Decl(ID* id, DeclType decl_type);
@@ -21,15 +21,15 @@ public:
     DeclType decl_type() const { return decl_type_; }
     AnalyzerContextDecl* analyzer_context() const { return analyzer_context_; }
 
-    // NULL except for TypeDecl or AnalyzerDecl
+
     virtual Env* env() const { return nullptr; }
 
     virtual void Prepare() = 0;
 
-    // Generate declarations out of the "binpac" namespace
-    virtual void GenExternDeclaration(Output* out_h) { /* do nothing */ }
 
-    // Generate declarations before definition of classes
+    virtual void GenExternDeclaration(Output* out_h) {  }
+
+
     virtual void GenForwardDeclaration(Output* out_h) = 0;
 
     virtual void GenCode(Output* out_h, Output* out_cc) = 0;
@@ -68,7 +68,7 @@ public:
 
     void Prepare() override;
     void GenExternDeclaration(Output* out_h) override;
-    void GenForwardDeclaration(Output* out_h) override { /* do nothing */ }
+    void GenForwardDeclaration(Output* out_h) override {  }
     void GenCode(Output* out_h, Output* out_cc) override;
 
 private:
@@ -79,4 +79,4 @@ private:
     static int helper_id_seq;
 };
 
-#endif // pac_decl_h
+#endif

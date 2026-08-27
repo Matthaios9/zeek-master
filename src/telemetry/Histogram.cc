@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/telemetry/Histogram.h"
 
@@ -29,9 +29,9 @@ std::shared_ptr<Histogram> HistogramFamily::GetOrAdd(std::span<const LabelView> 
     return histogram;
 }
 
-/**
- * @copydoc GetOrAdd
- */
+
+
+
 std::shared_ptr<Histogram> HistogramFamily::GetOrAdd(std::initializer_list<LabelView> labels) {
     return GetOrAdd(std::span{labels.begin(), labels.size()});
 }

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Overflow.h"
 
@@ -33,4 +33,4 @@ bool would_overflow(const zeek::Type* from_type, const zeek::Type* to_type, cons
     return false;
 }
 
-} // namespace zeek::detail
+}

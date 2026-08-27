@@ -3,7 +3,7 @@ find_package(FLEX REQUIRED)
 
 set(BISON_FLAGS "--debug")
 
-# BIF parser/scanner
+
 bison_target(BIFParser builtin-func.y ${CMAKE_CURRENT_BINARY_DIR}/bif_parse.cc
              DEFINES_FILE ${CMAKE_CURRENT_BINARY_DIR}/bif_parse.h COMPILE_FLAGS "${BISON_FLAGS}")
 flex_target(BIFScanner ${CMAKE_CURRENT_SOURCE_DIR}/builtin-func.l
@@ -24,8 +24,8 @@ target_include_directories(bifcl BEFORE PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inclu
 zeek_target_add_linters(bifcl)
 
 if (MSVC)
-    target_compile_options(bifcl PUBLIC "/J") # Similar to -funsigned-char on other platforms
-    target_compile_options(bifcl PUBLIC "/wd4018") # Similar to -Wno-sign-compare on other platforms
+    target_compile_options(bifcl PUBLIC "/J")
+    target_compile_options(bifcl PUBLIC "/wd4018")
     target_link_libraries(bifcl PRIVATE libunistd)
 else ()
     target_compile_options(bifcl PUBLIC "-Wno-sign-compare")

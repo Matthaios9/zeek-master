@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/Inline.h"
 
@@ -16,33 +16,33 @@ namespace zeek::detail {
 constexpr int MAX_INLINE_SIZE = 1000;
 
 void Inliner::Analyze() {
-    // Locate self- and indirectly recursive functions.
 
-    // Maps each function to any functions that it calls, either
-    // directly or (ultimately) indirectly.
+
+
+
     std::unordered_map<const Func*, std::unordered_set<const Func*>> call_set;
 
-    // Prime the call set for each function with the functions it
-    // directly calls.
+
+
     for ( auto& f : funcs ) {
-        // For any function explicitly known to the event engine, it can
-        // be hard to analyze whether there's a possibility that when
-        // executing the function, doing so will tickle the event engine
-        // into calling it recursively. So we remove these up front.
-        //
-        // We deal with cases where these defaults are overridden to refer
-        // to some other function below, when we go through indirect functions.
+
+
+
+
+
+
+
         if ( is_special_script_func(f.Func()->GetName()) )
             continue;
 
-        // If ZAM can replace the script, don't inline it, so its usage
-        // remains visible during the AST reduction process.
+
+
         if ( is_ZAM_replaceable_script_func(f.Func()->GetName()) )
             continue;
 
         std::unordered_set<const Func*> cs;
 
-        // Aspirational ....
+
         non_recursive_funcs.insert(f.Func());
 
         for ( auto& func : f.Profile()->ScriptCalls() ) {
@@ -61,22 +61,22 @@ void Inliner::Analyze() {
         for ( auto& ind_func : f.Profile()->IndirectFuncs() ) {
             auto& v = ind_func->GetVal();
             if ( ! v )
-                // Global doesn't correspond to an actual function body.
+
                 continue;
 
             auto vf = v->AsFunc();
             if ( vf->GetKind() != BuiltinFunc::SCRIPT_FUNC )
-                // Not of analysis interest.
+
                 continue;
 
             auto sf = static_cast<const ScriptFunc*>(vf);
 
-            // If we knew transitively that the function lead to any
-            // indirect calls, nor calls to unsafe BiFs that themselves
-            // might do so, then we could know that this function isn't
-            // recursive via indirection. It's not clear, however, that
-            // identifying such cases is worth the trouble, other than
-            // for cutting down noise from the following recursion report.
+
+
+
+
+
+
 
             if ( report_recursive )
                 printf("%s is used indirectly, and thus potentially recursively\n", sf->GetName().c_str());
@@ -85,45 +85,45 @@ void Inliner::Analyze() {
         }
     }
 
-    // Transitive closure.  If we had any self-respect, we'd implement
-    // Warshall's algorithm.  What we do here is feasible though since
-    // Zeek call graphs tend not to be super-deep.  (We could also save
-    // cycles by only analyzing non-[direct-or-indirect] leaves, as
-    // was computed by the previous version of this code.  But in
-    // practice, the execution time for this is completely dwarfed
-    // by the expense of compiling inlined functions, so we keep it
-    // simple.)
 
-    // Whether a change has occurred.
+
+
+
+
+
+
+
+
+
     bool did_addition = true;
     while ( did_addition ) {
         did_addition = false;
 
-        // Loop over all the functions of interest.
+
         for ( auto& c : call_set ) {
-            // For each of them, loop over the set of functions
-            // they call.
+
+
 
             std::unordered_set<const Func*> addls;
 
             for ( auto& cc : c.second ) {
                 if ( cc == c.first )
-                    // Don't loop over ourselves.
+
                     continue;
 
-                // For each called function, pull up *its*
-                // set of called functions.
+
+
                 for ( auto& ccc : call_set[cc] ) {
-                    // For each of those, if we don't
-                    // already have it, add it.
+
+
                     if ( c.second.contains(ccc) )
-                        // We already have it.
+
                         continue;
 
                     addls.insert(ccc);
 
                     if ( ccc != c.first )
-                        // Non-recursive.
+
                         continue;
 
                     if ( report_recursive )
@@ -152,8 +152,8 @@ void Inliner::Analyze() {
         const auto& func = func_ptr.get();
         const auto& body = f.Body();
 
-        // Candidates are non-event, non-hook, non-recursive,
-        // non-compiled functions ...
+
+
         if ( func->Flavor() != FUNC_FLAVOR_FUNCTION )
             continue;
 
@@ -189,11 +189,11 @@ void Inliner::CoalesceEventHandlers() {
         if ( func_type->AsFuncType()->Flavor() != FUNC_FLAVOR_EVENT )
             continue;
 
-        // Special-case: zeek_init both has tons of event handlers (even
-        // with -b), such that it inevitably blows out the inlining budget,
-        // *and* only runs once, such that even if we could inline it, if
-        // it takes more time to compile it than to just run it via the
-        // interpreter, it's a lose.
+
+
+
+
+
         static std::string zeek_init_name = "zeek_init";
         if ( func->GetName() == zeek_init_name )
             continue;
@@ -211,12 +211,12 @@ void Inliner::CoalesceEventHandlers() {
         auto func = e.first;
         auto& bodies = func->GetBodies();
         if ( bodies.size() != e.second )
-            // It's potentially unsound to inline some-but-not-all event
-            // handlers, because doing so may violate &priority's. We
-            // could do the work of identifying such instances and only
-            // skipping those, but given that ZAM is feature-complete
-            // the mismatch here should only arise when using restrictions
-            // like --optimize-file, which likely aren't the common case.
+
+
+
+
+
+
             continue;
 
         CoalesceEventHandlers({NewRef{}, func}, bodies, body_to_info);
@@ -225,7 +225,7 @@ void Inliner::CoalesceEventHandlers() {
 
 void Inliner::CoalesceEventHandlers(ScriptFuncPtr func, const std::vector<Func::Body>& bodies,
                                     const BodyInfo& body_to_info) {
-    // We pattern the new (alternate) body off of the first body.
+
     auto& b0 = func->GetBodies()[0].stmts;
     auto merged_body = with_location_of(make_intrusive<StmtList>(), b0);
     auto oi = merged_body->GetOptInfo();
@@ -242,9 +242,9 @@ void Inliner::CoalesceEventHandlers(ScriptFuncPtr func, const std::vector<Func::
     auto& scope0 = info0.Scope();
     auto& vars = scope0->OrderedVars();
 
-    // We need to create a new Scope. Otherwise, when inlining the first
-    // body the analysis of identifiers gets confused regarding whether
-    // a given identifier represents the outer instance or the inner.
+
+
+
     auto empty_attrs = std::make_unique<std::vector<AttrPtr>>();
     push_scope(scope0->GetID(), std::move(empty_attrs));
 
@@ -252,8 +252,8 @@ void Inliner::CoalesceEventHandlers(ScriptFuncPtr func, const std::vector<Func::
 
     for ( auto i = 0; i < nparams; ++i ) {
         auto& vi = vars[i];
-        // We use a special scope name so that when debugging issues we can
-        // see that a given variable came from coalescing event handlers.
+
+
         auto p = install_ID(vi->Name(), "<event>", false, false);
         p->SetType(vi->GetType());
         param_ids.push_back(std::move(p));
@@ -261,7 +261,7 @@ void Inliner::CoalesceEventHandlers(ScriptFuncPtr func, const std::vector<Func::
 
     auto new_scope = pop_scope();
 
-    // Build up the calling arguments.
+
     auto args = with_location_of(make_intrusive<ListExpr>(), b0);
     for ( auto& p : param_ids )
         args->Append(with_location_of(make_intrusive<NameExpr>(p), b0));
@@ -274,38 +274,38 @@ void Inliner::CoalesceEventHandlers(ScriptFuncPtr func, const std::vector<Func::
         auto ie = DoInline(func, bp, args, bi.Scope(), bi.Profile());
 
         if ( ! ie )
-            // Failure presumably occurred due to hitting the maximum
-            // AST complexity for inlining. We can give up by simply
-            // returning, as at this point we haven't made any actual
-            // changes other than the function's scope.
+
+
+
+
             return;
 
         auto ie_s = with_location_of(make_intrusive<ExprStmt>(ie), bp);
         merged_body->Stmts().emplace_back(std::move(ie_s));
     }
 
-    // The groups are empty here because CoalescedScriptFunc handles the
-    // case of groups turning elements on/off.
+
+
     Func::Body new_body = {.stmts = merged_body};
 
     auto inlined_func = make_intrusive<CoalescedScriptFunc>(new_body, new_scope, func);
     inlined_func->SetScope(new_scope);
 
-    // Replace the function for that EventHandler with the delegating one.
+
     auto* eh = event_registry->Lookup(func->GetName());
     ASSERT(eh);
     eh->SetFunc(inlined_func);
 
-    // Likewise, replace the value of the identifier.
+
     auto fid = lookup_ID(func->GetName().c_str(), GLOBAL_MODULE_NAME, false, false, false);
     ASSERT(fid);
     fid->SetVal(make_intrusive<FuncVal>(inlined_func));
 
     PostInline(oi, inlined_func);
 
-    // We don't need to worry about event groups because the CoalescedScriptFunc
-    // wrapper checks at run-time for whether any handlers have been disabled,
-    // and if so skips coalesced execution.
+
+
+
     Func::Body body{.stmts = merged_body};
     funcs.emplace_back(inlined_func, new_scope, std::move(body));
 
@@ -341,7 +341,7 @@ ExprPtr Inliner::CheckForInlining(CallExprPtr c) {
     auto f = c->Func();
 
     if ( f->Tag() != EXPR_NAME )
-        // We don't inline indirect calls.
+
         return c;
 
     auto n = f->AsNameExpr();
@@ -366,23 +366,23 @@ ExprPtr Inliner::CheckForInlining(CallExprPtr c) {
         return c;
 
     if ( c->IsInWhen() ) {
-        // Don't inline these, as doing so requires propagating
-        // the in-when attribute to the inlined function body.
+
+
         skipped_inlining.insert(func_vf.get());
         return c;
     }
 
-    // Check for mismatches in argument count due to single-arg-of-type-any
-    // loophole used for variadic BiFs.  (The issue isn't calls to the
-    // BiFs, which won't happen here, but instead to script functions that
-    // are misusing/abusing the loophole.)
+
+
+
+
     if ( function->GetType()->Params()->NumFields() == 1 && c->Args()->Exprs().size() != 1 ) {
         skipped_inlining.insert(func_vf.get());
         return c;
     }
 
-    // We're going to inline the body, unless it's too large.
-    auto body = func_vf->GetBodies()[0].stmts; // there's only 1 body
+
+    auto body = func_vf->GetBodies()[0].stmts;
 
     if ( body->Tag() == STMT_CPP )
         return c;
@@ -399,12 +399,12 @@ ExprPtr Inliner::CheckForInlining(CallExprPtr c) {
 }
 
 ExprPtr Inliner::DoInline(ScriptFuncPtr sf, StmtPtr body, ListExprPtr args, ScopePtr scope, const ProfileFunc* pf) {
-    // Inline the body, unless it's too large.
+
     auto oi = body->GetOptInfo();
 
     if ( num_stmts + oi->num_stmts + num_exprs + oi->num_exprs > MAX_INLINE_SIZE ) {
         skipped_inlining.insert(sf.get());
-        return nullptr; // signals "stop inlining"
+        return nullptr;
     }
 
     num_stmts += oi->num_stmts;
@@ -414,15 +414,15 @@ ExprPtr Inliner::DoInline(ScriptFuncPtr sf, StmtPtr body, ListExprPtr args, Scop
     body_dup->GetOptInfo()->num_stmts = oi->num_stmts;
     body_dup->GetOptInfo()->num_exprs = oi->num_exprs;
 
-    // Getting the names of the parameters is tricky.  It's tempting
-    // to take them from the function's type declaration, but alas
-    // Zeek allows forward-declaring a function with one set of parameter
-    // names and then defining a later instance of it with different
-    // names, as long as the types match.  So we have to glue together
-    // the type declaration, which gives us the number of parameters,
-    // with the scope, which gives us all the variables declared in
-    // the function, *using the knowledge that the parameters are
-    // declared first*.
+
+
+
+
+
+
+
+
+
     auto& vars = scope->OrderedVars();
     int nparam = sf->GetType()->Params()->NumFields();
 
@@ -435,9 +435,9 @@ ExprPtr Inliner::DoInline(ScriptFuncPtr sf, StmtPtr body, ListExprPtr args, Scop
         param_is_modified.emplace_back((pf->Assignees().contains(vi)));
     }
 
-    // Recursively inline the body.  This is safe to do because we've
-    // ensured there are no recursive loops ... but we have to be
-    // careful in accounting for the frame sizes.
+
+
+
     int frame_size = sf->FrameSize();
 
     int hold_curr_frame_size = curr_frame_size;
@@ -464,4 +464,4 @@ ExprPtr Inliner::DoInline(ScriptFuncPtr sf, StmtPtr body, ListExprPtr args, Scop
                             body);
 }
 
-} // namespace zeek::detail
+}

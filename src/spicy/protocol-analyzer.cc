@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/spicy/protocol-analyzer.h"
 
@@ -9,13 +9,13 @@ using namespace zeek;
 using namespace zeek::spicy;
 using namespace zeek::spicy::rt;
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+
 #ifdef DEBUG
 #define STATE_DEBUG_MSG(...) DebugMsg(__VA_ARGS__)
 #else
 #define STATE_DEBUG_MSG(...)
 #endif
-// NOLINTEND(cppcoreguidelines-macro-usage)
+
 
 void EndpointState::debug(const std::string& msg) { spicy::rt::debug(_cookie, hilti::rt::String(msg.c_str())); }
 
@@ -31,7 +31,7 @@ static auto create_endpoint(bool is_orig, analyzer::Analyzer* analyzer, ::spicy:
                                     .fstate_resp =
                                         cookie::FileStateStack(hilti::rt::fmt("%" PRIx64 ".resp", id_counter))};
 
-    // Cannot get parser here yet, analyzer may not have been fully set up.
+
     return EndpointState(std::move(cookie), type);
 }
 
@@ -80,7 +80,7 @@ void ProtocolAnalyzer::Process(bool is_orig, int len, const u_char* data) {
         endp->protocol().analyzer->SetSkip(true);
     } catch ( const hilti::rt::Exception& e ) {
         spicy_mgr->analyzerError(endp->protocol().analyzer, e.description(),
-                                 e.location()); // this sets Zeek to skip sending any further input
+                                 e.location());
     }
 }
 
@@ -103,7 +103,7 @@ void ProtocolAnalyzer::Finish(bool is_orig) {
         endp->skipRemaining();
     } catch ( const hilti::rt::Exception& e ) {
         spicy_mgr->analyzerError(endp->protocol().analyzer, e.description(),
-                                 e.location()); // this sets Zeek to skip sending any further input
+                                 e.location());
     }
 }
 
@@ -152,7 +152,7 @@ void TCP_Analyzer::DeliverStream(int len, const u_char* data, bool is_orig) {
         originator().skipRemaining();
         responder().skipRemaining();
 
-        if ( is_orig ) // doesn't really matter which endpoint here.
+        if ( is_orig )
             originator().protocol().analyzer->SetSkip(true);
         else
             responder().protocol().analyzer->SetSkip(true);

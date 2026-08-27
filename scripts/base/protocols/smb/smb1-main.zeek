@@ -3,7 +3,7 @@
 module SMB1;
 
 redef record SMB::CmdInfo += {
-	## Dialects offered by the client.
+
 	smb1_offered_dialects: string_vec &optional;
 };
 
@@ -106,8 +106,8 @@ event smb1_tree_connect_andx_request(c: connection, hdr: SMB1::Header, path: str
 
 event smb1_tree_connect_andx_response(c: connection, hdr: SMB1::Header, service: string, native_file_system: string) &priority=5
 	{
-	# If the current_cmd does not have a referenced tree, then likely we
-	# missed the  SMB_COM_TREE_CONNECT_ANDX. Report a weird and stop.
+
+
 	if ( ! c$smb_state$current_cmd?$referenced_tree )
 		{
 		local addl = fmt("current_cmd=%s", c$smb_state$current_cmd$command);
@@ -150,12 +150,12 @@ event smb1_nt_create_andx_response(c: connection, hdr: SMB1::Header, file_id: co
 	c$smb_state$current_cmd$referenced_file$fid = file_id;
 	c$smb_state$current_cmd$referenced_file$size = file_size;
 
-	# I'm seeing negative data from IPC tree transfers
+
 	if ( times$modified as double > 0.0 )
 		c$smb_state$current_cmd$referenced_file$times = times;
 
-	# We can identify the file by its file id now so let's stick it
-	# in the file map.
+
+
 	c$smb_state$fid_map[file_id] = c$smb_state$current_cmd$referenced_file;
 
 	c$smb_state$current_file = c$smb_state$fid_map[file_id];
@@ -184,7 +184,7 @@ event smb1_write_andx_request(c: connection, hdr: SMB1::Header, file_id: count, 
 	SMB::set_current_file(c$smb_state, file_id);
 	c$smb_state$current_file$action = SMB::FILE_WRITE;
 	if ( !c$smb_state$current_cmd?$argument &&
-	     # TODO: figure out why name isn't getting set sometimes.
+
 	     c$smb_state$current_file?$name )
 		c$smb_state$current_cmd$argument = c$smb_state$current_file$name;
 	}
@@ -194,14 +194,14 @@ event smb1_write_andx_request(c: connection, hdr: SMB1::Header, file_id: count, 
 	if ( c$smb_state$current_tree?$path && !c$smb_state$current_file?$path )
 		c$smb_state$current_file$path = c$smb_state$current_tree$path;
 
-	# We don't even try to log reads and writes to the files log.
-	#write_file_log(c$smb_state);
+
+
 	}
 
-#event smb1_write_andx_response(c: connection, hdr: SMB1::Header, written_bytes: count) &priority=5
-#	{
-#	# TODO - determine what to do here
-#	}
+
+
+
+
 
 event smb1_close_request(c: connection, hdr: SMB1::Header, file_id: count) &priority=5
 	{
@@ -214,7 +214,7 @@ event smb1_close_request(c: connection, hdr: SMB1::Header, file_id: count) &prio
 	if ( file_id in c$smb_state$fid_map )
 		{
 		local fl = c$smb_state$fid_map[file_id];
-		# Need to check for existence of path in case tree connect message wasn't seen.
+
 		if ( c$smb_state$current_tree?$path )
 			fl$path = c$smb_state$current_tree$path;
 
@@ -227,9 +227,9 @@ event smb1_close_request(c: connection, hdr: SMB1::Header, file_id: count) &prio
 		}
 	else
 		{
-		# TODO - Determine correct action
-		# A reporter message is not right...
-		#Reporter::warning("attempting to close an unknown file!");
+
+
+
 		}
 	}
 
@@ -250,12 +250,12 @@ event smb1_trans2_find_first2_request(c: connection, hdr: SMB1::Header, args: SM
 
 event smb1_session_setup_andx_request(c: connection, hdr: SMB1::Header, request: SMB1::SessionSetupAndXRequest) &priority=5
 	{
-	# No behavior yet.
+
 	}
 
 event smb1_session_setup_andx_response(c: connection, hdr: SMB1::Header, response: SMB1::SessionSetupAndXResponse) &priority=-5
 	{
-	# No behavior yet.
+
 	}
 
 event smb1_transaction_request(c: connection, hdr: SMB1::Header, name: string, sub_cmd: count, parameters: string, data: string)
@@ -267,7 +267,7 @@ event smb1_write_andx_request(c: connection, hdr: SMB1::Header, file_id: count, 
 	{
 	if ( ! c$smb_state?$current_file || ! c$smb_state$current_file?$uuid )
 		{
-		# TODO: figure out why the uuid isn't getting set sometimes.
+
 		return;
 		}
 

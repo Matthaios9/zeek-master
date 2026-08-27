@@ -1,8 +1,8 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
-// Zeek statements.
+
 
 #include "zeek/Dict.h"
 #include "zeek/Expr.h"
@@ -17,7 +17,7 @@ class CompositeHash;
 class NameExpr;
 using NameExprPtr = IntrusivePtr<zeek::detail::NameExpr>;
 
-class ZAMCompiler; // for "friend" declarations
+class ZAMCompiler;
 
 class ExprListStmt : public Stmt {
 public:
@@ -28,7 +28,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     void Inline(Inliner* inl) override;
 
     bool IsReduced(Reducer* c) const override;
@@ -44,10 +44,10 @@ protected:
 
     ListExprPtr l;
 
-    // Optimization-related:
 
-    // Returns a new version of the original derived object
-    // based on the given list of singleton expressions.
+
+
+
     virtual StmtPtr DoSubclassReduce(ListExprPtr singletons, Reducer* c) = 0;
 };
 
@@ -56,13 +56,13 @@ public:
     template<typename L>
     explicit PrintStmt(L&& l) : ExprListStmt(STMT_PRINT, std::forward<L>(l)) {}
 
-    // Optimization-related:
+
     StmtPtr Duplicate() override;
 
 protected:
     ValPtr DoExec(std::vector<ValPtr> vals, StmtFlowType& flow) override;
 
-    // Optimization-related:
+
     StmtPtr DoSubclassReduce(ListExprPtr singletons, Reducer* c) override;
 };
 
@@ -73,9 +73,9 @@ public:
     explicit ExprStmt(ExprPtr e);
     ~ExprStmt() override;
 
-    // This constructor is only meant for internal use, but it's
-    // not protected since ExprPtr's mask the actual caller,
-    // not allowing us to use "friend" for protected access.
+
+
+
     ExprStmt(StmtTag t, ExprPtr e);
 
     ValPtr Exec(Frame* f, StmtFlowType& flow) override;
@@ -87,7 +87,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     StmtPtr Duplicate() override;
     void Inline(Inliner* inl) override;
 
@@ -114,7 +114,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     StmtPtr Duplicate() override;
     void Inline(Inliner* inl) override;
 
@@ -163,7 +163,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const;
 
-    // Optimization-related:
+
     IntrusivePtr<Case> Duplicate();
 
 protected:
@@ -186,7 +186,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     StmtPtr Duplicate() override;
     void Inline(Inliner* inl) override;
 
@@ -208,24 +208,24 @@ protected:
     ValPtr DoExec(Frame* f, Val* v, StmtFlowType& flow) override;
     bool IsPure() const override;
 
-    // Initialize composite hash and case label map.
+
     void Init();
 
-    // Adds entries in case_label_value_map and case_label_hash_map
-    // for the given value to associate it with the given index in
-    // the cases list.  If the entry already exists, returns false,
-    // else returns true.
+
+
+
+
     bool AddCaseLabelValueMapping(const Val* v, int idx);
 
-    // Adds an entry in case_label_type_map for the given type (w/ ID) to
-    // associate it with the given index in the cases list.  If an entry
-    // for the type already exists, returns false; else returns true.
+
+
+
     bool AddCaseLabelTypeMapping(IDPtr t, int idx);
 
-    // Returns index of a case label that matches the value, or
-    // default_case_idx if no case label matches (which may be -1 if
-    // there's no default label). The second tuple element is the ID of
-    // the matching type-based case if it defines one.
+
+
+
+
     std::pair<int, IDPtr> FindCaseLabelMatch(const Val* v) const;
 
     case_list* cases = nullptr;
@@ -244,7 +244,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     StmtPtr Duplicate() override;
 
     StmtPtr DoReduce(Reducer* c) override;
@@ -264,7 +264,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     StmtPtr Duplicate() override;
     void Inline(Inliner* inl) override;
 
@@ -276,9 +276,9 @@ public:
     const StmtPtr& Body() const { return body; }
     const StmtPtr& ConditionAsStmt() const { return stmt_loop_condition; }
 
-    // Note, no need for a NoFlowAfter method because the loop might
-    // execute zero times, so it's always the default of "false".
-    // However, we do need to check for potential returns.
+
+
+
     bool CouldReturn(bool ignore_break) const override;
 
 protected:
@@ -287,23 +287,23 @@ protected:
     ExprPtr loop_condition;
     StmtPtr body;
 
-    // Optimization-related member variables.
 
-    // When in reduced form, the following holds a statement (which
-    // might be a block) that's a *predecessor* necessary for evaluating
-    // the loop's conditional.
+
+
+
+
     StmtPtr loop_cond_pred_stmt = nullptr;
 
-    // When reducing, we create a *statement* associated with
-    // evaluating the reduced conditional, as well as the reduced
-    // expression.  This turns out to be useful in propagating RDs/UDs.
+
+
+
     StmtPtr stmt_loop_condition = nullptr;
 };
 
 class ForStmt final : public ExprStmt {
 public:
     ForStmt(IDPList* loop_vars, ExprPtr loop_expr);
-    // Special constructor for key value for loop.
+
     ForStmt(IDPList* loop_vars, ExprPtr loop_expr, IDPtr val_var);
     ~ForStmt() override;
 
@@ -320,16 +320,16 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     StmtPtr Duplicate() override;
     void Inline(Inliner* inl) override;
 
     bool IsReduced(Reducer* c) const override;
     StmtPtr DoReduce(Reducer* c) override;
 
-    // Note, no need for a NoFlowAfter method because the loop might
-    // execute zero times, so it's always the default of "false".
-    // However, we do need to check for potential returns.
+
+
+
     bool CouldReturn(bool ignore_break) const override;
 
 protected:
@@ -337,8 +337,8 @@ protected:
 
     IDPList* loop_vars;
     StmtPtr body;
-    // Stores the value variable being used for a key value for loop.
-    // Always set to nullptr unless special constructor is called.
+
+
     IDPtr value_var;
 };
 
@@ -353,7 +353,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     StmtPtr Duplicate() override { return SetSucc(new NextStmt()); }
 
     bool NoFlowAfter(bool ignore_break) const override { return true; }
@@ -372,7 +372,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     StmtPtr Duplicate() override { return SetSucc(new BreakStmt()); }
 
     bool NoFlowAfter(bool ignore_break) const override { return ! ignore_break; }
@@ -392,7 +392,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     StmtPtr Duplicate() override { return SetSucc(new FallthroughStmt()); }
 
 protected:
@@ -406,14 +406,14 @@ public:
 
     void StmtDescribe(ODesc* d) const override;
 
-    // Optimization-related:
+
     StmtPtr Duplicate() override;
 
-    // Constructor used internally, for when we've already done
-    // all of the type-checking.
+
+
     ReturnStmt(ExprPtr e, bool ignored);
 
-    // Optimization-related:
+
     bool IsReduced(Reducer* c) const override;
     StmtPtr DoReduce(Reducer* c) override;
 
@@ -434,7 +434,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     StmtPtr Duplicate() override;
     void Inline(Inliner* inl) override;
 
@@ -444,7 +444,7 @@ public:
     bool NoFlowAfter(bool ignore_break) const override;
     bool CouldReturn(bool ignore_break) const override;
 
-    // Idioms commonly used in reduction.
+
     StmtList(StmtPtr s1, StmtPtr s2);
     StmtList(StmtPtr s1, StmtPtr s2, StmtPtr s3);
 
@@ -453,7 +453,7 @@ protected:
 
     std::vector<StmtPtr> stmts;
 
-    // Optimization-related:
+
     bool ReduceStmt(unsigned int& s_i, std::vector<StmtPtr>& f_stmts, Reducer* c);
 
     void ResetStmts(std::vector<StmtPtr> new_stmts) { stmts = std::move(new_stmts); }
@@ -478,7 +478,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     StmtPtr Duplicate() override;
 
     bool IsReduced(Reducer* c) const override;
@@ -499,10 +499,10 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     StmtPtr Duplicate() override { return SetSucc(new NullStmt()); }
 
-    // Returns true if this NullStmt represents a directive (@if..., @else, @endif)
+
     bool IsDirective() const { return is_directive; };
 
 private:
@@ -523,7 +523,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     StmtPtr Duplicate() override;
 
     bool IsReduced(Reducer* c) const override;
@@ -533,29 +533,29 @@ private:
     std::string cond_desc;
     ExprPtr msg;
 
-    // Statement to execute before evaluating "msg". Only used for script
-    // optimization.
+
+
     StmtPtr msg_setup_stmt;
 };
 
-// Helper function for reporting on asserts that either failed, or should
-// be processed regardless due to the presence of a "assertion_result" hook.
-//
-// If "cond" is false, throws an InterpreterException after reporting.
+
+
+
+
 extern void report_assert(bool cond, std::string_view cond_desc, StringValPtr msg_val, const Location* loc);
 
-// A helper class for tracking all of the information associated with
-// a "when" statement, and constructing the necessary components in support
-// of lambda-style captures.
+
+
+
 class WhenInfo {
 public:
-    // Takes ownership of the CaptureList.
+
     WhenInfo(ExprPtr cond, FuncType::CaptureList* cl, bool is_return);
 
-    // Used for duplication to support inlining.
+
     WhenInfo(const WhenInfo* orig);
 
-    // Constructor used by script optimization to create a stub.
+
     WhenInfo(bool is_return);
 
     ~WhenInfo() { delete cl; }
@@ -567,28 +567,28 @@ public:
         timeout_s = std::move(arg_timeout_s);
     }
 
-    // Complete construction of the associated internals, including
-    // the (complex) lambda used to access the different elements of
-    // the statement.  The optional argument is only for generating
-    // error messages.
+
+
+
+
     void Build(StmtPtr ws = nullptr);
 
-    // This is available after a call to Build().
+
     const LambdaExprPtr& Lambda() const { return lambda; }
 
-    // Instantiate a new instance, either by evaluating the associated
-    // lambda, or directly using the given function value (for compiled
-    // code).
+
+
+
     void Instantiate(Frame* f);
     void Instantiate(ValPtr func);
 
-    // Return the original components used to construct the "when".
+
     const ExprPtr& OrigCond() const { return cond; }
     const StmtPtr& OrigBody() const { return s; }
     const ExprPtr& OrigTimeout() const { return timeout; }
     const StmtPtr& OrigTimeoutStmt() const { return timeout_s; }
 
-    // Return different invocations of a lambda that manages the captures.
+
     ExprPtr Cond();
     StmtPtr WhenBody();
     StmtPtr TimeoutStmt();
@@ -602,26 +602,26 @@ public:
 
     bool IsReturn() const { return is_return; }
 
-    // The locals and globals used in the conditional expression
-    // (other than newly introduced locals), necessary for registering
-    // the associated triggers for when their values change.
+
+
+
     const auto& WhenExprLocals() const { return when_expr_locals; }
     const auto& WhenExprGlobals() const { return when_expr_globals; }
 
-    // The locals introduced in the conditional expression.
+
     const auto& WhenNewLocals() const { return when_new_locals; }
 
-    // Used for script optimization when in-lining needs to revise
-    // identifiers.
+
+
     bool HasUnreducedIDs(Reducer* c) const;
     void UpdateIDs(Reducer* c);
 
 private:
-    // Profile the original AST elements to extract things like
-    // globals and locals used.
+
+
     void BuildProfile();
 
-    // Build those elements we'll need for invoking our lambda.
+
     void BuildInvokeElems();
 
     ExprPtr cond;
@@ -632,26 +632,26 @@ private:
 
     bool is_return = false;
 
-    // The name of parameter passed to the lambda, and the corresponding
-    // identifier.
+
+
     std::string lambda_param_id;
     IDPtr param_id;
 
-    // The expression for constructing the lambda, and its type.
+
     LambdaExprPtr lambda;
     FuncTypePtr lambda_ft;
 
-    // The current instance of the lambda.  Created by Instantiate(),
-    // for immediate use via calls to Cond() etc.
+
+
     ExprPtr curr_lambda;
 
-    // Arguments to use when calling the lambda to either evaluate
-    // the conditional, or execute the body or the timeout statement.
+
+
     ListExprPtr invoke_cond;
     ListExprPtr invoke_s;
     ListExprPtr invoke_timeout;
 
-    // Helper expressions for calling the lambda / testing within it.
+
     ConstExprPtr one_const;
     ConstExprPtr two_const;
     ConstExprPtr three_const;
@@ -659,7 +659,7 @@ private:
     std::vector<IDPtr> when_expr_locals;
     IDSet when_expr_globals;
 
-    // Locals introduced via "local" in the "when" clause itself.
+
     IDSet when_new_locals;
 };
 
@@ -684,7 +684,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     StmtPtr Duplicate() override;
 
     bool IsReduced(Reducer* c) const override;
@@ -694,9 +694,9 @@ private:
     std::shared_ptr<WhenInfo> wi;
 };
 
-// Internal statement used for inlining.  Executes a block and stops
-// the propagation of any "return" inside the block.  Generated in
-// an already-reduced state.
+
+
+
 class CatchReturnStmt : public Stmt {
 public:
     explicit CatchReturnStmt(ScriptFuncPtr sf, StmtPtr block, NameExprPtr ret_var);
@@ -704,25 +704,25 @@ public:
     const ScriptFuncPtr& Func() const { return sf; }
     StmtPtr Block() const { return block; }
 
-    // This returns a bare pointer rather than a NameExprPtr only
-    // because we don't want to have to include Expr.h in this header.
+
+
     const NameExpr* RetVar() const { return ret_var.get(); }
 
-    // The assignment statement this statement transformed into,
-    // or nil if it hasn't (the common case).
+
+
     StmtPtr AssignStmt() const { return assign_stmt; }
 
     ValPtr Exec(Frame* f, StmtFlowType& flow) override;
 
     bool IsPure() const override;
 
-    // Even though these objects are generated in reduced form, we still
-    // have a reduction method to support the subsequent optimizer pass.
+
+
     StmtPtr DoReduce(Reducer* c) override;
 
-    // Note, no need for a NoFlowAfter() method because anything that
-    // has "NoFlowAfter" inside the body still gets caught and we
-    // continue afterwards.  Same goes for CouldReturn().
+
+
+
 
     StmtPtr Duplicate() override;
 
@@ -731,23 +731,23 @@ public:
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
 protected:
-    // The inlined function.
+
     ScriptFuncPtr sf;
 
-    // The inlined function body.
+
     StmtPtr block;
 
-    // Expression that holds the return value.  Only used for compiling.
+
     NameExprPtr ret_var;
 
-    // If this statement transformed into an assignment, that
-    // corresponding statement.
+
+
     StmtPtr assign_stmt;
 };
 
-// Statement that makes sure at run-time that an "any" type has the
-// correct number of (list) entries to enable sub-assigning to it via
-// statements like "[a, b, c] = x;".  Generated in an already-reduced state.
+
+
+
 class CheckAnyLenStmt : public ExprStmt {
 public:
     explicit CheckAnyLenStmt(ExprPtr e, int expected_len);
@@ -767,8 +767,8 @@ protected:
     int expected_len;
 };
 
-// Statement that calls a std::function. These can be added to a Func body
-// to directly call a C++ method.
+
+
 class StdFunctionStmt : public Stmt {
 public:
     StdFunctionStmt(std::function<void(const zeek::Args&, StmtFlowType&)> f)
@@ -784,4 +784,4 @@ private:
     std::function<void(const zeek::Args&, StmtFlowType&)> func;
 };
 
-} // namespace zeek::detail
+}

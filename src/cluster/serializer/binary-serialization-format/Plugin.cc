@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/cluster/serializer/binary-serialization-format/Plugin.h"
 
@@ -21,4 +21,4 @@ zeek::plugin::Configuration Plugin::Configure() {
     config.description = "Serialization using Zeek's custom binary serialization format";
     return config;
 }
-} // namespace zeek::plugin::Zeek_Binary_Serializer
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/RuleCondition.h"
 
@@ -11,10 +11,10 @@
 #include "zeek/analyzer/protocol/tcp/TCP.h"
 
 static inline bool is_established(const zeek::analyzer::tcp::TCP_Endpoint* e) {
-    // We more or less follow Snort here: an established session
-    // is one for which the initial handshake has succeeded (but we
-    // add partial connections).  The connection tear-down is part
-    // of the connection.
+
+
+
+
     return e->state != zeek::analyzer::tcp::TCP_ENDPOINT_INACTIVE &&
            e->state != zeek::analyzer::tcp::TCP_ENDPOINT_SYN_SENT &&
            e->state != zeek::analyzer::tcp::TCP_ENDPOINT_SYN_ACK_SENT;
@@ -70,7 +70,7 @@ void RuleConditionUDPState::PrintDebug() { fprintf(stderr, "	RuleConditionUDPSta
 void RuleConditionIPOptions::PrintDebug() { fprintf(stderr, "	RuleConditionIPOptions: 0x%x\n", options); }
 
 bool RuleConditionIPOptions::DoMatch(Rule* rule, RuleEndpointState* state, const u_char* data, int len) {
-    // FIXME: Not implemented yet
+
     return false;
 }
 
@@ -88,12 +88,12 @@ bool RuleConditionPayloadSize::DoMatch(Rule* rule, RuleEndpointState* state, con
 #endif
 
     if ( state->PayloadSize() < 0 )
-        // The size has not been set yet, i.e. we're matching
-        // on the pure rules now.
+
+
         return false;
 
     if ( state->PayloadSize() == 0 )
-        // We are interested in the first non-empty chunk.
+
         return false;
 
     uint32_t payload_size = static_cast<uint32_t>(state->PayloadSize());
@@ -114,7 +114,7 @@ bool RuleConditionPayloadSize::DoMatch(Rule* rule, RuleEndpointState* state, con
         default: reporter->InternalError("unknown comparison type");
     }
 
-    // Should not be reached
+
     return false;
 }
 
@@ -126,7 +126,7 @@ RuleConditionEval::RuleConditionEval(const char* func) {
     }
 
     if ( id->GetType()->Tag() == TYPE_FUNC ) {
-        // Validate argument quantity and type.
+
         FuncType* f = id->GetType()->AsFuncType();
 
         if ( f->Yield()->Tag() != TYPE_BOOL )
@@ -156,7 +156,7 @@ bool RuleConditionEval::DoMatch(Rule* rule, RuleEndpointState* state, const u_ch
     if ( id->GetType()->Tag() != TYPE_FUNC )
         return id->GetVal()->AsBool();
 
-    // Call function with a signature_state value as argument.
+
     Args args;
     args.reserve(2);
     args.emplace_back(AdoptRef{}, rule_matcher->BuildRuleStateValue(rule, state));
@@ -181,4 +181,4 @@ bool RuleConditionEval::DoMatch(Rule* rule, RuleEndpointState* state, const u_ch
 
 void RuleConditionEval::PrintDebug() { fprintf(stderr, "	RuleConditionEval: %s\n", id->Name()); }
 
-} // namespace zeek::detail
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/IPAddr.h"
 
@@ -74,13 +74,13 @@ void IPAddr::ReverseMask(int top_bits_to_chop) {
 bool IPAddr::ConvertString(const char* s, in6_addr* result) {
     for ( auto p = s; *p; ++p )
         if ( *p == ':' )
-            // IPv6
+
             return (inet_pton(AF_INET6, s, result->s6_addr) == 1);
 
-    // IPv4
-    // Parse the address directly instead of using inet_pton since
-    // some platforms have more sensitive implementations than others
-    // that can't e.g. handle leading zeroes.
+
+
+
+
     int a[4];
     int n = 0;
     int match_count = sscanf(s, "%d.%d.%d.%d%n", a + 0, a + 1, a + 2, a + 3, &n);
@@ -226,7 +226,7 @@ std::string IPPrefix::AsString() const {
     size_t prefix_len = str.size();
     str.resize(prefix_len + 16);
 
-    // length should only need 3 digits
+
     assert(length >= 0 && length <= 128);
 
     char* start = str.data() + prefix_len;
@@ -236,8 +236,8 @@ std::string IPPrefix::AsString() const {
     else
         res = std::to_chars(start, start + 16, length);
 
-    // The string comes back from to_chars without a null terminator, but res.ptr shows
-    // what character needs to be null.
+
+
     str.resize(res.ptr - str.data());
     return str;
 }
@@ -269,8 +269,8 @@ bool IPPrefix::ConvertString(const char* text, IPPrefix* result) {
     if ( ! IPAddr::ConvertString(ip_str.data(), &tmp) )
         return false;
 
-    // Set len_is_v6_relative=true if this looks like an IPv6 address to behave
-    // the same as when parsing subnet literals in the scripting language.
+
+
     bool len_is_v6_relative = s.find(':') != std::string::npos;
 
     auto ip = IPAddr(tmp);
@@ -282,4 +282,4 @@ bool IPPrefix::ConvertString(const char* text, IPPrefix* result) {
     return true;
 }
 
-} // namespace zeek
+}

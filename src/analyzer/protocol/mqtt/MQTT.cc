@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/mqtt/MQTT.h"
 
@@ -41,4 +41,4 @@ void MQTT_Analyzer::Undelivered(uint64_t seq, int len, bool orig) {
     interp->NewGap(orig, len);
 }
 
-} // namespace zeek::analyzer::mqtt
+}

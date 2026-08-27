@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_context_h
 #define pac_context_h
@@ -8,22 +8,22 @@
 #include "pac_type.h"
 #include "pac_typedecl.h"
 
-// AnalyzerContext represents a cookie that an analyzer gives to
-// parse functions of various message types. The cookie is parsed
-// to every parse function (if necessary) as parameter 'binpac_context'.
-//
-// The members of the cookie is declared through 'analyzer' declarations,
-// such as in:
-//
-// analyzer SunRPC withcontext {
-//        connection:     RPC_Conn;
-//        flow:           RPC_Flow;
-// };
-//
-// The cookie usually contains the connection and flow in which
-// the message appears, and the context information can be
-// accessed as members of the cookie, such as
-// ``binpac_context.connection''.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 class ContextField : public Field {
 public:
@@ -39,7 +39,7 @@ public:
 
     const ID* context_name_id() const { return context_name_id_; }
 
-    // The type of analyzer context as a parameter
+
     ParameterizedType* param_type() const { return param_type_; }
 
     void GenForwardDeclaration(Output* out_h) override;
@@ -54,7 +54,7 @@ private:
     ParameterizedType* param_type_;
     bool flow_buffer_added_;
 
-    // static members
+
 public:
     static AnalyzerContextDecl* current_analyzer_context() { return current_analyzer_context_; }
 
@@ -88,7 +88,7 @@ public:
 
     void DoGenParseCode(Output* out, Env* env, const DataPtr& data, int flags) override { ASSERT(0); }
 
-    // Generate code for computing the dynamic size of the type
+
     void GenDynamicSize(Output* out, Env* env, const DataPtr& data) override { ASSERT(0); }
 
 protected:
@@ -96,4 +96,4 @@ protected:
     void DoMarkIncrementalInput() override { ASSERT(0); }
 };
 
-#endif // pac_context_h
+#endif

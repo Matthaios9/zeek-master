@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -15,44 +15,44 @@ namespace zeek {
 namespace telemetry {
 class Counter;
 using CounterPtr = std::shared_ptr<Counter>;
-} // namespace telemetry
+}
 
 namespace cluster::zeromq {
 
-/**
- * Class providing metrics for the XPUB/XSUB proxy using Zeek's telemetry manager.
- *
- * If ProxyThread should ever run outside of Zeek, you'll likely implement a separate
- * class that doesn't depend on Zeek's Telemetry Manager.
- *
- * The lifetime here is a bit hairy. This class installs callbacks capturing [this] with the
- * telemetry manager. This should be okay, but if not, it's probably better to promote the
- * ZeroMQ XPUB/XSUB proxy out of the ZeroMQBackend and manage it separately down the road.
- */
+
+
+
+
+
+
+
+
+
+
 class ZeekProxyTelemetry {
 public:
     ZeekProxyTelemetry(zmq::socket_t&& arg_req);
     ~ZeekProxyTelemetry() { Shutdown(); }
 
-    // No copy or assignment.
+
     ZeekProxyTelemetry(const ZeekProxyTelemetry&) = delete;
     ZeekProxyTelemetry(ZeekProxyTelemetry&&) = delete;
     ZeekProxyTelemetry operator=(ZeekProxyTelemetry&) = delete;
 
-    /**
-     * Close the socket.
-     *
-     * The constructor installs callbacks with the telemetry manager
-     * referencing this, so we avoid freeing ZeekProxyTelemetry to
-     * avoid accessing released memory and return the most recent
-     * values from proxy_stats.
-     */
+
+
+
+
+
+
+
+
     void Shutdown() { req.close(); }
 
 private:
-    /**
-     * Send STATISTICS request and receive all values into proxy_stats.
-     */
+
+
+
     void RefreshStatistics();
     void RefreshStatisticsIfNeeded();
 
@@ -61,101 +61,101 @@ private:
     std::array<double, 8> proxy_stats = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 };
 
-/**
- * Helper class for encryption related configuration.
- *
- * ZeroMQ CURVE encryption is enabled, when the server's public key as well as
- * a client secret and public key is configured.
- *
- * Server side encryption is enabled when the servers secretkey is available. It's passed
- * to the proxy thread when hosting the XPUB and XSUB socket. See ZeroMQ-Proxy.cc. Also
- * the log PULL sockets are configured as curve servers using the secret key stored here.
- *
- * If we ever want to do per-client certificate authentication, we could stash client certs
- * here as well.
- *
- * There's no provisions about wiping the key material. It's stored in scripts and loaded into
- * memory here. If someone manages to own a Zeek process or has the ability to gdb, they can
- * easily get to the secrets. Mainly we want to prevent evasdropping on Zeek cluster communication
- * on the network.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 struct CurveConfig {
-    // Loaded during InitPostScript() from Cluster::Backend::ZeroMQ module
-    // const redef variables or environment variables in the form of
-    // ZEEK_ZEROMQ_CURVE_(CLIENT|SERVER)_(PUBLIC|SECRET)KEY
+
+
+
     std::string client_publickey;
     std::string client_secretkey;
     std::string server_publickey;
     std::string server_secretkey;
 
-    /**
-     * @return true if enough keys are available to enable client side encryption.
-     */
+
+
+
     bool IsClientEnabled() const {
         return ! server_publickey.empty() && ! client_secretkey.empty() && ! client_publickey.empty();
     };
 
-    /**
-     * @return true if enough keys are available to enable a curve server.
-     */
+
+
+
     bool IsServerEnabled() const { return ! server_secretkey.empty() && ! client_publickey.empty(); };
 
-    /**
-     * Configure the server's public key and client secret and public key on the give socket.
-     *
-     * @param sock ZeroMQ socket to enable encryption on.
-     */
+
+
+
+
+
     void ConfigureClientCurveSockOpts(zmq::socket_t& sock) const;
 
-    /**
-     * Configure the given socket as a curve server socket.
-     *
-     * @param sock ZeroMQ socket to enable encryption on.
-     */
+
+
+
+
+
     void ConfigureServerCurveSockOpts(zmq::socket_t& sock) const;
 
-    /**
-     * Initialize the given ZapArgs struct.
-     */
+
+
+
     void InitZap(zmq::context_t& ctx, ZapArgs& args) const;
 };
 
-/**
- * Create a CurveConfig object based on script variables and the environment.
- *
- * Results in a FatalError() in case of errors.
- */
+
+
+
+
+
 struct CurveConfig load_curve_config();
 
 class ProxyThread;
 
 class ZeroMQBackend : public cluster::ThreadedBackend {
 public:
-    /**
-     * Constructor.
-     */
+
+
+
     ZeroMQBackend(std::unique_ptr<EventSerializer> es, std::unique_ptr<LogSerializer> ls,
                   std::unique_ptr<detail::EventHandlingStrategy> ehs, zeek_uint_t onloop_max_queue_size);
 
-    /**
-     * Destructor.
-     */
+
+
+
     ~ZeroMQBackend() override;
 
-    /**
-     * Spawns a thread running zmq_proxy() for the configured XPUB/XSUB listen
-     * sockets. Only one node in a cluster should do this.
-     */
+
+
+
+
     bool SpawnZmqProxyThread();
 
-    /**
-     * Run method for background thread.
-     */
+
+
+
     void Run();
 
-    /**
-     * Component factory.
-     */
+
+
+
     static std::unique_ptr<Backend> Instantiate(std::unique_ptr<EventSerializer> event_serializer,
                                                 std::unique_ptr<LogSerializer> log_serializer,
                                                 std::unique_ptr<detail::EventHandlingStrategy> ehs);
@@ -180,7 +180,7 @@ private:
 
     void DoReadyToPublishCallback(ReadyCallback cb) override;
 
-    // Inner thread helper methods.
+
     using MultipartMessage = std::vector<zmq::message_t>;
     void HandleInprocMessages(std::vector<MultipartMessage>& msgs);
     void HandleLogMessages(const std::vector<MultipartMessage>& msgs);
@@ -188,7 +188,7 @@ private:
     void HandleXSubMessages(const std::vector<MultipartMessage>& msgs);
     void HandleMonitoringMessages(const std::vector<MultipartMessage>& msgs);
 
-    // Script level variables.
+
     std::string connect_xsub_endpoint;
     std::string connect_xpub_endpoint;
     int connect_xpub_nodrop = 1;
@@ -208,45 +208,45 @@ private:
     EventHandlerPtr event_unsubscription;
     EventHandlerPtr event_monitoring_event;
 
-    // xpub/xsub configuration
-    int xpub_sndhwm = 1000; // libzmq default
-    int xpub_sndbuf = -1;   // OS defaults
-    int xsub_rcvhwm = 1000; // libzmq default
-    int xsub_rcvbuf = -1;   // OS defaults
 
-    // log socket configuration
-    int log_immediate = false; // libzmq default
-    int log_sndhwm = 1000;     // libzmq default
-    int log_sndbuf = -1;       // OS defaults
-    int log_rcvhwm = 1000;     // libzmq defaults
-    int log_rcvbuf = -1;       // OS defaults
+    int xpub_sndhwm = 1000;
+    int xpub_sndbuf = -1;
+    int xsub_rcvhwm = 1000;
+    int xsub_rcvbuf = -1;
+
+
+    int log_immediate = false;
+    int log_sndhwm = 1000;
+    int log_sndbuf = -1;
+    int log_rcvhwm = 1000;
+    int log_rcvbuf = -1;
 
     zmq::context_t ctx;
     zmq::socket_t xsub;
     zmq::socket_t xpub;
 
-    // inproc sockets used for sending
-    // publish messages to xpub in a
-    // thread safe manner.
+
+
+
     zmq::socket_t main_inproc;
     zmq::socket_t child_inproc;
 
-    // Sockets used for logging. The log_push socket connects
-    // with one or more logger-like nodes. Logger nodes listen
-    // on the log_pull socket.
+
+
+
     std::vector<std::string> connect_log_endpoints;
     zmq::socket_t log_push;
     zmq::socket_t log_pull;
 
-    // PAIR sockets for per socket monitoring events.
+
     std::array<zmq::socket_t, 3> monitoring_sockets;
 
     std::thread self_thread;
     bool self_thread_shutdown_requested = false;
     bool self_thread_stop = false;
 
-    // If encryption is enabled, the local ZAP thread for
-    // used by the log pull socket on logger nodes.
+
+
     std::thread zap_thread;
     ZapArgs zap_args;
 
@@ -256,18 +256,18 @@ private:
 
     CurveConfig curve_config;
 
-    // Tracking the subscriptions on the local XPUB socket.
+
     std::map<std::string, SubscribeCallback> subscription_callbacks;
     std::set<std::string> xpub_subscriptions;
 
-    zeek::telemetry::CounterPtr total_xpub_drops;   // events dropped due to XPUB socket hwm reached
-    zeek::telemetry::CounterPtr total_onloop_drops; // events dropped due to onloop queue full
-    zeek::telemetry::CounterPtr total_msg_errors;   // messages with the wrong number of parts
+    zeek::telemetry::CounterPtr total_xpub_drops;
+    zeek::telemetry::CounterPtr total_onloop_drops;
+    zeek::telemetry::CounterPtr total_msg_errors;
 
-    // Could rework to log-once-every X seconds if needed.
+
     double xpub_drop_last_warn_at = 0.0;
     double onloop_drop_last_warn_at = 0.0;
 };
 
-} // namespace cluster::zeromq
-} // namespace zeek
+}
+}

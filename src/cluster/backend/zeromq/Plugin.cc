@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/cluster/backend/zeromq/Plugin.h"
 
@@ -19,4 +19,4 @@ zeek::plugin::Configuration Plugin::Configure() {
     return config;
 }
 
-} // namespace zeek::plugin::Zeek_Cluster_Backend_ZeroMQ
+}

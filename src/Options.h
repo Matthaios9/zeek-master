@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -11,22 +11,22 @@
 
 namespace zeek {
 
-/**
- * Options that define general Zeek processing behavior, usually determined
- * from command-line arguments.
- */
+
+
+
+
 struct Options {
-    /**
-     * Unset options that aren't meant to be used by the supervisor, but may
-     * make sense for supervised nodes to inherit (as opposed to flagging
-     * as an error an exiting outright if used in supervisor-mode).
-     */
+
+
+
+
+
     void filter_supervisor_options();
 
-    /**
-     * Inherit certain options set in the original supervisor parent process
-     * and discard the rest.
-     */
+
+
+
+
     void filter_supervised_node_options();
 
     bool print_version = false;
@@ -41,7 +41,7 @@ struct Options {
 
     std::optional<std::string> identifier_to_print;
     std::optional<std::string> script_code_to_exec;
-    std::vector<std::string> script_prefixes = {""}; // "" = "no prefix"
+    std::vector<std::string> script_prefixes = {""};
 
     int signature_re_level = 4;
     bool ignore_checksums = false;
@@ -81,27 +81,27 @@ struct Options {
 
     std::vector<std::string> script_args;
 
-    // For script optimization:
+
     detail::AnalyOpt analysis_options;
 };
 
-/**
- * Parse Zeek command-line arguments.
- * @param argc  argument count (same semantics as arguments to main())
- * @param argv  argument strings (same semantics as arguments to main())
- * @return  the parsed command-line options
- */
+
+
+
+
+
+
 Options parse_cmdline(int argc, char** argv);
 
-/**
- * Print command-line Zeek usage information.
- * @param prog  the name/path of the Zeek command-line invocation
- */
+
+
+
+
 void usage(const char* prog);
 
-/**
- * @return  true if zeek is running a "fake" DNS resolver, else false.
- */
+
+
+
 bool fake_dns();
 
-} // namespace zeek
+}

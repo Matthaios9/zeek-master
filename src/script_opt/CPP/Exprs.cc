@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/CPP/Compile.h"
 
@@ -27,7 +27,7 @@ string CPPCompile::GenListExpr(const Expr* e, GenType gt, bool nested) {
         auto gen_i = GenExpr(e_i, gt);
 
         if ( nested && e_i->Tag() == EXPR_LIST )
-            // These are table or set indices.
+
             gen_i = util::fmt("index_val__CPP({%s})", gen_i.c_str());
 
         gen += gen_i;
@@ -65,7 +65,7 @@ string CPPCompile::GenExpr(const Expr* e, GenType gt, bool top_level) {
         case EXPR_SUB: return GenBinary(e, gt, "-", "sub");
         case EXPR_TIMES: return GenBinary(e, gt, "*", "mul");
         case EXPR_DIVIDE:
-        case EXPR_MASK: // later code will split into addr masking
+        case EXPR_MASK:
             return GenBinary(e, gt, "/", "div");
         case EXPR_MOD: return GenBinary(e, gt, "%", "mod");
         case EXPR_AND: return GenBinary(e, gt, "&", "and");
@@ -110,9 +110,9 @@ string CPPCompile::GenExpr(const Expr* e, GenType gt, bool top_level) {
         case EXPR_VECTOR_CONSTRUCTOR: return GenVectorConstructorExpr(e);
 
         case EXPR_EVENT:
-            // These should not wind up being directly generated,
-            // but instead deconstructed in the context of either
-            // a "schedule" expression or an "event" statement.
+
+
+
             ASSERT(0);
 
         case EXPR_CAST:
@@ -144,13 +144,13 @@ string CPPCompile::GenExpr(const Expr* e, GenType gt, bool top_level) {
         case EXPR_FIELD_ASSIGN:
         case EXPR_INDEX_SLICE_ASSIGN:
         case EXPR_INLINE:
-            // These are only generated for reduced ASTs, which
-            // we shouldn't be compiling.
+
+
             ASSERT(0);
 
         default:
-            // Intended to catch errors in overlooking the possible
-            // expressions that might appear.
+
+
             return "EXPR";
     }
 }
@@ -227,10 +227,10 @@ string CPPCompile::GenAggrDel(const Expr* e) {
 }
 
 string CPPCompile::GenIncrExpr(const Expr* e, GenType gt, bool is_incr, bool top_level) {
-    // For compound operands (table indexing, record fields),
-    // Zeek's interpreter will actually evaluate the operand
-    // twice, so easiest is to just transform this node
-    // into the expanded equivalent.
+
+
+
+
     auto op = e->GetOp1();
     auto one = e->GetType()->InternalType() == TYPE_INTERNAL_INT ? val_mgr->Int(1) : val_mgr->Count(1);
     auto one_e = make_intrusive<ConstExpr>(one);
@@ -243,8 +243,8 @@ string CPPCompile::GenIncrExpr(const Expr* e, GenType gt, bool is_incr, bool top
 
     auto assign = make_intrusive<AssignExpr>(op, rhs, false, nullptr, nullptr, false);
 
-    // Make sure any newly created types are known to
-    // the profiler.
+
+
     (void)pfs->HashType(one_e->GetType());
     (void)pfs->HashType(rhs->GetType());
     (void)pfs->HashType(assign->GetType());
@@ -290,7 +290,7 @@ string CPPCompile::GenCallExpr(const CallExpr* c, GenType gt, bool top_level) {
         bool was_compiled = hashed_funcs.contains(id_name);
         bool is_variadic = params->NumFields() == 1 && nargs != 1;
 
-        if ( ! is_async && ! is_variadic && (is_compiled || was_compiled) ) { // Can call directly.
+        if ( ! is_async && ! is_variadic && (is_compiled || was_compiled) ) {
             string fname;
 
             if ( was_compiled )
@@ -306,22 +306,22 @@ string CPPCompile::GenCallExpr(const CallExpr* c, GenType gt, bool top_level) {
             return NativeToGT(gen, t, gt);
         }
 
-        // If the function isn't a BiF, then it will have been
-        // declared as a ValPtr (or a FuncValPtr, if a local),
-        // and we need to convert it to a Func*.
-        //
-        // If it is a BiF *that's also a global variable*, then
-        // we need to look up the BiF version of the global.
+
+
+
+
+
+
         if ( ! pfs->BiFGlobals().contains(f_id) )
             gen += +"->AsFunc()";
 
         else if ( accessed_globals.contains(f_id) )
-            // The BiF version has an extra "_", per AddBiF(..., true).
+
             gen = globals[string(id_name) + "_"];
     }
 
     else
-        // Indirect call.
+
         gen = string("(") + gen + ")->AsFunc()";
 
     string invoke_func;
@@ -344,7 +344,7 @@ string CPPCompile::GenCallExpr(const CallExpr* c, GenType gt, bool top_level) {
     invoker += ')';
 
     if ( top_level )
-        // No need to use accessor.
+
         return invoker;
 
     if ( IsNativeType(t) && gt != GEN_VAL_PTR )
@@ -541,7 +541,7 @@ string CPPCompile::GenAddToExpr(const Expr* e, GenType gt, bool top_level) {
         return GenericValPtrToGT(gen, t, gt);
     }
 
-    // Second GetOp1 is because if we get this far, LHS will be a RefExpr.
+
     lhs = lhs->GetOp1();
 
     if ( t->Tag() == TYPE_STRING ) {
@@ -552,13 +552,13 @@ string CPPCompile::GenAddToExpr(const Expr* e, GenType gt, bool top_level) {
     }
 
     if ( lhs->Tag() != EXPR_NAME || lhs->AsNameExpr()->Id()->IsGlobal() ) {
-        // LHS is a compound, or a global (and thus doesn't
-        // equate to a C++ variable); expand x += y to x = x + y
+
+
         rhs = make_intrusive<AddExpr>(lhs, rhs);
         auto assign = make_intrusive<AssignExpr>(lhs, rhs, false, nullptr, nullptr, false);
 
-        // Make sure any newly created types are known to
-        // the profiler.
+
+
         (void)pfs->HashType(rhs->GetType());
         (void)pfs->HashType(assign->GetType());
 
@@ -579,17 +579,17 @@ string CPPCompile::GenRemoveFromExpr(const Expr* e, GenType gt, bool top_level) 
         return GenericValPtrToGT(gen, t, gt);
     }
 
-    // Second GetOp1 is because if we get this far, LHS will be a RefExpr.
+
     lhs = lhs->GetOp1();
 
     if ( lhs->Tag() != EXPR_NAME || lhs->AsNameExpr()->Id()->IsGlobal() ) {
-        // LHS is a compound, or a global (and thus doesn't
-        // equate to a C++ variable); expand x -= y to x = x - y
+
+
         rhs = make_intrusive<SubExpr>(lhs, rhs);
         auto assign = make_intrusive<AssignExpr>(lhs, rhs, false, nullptr, nullptr, false);
 
-        // Make sure any newly created types are known to
-        // the profiler.
+
+
         (void)pfs->HashType(rhs->GetType());
         (void)pfs->HashType(assign->GetType());
 
@@ -610,7 +610,7 @@ string CPPCompile::GenSizeExpr(const Expr* e, GenType gt) {
         gen = string("((") + gen + ") ? 1 : 0)";
 
     else if ( it == TYPE_INTERNAL_UNSIGNED )
-        // no-op
+
         ;
 
     else if ( it == TYPE_INTERNAL_INT )
@@ -698,7 +698,7 @@ string CPPCompile::GenRecordCoerceExpr(const Expr* e) {
     const auto& to_type = rc->GetType();
 
     if ( same_type(from_type, to_type) )
-        // Elide coercion.
+
         return GenExpr(op1, GEN_VAL_PTR);
 
     const auto& map = rc->Map();
@@ -803,7 +803,7 @@ string CPPCompile::GenTableConstructorExpr(const Expr* e) {
         auto v = expr->GetOp2();
 
         if ( index->Tag() == EXPR_LIST )
-            // Multiple indices.
+
             indices += "index_val__CPP({" + GenExpr(index, GEN_VAL_PTR) + "})";
         else
             indices += GenExpr(index, GEN_VAL_PTR);
@@ -855,7 +855,7 @@ string CPPCompile::GenUnary(const Expr* e, GenType gt, const char* op, const cha
     if ( e->GetType()->Tag() == TYPE_VECTOR )
         return GenVectorOp(e, GenExpr(e->GetOp1(), GEN_NATIVE), vec_op);
 
-    // Look for coercions that the interpreter does implicitly.
+
     auto op1 = e->GetOp1();
     if ( op1->GetType()->Tag() == TYPE_COUNT && (e->Tag() == EXPR_POSITIVE || e->Tag() == EXPR_NEGATE) )
         op1 = make_intrusive<ArithCoerceExpr>(op1, TYPE_INT);
@@ -881,10 +881,10 @@ string CPPCompile::GenBinary(const Expr* e, GenType gt, const char* op, const ch
     if ( t->IsSet() )
         return GenBinarySet(e, gt, op);
 
-    // The following is only used for internal int/uint/double
-    // operations.  For those, it holds the prefix we use to
-    // distinguish different instances of inlined functions
-    // employed to support an operation.
+
+
+
+
     string flavor;
 
     switch ( t->InternalType() ) {
@@ -1168,8 +1168,8 @@ string CPPCompile::GenVectorOp(const Expr* e, const string& op1, const string& o
     auto& op2_t = e->GetOp2()->GetType();
 
     if ( op1_t->Tag() != TYPE_VECTOR || op2_t->Tag() != TYPE_VECTOR ) {
-        // This is a deprecated mixed-scalar-and-vector operation.
-        // We don't support these.  Arrange for linking errors.
+
+
         reporter->Error("C++ generation does not support deprecated scalar-mixed-with-vector operations");
         return "vec_scalar_mixed_with_vector()";
     }
@@ -1244,19 +1244,19 @@ string CPPCompile::GenEnum(const TypePtr& t, const ValPtr& ev) {
     auto v = ev->AsEnum();
 
     if ( ! et->HasRedefs() )
-        // Can use direct access.
+
         return "zeek_int_t(" + std::to_string(v) + ")";
 
-    // Need to dynamically map the access.
+
     int mapping_slot;
 
     auto evm = enum_val_mappings.find(et);
     if ( evm != enum_val_mappings.end() && evm->second.contains(v) )
-        // We're already tracking this value.
+
         mapping_slot = evm->second[v];
 
     else {
-        // New mapping.
+
         mapping_slot = num_ev_mappings++;
 
         string enum_name = et->Lookup(v);
@@ -1264,11 +1264,11 @@ string CPPCompile::GenEnum(const TypePtr& t, const ValPtr& ev) {
         enum_names.emplace_back(EnumMappingInfo{TypeOffset(t), std::move(enum_name), create_if_missing});
 
         if ( evm != enum_val_mappings.end() ) {
-            // We're already tracking this enum.
+
             evm->second[v] = mapping_slot;
         }
         else {
-            // Need to start tracking this enum.
+
             unordered_map<int, int> et_mapping;
             et_mapping[v] = mapping_slot;
             enum_val_mappings[et] = et_mapping;
@@ -1322,7 +1322,7 @@ int CPPCompile::ReadyProfile(const shared_ptr<ProfileFunc>& pf) {
     }
 
     for ( const auto& g : compiled_funcs_called ) {
-        readied_globals[g] = 0; // prevent infinite loops on recursion
+        readied_globals[g] = 0;
         auto f = g->GetVal()->AsFunc();
         int f_cohort = 0;
 
@@ -1341,15 +1341,15 @@ int CPPCompile::ReadyProfile(const shared_ptr<ProfileFunc>& pf) {
 
 int CPPCompile::GetFieldMapping(const RecordType* rt, int field) {
     if ( field < rt->NumOrigFields() )
-        // Can use direct access.
+
         return -1;
 
     auto rfm = record_field_mappings.find(rt);
     if ( rfm != record_field_mappings.end() && rfm->second.contains(field) )
-        // We're already tracking this field.
+
         return rfm->second[field];
 
-    // Need to dynamically map the field.
+
     int mapping_slot = num_rf_mappings++;
 
     auto pt = processed_types.find(rt);
@@ -1360,10 +1360,10 @@ int CPPCompile::GetFieldMapping(const RecordType* rt, int field) {
     field_decls.emplace_back(rt_offset, decl);
 
     if ( rfm != record_field_mappings.end() )
-        // We're already tracking this record.
+
         rfm->second[field] = mapping_slot;
     else {
-        // Need to start tracking this record.
+
         unordered_map<int, int> rt_mapping;
         rt_mapping[field] = mapping_slot;
         record_field_mappings[rt] = rt_mapping;
@@ -1372,4 +1372,4 @@ int CPPCompile::GetFieldMapping(const RecordType* rt, int field) {
     return mapping_slot;
 }
 
-} // namespace zeek::detail
+}

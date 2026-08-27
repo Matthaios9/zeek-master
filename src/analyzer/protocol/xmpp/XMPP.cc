@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/xmpp/XMPP.h"
 
@@ -29,8 +29,8 @@ void XMPP_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
     analyzer::tcp::TCP_ApplicationAnalyzer::DeliverStream(len, data, orig);
 
     if ( tls_active ) {
-        // If TLS has been initiated, forward to child and abort further
-        // processing
+
+
         ForwardStream(len, data, orig);
         return;
     }
@@ -39,9 +39,9 @@ void XMPP_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
         return;
 
     if ( had_gap )
-        // If only one side had a content gap, we could still try to
-        // deliver data to the other side if the script layer can
-        // handle this.
+
+
+
         return;
 
     try {
@@ -58,9 +58,9 @@ void XMPP_Analyzer::Undelivered(uint64_t seq, int len, bool orig) {
 }
 
 void XMPP_Analyzer::StartTLS() {
-    // StartTLS was called. This means we saw a client starttls followed
-    // by a server proceed. From here on, everything should be a binary
-    // TLS datastream.
+
+
+
 
     tls_active = true;
 
@@ -69,4 +69,4 @@ void XMPP_Analyzer::StartTLS() {
         AddChildAnalyzer(ssl);
 }
 
-} // namespace zeek::analyzer::xmpp
+}

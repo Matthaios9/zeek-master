@@ -1,4 +1,4 @@
-##! OpenFlow plugin for the Ryu controller.
+
 
 @load base/frameworks/openflow
 @load base/utils/active-http
@@ -11,45 +11,45 @@ export {
 		RYU,
 	};
 
-	## Ryu controller constructor.
-	##
-	## host: Controller ip.
-	##
-	## host_port: Controller listen port.
-	##
-	## dpid: OpenFlow switch datapath id.
-	##
-	## Returns: OpenFlow::Controller record.
+
+
+
+
+
+
+
+
+
 	global ryu_new: function(host: addr, host_port: count, dpid: count): OpenFlow::Controller;
 
 	redef record ControllerState += {
-		## Controller ip.
+
 		ryu_host: addr &optional;
-		## Controller listen port.
+
 		ryu_port: count &optional;
-		## OpenFlow switch datapath id.
+
 		ryu_dpid: count &optional;
-		## Enable debug mode - output JSON to stdout; do not perform actions.
+
 		ryu_debug: bool &default=F;
 	};
 }
 
-# Ryu ReST API flow_mod URL-path
-const RYU_FLOWENTRY_PATH = "/stats/flowentry/";
-# Ryu ReST API flow_stats URL-path
-#const RYU_FLOWSTATS_PATH = "/stats/flow/";
 
-# Ryu ReST API action_output type.
+const RYU_FLOWENTRY_PATH = "/stats/flowentry/";
+
+
+
+
 type ryu_flow_action: record {
-	# Ryu uses strings as its ReST API output action.
+
 	_type: string;
-	# The output port for type OUTPUT
+
 	_port: count &optional;
 };
 
-# The ReST API documentation can be found at
-# https://media.readthedocs.org/pdf/ryu/latest/ryu.pdf
-# Ryu ReST API flow_mod type.
+
+
+
 type ryu_ofp_flow_mod: record {
 	dpid: count;
 	cookie: count &optional;
@@ -65,7 +65,7 @@ type ryu_ofp_flow_mod: record {
 	out_group: count &optional;
 };
 
-# Mapping between ofp flow mod commands and ryu urls
+
 const ryu_url: table[ofp_flow_mod_command] of string = {
 	[OFPFC_ADD] = "add",
 	[OFPFC_MODIFY] = "modify",
@@ -74,7 +74,7 @@ const ryu_url: table[ofp_flow_mod_command] of string = {
 	[OFPFC_DELETE_STRICT] = "delete_strict",
 };
 
-# Ryu flow_mod function
+
 function ryu_flow_mod(state: OpenFlow::ControllerState, match: ofp_match, flow_mod: OpenFlow::ofp_flow_mod): bool
 	{
 	if ( state$_plugin != RYU )
@@ -83,13 +83,13 @@ function ryu_flow_mod(state: OpenFlow::ControllerState, match: ofp_match, flow_m
 		return F;
 		}
 
-	# Generate ryu_flow_actions because their type differs (using strings as type).
+
 	local flow_actions: vector of ryu_flow_action = vector();
 
 	for ( i in flow_mod$actions$out_ports )
 		flow_actions += ryu_flow_action($_type="OUTPUT", $_port=flow_mod$actions$out_ports[i]);
 
-	# Generate our ryu_flow_mod record for the ReST API call.
+
 	local mod: ryu_ofp_flow_mod = ryu_ofp_flow_mod(
 		$dpid=state$ryu_dpid,
 		$cookie=flow_mod$cookie,
@@ -106,7 +106,7 @@ function ryu_flow_mod(state: OpenFlow::ControllerState, match: ofp_match, flow_m
 	if ( flow_mod?$out_group )
 		mod$out_group = flow_mod$out_group;
 
-	# Type of the command
+
 	local command_type: string;
 
 	if ( flow_mod$command in ryu_url )
@@ -127,14 +127,14 @@ function ryu_flow_mod(state: OpenFlow::ControllerState, match: ofp_match, flow_m
 		return T;
 		}
 
-	# Create the ActiveHTTP request and convert the record to a Ryu ReST API JSON string
+
 	local request: ActiveHTTP::Request = ActiveHTTP::Request(
 		$url=url,
 		$method="POST",
 		$client_data=to_json(mod)
 	);
 
-	# Execute call to Ryu's ReST API
+
 	when [state, match, flow_mod, request] ( local result = ActiveHTTP::request(request) )
 		{
 		if (result$code == 200)
@@ -177,7 +177,7 @@ function ryu_describe(state: ControllerState): string
 	return fmt("Ryu-%d-http://%s:%d", state$ryu_dpid, state$ryu_host, state$ryu_port);
 	}
 
-# Ryu controller constructor
+
 function ryu_new(host: addr, host_port: count, dpid: count): OpenFlow::Controller
 	{
 	local c = OpenFlow::Controller($state=OpenFlow::ControllerState($ryu_host=host, $ryu_port=host_port, $ryu_dpid=dpid),

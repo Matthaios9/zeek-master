@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/netbios/NetbiosSSN.h"
 
@@ -59,7 +59,7 @@ NetbiosDGM_RawMsgHdr::NetbiosDGM_RawMsgHdr(const u_char*& data, int& len) {
 
 NetbiosSSN_Interpreter::NetbiosSSN_Interpreter(analyzer::Analyzer* arg_analyzer) {
     analyzer = arg_analyzer;
-    // smb_session = arg_smb_session;
+
 }
 
 void NetbiosSSN_Interpreter::ParseMessage(unsigned int type, unsigned int flags, const u_char* data, int len,
@@ -95,17 +95,17 @@ void NetbiosSSN_Interpreter::ParseMessage(unsigned int type, unsigned int flags,
 }
 
 void NetbiosSSN_Interpreter::ParseDatagram(const u_char* data, int len, bool is_query) {
-    // if ( smb_session )
-    //	{
-    //	smb_session->Deliver(is_query, len, data);
-    //	}
+
+
+
+
 }
 
 void NetbiosSSN_Interpreter::ParseBroadcast(const u_char* data, int len, bool is_query) {
-    // TODO: Parse and validate broadcast source/destination names if needed.
 
-    // if ( smb_session )
-    //	smb_session->Deliver(is_query, len, data);
+
+
+
 }
 
 void NetbiosSSN_Interpreter::ParseMessageTCP(const u_char* data, int len, bool is_query) {
@@ -123,10 +123,10 @@ void NetbiosSSN_Interpreter::ParseMessageTCP(const u_char* data, int len, bool i
 }
 
 void NetbiosSSN_Interpreter::ParseMessageUDP(const u_char* data, int len, bool is_query) {
-    // The NetBIOS Datagram Service header consumed by NetbiosDGM_RawMsgHdr
-    // is 14 bytes (type, flags, id, srcip, srcport, length, offset). Reject
-    // short datagrams here so the header constructor does not read past the
-    // end of the caller-supplied UDP payload.
+
+
+
+
     if ( len < 14 ) {
         analyzer->AnalyzerViolation("NetBIOS datagram too short for header", reinterpret_cast<const char*>(data), len);
         return;
@@ -147,18 +147,18 @@ void NetbiosSSN_Interpreter::ParseMessageUDP(const u_char* data, int len, bool i
 
 void NetbiosSSN_Interpreter::ParseSessionMsg(const u_char* data, int len, bool is_query) {
     if ( len < 4 || strncmp(reinterpret_cast<const char*>(data), "\xffSMB", 4) != 0 ) {
-        // This should be an event, too.
+
         analyzer->Weird("netbios_raw_session_msg");
         Event(netbios_session_raw_message, data, len, is_query);
         return;
     }
 
-    // if ( smb_session )
-    //	{
-    //	smb_session->Deliver(is_query, len, data);
-    //	return 0;
-    //	}
-    // else
+
+
+
+
+
+
     {
         analyzer->Weird("no_smb_session_using_parsesambamsg");
         data += 4;
@@ -170,7 +170,7 @@ void NetbiosSSN_Interpreter::ParseSessionMsg(const u_char* data, int len, bool i
 void NetbiosSSN_Interpreter::ParseSambaMsg(const u_char* data, int len, bool is_query) {}
 
 int NetbiosSSN_Interpreter::ConvertName(const u_char* name, int name_len, u_char*& xname, int& xlen) {
-    // Taken from tcpdump's smbutil.c.
+
 
     xname = nullptr;
 
@@ -180,9 +180,9 @@ int NetbiosSSN_Interpreter::ConvertName(const u_char* name, int name_len, u_char
     int len = (*name++) / 2;
     xlen = len;
 
-    // The loop below reads two bytes per encoded name character, on top
-    // of the one length byte already consumed above, so the input must
-    // hold at least 2 * len + 1 bytes total.
+
+
+
     if ( len > 30 || len < 1 || name_len < 2 * len + 1 )
         return 0;
 
@@ -273,7 +273,7 @@ void NetbiosSSN_Interpreter::Event(EventHandlerPtr event, const u_char* data, in
         analyzer->EnqueueConnEvent(event, analyzer->ConnVal(), make_intrusive<StringVal>(new String(data, len, false)));
 }
 
-} // namespace detail
+}
 
 Contents_NetbiosSSN::Contents_NetbiosSSN(Connection* conn, bool orig, detail::NetbiosSSN_Interpreter* arg_interp)
     : analyzer::tcp::TCP_SupportAnalyzer("CONTENTS_NETBIOSSSN", conn, orig) {
@@ -287,7 +287,7 @@ Contents_NetbiosSSN::Contents_NetbiosSSN(Connection* conn, bool orig, detail::Ne
 Contents_NetbiosSSN::~Contents_NetbiosSSN() { delete[] msg_buf; }
 
 void Contents_NetbiosSSN::Flush() {
-    if ( buf_n > 0 ) { // Deliver partial message.
+    if ( buf_n > 0 ) {
         interp->ParseMessage(type, flags, msg_buf, buf_n, IsOrig());
         msg_size = 0;
     }
@@ -371,7 +371,7 @@ void Contents_NetbiosSSN::ProcessChunk(int& len, const u_char*& data, bool orig)
     len -= n;
 
     if ( buf_n < msg_size )
-        // Haven't filled up the message buffer yet, no more to do.
+
         return;
 
     interp->ParseMessage(type, flags, msg_buf, msg_size, IsOrig());
@@ -382,7 +382,7 @@ void Contents_NetbiosSSN::ProcessChunk(int& len, const u_char*& data, bool orig)
 
 NetbiosSSN_Analyzer::NetbiosSSN_Analyzer(Connection* conn)
     : analyzer::tcp::TCP_ApplicationAnalyzer("NETBIOSSSN", conn) {
-    // smb_session = new SMB_Session(this);
+
     interp = new detail::NetbiosSSN_Interpreter(this);
     orig_netbios = resp_netbios = nullptr;
     did_session_done = 0;
@@ -402,7 +402,7 @@ NetbiosSSN_Analyzer::NetbiosSSN_Analyzer(Connection* conn)
 
 NetbiosSSN_Analyzer::~NetbiosSSN_Analyzer() {
     delete interp;
-    // delete smb_session;
+
 }
 
 void NetbiosSSN_Analyzer::Done() {
@@ -425,9 +425,9 @@ void NetbiosSSN_Analyzer::ConnectionClosed(analyzer::tcp::TCP_Endpoint* endpoint
                                            bool gen_event) {
     analyzer::tcp::TCP_ApplicationAnalyzer::ConnectionClosed(endpoint, peer, gen_event);
 
-    // Question: Why do we flush *both* endpoints upon connection close?
-    // orig_netbios->Flush();
-    // resp_netbios->Flush();
+
+
+
 }
 
 void NetbiosSSN_Analyzer::DeliverPacket(int len, const u_char* data, bool orig, uint64_t seq, const IP_Hdr* ip,
@@ -441,9 +441,9 @@ void NetbiosSSN_Analyzer::DeliverPacket(int len, const u_char* data, bool orig, 
 }
 
 void NetbiosSSN_Analyzer::ExpireTimer(double t) {
-    // The - 1.0 in the following is to allow 1 second for the
-    // common case of a single request followed by a single reply,
-    // so we don't needlessly set the timer twice in that case.
+
+
+
     if ( run_state::terminating ||
          run_state::network_time - Conn()->LastTime() >= BifConst::netbios_ssn_session_timeout - 1.0 ) {
         Event(connection_timeout);
@@ -454,4 +454,4 @@ void NetbiosSSN_Analyzer::ExpireTimer(double t) {
                            zeek::detail::TIMER_NB_EXPIRE);
 }
 
-} // namespace zeek::analyzer::netbios_ssn
+}

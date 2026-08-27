@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -12,10 +12,10 @@ using EnumValPtr = IntrusivePtr<EnumVal>;
 
 namespace storage {
 
-/**
- * A collection of EnumValPtrs for the default set of result codes in the storage framework.
- * should be kept up-to-date with the Storage::ReturnCodes script-level enum.
- */
+
+
+
+
 class ReturnCode final {
 public:
     static void Initialize();
@@ -38,5 +38,5 @@ public:
     ZEEK_IMPORT_DATA static EnumValPtr UNSERIALIZATION_FAILED;
 };
 
-} // namespace storage
-} // namespace zeek
+}
+}

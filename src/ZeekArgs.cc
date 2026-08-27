@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/ZeekArgs.h"
 
@@ -55,4 +55,4 @@ VectorValPtr MakeEmptyCallArgumentVector() {
     return make_intrusive<VectorVal>(call_argument_vector);
 }
 
-} // namespace zeek
+}

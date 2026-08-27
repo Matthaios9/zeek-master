@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/net_util.h"
 
@@ -64,13 +64,13 @@ uint16_t detail::ip6_in_cksum(const IPAddr& src, const IPAddr& dst, uint8_t next
     return in_cksum(blocks, nblocks);
 }
 
-// Returns the ones-complement checksum of a chunk of 'b' bytes.
+
 int ones_complement_checksum(const void* p, int b, uint32_t sum) {
     const unsigned char* sp = reinterpret_cast<const unsigned char*>(p);
 
-    b /= 2; // convert to count of short's
+    b /= 2;
 
-    /* No need for endian conversions. */
+
     while ( --b >= 0 ) {
         sum += *sp + (*(sp + 1) << 8);
         sp += 2;
@@ -106,9 +106,9 @@ int mobility_header_checksum(const IP_Hdr* ip) {
 
     sum = ones_complement_checksum(ip->SrcAddr(), sum);
     sum = ones_complement_checksum(ip->DstAddr(), sum);
-    // Note, for IPv6, strictly speaking the protocol and length fields are
-    // 32 bits rather than 16 bits.  But because the upper bits are all zero,
-    // we get the same checksum either way.
+
+
+
     sum += htons(IPPROTO_MOBILITY);
     sum += htons(mh_len);
     sum = ones_complement_checksum(mh, mh_len, sum);
@@ -117,8 +117,8 @@ int mobility_header_checksum(const IP_Hdr* ip) {
 }
 
 int icmp6_checksum(const struct icmp* icmpp, const IP_Hdr* ip, int len) {
-    // ICMP6 uses the same checksum function as ICMP4 but a different
-    // pseudo-header over which it is computed.
+
+
     return detail::ip6_in_cksum(ip->SrcAddr(), ip->DstAddr(), IPPROTO_ICMPV6, reinterpret_cast<const uint8_t*>(icmpp),
                                 len);
 }
@@ -160,14 +160,14 @@ const char* fmt_conn_id(const uint32_t* src_addr, uint32_t src_port, const uint3
 
 TEST_CASE("fmt_mac") {
     auto my_fmt_mac = [](const char* m, int len) {
-        // allow working with literal strings
+
         return fmt_mac(reinterpret_cast<const unsigned char*>(m), len);
     };
 
     CHECK(my_fmt_mac("", 0) == "");
     CHECK(my_fmt_mac("\x01\x02\x03\x04\x05\x06", 4) == "");
     CHECK(my_fmt_mac("\x01\x02\x03\x04\x05\x06", 6) == "01:02:03:04:05:06");
-    // NOLINTNEXTLINE(bugprone-string-literal-with-embedded-nul)
+
     CHECK(my_fmt_mac("\x01\x02\x03\x04\x05\x06\x00\x00", 8) == "01:02:03:04:05:06");
     CHECK(my_fmt_mac("\x01\x02\x03\x04\x05\x06\x07\x08", 8) == "01:02:03:04:05:06:07:08");
     CHECK(my_fmt_mac("\x08\x07\x06\x05\x04\x03\x02\x01", 8) == "08:07:06:05:04:03:02:01");
@@ -180,24 +180,24 @@ std::string fmt_mac(const unsigned char* m, int len) {
 
 TEST_CASE("fmt_mac_bytes") {
     auto my_fmt_mac_bytes = [](const char* m, int len) {
-        // allow working with literal strings
+
         return fmt_mac_bytes(reinterpret_cast<const unsigned char*>(m), len);
     };
 
     auto [buf1, len1] = my_fmt_mac_bytes("\x01\x02\x03\x04\x05\x06", 4);
     CHECK(len1 == 0);
-    CHECK(memcmp(buf1.get(), "", 1) == 0); // still null terminated
+    CHECK(memcmp(buf1.get(), "", 1) == 0);
 
     auto [buf2, len2] = my_fmt_mac_bytes("\x01\x02\x03\x04\x05\x06", 6);
     CHECK(len2 == 2 * 6 + 5);
     CHECK(memcmp(buf2.get(), "01:02:03:04:05:06", len2 + 1) == 0);
 
-    // NOLINTNEXTLINE(bugprone-string-literal-with-embedded-nul)
+
     auto [buf3, len3] = my_fmt_mac_bytes("\x01\x02\x03\x04\x05\x06\x00\x00", 8);
     CHECK(len3 == 2 * 6 + 5);
     CHECK(memcmp(buf3.get(), "01:02:03:04:05:06", len3 + 1) == 0);
 
-    // Check for no memory overreads
+
     auto [buf4, len4] = my_fmt_mac_bytes("\x01\x02\x03\x04\x05\x06\x07\x08\xff\xff", 42);
     CHECK(len4 == 2 * 8 + 7);
     CHECK(memcmp(buf4.get(), "01:02:03:04:05:06:07:08", len4 + 1) == 0);
@@ -236,4 +236,4 @@ uint32_t extract_uint32(const u_char* data) {
     return val;
 }
 
-} // namespace zeek
+}

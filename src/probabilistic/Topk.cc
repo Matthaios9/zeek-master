@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/probabilistic/Topk.h"
 
@@ -51,7 +51,7 @@ TopkVal::~TopkVal() {
     elementDict->Clear();
     delete elementDict;
 
-    // now all elements are already gone - delete the buckets
+
     std::list<Bucket*>::iterator bi = buckets.begin();
     while ( bi != buckets.end() ) {
         delete *bi;
@@ -63,7 +63,7 @@ TopkVal::~TopkVal() {
 
 void TopkVal::Merge(const TopkVal* value, bool doPrune) {
     if ( ! value->type ) {
-        // Merge-from is empty. Nothing to do.
+
         assert(value->numElements == 0);
         return;
     }
@@ -88,7 +88,7 @@ void TopkVal::Merge(const TopkVal* value, bool doPrune) {
 
         while ( eit != b->elements.end() ) {
             Element* e = *eit;
-            // lookup if we already know this one...
+
             zeek::detail::HashKey* key = GetHash(e->value);
             Element* olde = elementDict->Lookup(key);
 
@@ -96,7 +96,7 @@ void TopkVal::Merge(const TopkVal* value, bool doPrune) {
                 olde = new Element();
                 olde->epsilon = 0;
                 olde->value = e->value;
-                // insert at bucket position 0
+
                 if ( ! buckets.empty() )
                     assert(buckets.front()->count > 0);
 
@@ -111,10 +111,10 @@ void TopkVal::Merge(const TopkVal* value, bool doPrune) {
                 numElements++;
             }
 
-            // now that we are sure that the old element is present - increment epsilon
+
             olde->epsilon += e->epsilon;
 
-            // and increment position...
+
             IncrementCounter(olde, currcount);
             delete key;
 
@@ -124,8 +124,8 @@ void TopkVal::Merge(const TopkVal* value, bool doPrune) {
         it++;
     }
 
-    // now we have added everything. And our top-k table could be too big.
-    // prune everything...
+
+
 
     assert(size > 0);
 
@@ -161,7 +161,7 @@ ValPtr TopkVal::DoClone(CloneState* state) {
     return state->NewClone(this, std::move(clone));
 }
 
-VectorValPtr TopkVal::GetTopK(int k) const // returns vector
+VectorValPtr TopkVal::GetTopK(int k) const
 {
     if ( numElements == 0 ) {
         reporter->Error("Cannot return topk of empty");
@@ -171,17 +171,17 @@ VectorValPtr TopkVal::GetTopK(int k) const // returns vector
     auto v = make_intrusive<VectorType>(type);
     auto t = make_intrusive<VectorVal>(std::move(v));
 
-    // this does no estimation if the results is correct!
-    // in any case - just to make this future-proof (and I am lazy) - this can return more than k.
+
+
 
     int read = 0;
     std::list<Bucket*>::const_iterator it = buckets.end();
     it--;
     while ( read < k ) {
-        // printf("Bucket %llu\n", (*it)->count);
+
         std::list<Element*>::iterator eit = (*it)->elements.begin();
         while ( eit != (*it)->elements.end() ) {
-            // printf("Size: %ld\n", (*it)->elements.size());
+
             t->Assign(read, (*eit)->value);
             read++;
             eit++;
@@ -241,7 +241,7 @@ uint64_t TopkVal::GetSum() const {
 }
 
 void TopkVal::Encountered(ValPtr encountered) {
-    // ok, let's see if we already know this one.
+
 
     if ( numElements == 0 )
         Typify(encountered->GetType());
@@ -250,7 +250,7 @@ void TopkVal::Encountered(ValPtr encountered) {
         return;
     }
 
-    // Step 1 - get the hash.
+
     zeek::detail::HashKey* key = GetHash(encountered);
     Element* e = elementDict->Lookup(key);
 
@@ -259,9 +259,9 @@ void TopkVal::Encountered(ValPtr encountered) {
         e->epsilon = 0;
         e->value = std::move(encountered);
 
-        // well, we do not know this one yet...
+
         if ( numElements < size ) {
-            // brilliant. just add it at position 1
+
             if ( buckets.empty() || (*buckets.begin())->count > 1 ) {
                 Bucket* b = new Bucket();
                 b->count = 1;
@@ -281,43 +281,43 @@ void TopkVal::Encountered(ValPtr encountered) {
             numElements++;
             delete key;
 
-            return; // done. it is at pos 1.
+            return;
         }
 
         else {
-            // replace element with min-value
-            Bucket* b = *buckets.begin(); // bucket with smallest elements
 
-            // evict oldest element with least hits.
+            Bucket* b = *buckets.begin();
+
+
             assert(! b->elements.empty());
             zeek::detail::HashKey* deleteKey = GetHash((*(b->elements.begin()))->value);
             b->elements.erase(b->elements.begin());
             Element* deleteElement = elementDict->RemoveEntry(deleteKey);
-            assert(deleteElement); // there has to have been a minimal element...
+            assert(deleteElement);
             delete deleteElement;
             delete deleteKey;
 
-            // and add the new one to the end
+
             e->epsilon = b->count;
             b->elements.insert(b->elements.end(), e);
             elementDict->Insert(key, e);
             e->parent = b;
 
-            // fallthrough, increment operation has to run!
+
         }
     }
 
-    // ok, we now have an element in e
+
     delete key;
-    IncrementCounter(e); // well, this certainly was anticlimactic.
+    IncrementCounter(e);
 }
 
-// increment by count
+
 void TopkVal::IncrementCounter(Element* e, unsigned int count) {
     Bucket* currBucket = e->parent;
     uint64_t currcount = currBucket->count;
 
-    // well, let's test if there is a bucket for currcount++
+
     std::list<Bucket*>::iterator bucketIter = currBucket->bucketPos;
 
     Bucket* nextBucket = nullptr;
@@ -331,25 +331,25 @@ void TopkVal::IncrementCounter(Element* e, unsigned int count) {
         nextBucket = *bucketIter;
 
     if ( nextBucket == nullptr ) {
-        // the bucket for the value that we want does not exist.
-        // create it...
+
+
 
         Bucket* b = new Bucket();
         b->count = currcount + count;
 
         std::list<Bucket*>::iterator nextBucketPos = buckets.insert(bucketIter, b);
-        b->bucketPos = nextBucketPos; // and give it the iterator we know now.
+        b->bucketPos = nextBucketPos;
 
         nextBucket = b;
     }
 
-    // ok, now we have the new bucket in nextBucket. Shift the element over...
+
     currBucket->elements.remove(e);
     nextBucket->elements.insert(nextBucket->elements.end(), e);
 
     e->parent = nextBucket;
 
-    // if currBucket is empty, we have to delete it now
+
     if ( currBucket->elements.empty() ) {
         buckets.remove(currBucket);
         delete currBucket;
@@ -420,11 +420,11 @@ bool TopkVal::DoUnserializeData(BrokerDataView data) {
     }
 
     bool ok = true;
-    auto index = size_t{4}; // Index into v.
+    auto index = size_t{4};
     auto atEnd = [&v, &index] { return index >= v.Size(); };
-    // Returns the element  at the given index in v, if that element is a count.
-    // If so, ok becomes true, and the index gets incremented.
-    // If not, ok becomes false, and the index remains unchanged.
+
+
+
     auto nextCount = [&v, &ok, &index]() -> uint64_t {
         if ( index >= v.Size() || ! v[index].IsCount() ) {
             ok = false;
@@ -484,4 +484,4 @@ bool TopkVal::DoUnserializeData(BrokerDataView data) {
     return true;
 }
 
-} // namespace zeek::probabilistic::detail
+}

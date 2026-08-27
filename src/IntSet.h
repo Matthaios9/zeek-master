@@ -1,10 +1,10 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// A simple but fast data structure for sets of integers.
-// Only supported operations are insert, remove and membership test.
-//
-// It's implemented via a bitmap so the memory usage increases linearly
-// with max(set).
+
+
+
+
+
+
 
 #pragma once
 
@@ -14,7 +14,7 @@ namespace zeek::detail {
 
 class IntSet {
 public:
-    // n is a hint for the value of the largest integer.
+
     explicit IntSet(unsigned int n = 1);
     ~IntSet();
 
@@ -53,4 +53,4 @@ inline void IntSet::Remove(unsigned int i) {
 
 inline bool IntSet::Contains(unsigned int i) const { return i / 8 < size ? set[i / 8] & (1 << (i % 8)) : false; }
 
-} // namespace zeek::detail
+}

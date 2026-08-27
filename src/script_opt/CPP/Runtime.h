@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -39,4 +39,4 @@ using FuncValPtr = IntrusivePtr<zeek::FuncVal>;
 using FileValPtr = IntrusivePtr<zeek::FileVal>;
 using SubNetValPtr = IntrusivePtr<zeek::SubNetVal>;
 
-} // namespace zeek::detail
+}

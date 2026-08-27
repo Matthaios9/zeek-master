@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/protocol/unknown_ip_transport/UnknownIPSessionAdapter.h"
 
@@ -12,6 +12,6 @@ void UnknownIPSessionAdapter::AddExtraAnalyzers(Connection* conn) {
     static zeek::Tag analyzer_connsize = analyzer_mgr->GetComponentTag("CONNSIZE");
 
     if ( analyzer_mgr->IsEnabled(analyzer_connsize) )
-        // Add ConnSize analyzer. Needs to see packets, not stream.
+
         AddChildAnalyzer(new analyzer::conn_size::ConnSize_Analyzer(conn));
 }

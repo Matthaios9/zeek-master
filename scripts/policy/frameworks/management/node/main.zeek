@@ -1,5 +1,5 @@
-##! This module provides Management framework functionality present in every
-##! cluster node, to allowing Management agents to interact with the nodes.
+
+
 
 @load base/frameworks/broker/store
 @load base/frameworks/cluster
@@ -15,16 +15,16 @@
 
 module Management::Node;
 
-# Tag our logs correctly
+
 redef Management::role = Management::NODE;
 
-## The type of dispatch callbacks. These implement a particular dispatch action,
-## using the provided string vector as arguments, filling results into the
-## provided result record.
+
+
+
 type DispatchCallback: function(args: vector of string, res: Management::Result);
 
-## Implementation of the "get_id_value" dispatch. Its only argument is the name
-## of the ID to look up.
+
+
 function dispatch_get_id_value(args: vector of string, res: Management::Result)
 	{
 	if ( |args| == 0 )
@@ -36,7 +36,7 @@ function dispatch_get_id_value(args: vector of string, res: Management::Result)
 
 	local val = lookup_ID(args[0]);
 
-	# The following lookup_ID() result strings indicate errors:
+
 	if ( type_name(val) == "string" )
 		{
 		local valstr: string = val;
@@ -100,7 +100,7 @@ event Broker::peer_added(peer: Broker::EndpointInfo, msg: string)
 	{
 	local epi = Management::Agent::endpoint_info();
 
-	# If this is the agent peering, notify it that we're ready
+
 	if ( peer$network$address == epi$network$address &&
 	     peer$network$bound_port == epi$network$bound_port )
 		{

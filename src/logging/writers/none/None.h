@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
-//
-// Dummy log writer that just discards everything (but still pretends to rotate).
+
+
+
 
 #pragma once
 
@@ -10,7 +10,7 @@ namespace zeek::logging::writer::detail {
 
 class None : public WriterBackend {
 public:
-    explicit None(WriterFrontend* frontend) : WriterBackend(frontend, /*send_heartbeats=*/false) {}
+    explicit None(WriterFrontend* frontend) : WriterBackend(frontend, false) {}
 
     static WriterBackend* Instantiate(WriterFrontend* frontend) { return new None(frontend); }
 
@@ -25,4 +25,4 @@ protected:
     bool DoFinish(double network_time) override { return true; }
 };
 
-} // namespace zeek::logging::writer::detail
+}

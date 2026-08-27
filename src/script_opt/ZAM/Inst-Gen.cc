@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Helper functions for generating ZAM code.
+
+
 
 #include "zeek/script_opt/ZAM/Compile.h"
 
@@ -63,8 +63,8 @@ ZInstI ZAMCompiler::GenInst(ZOp op, const NameExpr* v1, const NameExpr* v2, cons
 }
 
 ZInstI ZAMCompiler::GenInst(ZOp op, const NameExpr* v1, const NameExpr* v2, const ConstExpr* ce, const NameExpr* v3) {
-    // Note that here we reverse the order of the arguments; saves
-    // us from needing to implement a redundant constructor.
+
+
     int nv2 = FrameSlot(v2);
     int nv3 = FrameSlot(v3);
     return {op, Frame1Slot(v1, op), nv2, nv3, ce};
@@ -118,4 +118,4 @@ ZInstI ZAMCompiler::GenInst(ZOp op, const NameExpr* v1, const ConstExpr* c, cons
     return z;
 }
 
-} // namespace zeek::detail
+}

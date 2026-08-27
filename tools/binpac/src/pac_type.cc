@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_type.h"
 
@@ -150,7 +150,7 @@ void Type::ProcessAttr(Attr* a) {
             if ( ! attr_letfields_ )
                 attr_letfields_ = letattr->letfields();
             else {
-                // Append to attr_letfields_
+
                 attr_letfields_->insert(attr_letfields_->end(), letattr->letfields()->begin(),
                                         letattr->letfields()->end());
             }
@@ -178,9 +178,9 @@ void Type::ProcessAttr(Attr* a) {
         case ATTR_UNTIL:
         case ATTR_RESTOFDATA:
         case ATTR_RESTOFFLOW:
-            // Ignore
-            // ... these are processed by {
-            // {ArrayType, StringType}::ProcessAttr
+
+
+
             break;
     }
 
@@ -188,9 +188,9 @@ void Type::ProcessAttr(Attr* a) {
 }
 
 string Type::EvalByteOrder(Output* out_cc, Env* env) const {
-    // If &byteorder is specified for a field, rather
-    // than a type declaration, we do not add a byteorder variable
-    // to the class, but instead evaluate it directly.
+
+
+
     if ( attr_byteorder_expr() && ! declared_as_type() )
         return attr_byteorder_expr()->EvalExpr(out_cc, global_env());
     env->Evaluate(out_cc, byteorder_id);
@@ -201,7 +201,7 @@ void Type::Prepare(Env* env, int flags) {
     env_ = env;
     ASSERT(env_);
 
-    // The name of the value variable
+
     if ( value_var() ) {
         data_id_str_ = strfmt("%s:%s", decl_id()->Name(), value_var()->Name());
     }
@@ -223,7 +223,7 @@ void Type::Prepare(Env* env, int flags) {
         AddField(new PubVarField(sourcedata_id->clone(), extern_type_const_bytestring->Clone()));
     }
 
-    // An optional field
+
     if ( attr_if_expr() ) {
         ASSERT(value_var());
         ID* has_value_id = new ID(strfmt("has_%s", value_var()->Name()));
@@ -323,7 +323,7 @@ void Type::GenBufferConfiguration(Output* out_cc, Env* env) {
             out_cc->inc_indent();
 
             if ( attr_length_expr_ ) {
-                // frame_buffer_arg = attr_length_expr_->EvalExpr(out_cc, env);
+
                 frame_buffer_arg = strfmt("%d", InitialBufferLength());
             }
             else if ( attr_restofflow_ ) {
@@ -380,7 +380,7 @@ void Type::GenPreParsing(Output* out_cc, Env* env) {
     }
 }
 
-// Wrappers around DoGenParseCode, which does the real job
+
 void Type::GenParseCode(Output* out_cc, Env* env, const DataPtr& data, int flags) {
     if ( value_var() && env->Evaluated(value_var()) )
         return;
@@ -645,8 +645,8 @@ Type* Type::MemberDataType(const ID* member_id) const {
 
 Type* Type::ElementDataType() const { return nullptr; }
 
-// Returns false if it is not necessary to add size_var
-// (it is already added or the type has a fixed size).
+
+
 bool Type::AddSizeVar(Output* out_cc, Env* env) {
     if ( size_var() ) {
         DEBUG_MSG("size var `%s' already added\n", size_var()->Name());
@@ -676,7 +676,7 @@ string Type::EvalLengthExpr(Output* out_cc, Env* env) {
     int static_length;
     if ( attr_length_expr_->ConstFold(env, &static_length) )
         return strfmt("%d", static_length);
-    // How do we make sure size_var is evaluated with attr_length_expr_?
+
     if ( AddSizeVar(out_cc, env) ) {
         out_cc->println("%s = %s;", env->LValue(size_var()), attr_length_expr_->EvalExpr(out_cc, env));
         env->SetEvaluated(size_var());
@@ -787,22 +787,22 @@ void Type::MarkIncrementalInput() {
 void Type::DoMarkIncrementalInput() { throw Exception(this, "cannot handle incremental input"); }
 
 bool Type::BufferableByLength() const {
-    // If the input is an "frame buffer" with specified length
+
     return attr_length_expr_ || attr_restofflow_;
 }
 
 bool Type::BufferableByLine() const {
-    // If the input is an ASCII line;
+
     return attr_oneline_;
 }
 
 bool Type::Bufferable() const {
-    // If the input is an ASCII line or an "frame buffer"
+
     return IsEmptyType() || BufferableByLength() || BufferableByLine();
 }
 
 bool Type::BufferableWithLineBreaker() const {
-    // If the input is an ASCII line with a given linebreaker;
+
     return attr_linebreaker_ != nullptr;
 }
 
@@ -844,12 +844,12 @@ int Type::InitialBufferLength() const {
 }
 
 bool Type::CompatibleTypes(Type* type1, Type* type2) {
-    // If we cannot deduce one of the data types, assume that
-    // they are compatible.
+
+
     if ( ! type1 || ! type2 )
         return true;
 
-    // We do not have enough information about extern types
+
     if ( type1->tot() == EXTERN || type2->tot() == EXTERN )
         return true;
 
@@ -885,17 +885,17 @@ bool Type::CompatibleTypes(Type* type1, Type* type2) {
 }
 
 Type* Type::LookUpByID(ID* id) {
-    // 1. Is it a pre-defined type?
+
     string name = id->Name();
     if ( auto it = type_map_.find(name); it != type_map_.end() ) {
         return it->second->Clone();
     }
 
-    // 2. Is it a simple declared type?
+
     Type* type = TypeDecl::LookUpType(id);
     if ( type ) {
-        // Note: as a Type is always associated with a variable,
-        // return a clone.
+
+
         switch ( type->tot() ) {
             case Type::BUILTIN:
             case Type::EXTERN:

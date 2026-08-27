@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -16,8 +16,8 @@ public:
     void UpdateLength(bool is_orig, int len);
     void HandleBadChecksum(bool is_orig);
 
-    // For tracking checksum history. These are connection-specific so they
-    // need to be stored in the session adapter created for each connection.
+
+
     uint32_t req_chk_cnt = 0;
     uint32_t req_chk_thresh = 1;
     uint32_t rep_chk_cnt = 0;
@@ -31,4 +31,4 @@ private:
     zeek_int_t reply_len = -1;
 };
 
-} // namespace zeek::packet_analysis::UDP
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_field.h"
 
@@ -83,13 +83,13 @@ void Field::GenPubDecls(Output* out_h, Env* env) {
 }
 
 void Field::GenPrivDecls(Output* out_h, Env* env) {
-    // Generate private declaration only if it is a class member
+
     if ( type_ && (flags_ & CLASS_MEMBER) )
         type_->GenPrivDecls(out_h, env);
 }
 
 void Field::GenTempDecls(Output* out_h, Env* env) {
-    // Generate temp field
+
     if ( type_ && ! (flags_ & CLASS_MEMBER) )
         type_->GenPrivDecls(out_h, env);
 }
@@ -105,7 +105,7 @@ void Field::GenCleanUpCode(Output* out_cc, Env* env) {
 }
 
 bool Field::DoTraverse(DataDepVisitor* visitor) {
-    // Check parameterized type
+
     if ( type_ && ! type_->Traverse(visitor) )
         return false;
     foreach (i, AttrList, attrs_)
@@ -115,7 +115,7 @@ bool Field::DoTraverse(DataDepVisitor* visitor) {
 }
 
 bool Field::RequiresAnalyzerContext() const {
-    // Check parameterized type
+
     if ( type_ && type_->RequiresAnalyzerContext() )
         return true;
     foreach (i, AttrList, attrs_)

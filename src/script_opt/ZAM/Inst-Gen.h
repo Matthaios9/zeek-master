@@ -1,10 +1,10 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Methods for generating ZAM instructions, mainly to aid in translating
-// NameExpr*'s to slots.  Some aren't needed, but we provide a complete
-// set mirroring the ZInstI constructors for consistency.
-//
-// This file is included by Compile.h to insert into the ZAMCompiler class.
+
+
+
+
+
+
 
 ZInstI GenInst(ZOp op);
 ZInstI GenInst(ZOp op, const NameExpr* v1);

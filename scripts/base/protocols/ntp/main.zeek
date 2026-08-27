@@ -3,7 +3,7 @@ module NTP;
 export {
 	redef enum Log::ID += { LOG, CONTROL_LOG, PRIVATE_LOG };
 
-	## Well-known ports for NTP.
+
 	const ports = { 123/udp } &redef;
 
 	global log_policy: Log::PolicyHook;
@@ -11,116 +11,116 @@ export {
 	global log_policy_private: Log::PolicyHook;
 
 	type Info: record {
-		## Timestamp for when the event happened.
+
 		ts:         time	&log;
-		## Unique ID for the connection.
+
 		uid:        string  &log;
-		## The connection's 4-tuple of endpoint addresses/ports.
+
 		id:         conn_id &log;
-		## The NTP version number (1, 2, 3, 4).
+
 		version:    count &log;
-		## The NTP mode being used.
+
 		mode:       count &log;
-		## The stratum (primary server, secondary server, etc.).
+
 		stratum:    count &log;
-		## The maximum interval between successive messages.
+
 		poll:       interval &log;
-		## The precision of the system clock.
+
 		precision:  interval &log;
-		## Total round-trip delay to the reference clock.
+
 		root_delay: interval &log;
-		## Total dispersion to the reference clock.
+
 		root_disp:  interval &log;
-		## For stratum 0, 4 character string used for debugging.
-		## For stratum 1, ID assigned to the reference clock by IANA.
-		## Above stratum 1, when using IPv4, the IP address of the reference
-		## clock.  Note that the NTP protocol did not originally specify a
-		## large enough field to represent IPv6 addresses, so they use
-		## the first four bytes of the MD5 hash of the reference clock's
-		## IPv6 address (i.e. an IPv4 address here is not necessarily IPv4).
+
+
+
+
+
+
+
 		ref_id:     string &log;
-		## Time when the system clock was last set or correct.
+
 		ref_time:   time &log;
-		## Time at the client when the request departed for the NTP server.
+
 		org_time:   time &log;
-		## Time at the server when the request arrived from the NTP client.
+
 		rec_time:   time &log;
-		## Time at the server when the response departed for the NTP client.
+
 		xmt_time:   time &log;
-		## Number of extension fields (which are not currently parsed).
+
 		num_exts:   count &default=0 &log;
 	};
 
-	## The record type which contains the column fields of the NTP control log.
-	## For more in-depth documentation, see :zeek:see:`NTP::ControlMessage`.
+
+
 	type ControlInfo: record {
-		## Timestamp for when the event happened.
+
 		ts:         time    &log;
-		## Unique ID for the connection.
+
 		uid:        string  &log;
-		## The connection's 4-tuple of endpoint addresses/ports.
+
 		id:         conn_id &log;
-		## The NTP version number (1, 2, 3, 4).
+
 		version:    count   &log;
-		## The NTP mode being used.
+
 		mode:       count   &log;
-		## The control operation code.
+
 		op_code:    count   &log;
-		## The sequence number of the control message.
+
 		sequence:   count   &log;
-		## The status word of the control response.
+
 		status:     count   &log;
-		## The association ID.
+
 		association_id: count &log;
-		## The response bit.  Set to zero for commands, one for responses.
+
 		resp_bit:    bool    &log;
-		## The error bit.  Set to zero for normal response, one for error.
+
 		err_bit:     bool    &log;
-		## The more bit.  Set to zero for last fragment, one for all others.
+
 		more_bit:    bool    &log;
-		## The payload data of the control message.
+
 		data:        string  &log &optional;
-		## The key ID used to generate the message-authentication code.
+
 		key_id:      count   &log &optional;
-		## The crypto-checksum computed by the encryption procedure.
+
 		crypto_checksum: string &log &optional;
 	};
 
-	## The record type which contains the column fields of the NTP private log.
-	## For more in-depth documentation, see :zeek:see:`NTP::Mode7Message`.
+
+
 	type PrivateInfo: record {
-		## Timestamp for when the event happened.
+
 		ts:         time    &log;
-		## Unique ID for the connection.
+
 		uid:        string  &log;
-		## The connection's 4-tuple of endpoint addresses/ports.
+
 		id:         conn_id &log;
-		## The NTP version number (1, 2, 3, 4).
+
 		version:    count   &log;
-		## The NTP mode being used.
+
 		mode:       count   &log;
-		## The request code.
+
 		req_code:   count   &log;
-		## The sequence number of the private message.
+
 		sequence:   count   &log;
-		## The implementation number.
+
 		implementation: count &log;
-		## The authenticated bit.  If set, this packet is authenticated.
+
 		auth_bit:    bool    &log;
-		## The error code.
+
 		err:        count   &log;
-		## The payload data of the private message.
+
 		data:       string  &log &optional;
 	};
 
-	## Event that can be handled to access the NTP record as it is sent on
-	## to the logging framework.
+
+
 	global log_ntp: event(rec: Info);
 
-	## Event that can be handled to access the NTP control record.
+
 	global log_ntp_control: event(rec: ControlInfo);
 
-	## Event that can be handled to access the NTP private record.
+
 	global log_ntp_private: event(rec: PrivateInfo);
 }
 
@@ -145,7 +145,7 @@ event zeek_init() &priority=5
 
 event ntp_message(c: connection, is_orig: bool, msg: NTP::Message) &priority=5
 	{
-	# Mode 1-5: standard NTP synchronization messages.
+
 	if ( msg?$std_msg )
 		{
 		local info: Info;
@@ -177,7 +177,7 @@ event ntp_message(c: connection, is_orig: bool, msg: NTP::Message) &priority=5
 		c$ntp = info;
 		}
 
-	# Mode 6: control messages.
+
 	if ( msg?$control_msg )
 		{
 		local ctrl: ControlInfo;
@@ -203,7 +203,7 @@ event ntp_message(c: connection, is_orig: bool, msg: NTP::Message) &priority=5
 		c$ntp_control = ctrl;
 		}
 
-	# Mode 7: private messages.
+
 	if ( msg?$mode7_msg )
 		{
 		local priv: PrivateInfo;

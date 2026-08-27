@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/iosource/af_packet/AF_Packet.h"
 
@@ -75,7 +75,7 @@ void AF_PacketSource::Open() {
             props.path.c_str());
     }
 
-    // Create RX-ring
+
     try {
         rx_ring = new RX_Ring(socket_fd, buffer_size, block_size, block_timeout_msec);
     } catch ( RX_RingException& e ) {
@@ -85,7 +85,7 @@ void AF_PacketSource::Open() {
         return;
     }
 
-    // Setup interface
+
     if ( ! BindInterface(info) ) {
         std::error_code ec(errno, std::generic_category());
         Error(util::fmt("unable to bind to interface: %s", ec.message().c_str()));
@@ -277,14 +277,14 @@ bool AF_PacketSource::ExtractNextPacket(zeek::Packet* pkt) {
 
         switch ( checksum_mode ) {
             case BifEnum::AF_Packet::CHECKSUM_OFF: {
-                // If set to off, just accept whatever checksum in the packet is correct and
-                // skip checking it here and in Zeek.
+
+
                 pkt->l4_checksummed = true;
                 break;
             }
             case BifEnum::AF_Packet::CHECKSUM_KERNEL: {
-                // If set to kernel, check whether the kernel thinks the checksum is valid. If it
-                // does, tell Zeek to skip checking by itself.
+
+
                 if ( ((packet->tp_status & TP_STATUS_CSUM_VALID) != 0) ||
                      ((packet->tp_status & TP_STATUS_CSUMNOTREADY) != 0) )
                     pkt->l4_checksummed = true;
@@ -294,7 +294,7 @@ bool AF_PacketSource::ExtractNextPacket(zeek::Packet* pkt) {
             }
             case BifEnum::AF_Packet::CHECKSUM_ON:
             default: {
-                // Let Zeek handle it.
+
                 pkt->l4_checksummed = false;
                 break;
             }

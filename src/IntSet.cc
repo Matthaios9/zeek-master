@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/IntSet.h"
 
@@ -18,4 +18,4 @@ void IntSet::Expand(unsigned int i) {
     set = newset;
 }
 
-} // namespace zeek::detail
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/TunnelEncapsulation.h"
 
@@ -67,4 +67,4 @@ void EncapsulationStack::Pop() {
     conns->pop_back();
 }
 
-} // namespace zeek
+}

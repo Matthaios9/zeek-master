@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -16,13 +16,13 @@
 namespace zeek::input::reader::detail {
 
 
-// Description for input field mapping.
+
 struct FieldMapping {
     std::string name;
     TypeTag type;
-    TypeTag subtype; // internal type for sets and vectors
+    TypeTag subtype;
     int position = -1;
-    int secondary_position = -1; // for ports: pos of the second field
+    int secondary_position = -1;
     bool present = false;
 
     FieldMapping(std::string arg_name, const TypeTag& arg_type, int arg_position);
@@ -36,14 +36,14 @@ struct FieldMapping {
     FieldMapping subType();
 };
 
-/**
- * Reader for structured ASCII files.
- */
+
+
+
 class Ascii : public ReaderBackend {
 public:
     explicit Ascii(ReaderFrontend* frontend);
 
-    // prohibit copying and moving
+
     Ascii(const Ascii&) = delete;
     Ascii(Ascii&&) = delete;
     Ascii& operator=(const Ascii&) = delete;
@@ -68,18 +68,18 @@ private:
     time_t mtime;
     file_ino_t ino;
 
-    // The name using which we actually load the file -- compared
-    // to the input source name, this one may have a path_prefix
-    // attached to it.
+
+
+
     std::string fname;
 
-    // map columns in the file to columns to send back to the manager
+
     std::vector<FieldMapping> columnMap;
 
-    // keep a copy of the headerline to determine field locations when stream descriptions change
+
     std::string headerline;
 
-    // options set from the script-level.
+
     std::string separator;
     std::string set_separator;
     std::string empty_field;
@@ -90,9 +90,9 @@ private:
 
     std::unique_ptr<threading::Formatter> formatter;
 
-    // zeek::detail::Location doesn't have a destructor because it's constexpr, so we have to
-    // define a custom deleter for the unique_ptr here to make sure the filename gets deleted
-    // correctly when the unique_ptr gets reset.
+
+
+
     struct LocationDeleter {
         void operator()(zeek::detail::Location* loc) const {
             delete[] loc->FileName();
@@ -104,4 +104,4 @@ private:
     LocationPtr read_location;
 };
 
-} // namespace zeek::input::reader::detail
+}

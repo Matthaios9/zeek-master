@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include <hilti/rt/libhilti.h>
 #include <cassert>
@@ -47,7 +47,7 @@ hilti::rt::String ssl_get_ocsp_fuid() {
     return {std::string_view(file_id)};
 }
 
-// TODO: it would make sense to make this available for all users of Spicy
+
 bool ssl_is_partial_tcp() {
     auto cookie = static_cast<zeek::spicy::rt::Cookie*>(hilti::rt::context::cookie());
     assert(cookie);

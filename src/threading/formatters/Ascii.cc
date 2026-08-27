@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/threading/formatters/Ascii.h"
 
@@ -13,9 +13,9 @@ using namespace std;
 
 namespace zeek::threading::formatter {
 
-// If the value we'd write out would match exactly the a reserved string, we
-// escape the first character so that the output won't be ambiguous. If this
-// function returns true, it has added an escaped version of data to desc.
+
+
+
 static inline bool escapeReservedContent(ODesc* desc, const string& reserved, const char* data, int size) {
     if ( size != static_cast<int>(reserved.size()) || memcmp(data, reserved.data(), size) != 0 )
         return false;
@@ -76,17 +76,17 @@ bool Ascii::Describe(ODesc* desc, Value* val, const string& name) const {
         case TYPE_ADDR: desc->Add(Render(val->val.addr_val)); break;
 
         case TYPE_DOUBLE:
-            // Rendering via Add() truncates trailing 0s after the
-            // decimal point. The difference with TIME/INTERVAL is mainly
-            // to keep the log format consistent.
+
+
+
             desc->Add(val->val.double_val, true);
             break;
 
         case TYPE_INTERVAL:
         case TYPE_TIME:
-            // Rendering via Render() keeps trailing 0s after the decimal
-            // point. The difference with DOUBLE is mainly to keep the
-            // log format consistent.
+
+
+
             desc->Add(Render(val->val.double_val));
             break;
 
@@ -167,7 +167,7 @@ bool Ascii::Describe(ODesc* desc, Value* val, const string& name) const {
 }
 
 Value* Ascii::ParseValue(const string& s, const string& name, TypeTag type, TypeTag subtype) const {
-    if ( ! separators.unset_field.empty() && s.compare(separators.unset_field) == 0 ) // field is not set...
+    if ( ! separators.unset_field.empty() && s.compare(separators.unset_field) == 0 )
         return new Value(type, false);
 
     Value* val = new Value(type, subtype, true);
@@ -182,7 +182,7 @@ Value* Ascii::ParseValue(const string& s, const string& name, TypeTag type, Type
             string unescaped = util::get_unescaped_string(s);
             val->val.string_val.length = unescaped.size();
             val->val.string_val.data = new char[val->val.string_val.length];
-            // we do not need a zero-byte at the end - the input manager adds that explicitly
+
             memcpy(val->val.string_val.data, unescaped.data(), unescaped.size());
             break;
         }
@@ -278,11 +278,11 @@ Value* Ascii::ParseValue(const string& s, const string& name, TypeTag type, Type
 
         case TYPE_PATTERN: {
             string candidate = util::get_unescaped_string(s);
-            // A string is a candidate pattern iff it is surrounded by '/'
-            // characters, with an optional suffix of the 'i' and/or 's' flags
-            // to denote case insensitive or single line matching, respectively.
-            // Whether the pattern is legal will be determined later by the RE
-            // engine.
+
+
+
+
+
             if ( candidate.size() >= 2 && candidate.front() == '/' ) {
                 auto closing = candidate.rfind('/');
                 if ( closing > 0 && (candidate.size() - 1 - closing) <= 2 ) {
@@ -318,12 +318,12 @@ Value* Ascii::ParseValue(const string& s, const string& name, TypeTag type, Type
 
         case TYPE_TABLE:
         case TYPE_VECTOR:
-            // First - common initialization
-            // Then - initialization for table.
-            // Then - initialization for vector.
-            // Then - common stuff
+
+
+
+
             {
-                // how many entries do we have...
+
                 unsigned int length = 1;
                 for ( const auto& c : s ) {
                     if ( c == separators.set_separator[0] )
@@ -355,7 +355,7 @@ Value* Ascii::ParseValue(const string& s, const string& name, TypeTag type, Type
                     assert(false);
 
                 if ( length == 0 )
-                    break; // empty
+                    break;
 
                 istringstream splitstream(s);
                 while ( splitstream ) {
@@ -385,9 +385,9 @@ Value* Ascii::ParseValue(const string& s, const string& name, TypeTag type, Type
                     pos++;
                 }
 
-                // Test if the string ends with a set_separator... or if the
-                // complete string is empty. In either of these cases we have
-                // to push an empty val on top of it.
+
+
+
                 if ( ! error && (s.empty() || *s.rbegin() == separators.set_separator[0]) ) {
                     lvals[pos] = ParseValue("", name, subtype);
                     if ( lvals[pos] == nullptr ) {
@@ -399,13 +399,13 @@ Value* Ascii::ParseValue(const string& s, const string& name, TypeTag type, Type
                 }
 
                 if ( error ) {
-                    // We had an error while reading a set or a vector.
-                    // Hence we have to clean up the values that have
-                    // been read so far
+
+
+
                     for ( unsigned int i = 0; i < pos; i++ )
                         delete lvals[i];
 
-                    // and set the length of the set to 0, otherwise the destructor will crash.
+
                     val->val.vector_val.size = 0;
 
                     goto parse_error;
@@ -452,8 +452,8 @@ bool Ascii::CheckNumberError(const char* start, const char* end, bool nonneg_onl
                         start, end));
 
     if ( nonneg_only ) {
-        // String may legitimately start with whitespace, so
-        // we skip this before checking for a minus sign.
+
+
         const char* s = start;
         while ( s < end && isspace(*s) )
             s++;
@@ -476,4 +476,4 @@ bool Ascii::CheckNumberError(const char* start, const char* end, bool nonneg_onl
     return false;
 }
 
-} // namespace zeek::threading::formatter
+}

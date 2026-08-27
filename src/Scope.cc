@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Scope.h"
 
@@ -100,7 +100,7 @@ const IDPtr& lookup_ID(const char* name, const char* curr_module, bool no_global
     std::string fullname = make_full_var_name(curr_module, name);
     std::string ID_module = extract_module_name(fullname.c_str());
 
-    // This is mostly for sanity (and should be covered by syntax)
+
     if ( explicit_global && same_module_only && ID_module != GLOBAL_MODULE_NAME ) {
         reporter->Error("lookup_ID for %s with :: prefix for non-global module called", name);
         return ID::nil;
@@ -186,4 +186,4 @@ ScopePtr current_scope() { return top_scope; }
 
 ScopePtr global_scope() { return scopes.empty() ? nullptr : scopes.front(); }
 
-} // namespace zeek::detail
+}

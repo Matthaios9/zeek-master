@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/cluster/Telemetry.h"
 
@@ -29,9 +29,9 @@ std::string_view TableTopicNormalizer::operator()(std::string_view topic) {
     if ( r->Size() == 0 )
         return topic;
 
-    // I think this is safe: It returns a string_view to a StringVal that's stored
-    // persistently in a table[pattern] of string. We only need the string_view for
-    // looking up the right counter.
+
+
+
     return r->StringValAt(0)->ToStdStringView();
 }
 
@@ -57,7 +57,7 @@ std::vector<std::string_view> to_label_names_vec(const LabelList& static_label_l
     return label_names_vec;
 }
 
-} // namespace
+}
 
 InfoTelemetry::InfoTelemetry(std::string_view name, const LabelList& static_labels, std::string_view prefix) {
     if ( name != "core" && name != "websocket" )
@@ -88,7 +88,7 @@ VerboseTelemetry::VerboseTelemetry(TopicNormalizer topic_normalizer, std::string
     if ( name != "core" && name != "websocket" )
         zeek::reporter->FatalError("name can only be backend or websocket, got '%s'", std::string(name).c_str());
 
-    // Add topic and handler to the labels. This assumes the caller didn't provide them already.
+
     topic_idx = labels.size();
     labels.emplace_back("topic", "");
     handler_idx = labels.size();
@@ -130,9 +130,9 @@ void VerboseTelemetry::OnIncomingEvent(std::string_view topic, std::string_view 
 namespace {
 
 
-// Cached lookup of a script location.
+
 std::string_view determine_script_location() {
-    // Global cache for CallExpr pointers to their location.
+
     static std::map<const zeek::detail::CallExpr*, std::string> location_cache;
 
     ssize_t sidx = static_cast<ssize_t>(zeek::detail::call_stack.size()) - 1;
@@ -140,21 +140,21 @@ std::string_view determine_script_location() {
         const auto* func = zeek::detail::call_stack[sidx].frame->GetFunction();
         const auto* ce = zeek::detail::call_stack[sidx].call;
 
-        // Cached?
+
         if ( auto it = location_cache.find(ce); it != location_cache.end() )
             return it->second;
 
-        // Future: Ignore wrapper functions if we ever come across some.
-        // We only care about Broker::publish() and Cluster::publish() and
-        // these aren't wrapped, so currently nothing to do here.
-        //
-        // if ( ignore func ) {
-        //     --sidx;
-        //      continue;
-        // }
-        //
-        // Check Func.cc::emit_builtin_error_common() for inspiration how to
-        // remove wrapper function.
+
+
+
+
+
+
+
+
+
+
+
 
         const auto* loc = ce->GetLocationInfo();
         std::string normalized_location = zeek::util::detail::without_zeekpath_component(loc->FileName());
@@ -169,7 +169,7 @@ std::string_view determine_script_location() {
     return "none";
 }
 
-} // namespace
+}
 
 
 DebugTelemetry::DebugTelemetry(TopicNormalizer topic_normalizer, std::string_view name, LabelList static_labels,
@@ -180,7 +180,7 @@ DebugTelemetry::DebugTelemetry(TopicNormalizer topic_normalizer, std::string_vie
     if ( name != "core" && name != "websocket" )
         zeek::reporter->FatalError("name can only be backend or websocket, got '%s'", std::string(name).c_str());
 
-    // Add topic, handler and script_location to the labels. This assumes the caller didn't provide them already.
+
     topic_idx = labels.size();
     labels.emplace_back("topic", "");
     handler_idx = labels.size();
@@ -200,7 +200,7 @@ DebugTelemetry::DebugTelemetry(TopicNormalizer topic_normalizer, std::string_vie
         prefix, out_name, label_names, size_bounds,
         "The number and size distribution of outgoing events with topic, handler and script location information");
 
-    // Remove script-location from incoming metrics
+
     label_names.pop_back();
 
     in =
@@ -232,8 +232,8 @@ void DebugTelemetry::OnIncomingEvent(std::string_view topic, std::string_view ha
     hist->Observe(static_cast<double>(info.Size()));
 }
 
-// Reads Cluster::Telemetry consts, instantiates and appropriate Telemetry instance and configures
-// the given backend with it.
+
+
 void configure_backend_telemetry(Backend& backend, std::string_view name, const LabelList& static_labels) {
     if ( name != "core" && name != "websocket" )
         zeek::reporter->FatalError("name can only be core or websocket, got '%s'", std::string(name).c_str());
@@ -249,7 +249,7 @@ void configure_backend_telemetry(Backend& backend, std::string_view name, const 
 
     for ( const auto& [k, v] : metrics->ToMap() ) {
         detail::TelemetryPtr child;
-        // Keys are (always?) returned as ListVal, take the first one.
+
         auto metric_type = zeek::cast_intrusive<zeek::EnumVal>(k->AsListVal()->Idx(0));
 
         if ( metric_type == info ) {
@@ -278,4 +278,4 @@ void configure_backend_telemetry(Backend& backend, std::string_view name, const 
     backend.SetTelemetry(std::move(composite));
 }
 
-} // namespace zeek::cluster::detail
+}

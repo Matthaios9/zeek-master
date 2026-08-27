@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Classes that collect and report statistics.
+
+
 
 #pragma once
 
@@ -30,10 +30,10 @@ private:
 
 extern std::shared_ptr<ProfileLogger> profiling_logger;
 
-// Connection statistics.
+
 extern uint64_t killed_by_inactivity;
 
-// Content gap statistics.
+
 extern uint64_t tot_ack_events;
 extern uint64_t tot_ack_bytes;
 extern uint64_t tot_gap_events;
@@ -61,5 +61,5 @@ protected:
     uint64_t byte_cnt;
 };
 
-} // namespace detail
-} // namespace zeek
+}
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/cluster/serializer/binary-serialization-format/Serializer.h"
 
@@ -23,7 +23,7 @@ extern Plugin plugin;
 
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+
 #define SERIALIZER_DEBUG(...) PLUGIN_DBG_LOG(zeek::plugin::Zeek_Binary_Serializer::plugin, __VA_ARGS__)
 
 bool detail::BinarySerializationFormatLogSerializer::SerializeLogWrite(byte_buffer& buf,
@@ -37,7 +37,7 @@ bool detail::BinarySerializationFormatLogSerializer::SerializeLogWrite(byte_buff
 
     fmt.StartWrite();
 
-    // Header: stream_name, writer_id, filter_name, path, num_fields, schema fields
+
     bool success = true;
     success &= fmt.Write(header.stream_name, "stream_id");
     success &= fmt.Write(header.writer_name, "writer_id");
@@ -54,7 +54,7 @@ bool detail::BinarySerializationFormatLogSerializer::SerializeLogWrite(byte_buff
         return false;
     }
 
-    // Write out the payload.
+
     for ( const auto& rec : records ) {
         for ( size_t i = 0; i < rec.size(); ++i ) {
             if ( ! rec[i].Write(&fmt) ) {
@@ -69,8 +69,8 @@ bool detail::BinarySerializationFormatLogSerializer::SerializeLogWrite(byte_buff
     uint32_t len;
     len = fmt.EndWrite(&data);
 
-    // Copy result into buffer. Would be nice to serialize directly into the buffer,
-    // but the SerializationFormat doesn't really allow for that.
+
+
     buf.resize(len);
     memcpy(buf.data(), data, len);
     free(data);
@@ -184,8 +184,8 @@ TEST_CASE("roundtrip") {
     REQUIRE(serializer.SerializeLogWrite(buf, hdr, records));
     CHECK_EQ(expected, buf);
 
-    // for ( auto c : buf )
-    //    std::fprintf(stderr, "0x%02x,", int(c));
+
+
 
 
     auto result = serializer.UnserializeLogWrite(buf);

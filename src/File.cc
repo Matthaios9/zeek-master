@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/File.h"
 
@@ -35,20 +35,20 @@ namespace {
 
 std::list<std::pair<std::string, File*>> open_files;
 
-} // namespace
+}
 
-// Maximizes the number of open file descriptors.
+
 static void maximize_num_fds() {
     struct rlimit rl;
     if ( getrlimit(RLIMIT_NOFILE, &rl) < 0 )
         reporter->FatalError("maximize_num_fds(): getrlimit failed");
 
     if ( rl.rlim_max == RLIM_INFINITY ) {
-        // Don't try raising the current limit.
+
         return;
     }
 
-    // See if we can raise the current to the maximum.
+
     rl.rlim_cur = rl.rlim_max;
 
     if ( setrlimit(RLIMIT_NOFILE, &rl) < 0 )
@@ -116,7 +116,7 @@ bool File::Open(FILE* file, const char* mode) {
     open_time = run_state::network_time ? run_state::network_time : util::current_time();
 
     if ( ! fds_maximized ) {
-        // Haven't initialized yet.
+
         maximize_num_fds();
         fds_maximized = true;
     }
@@ -195,7 +195,7 @@ bool File::Close() {
     if ( ! is_open )
         return true;
 
-    // Do not close stdin/stdout/stderr.
+
     if ( f == stdin || f == stdout || f == stderr )
         return false;
 
@@ -252,7 +252,7 @@ RecordVal* File::Rotate() {
     if ( ! is_open )
         return nullptr;
 
-    // Do not rotate stdin/stdout/stderr.
+
     if ( f == stdin || f == stdout || f == stderr )
         return nullptr;
 
@@ -260,7 +260,7 @@ RecordVal* File::Rotate() {
     auto* info = new RecordVal(rotate_info);
 
 #ifdef _MSC_VER
-    // Windows can't rename open files. Close before rotating.
+
     fclose(f);
     f = nullptr;
 #endif
@@ -333,4 +333,4 @@ FilePtr File::Get(const char* name) {
     return make_intrusive<File>(name, "w");
 }
 
-} // namespace zeek
+}

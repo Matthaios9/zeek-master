@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -19,4 +19,4 @@ private:
     static std::string versioned_name;
 };
 
-} // namespace zeek::storage::serializer::json
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/protocol/ieee802_11_radio/IEEE802_11_Radio.h"
 
@@ -14,7 +14,7 @@ bool IEEE802_11_RadioAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Pa
         return false;
     }
 
-    // Skip over the RadioTap header
+
     size_t rtheader_len = (data[3] << 8) + data[2];
 
     if ( rtheader_len >= len ) {

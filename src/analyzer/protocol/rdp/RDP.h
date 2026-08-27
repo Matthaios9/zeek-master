@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -12,7 +12,7 @@ public:
     explicit RDP_Analyzer(Connection* conn);
     ~RDP_Analyzer() override;
 
-    // Overridden from Analyzer.
+
     void Done() override;
     void DeliverStream(int len, const u_char* data, bool orig) override;
     void Undelivered(uint64_t seq, int len, bool orig) override;
@@ -27,4 +27,4 @@ protected:
     bool tls_active;
 };
 
-} // namespace zeek::analyzer::rdp
+}

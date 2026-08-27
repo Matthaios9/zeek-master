@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_typedecl_h
 #define pac_typedecl_h
@@ -45,4 +45,4 @@ protected:
     Type* type_;
 };
 
-#endif // pac_typedecl_h
+#endif

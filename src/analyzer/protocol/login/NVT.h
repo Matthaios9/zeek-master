@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -20,7 +20,7 @@ public:
     TelnetOption(NVT_Analyzer* endp, unsigned int code);
     virtual ~TelnetOption() = default;
 
-    // Whether we told the other side WILL/WONT/DO/DONT.
+
     enum SaidOptions : uint8_t { OPT_SAID_WILL = 0x1, OPT_SAID_WONT = 0x2, OPT_SAID_DO = 0x4, OPT_SAID_DONT = 0x8 };
 
     unsigned int Code() const { return code; }
@@ -115,7 +115,7 @@ protected:
     void InconsistentOption(unsigned int type) override;
 };
 
-} // namespace detail
+}
 
 class NVT_Analyzer final : public analyzer::tcp::ContentLine_Analyzer {
 public:
@@ -154,11 +154,11 @@ protected:
 
     NVT_Analyzer* peer = nullptr;
 
-    int IAC_pos = 0;                               // where the IAC was seen
-    bool pending_IAC = false;                      // true if we're working on an option/IAC
-    bool is_suboption = false;                     // true if current option is suboption
-    bool last_was_IAC = false;                     // for scanning suboptions
-    bool authentication_has_been_accepted = false; // if true, we accepted peer's authentication
+    int IAC_pos = 0;
+    bool pending_IAC = false;
+    bool is_suboption = false;
+    bool last_was_IAC = false;
+    bool authentication_has_been_accepted = false;
 
     int binary_mode = 0;
     int encrypting_mode = 0;
@@ -168,4 +168,4 @@ protected:
     int num_options = 0;
 };
 
-} // namespace zeek::analyzer::login
+}

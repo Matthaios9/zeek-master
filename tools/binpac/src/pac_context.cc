@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_context.h"
 
@@ -19,7 +19,7 @@ AnalyzerContextDecl* AnalyzerContextDecl::current_analyzer_context_ = nullptr;
 
 namespace {
 ParamList* ContextFieldsToParams(ContextFieldList* context_fields) {
-    // Convert context fields to parameters
+
     ParamList* params = new ParamList();
     foreach (i, ContextFieldList, context_fields) {
         ContextField* f = *i;
@@ -27,7 +27,7 @@ ParamList* ContextFieldsToParams(ContextFieldList* context_fields) {
     }
     return params;
 }
-} // namespace
+}
 
 AnalyzerContextDecl::AnalyzerContextDecl(ID* id, ContextFieldList* context_fields)
     : TypeDecl(new ID(strfmt("Context%s", id->Name())), ContextFieldsToParams(context_fields), new DummyType()) {
@@ -84,12 +84,12 @@ void AnalyzerContextDecl::AddFlowBuffer() {
 }
 
 string AnalyzerContextDecl::mb_buffer(Env* env) {
-    // A hack. The orthodox way would be to build an Expr of
-    // context.flow_buffer_var, and then EvalExpr.
+
+
     return strfmt("%s->%s()", env->RValue(analyzer_context_id), kFlowBufferVar);
 }
 
 Type* DummyType::DoClone() const {
-    // Fields will be copied in Type::Clone().
+
     return new DummyType();
 }

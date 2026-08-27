@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Anon.h"
 
@@ -24,14 +24,14 @@ static uint32_t rand32() {
     return ((util::detail::random_number() & 0xffff) << 16) | (util::detail::random_number() & 0xffff);
 }
 
-// From tcpdpriv.
+
 static int bi_ffs(uint32_t value) {
     int add = 0;
     static uint8_t bvals[] = {0, 4, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1};
 
     if ( (value & 0xFFFF0000) == 0 ) {
         if ( value == 0 )
-            // Zero input ==> zero output.
+
             return 0;
 
         add += 16;
@@ -67,8 +67,8 @@ ipaddr32_t AnonymizeIPAddr::Anonymize(ipaddr32_t addr) {
     }
 }
 
-// Keep the specified prefix unchanged.
-bool AnonymizeIPAddr::PreservePrefix(ipaddr32_t /* input */, int /* num_bits */) {
+
+bool AnonymizeIPAddr::PreservePrefix(ipaddr32_t , int ) {
     reporter->InternalError("prefix preserving is not supported for the anonymizer");
     return false;
 }
@@ -82,7 +82,7 @@ bool AnonymizeIPAddr::PreserveNet(ipaddr32_t input) {
     }
 }
 
-ipaddr32_t AnonymizeIPAddr_Seq::anonymize(ipaddr32_t /* input */) {
+ipaddr32_t AnonymizeIPAddr_Seq::anonymize(ipaddr32_t ) {
     ++seq;
     return htonl(seq);
 }
@@ -106,10 +106,10 @@ ipaddr32_t AnonymizeIPAddr_RandomMD5::anonymize(ipaddr32_t input) {
     return output;
 }
 
-// This code is from "On the Design and Performance of Prefix-Preserving
-// IP Traffic Trace Anonymization", by Xu et al (IMW 2001)
-//
-// http://www.imconf.net/imw-2001/proceedings.html
+
+
+
+
 
 ipaddr32_t AnonymizeIPAddr_PrefixMD5::anonymize(ipaddr32_t input) {
     uint8_t digest[16];
@@ -118,7 +118,7 @@ ipaddr32_t AnonymizeIPAddr_PrefixMD5::anonymize(ipaddr32_t input) {
     ipaddr32_t output = input;
 
     for ( int i = 0; i < 32; ++i ) {
-        // PAD(x_0 ... x_{i-1}) = x_0 ... x_{i-1} 1 0 ... 0 .
+
         prefix.len = htonl(i + 1);
         prefix.prefix = htonl((input & ~(prefix_mask >> i)) | (1 << (31 - i)));
 
@@ -126,16 +126,16 @@ ipaddr32_t AnonymizeIPAddr_PrefixMD5::anonymize(ipaddr32_t input) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
-        // HK(PAD(x_0 ... x_{i-1})).
+
         util::detail::hmac_md5(sizeof(prefix), reinterpret_cast<u_char*>(&prefix), digest);
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
 
-        // f_{i-1} = LSB(HK(PAD(x_0 ... x_{i-1}))).
+
         ipaddr32_t bit_mask = (digest[0] & 1) << (31 - i);
 
-        // x_i' = x_i ^ f_{i-1}.
+
         output ^= bit_mask;
     }
 
@@ -150,7 +150,7 @@ AnonymizeIPAddr_A50::~AnonymizeIPAddr_A50() {
 void AnonymizeIPAddr_A50::init() {
     root = next_free_node = nullptr;
 
-    // Prepare special nodes for 0.0.0.0 and 255.255.255.255.
+
     memset(&special_nodes[0], 0, sizeof(special_nodes));
     special_nodes[0].input = special_nodes[0].output = 0;
     special_nodes[1].input = special_nodes[1].output = 0xFFFFFFFF;
@@ -167,12 +167,12 @@ bool AnonymizeIPAddr_A50::PreservePrefix(ipaddr32_t input, int num_bits) {
 
     input = ntohl(input);
 
-    // Sanitize input.
+
     input = input & first_n_bit_mask(num_bits);
 
     Node* n = find_node(input);
 
-    // Preserve the first num_bits bits of addr.
+
     if ( num_bits == 32 )
         n->output = input;
 
@@ -235,14 +235,14 @@ inline void AnonymizeIPAddr_A50::free_node(Node* n) {
 }
 
 ipaddr32_t AnonymizeIPAddr_A50::make_output(ipaddr32_t old_output, int swivel) const {
-    // -A50 anonymization
+
     if ( swivel == 32 )
         return old_output ^ 1;
     else {
-        // Bits up to swivel are unchanged; bit swivel is flipped.
+
         ipaddr32_t known_part = ((old_output >> (32 - swivel)) ^ 1) << (32 - swivel);
 
-        // Remainder of bits are random.
+
         return known_part | ((rand32() & 0x7FFFFFFF) >> swivel);
     }
 }
@@ -251,9 +251,9 @@ AnonymizeIPAddr_A50::Node* AnonymizeIPAddr_A50::make_peer(ipaddr32_t a, Node* n)
     if ( a == 0 || a == 0xFFFFFFFFU )
         reporter->InternalError("0.0.0.0 and 255.255.255.255 should never get into the tree");
 
-    // Become a peer.
-    // Algorithm: create two nodes, the two peers.  Leave orig node as
-    // the parent of the two new ones.
+
+
+
 
     Node* down[2];
     down[0] = new_node();
@@ -266,33 +266,33 @@ AnonymizeIPAddr_A50::Node* AnonymizeIPAddr_A50::make_peer(ipaddr32_t a, Node* n)
         return nullptr;
     }
 
-    // swivel is first bit 'a' and 'old->input' differ.
+
     int swivel = bi_ffs(a ^ n->input);
 
-    // Shifting by more than 31 bits below results in undefined behavior.
-    // This shouldn't be possible, but check anyways.
+
+
     ASSERT(swivel > 0);
 
-    // bitvalue is the value of that bit of 'a'.
+
     int bitvalue = (a >> (32 - swivel)) & 1;
 
     down[bitvalue]->input = a;
     down[bitvalue]->output = make_output(n->output, swivel);
     down[bitvalue]->child[0] = down[bitvalue]->child[1] = nullptr;
 
-    *down[1 - bitvalue] = *n; // copy orig node down one level
+    *down[1 - bitvalue] = *n;
 
-    n->input = down[1]->input; // NB: 1s to the right (0s to the left)
+    n->input = down[1]->input;
     n->output = down[1]->output;
-    n->child[0] = down[0]; // point to children
+    n->child[0] = down[0];
     n->child[1] = down[1];
 
     return down[bitvalue];
 }
 
 AnonymizeIPAddr_A50::Node* AnonymizeIPAddr_A50::find_node(ipaddr32_t a) {
-    // Watch out for special IP addresses, which never make it
-    // into the tree.
+
+
     if ( a == 0 || a == 0xFFFFFFFFU )
         return &special_nodes[a & 1];
 
@@ -305,7 +305,7 @@ AnonymizeIPAddr_A50::Node* AnonymizeIPAddr_A50::find_node(ipaddr32_t a) {
         return root;
     }
 
-    // Straight from tcpdpriv.
+
     Node* n = root;
     while ( n ) {
         if ( n->input == a )
@@ -315,16 +315,16 @@ AnonymizeIPAddr_A50::Node* AnonymizeIPAddr_A50::find_node(ipaddr32_t a) {
             n = make_peer(a, n);
 
         else {
-            // swivel is the first bit in which the two children
-            // differ.
+
+
             int swivel = bi_ffs(n->child[0]->input ^ n->child[1]->input);
 
-            // Shifting by more than 31 bits below results in undefined behavior.
-            // This shouldn't be possible, but check anyways.
+
+
             ASSERT(swivel > 0);
 
             if ( bi_ffs(a ^ n->input) < swivel )
-                // Input differs earlier.
+
                 n = make_peer(a, n);
 
             else if ( a & (1 << (32 - swivel)) )
@@ -351,10 +351,10 @@ ipaddr32_t AnonymizeIPAddr_RandomSHA256::anonymize(ipaddr32_t input) {
     return output;
 }
 
-// This code is from "On the Design and Performance of Prefix-Preserving
-// IP Traffic Trace Anonymization", by Xu et al (IMW 2001)
-//
-// http://www.imconf.net/imw-2001/proceedings.html
+
+
+
+
 
 ipaddr32_t AnonymizeIPAddr_PrefixSHA256::anonymize(ipaddr32_t input) {
     uint8_t digest[ZEEK_SHA256_DIGEST_LENGTH];
@@ -363,17 +363,17 @@ ipaddr32_t AnonymizeIPAddr_PrefixSHA256::anonymize(ipaddr32_t input) {
     ipaddr32_t output = input;
 
     for ( int i = 0; i < 32; ++i ) {
-        // PAD(x_0 ... x_{i-1}) = x_0 ... x_{i-1} 1 0 ... 0 .
+
         prefix.len = htonl(i + 1);
         prefix.prefix = htonl((input & ~(prefix_mask >> i)) | (1 << (31 - i)));
 
-        // HK(PAD(x_0 ... x_{i-1})).
+
         util::detail::hmac_sha256(sizeof(prefix), reinterpret_cast<u_char*>(&prefix), digest);
 
-        // f_{i-1} = LSB(HK(PAD(x_0 ... x_{i-1}))).
+
         ipaddr32_t bit_mask = (digest[0] & 1) << (31 - i);
 
-        // x_i' = x_i ^ f_{i-1}.
+
         output ^= bit_mask;
     }
 
@@ -424,12 +424,12 @@ ipaddr32_t anonymize_ip(ipaddr32_t ip, enum ip_addr_anonymization_class_t cl) {
     int method = -1;
 
     switch ( cl ) {
-        case ORIG_ADDR: // client address
+        case ORIG_ADDR:
             preserve_addr = anon_preserve_orig_addr.get();
             method = orig_addr_anonymization;
             break;
 
-        case RESP_ADDR: // server address
+        case RESP_ADDR:
             preserve_addr = anon_preserve_resp_addr.get();
             method = resp_addr_anonymization;
             break;
@@ -474,4 +474,4 @@ void log_anonymization_mapping(ipaddr32_t input, ipaddr32_t output) {
 
 #endif
 
-} // namespace zeek::detail
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/MMDB.h"
 
@@ -63,7 +63,7 @@ static zeek::ValPtr mmdb_getvalue(MMDB_entry_data_s* entry_data, int status, int
             break;
 
         case MMDB_LOOKUP_PATH_DOES_NOT_MATCH_DATA_ERROR:
-            // key doesn't exist, nothing to do
+
             break;
 
         default: report_msg("MaxMind DB error [%s]", MMDB_strerror(status)); break;
@@ -151,9 +151,9 @@ bool MMDB::Lookup(const zeek::IPAddr& addr, MMDB_lookup_result_s& result) {
     return result.found_entry;
 }
 
-// Check to see if the Maxmind DB should be closed and reopened.  This will
-// happen if there was a lookup error or if the mmap'd file has been replaced
-// by an external process.
+
+
+
 bool MMDB::IsStaleDB() {
     if ( ! IsOpen() )
         return false;
@@ -182,7 +182,7 @@ bool MMDB::IsStaleDB() {
 }
 
 bool LocDB::OpenFromScriptConfig() {
-    // City database is always preferred over Country database.
+
     const auto& mmdb_dir_val = zeek::id::find_val<StringVal>("mmdb_dir");
     std::string mmdb_dir{mmdb_dir_val->ToStdStringView()};
 
@@ -244,7 +244,7 @@ bool AsnDB::OpenFromScriptConfig() {
 
     return false;
 }
-#endif // USE_GEOIP
+#endif
 
 ValPtr mmdb_open_location_db(const StringValPtr& filename) {
 #ifdef USE_GEOIP
@@ -276,30 +276,30 @@ RecordValPtr mmdb_lookup_location(const AddrValPtr& addr) {
         MMDB_entry_data_s entry_data;
         int status;
 
-        // Get Country ISO Code
+
         status = MMDB_get_value(&result.entry, &entry_data, "country", "iso_code", nullptr);
         location->Assign(0, mmdb_getvalue(&entry_data, status, MMDB_DATA_TYPE_UTF8_STRING));
 
-        // Get Major Subdivision ISO Code
+
         status = MMDB_get_value(&result.entry, &entry_data, "subdivisions", "0", "iso_code", nullptr);
         location->Assign(1, mmdb_getvalue(&entry_data, status, MMDB_DATA_TYPE_UTF8_STRING));
 
-        // Get City English Name
+
         status = MMDB_get_value(&result.entry, &entry_data, "city", "names", "en", nullptr);
         location->Assign(2, mmdb_getvalue(&entry_data, status, MMDB_DATA_TYPE_UTF8_STRING));
 
-        // Get Location Latitude
+
         status = MMDB_get_value(&result.entry, &entry_data, "location", "latitude", nullptr);
         location->Assign(3, mmdb_getvalue(&entry_data, status, MMDB_DATA_TYPE_DOUBLE));
 
-        // Get Location Longitude
+
         status = MMDB_get_value(&result.entry, &entry_data, "location", "longitude", nullptr);
         location->Assign(4, mmdb_getvalue(&entry_data, status, MMDB_DATA_TYPE_DOUBLE));
 
         return location;
     }
 
-#else // not USE_GEOIP
+#else
     static int missing_geoip_reported = 0;
 
     if ( ! missing_geoip_reported ) {
@@ -308,9 +308,9 @@ RecordValPtr mmdb_lookup_location(const AddrValPtr& addr) {
     }
 #endif
 
-    // We can get here even if we have MMDB support if we weren't
-    // able to initialize it or it didn't return any information for
-    // the address.
+
+
+
     return location;
 }
 
@@ -328,18 +328,18 @@ RecordValPtr mmdb_lookup_autonomous_system(const AddrValPtr& addr) {
         MMDB_entry_data_s entry_data;
         int status;
 
-        // Get Autonomous System Number
+
         status = MMDB_get_value(&result.entry, &entry_data, "autonomous_system_number", nullptr);
         autonomous_system->Assign(0, mmdb_getvalue(&entry_data, status, MMDB_DATA_TYPE_UINT32));
 
-        // Get Autonomous System Organization
+
         status = MMDB_get_value(&result.entry, &entry_data, "autonomous_system_organization", nullptr);
         autonomous_system->Assign(1, mmdb_getvalue(&entry_data, status, MMDB_DATA_TYPE_UTF8_STRING));
 
         return autonomous_system;
     }
 
-#else // not USE_GEOIP
+#else
     static int missing_geoip_reported = 0;
 
     if ( ! missing_geoip_reported ) {
@@ -348,10 +348,10 @@ RecordValPtr mmdb_lookup_autonomous_system(const AddrValPtr& addr) {
     }
 #endif
 
-    // We can get here even if we have GeoIP support, if we weren't
-    // able to initialize it or it didn't return any information for
-    // the address.
+
+
+
     return autonomous_system;
 }
 
-} // namespace zeek
+}

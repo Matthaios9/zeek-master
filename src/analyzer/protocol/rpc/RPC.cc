@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/rpc/RPC.h"
 
@@ -14,13 +14,13 @@
 #include "zeek/analyzer/protocol/rpc/events.bif.h"
 #include "zeek/session/Manager.h"
 
-namespace { // local namespace
+namespace {
 const bool DEBUG_rpc_resync = false;
 }
 
-// TODO: Should we add start_time and last_time to the rpc_* events??
 
-// TODO: make this configurable
+
+
 constexpr uint32_t MAX_RPC_LEN = 65536;
 
 namespace zeek::analyzer::rpc {
@@ -128,14 +128,14 @@ int RPC_Interpreter::DeliverRPC(const u_char* buf, int n, int rpclen, bool is_or
             if ( ! call->CompareRexmit(buf, n) )
                 Weird("RPC_rexmit_inconsistency");
 
-            // TODO: Should we update start_time and last_time or
-            // not??
+
+
             call->SetStartTime(start_time);
             call->SetLastTime(last_time);
 
-            // TODO: Not sure whether the handling if rexmit
-            // inconsistencies are correct. Maybe we should use
-            // the info in the new call for further processing.
+
+
+
             if ( call->HeaderLen() > n ) {
                 Weird("RPC_underflow");
                 return 0;
@@ -153,9 +153,9 @@ int RPC_Interpreter::DeliverRPC(const u_char* buf, int n, int rpclen, bool is_or
                 return 0;
             }
 
-            // Prevent unbounded state growth of calls map, completely clearing it
-            // when exceeded. See also DCE-RPC analyzer handling in smb-pipe.pac,
-            // or SMB::max_pending_messages in the SMB analyzer.
+
+
+
             if ( BifConst::rpc_max_pending_calls > 0 && calls.size() >= BifConst::rpc_max_pending_calls ) {
                 Weird("RPC_pending_calls_discarded");
 
@@ -171,9 +171,9 @@ int RPC_Interpreter::DeliverRPC(const u_char* buf, int n, int rpclen, bool is_or
             calls[xid] = call;
         }
 
-        // We now have a valid RPC_CallInfo (either the previous one
-        // in case of a rexmit or the current one).
-        // TODO: What to do in case of a rexmit_inconsistency??
+
+
+
         Event_RPC_Call(call);
 
         if ( RPC_BuildCall(call, buf, n) )
@@ -198,8 +198,8 @@ int RPC_Interpreter::DeliverRPC(const u_char* buf, int n, int rpclen, bool is_or
             (void)skip_XDR_opaque_auth(buf, n);
             uint32_t accept_stat = extract_XDR_uint32(buf, n);
 
-            // The first members of BifEnum::RPC_* correspond
-            // to accept_stat.
+
+
             if ( accept_stat <= RPC_SYSTEM_ERR )
                 status = static_cast<BifEnum::rpc_status>(accept_stat);
 
@@ -221,7 +221,7 @@ int RPC_Interpreter::DeliverRPC(const u_char* buf, int n, int rpclen, bool is_or
                 return 0;
 
             if ( reject_stat == RPC_MISMATCH ) {
-                // Note that RPC_MISMATCH == 0 == RPC_SUCCESS.
+
                 status = BifEnum::RPC_VERS_MISMATCH;
 
                 (void)extract_XDR_uint32(buf, n);
@@ -248,16 +248,16 @@ int RPC_Interpreter::DeliverRPC(const u_char* buf, int n, int rpclen, bool is_or
         else
             Weird("bad_RPC");
 
-        // We now have extracted the status we want to use.
+
         Event_RPC_Reply(xid, status, n);
 
         if ( call ) {
             if ( ! call->IsValidCall() ) {
                 if ( status == BifEnum::RPC_SUCCESS )
                     Weird("successful_RPC_reply_to_invalid_request");
-                // We can't process this further, even if
-                // it was successful, because the call
-                // info won't be fully set up.
+
+
+
             }
 
             else {
@@ -281,7 +281,7 @@ int RPC_Interpreter::DeliverRPC(const u_char* buf, int n, int rpclen, bool is_or
         Weird("bad_RPC");
 
     if ( n > 0 && buf ) {
-        // If it's just padded with zeroes, don't complain.
+
         for ( ; n > 0; --n, ++buf )
             if ( *buf != 0 )
                 break;
@@ -348,15 +348,15 @@ void RPC_Reasm_Buffer::Init(int64_t arg_maxsize, int64_t arg_expected) {
 };
 
 bool RPC_Reasm_Buffer::ConsumeChunk(const u_char*& data, int& len) {
-    // How many bytes do we want to process with this call?  Either the
-    // all of the bytes available or the number of bytes that we are
-    // still missing.
+
+
+
     auto to_process = std::min<int64_t>(len, (expected - processed));
 
     if ( fill < maxsize ) {
-        // We haven't yet filled the buffer. How many bytes to copy
-        // into the buff. Either all of the bytes we want to process
-        // or the number of bytes until we reach maxsize.
+
+
+
         int64_t to_copy = std::min(to_process, (maxsize - fill));
         if ( to_copy )
             memcpy(buf + fill, data, to_copy);
@@ -370,7 +370,7 @@ bool RPC_Reasm_Buffer::ConsumeChunk(const u_char*& data, int& len) {
     return (expected == processed);
 }
 
-} // namespace detail
+}
 
 Contents_RPC::Contents_RPC(Connection* conn, bool orig, detail::RPC_Interpreter* arg_interp)
     : analyzer::tcp::TCP_SupportAnalyzer("CONTENTS_RPC", conn, orig) {
@@ -398,10 +398,10 @@ bool Contents_RPC::CheckResync(int& len, const u_char*& data, bool orig) {
     bool discard_this_chunk = false;
 
     if ( resync_state == RESYNC_INIT ) {
-        // First time CheckResync is called. If the TCP endpoint
-        // is fully established we are in sync (since it's the first chunk
-        // of data after the SYN if its not established we need to
-        // resync.
+
+
+
+
         resync_state = INSYNC;
 
         if ( auto* tcp = static_cast<analyzer::tcp::TCP_ApplicationAnalyzer*>(Parent())->TCP() ) {
@@ -414,29 +414,29 @@ bool Contents_RPC::CheckResync(int& len, const u_char*& data, bool orig) {
     if ( resync_state == INSYNC )
         return true;
 
-    // This is an attempt to re-synchronize the stream with RPC frames
-    // after a content gap.  Returns true if we are in sync.  Returns
-    // false otherwise (we are in resync mode)
-    //
-    // We try to look for the beginning of a RPC frame, assuming RPC
-    // frames begin at packet boundaries (though they may span over
-    // multiple packets) (note that the data* of DeliverStream() usually
-    // starts at a packet boundary).
-    //
-    // If we see a frame start that makes sense (direction and frame
-    // length seem ok), we try to read (skip over) the next RPC message.
-    // If this is successful and we the place we are seems like a valid
-    // start of a RPC msg (direction and frame length seem ok). We assume
-    // that we have successfully resync'ed.
 
-    // Assuming RPC frames align with packet boundaries ...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     while ( len > 0 ) {
         if ( resync_toskip ) {
             if ( DEBUG_rpc_resync )
                 DEBUG_MSG("RPC resync: skipping %d bytes.\n", len);
 
-            // We have some bytes to skip over.
+
             if ( resync_toskip < len ) {
                 len -= resync_toskip;
                 data += resync_toskip;
@@ -451,20 +451,20 @@ bool Contents_RPC::CheckResync(int& len, const u_char*& data, bool orig) {
         }
 
         if ( resync_toskip != 0 ) {
-            // Should never happen.
+
             reporter->AnalyzerError(this, "RPC resync: skipping over data failed");
             return false;
         }
 
-        // Now lets see whether data points to the beginning of a RPC
-        // frame. If the resync processes is successful, we should be
-        // at the beginning of a frame.
+
+
+
 
         if ( len < 12 ) {
-            // Ignore small chunks.
+
             if ( len != 1 && DEBUG_rpc_resync ) {
-                // One-byte fragments are likely caused by
-                // TCP keep-alive retransmissions.
+
+
                 DEBUG_MSG(
                     "%.6f RPC resync: "
                     "discard small pieces: %d\n",
@@ -484,34 +484,34 @@ bool Contents_RPC::CheckResync(int& len, const u_char*& data, bool orig) {
         xid = extract_XDR_uint32(xdata, xlen);
         frame_type = extract_XDR_uint32(xdata, xlen);
 
-        // Check if the direction makes sense and the length of the
-        // frame to expect.
+
+
         if ( (IsOrig() && frame_type != 0) || (! IsOrig() && frame_type != 1) || frame_len < 16 )
 
             discard_this_chunk = true;
 
-        // Make sure the frame isn't too long.
-        // TODO: Could possible even reduce this number even further.
+
+
         if ( frame_len > MAX_RPC_LEN )
             discard_this_chunk = true;
 
         if ( discard_this_chunk ) {
-            // Skip this chunk
+
             if ( DEBUG_rpc_resync )
                 DEBUG_MSG("RPC resync: Need to resync. discarding %d bytes.\n", len);
 
-            NeedResync(); // let's try the resync again from the beginning
+            NeedResync();
             return false;
         }
 
-        // Looks like we are at the start of a frame and have successfully
-        // extracted the frame length (marker).
+
+
 
         switch ( resync_state ) {
             case NEED_RESYNC:
             case RESYNC_WAIT_FOR_MSG_START:
-                // Initial phase of resyncing. Skip frames until we get a frame
-                // with the last_fragment bit set.
+
+
                 resync_toskip = frame_len + 4;
 
                 if ( last_frag )
@@ -521,8 +521,8 @@ bool Contents_RPC::CheckResync(int& len, const u_char*& data, bool orig) {
                 break;
 
             case RESYNC_WAIT_FOR_FULL_MSG:
-                // If the resync was successful so far, we should now be the start
-                // of a new RPC message. Try to skip over it.
+
+
                 resync_toskip = frame_len + 4;
 
                 if ( last_frag )
@@ -530,8 +530,8 @@ bool Contents_RPC::CheckResync(int& len, const u_char*& data, bool orig) {
                 break;
 
             case RESYNC_HAD_FULL_MSG:
-                // We have now successfully skipped over a full RPC message.
-                // If we got that far, we are in sync.
+
+
                 resync_state = INSYNC;
 
                 if ( DEBUG_rpc_resync )
@@ -539,11 +539,11 @@ bool Contents_RPC::CheckResync(int& len, const u_char*& data, bool orig) {
                 return true;
 
             default:
-                // Should never happen.
+
                 NeedResync();
                 return false;
-        } // end switch
-    } // end while (len>0)
+        }
+    }
 
     return false;
 }
@@ -554,23 +554,23 @@ void Contents_RPC::DeliverStream(int len, const u_char* data, bool orig) {
     bool last_frag;
 
     if ( ! CheckResync(len, data, orig) )
-        return; // Not in sync yet. Still resyncing.
+        return;
 
-    // Should be in sync now.
+
 
     while ( len > 0 ) {
         last_time = run_state::network_time;
 
         switch ( state ) {
             case WAIT_FOR_MESSAGE:
-                // A new RPC message is starting. Initialize state.
 
-                // We expect and want 4 bytes of the frame markers.
+
+
                 marker_buf.Init(4, 4);
 
-                // We want at most 64KB of message data and we don't
-                // know yet how much we expect, so we set expected to
-                // 0.
+
+
+
                 msg_buf.Init(MAX_RPC_LEN, 0);
                 state = WAIT_FOR_MARKER;
                 start_time = run_state::network_time;
@@ -583,7 +583,7 @@ void Contents_RPC::DeliverStream(int len, const u_char* data, bool orig) {
                     const u_char* dummy_p = marker_buf.GetBuf();
                     int dummy_len = static_cast<int>(marker_buf.GetFill());
 
-                    // have full marker
+
                     marker = extract_XDR_uint32(dummy_p, dummy_len);
                     marker_buf.Init(4, 4);
 
@@ -594,10 +594,10 @@ void Contents_RPC::DeliverStream(int len, const u_char* data, bool orig) {
 
                     last_frag = (marker & 0x80000000) != 0;
                     marker &= 0x7fffffff;
-                    // printf("%.6f %d marker= %u <> last_frag= %d <> expected=%llu <>
-                    // processed= %llu <> len = %d\n", 		run_state::network_time, IsOrig(),
-                    // marker,
-                    // last_frag, msg_buf.GetExpected(), msg_buf.GetProcessed(), len);
+
+
+
+
 
                     if ( ! msg_buf.AddToExpected(marker) )
                         Conn()->Weird("RPC_message_too_long", util::fmt("%" PRId64, msg_buf.GetExpected()));
@@ -608,8 +608,8 @@ void Contents_RPC::DeliverStream(int len, const u_char* data, bool orig) {
                         state = WAIT_FOR_DATA;
                 }
             }
-            // Else remain in state. Haven't got the full 4 bytes
-            // for the marker yet.
+
+
             break;
 
             case WAIT_FOR_DATA:
@@ -617,10 +617,10 @@ void Contents_RPC::DeliverStream(int len, const u_char* data, bool orig) {
                 bool got_all_data = msg_buf.ConsumeChunk(data, len);
 
                 if ( got_all_data ) {
-                    // Got all the data we expected. Now let's
-                    // see whether there is another fragment
-                    // coming or whether we just finished the
-                    // last fragment.
+
+
+
+
                     if ( state == WAIT_FOR_LAST_DATA ) {
                         const u_char* dummy_p = msg_buf.GetBuf();
                         int dummy_len = static_cast<int>(msg_buf.GetFill());
@@ -634,11 +634,11 @@ void Contents_RPC::DeliverStream(int len, const u_char* data, bool orig) {
                     else
                         state = WAIT_FOR_MARKER;
                 }
-                // Else remain in state. Haven't read all the data
-                // yet.
+
+
             } break;
-        } // end switch
-    } // end while
+        }
+    }
 }
 
 RPC_Analyzer::RPC_Analyzer(const char* name, Connection* conn, detail::RPC_Interpreter* arg_interp)
@@ -670,9 +670,9 @@ void RPC_Analyzer::Done() {
     interp->Timeout();
 }
 
-void RPC_Analyzer::ExpireTimer(double /* t */) {
+void RPC_Analyzer::ExpireTimer(double ) {
     Event(connection_timeout);
     session_mgr->Remove(Conn());
 }
 
-} // namespace zeek::analyzer::rpc
+}

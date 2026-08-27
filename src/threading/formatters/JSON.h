@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -13,18 +13,18 @@ class NullDoubleWriter;
 
 namespace zeek::threading::formatter {
 
-/**
- * A thread-safe class for converting values into a JSON representation
- * and vice versa.
- */
+
+
+
+
 class JSON : public Formatter {
 public:
     enum TimeFormat : uint8_t {
-        TS_EPOCH,          // Doubles that represents seconds from the UNIX epoch.
-        TS_ISO8601,        // ISO 8601 defined human readable timestamp format.
-        TS_MILLIS,         // Signed milliseconds from the UNIX epoch.  Some consumers need this (e.g.,
-                           // elasticsearch).
-        TS_MILLIS_UNSIGNED // Unsigned milliseconds from the UNIX epoch, overflowing.
+        TS_EPOCH,
+        TS_ISO8601,
+        TS_MILLIS,
+
+        TS_MILLIS_UNSIGNED
     };
 
     enum StringEscapePolicy : uint8_t {
@@ -48,8 +48,8 @@ private:
     bool include_unset_fields;
     StringEscapePolicy string_escape_policy;
 
-    // Mutable because used in const BuildJSON() for string rendering.
+
     mutable ODesc desc;
 };
 
-} // namespace zeek::threading::formatter
+}

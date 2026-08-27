@@ -1,24 +1,24 @@
-##! Discover cases where the local interface is sniffed and outbound packets
-##! have checksum offloading.  Load this script to receive a notice if it's
-##! likely that checksum offload effects are being seen on a live interface or
-##! in a packet trace file.
+
+
+
+
 
 @load base/frameworks/notice
 
 module ChecksumOffloading;
 
 export {
-	## The interval which is used for checking packet statistics
-	## to see if checksum offloading is affecting analysis.
+
+
 	const check_interval = 10secs &redef;
 }
 
-# Keep track of how many bad checksums have been seen.
+
 global bad_ip_checksums  = 0;
 global bad_tcp_checksums = 0;
 global bad_udp_checksums = 0;
 
-# Track to see if this script is done so that messages aren't created multiple times.
+
 global done = F;
 
 event ChecksumOffloading::check()
@@ -56,8 +56,8 @@ event ChecksumOffloading::check()
 		}
 	else if ( pkts_recvd < 20 )
 		{
-		# Keep scheduling this event until we've seen some lower threshold of
-		# total packets.
+
+
 		schedule check_interval { ChecksumOffloading::check() };
 		}
 	}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include <regex>
 
@@ -50,7 +50,7 @@ void CPP_InitsInfo::GenerateInitializers(CPPCompile* c) {
 
     auto gt = InitsType();
 
-    // Declare the initializer.
+
     c->Emit("%s %s = %s(%s, %s,", gt, InitializersName(), gt, base_name, Fmt(offset_set));
 
     c->IndentUp();
@@ -65,7 +65,7 @@ void CPP_InitsInfo::GenerateCohorts(CPPCompile* c) {
 
     int n = 0;
 
-    // Add each cohort as a vector element.
+
     for ( auto& cohort : instances ) {
         if ( ++n > 1 )
             c->Emit("");
@@ -86,8 +86,8 @@ void CPP_InitsInfo::BuildOffsetSet(CPPCompile* c) {
     vector<int> offsets_vec;
 
     for ( auto& cohort : instances ) {
-        // Reduce the offsets used by this cohort to an
-        // offset into the managed vector-of-indices global.
+
+
         vector<int> offsets;
         offsets.reserve(cohort.size());
         for ( auto& co : cohort )
@@ -96,8 +96,8 @@ void CPP_InitsInfo::BuildOffsetSet(CPPCompile* c) {
         offsets_vec.push_back(c->IndMgr().AddIndices(offsets));
     }
 
-    // Now that we have all the offsets in a vector, reduce them, too,
-    // to an offset into the managed vector-of-indices global,
+
+
     offset_set = c->IndMgr().AddIndices(offsets_vec);
 }
 
@@ -109,7 +109,7 @@ static std::string describe_initializer(const Obj* o) {
         od = od.substr(0, max_useful_size) + "...";
     }
 
-    // Escape any embedded comment characters.
+
     od = regex_replace(od, std::regex("/\\*"), "<<SLASH-STAR>>");
     od = regex_replace(od, std::regex("\\*/"), "<<STAR-SLASH>>");
 
@@ -157,7 +157,7 @@ void CPP_CompoundInitsInfo::GenerateInitializers(CPPCompile* c) {
         if ( ++n > 1 )
             c->Emit("");
 
-        // Figure out the size of the cohort.
+
         for ( auto& co : cohort ) {
             auto o = co->InitObj();
             if ( o )
@@ -284,8 +284,8 @@ TableConstInfo::TableConstInfo(CPPCompile* c, ValPtr v) : CompoundItemInfo(c, v)
     vals.emplace_back(std::to_string(attrs));
 
     for ( auto& tv_i : tv->ToMap() ) {
-        vals.emplace_back(ValElem(c, tv_i.first));  // index
-        vals.emplace_back(ValElem(c, tv_i.second)); // value
+        vals.emplace_back(ValElem(c, tv_i.first));
+        vals.emplace_back(ValElem(c, tv_i.second));
     }
 }
 
@@ -296,12 +296,12 @@ FileConstInfo::FileConstInfo(CPPCompile* c, ValPtr v) : CompoundItemInfo(c, v) {
 }
 
 FuncConstInfo::FuncConstInfo(CPPCompile* _c, ValPtr v) : CompoundItemInfo(_c, v), fv(v->AsFuncVal()) {
-    // This is slightly hacky.  There's a chance that this constant
-    // depends on a lambda being registered.  Here we use the knowledge
-    // that LambdaRegistrationInfo sets its cohort to 1 more than
-    // the function type, so we can ensure any possible lambda has
-    // been registered by setting ours to 2 more.  CompoundItemInfo
-    // has already set our cohort to 1 more.
+
+
+
+
+
+
     ++init_cohort;
 }
 
@@ -428,27 +428,27 @@ GlobalInitInfo::GlobalInitInfo(CPPCompile* c, IDPtr _g, string _CPP_name)
     gc.is_enum_const = g->IsEnumConst();
     gc.is_type = g->IsType();
 
-    // Check whether the global has a constant initialization. If so then we
-    // can initialize it directly, which for (very) large aggregates can save
-    // a bunch of C++ compile time. If not then we'll make sure that it can be
-    // generated per the use of GetCohortIDs() in CPPCompile::GenFinishInit().
+
+
+
+
     if ( c->HasFixedInit(g) )
         val = ValElem(c, c->GenFixedInit(g));
     else {
         val = ValElem(c, nullptr);
 
-        // This code here parallels that of CPPCompile::InitializeGlobal().
+
         const auto& oi = g->GetOptInfo();
         for ( auto& init : oi->GetInitExprs() )
-            // We use GetOp2() because initialization expressions are
-            // represented as some sort of assignment.
+
+
             init_cohort = max(init_cohort, c->ReadyExpr(init->GetOp2()) + 1);
     }
 
     if ( gt->Tag() == TYPE_FUNC && (! g->GetVal() || g->GetVal()->AsFunc()->GetKind() == Func::BUILTIN_FUNC) )
-        // Be sure not to try to create BiFs. In addition, GetVal() can be
-        // nil in certain error situations, which we'll want to recreate
-        // for behavior compatibility.
+
+
+
         func_with_no_val = true;
 }
 
@@ -535,8 +535,8 @@ void VectorTypeInfo::AddInitializerVals(std::vector<std::string>& ivs) const {
 
 ListTypeInfo::ListTypeInfo(CPPCompile* _c, TypePtr _t)
     : AbstractTypeInfo(_c, std::move(_t)), types(t->AsTypeList()->GetTypes()) {
-    // Note, we leave init_cohort at 0 because the skeleton of this type
-    // is built in the first cohort.
+
+
     for ( auto& tl_i : types ) {
         auto gi = c->RegisterType(tl_i);
         if ( gi )
@@ -555,8 +555,8 @@ void ListTypeInfo::AddInitializerVals(std::vector<std::string>& ivs) const {
 }
 
 TableTypeInfo::TableTypeInfo(CPPCompile* _c, TypePtr _t) : AbstractTypeInfo(_c, std::move(_t)) {
-    // Note, we leave init_cohort at 0 because the skeleton of this type
-    // is built in the first cohort.
+
+
 
     auto tbl = t->AsTableType();
 
@@ -607,8 +607,8 @@ void FuncTypeInfo::AddInitializerVals(std::vector<std::string>& ivs) const {
 
 RecordTypeInfo::RecordTypeInfo(CPPCompile* _c, TypePtr _t, int _addl_fields)
     : AbstractTypeInfo(_c, std::move(_t)), addl_fields(_addl_fields) {
-    // Note, we leave init_cohort at 0 because the skeleton of this type
-    // is built in the first cohort.
+
+
     auto r = t->AsRecordType()->Types();
 
     if ( ! r )
@@ -620,7 +620,7 @@ RecordTypeInfo::RecordTypeInfo(CPPCompile* _c, TypePtr _t, int _addl_fields)
         auto gi = c->RegisterType(r_i->type);
         if ( gi )
             final_init_cohort = max(final_init_cohort, gi->InitCohort());
-        // else it's a recursive type, no need to adjust cohort here
+
 
         field_types.push_back(r_i->type);
 
@@ -645,10 +645,10 @@ void RecordTypeInfo::AddInitializerVals(std::vector<std::string>& ivs) const {
     for ( auto i = 0U; i < n; ++i ) {
         ivs.emplace_back(Fmt(c->TrackString(field_names[i])));
 
-        // Because RecordType's can be recursively defined,
-        // during construction we couldn't reliably access
-        // the field type's offsets.  At this point, though,
-        // they should all be available.
+
+
+
+
         ivs.emplace_back(Fmt(c->TypeOffset(field_types[i])));
         ivs.emplace_back(Fmt(field_attrs[i]));
     }
@@ -667,11 +667,11 @@ void IndicesManager::Generate(CPPCompile* c) {
 
     int nset = 0;
     for ( auto& is : indices_set ) {
-        // Track the offsets into the raw vector, to make it
-        // easier to debug problems.
+
+
         auto line = string("/* ") + to_string(nset++) + " */ ";
 
-        // We first record the size, then the values.
+
         line += to_string(is.size()) + ", ";
 
         auto n = 1;
@@ -692,4 +692,4 @@ void IndicesManager::Generate(CPPCompile* c) {
     c->EndBlock(true);
 }
 
-} // namespace zeek::detail
+}

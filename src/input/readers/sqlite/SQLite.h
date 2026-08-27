@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -28,7 +28,7 @@ private:
 
     threading::Value* EntryToVal(sqlite3_stmt* st, const threading::Field* field, int pos, int subpos);
 
-    const threading::Field* const* fields = nullptr; // raw mapping
+    const threading::Field* const* fields = nullptr;
     unsigned int num_fields = 0;
     int mode = 0;
     bool started = false;
@@ -42,4 +42,4 @@ private:
     std::string empty_field;
 };
 
-} // namespace zeek::input::reader::detail
+}

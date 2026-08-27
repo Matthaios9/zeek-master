@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Rule.h"
 
@@ -8,8 +8,8 @@
 
 namespace zeek::detail {
 
-// Start at one as we want search for this within a list,
-// and List's is_member returns zero for non-membership ...
+
+
 unsigned int Rule::rule_counter = 1;
 unsigned int Rule::pattern_counter = 0;
 rule_list Rule::rule_table;
@@ -87,8 +87,8 @@ void Rule::AddRequires(const char* id, bool opposite_direction, bool negate) {
 }
 
 void Rule::SortHdrTests() {
-    // FIXME: Do nothing for now - we may want to come up with
-    // something clever here.
+
+
 }
 
-} // namespace zeek::detail
+}

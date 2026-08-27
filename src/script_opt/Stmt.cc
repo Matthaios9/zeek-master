@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Optimization-related methods for Stmt classes.
+
+
 
 #include "zeek/Stmt.h"
 
@@ -35,8 +35,8 @@ StmtPtr Stmt::Reduce(Reducer* c) {
 StmtPtr Stmt::TransformMe(StmtPtr new_me, Reducer* c) {
     ASSERT(new_me != this);
 
-    // Set the original prior to reduction, to support "original chains"
-    // to ultimately resolve back to the source statement.
+
+
     new_me->SetLocationInfo(GetLocationInfo());
     return new_me->Reduce(c);
 }
@@ -114,7 +114,7 @@ bool ExprStmt::IsReduced(Reducer* c) const {
 
 StmtPtr ExprStmt::DoReduce(Reducer* c) {
     if ( ! e )
-        // e can be nil for our derived classes (like ReturnStmt).
+
         return TransformMe(make_intrusive<NullStmt>(), c);
 
     auto t = e->Tag();
@@ -128,7 +128,7 @@ StmtPtr ExprStmt::DoReduce(Reducer* c) {
     }
 
     if ( e->IsSingleton(c) )
-        // No point evaluating.
+
         return TransformMe(make_intrusive<NullStmt>(), c);
 
     if ( (t == EXPR_ASSIGN || t == EXPR_CALL || t == EXPR_INDEX_ASSIGN || t == EXPR_FIELD_LHS_ASSIGN ||
@@ -139,13 +139,13 @@ StmtPtr ExprStmt::DoReduce(Reducer* c) {
     StmtPtr red_e_stmt;
 
     if ( t == EXPR_CALL && ! e->WillTransform(c) )
-        // A bare call.  If we reduce it regularly, if it has a non-void
-        // type it'll generate an assignment to a temporary.
+
+
         red_e_stmt = e->ReduceToSingletons(c);
     else {
         e = e->Reduce(c, red_e_stmt);
-        // It's possible that 'e' has gone away because it was a call
-        // to an inlined function that doesn't have a return value.
+
+
         if ( ! e )
             return red_e_stmt;
     }
@@ -183,11 +183,11 @@ StmtPtr IfStmt::DoReduce(Reducer* c) {
     if ( e->WillTransformInConditional(c) )
         e = e->ReduceToConditional(c, red_e_stmt);
 
-    // First, assess some fundamental transformations.
+
     if ( IsMinMaxConstruct() )
         return ConvertToMinMaxConstruct()->Reduce(c);
 
-    if ( e->Tag() == EXPR_NOT ) { // Change "if ( ! x ) s1 else s2" to "if ( x ) s2 else s1".
+    if ( e->Tag() == EXPR_NOT ) {
         std::swap(s1, s2);
         e = e->GetOp1();
     }
@@ -195,8 +195,8 @@ StmtPtr IfStmt::DoReduce(Reducer* c) {
     if ( e->Tag() == EXPR_OR_OR && c->BifurcationOkay() ) {
         c->PushBifurcation();
 
-        // Expand "if ( a || b ) s1 else s2" to
-        // "if ( a ) s1 else { if ( b ) s1 else s2 }"
+
+
         auto a = e->GetOp1();
         auto b = e->GetOp2();
 
@@ -212,8 +212,8 @@ StmtPtr IfStmt::DoReduce(Reducer* c) {
     if ( e->Tag() == EXPR_AND_AND && c->BifurcationOkay() ) {
         c->PushBifurcation();
 
-        // Expand "if ( a && b ) s1 else s2" to
-        // "if ( a ) { if ( b ) s1 else s2 } else s2"
+
+
         auto a = e->GetOp1();
         auto b = e->GetOp2();
 
@@ -244,7 +244,7 @@ StmtPtr IfStmt::DoReduce(Reducer* c) {
             red_e_stmt = cond_red_stmt;
     }
 
-    // Check again for negation given above reductions/replacements.
+
     if ( e->Tag() == EXPR_NOT ) {
         std::swap(s1, s2);
         e = e->GetOp1();
@@ -275,9 +275,9 @@ bool IfStmt::NoFlowAfter(bool ignore_break) const {
     if ( s1 && s2 )
         return s1->NoFlowAfter(ignore_break) && s2->NoFlowAfter(ignore_break);
 
-    // Assuming the test isn't constant, the nonexistent branch
-    // could be picked, so flow definitely continues afterwards.
-    // (Constant branches will be pruned during reduction.)
+
+
+
     return false;
 }
 
@@ -287,11 +287,11 @@ bool IfStmt::CouldReturn(bool ignore_break) const {
 
 bool IfStmt::IsMinMaxConstruct() const {
     if ( ! s1 || ! s2 )
-        // not an if-else construct
+
         return false;
 
     if ( s1->Tag() != STMT_EXPR || s2->Tag() != STMT_EXPR )
-        // definitely not if-else assignments
+
         return false;
 
     auto es1 = s1->AsExprStmt()->StmtExpr();
@@ -307,7 +307,7 @@ bool IfStmt::IsMinMaxConstruct() const {
         case EXPR_GT: break;
 
         default:
-            // Not an apt conditional.
+
             return false;
     }
 
@@ -317,7 +317,7 @@ bool IfStmt::IsMinMaxConstruct() const {
     auto a2_lhs = a2->GetOp1();
 
     if ( ! same_expr(a1_lhs, a2_lhs) )
-        // if-else assignments are not to the same variable
+
         return false;
 
     auto a1_rhs = a1->GetOp2();
@@ -326,15 +326,15 @@ bool IfStmt::IsMinMaxConstruct() const {
     auto op2 = e->GetOp2();
 
     if ( ! same_expr(op1, a1_rhs) && ! same_expr(op1, a2_rhs) )
-        // Operand does not appear in the assignment RHS.
+
         return false;
 
     if ( ! same_expr(op2, a1_rhs) && ! same_expr(op2, a2_rhs) )
-        // Operand does not appear in the assignment RHS.
+
         return false;
 
     if ( same_expr(op1, op2) )
-        // This is degenerate and should be found by other reductions.
+
         return false;
 
     return true;
@@ -390,9 +390,9 @@ void SwitchStmt::Inline(Inliner* inl) {
     ExprStmt::Inline(inl);
 
     for ( auto c : *cases )
-        // In principle this can do the operation multiple times
-        // for a given body, but that's no big deal as repeated
-        // calls won't do anything.
+
+
+
         c->Body()->Inline(inl);
 }
 
@@ -419,7 +419,7 @@ bool SwitchStmt::IsReduced(Reducer* r) const {
 
 StmtPtr SwitchStmt::DoReduce(Reducer* rc) {
     if ( cases->empty() )
-        // Degenerate.
+
         return TransformMe(make_intrusive<NullStmt>(), rc);
 
     auto s = with_location_of(make_intrusive<StmtList>(), this);
@@ -430,12 +430,12 @@ StmtPtr SwitchStmt::DoReduce(Reducer* rc) {
     else
         e = e->Reduce(rc, red_e_stmt);
 
-    // Note, the compiler checks for constant switch expressions.
+
 
     if ( red_e_stmt )
         s->Stmts().push_back(red_e_stmt);
 
-    // Update type cases.
+
     for ( auto& i : case_label_type_list ) {
         auto& id = i.first;
         if ( id->Name() )
@@ -477,8 +477,8 @@ bool SwitchStmt::NoFlowAfter(bool ignore_break) const {
             return false;
 
         if ( (! c->ExprCases() || c->ExprCases()->Exprs().empty()) && (! c->TypeCases() || c->TypeCases()->empty()) )
-            // We saw the default, and the test before this
-            // one established that it has no flow after it.
+
+
             default_seen_with_no_flow_after = true;
     }
 
@@ -527,14 +527,14 @@ void WhileStmt::Inline(Inliner* inl) {
 }
 
 bool WhileStmt::IsReduced(Reducer* c) const {
-    // No need to check loop_cond_pred_stmt, as we create it reduced.
+
     return loop_condition->IsReducedConditional(c) && body->IsReduced(c);
 }
 
 StmtPtr WhileStmt::DoReduce(Reducer* c) {
     if ( loop_cond_pred_stmt )
-        // Important to do this before updating the loop_condition, since
-        // changes to the predecessor statement can alter the condition.
+
+
         loop_cond_pred_stmt = loop_cond_pred_stmt->Reduce(c);
 
     if ( c->Optimizing() )
@@ -542,8 +542,8 @@ StmtPtr WhileStmt::DoReduce(Reducer* c) {
     else {
         if ( IsReduced(c) ) {
             if ( ! c->IsPruning() ) {
-                // See comment below for the particulars
-                // of this constructor.
+
+
                 stmt_loop_condition = with_location_of(make_intrusive<ExprStmt>(STMT_EXPR, loop_condition), this);
                 return ThisPtr();
             }
@@ -554,9 +554,9 @@ StmtPtr WhileStmt::DoReduce(Reducer* c) {
 
     body = body->Reduce(c);
 
-    // We use the more involved ExprStmt constructor here to bypass
-    // its check for whether the expression is being ignored, since
-    // we're not actually creating an ExprStmt for execution.
+
+
+
     stmt_loop_condition = with_location_of(make_intrusive<ExprStmt>(STMT_EXPR, loop_condition), this);
 
     return ThisPtr();
@@ -746,43 +746,43 @@ static unsigned int find_rec_assignment_chain(const std::vector<StmtPtr>& stmts,
     for ( ; i < stmts.size(); ++i ) {
         const auto& s = stmts[i];
 
-        // We're looking for either "x$a = y$b" or "x$a = x$a + y$b".
+
         if ( s->Tag() != STMT_EXPR )
-            // No way it's an assignment.
+
             return i;
 
         auto se = s->AsExprStmt()->StmtExpr();
         if ( se->Tag() != EXPR_ASSIGN )
             return i;
 
-        // The LHS of an assignment starts with a RefExpr.
+
         auto lhs_ref = se->GetOp1();
         ASSERT(lhs_ref->Tag() == EXPR_REF);
 
         auto lhs = lhs_ref->GetOp1();
         if ( lhs->Tag() != EXPR_FIELD )
-            // Not of the form "x$a = ...".
+
             return i;
 
         auto lhs_field = lhs->AsFieldExpr()->Field();
         if ( fields_seen.contains(lhs_field) )
-            // Earlier in this chain we've already seen "x$a", so end the
-            // chain at this repeated use because it's no longer a simple
-            // block of field assignments.
+
+
+
             return i;
 
         fields_seen.insert(lhs_field);
 
         auto lhs_rec = lhs->GetOp1();
         if ( lhs_rec->Tag() != EXPR_NAME )
-            // Not a simple field reference, e.g. "x$y$a".
+
             return i;
 
         auto lhs_rec_n = lhs_rec->AsNameExpr();
 
         if ( targ_rec ) {
             if ( lhs_rec_n->Id() != targ_rec->Id() )
-                // It's no longer "x$..." but some new variable "z$...".
+
                 return i;
         }
         else
@@ -798,19 +798,19 @@ static void update_assignment_chains(const StmtPtr& s, OpChain& assign_chains, O
     auto se = s->AsExprStmt()->StmtExpr();
     ASSERT(se->Tag() == EXPR_ASSIGN);
 
-    // The first GetOp1() here accesses the EXPR_ASSIGN's first operand,
-    // which is a RefExpr; the second gets its operand, which we've guaranteed
-    // in find_rec_assignment_chain is a FieldExpr.
+
+
+
     auto lhs_fe = se->GetOp1()->GetOp1()->AsFieldExpr();
     auto lhs_id = lhs_fe->GetOp1()->AsNameExpr()->Id();
     auto rhs = se->GetOp2();
     const FieldExpr* f;
     OpChain* c;
 
-    // Check whether RHS is either "y$b" or "x$a + y$b".
+
 
     if ( rhs->Tag() == EXPR_ADD ) {
-        auto rhs_op1 = rhs->GetOp1(); // need to see that it's "x$a"
+        auto rhs_op1 = rhs->GetOp1();
 
         if ( rhs_op1->Tag() != EXPR_FIELD )
             return;
@@ -821,12 +821,12 @@ static void update_assignment_chains(const StmtPtr& s, OpChain& assign_chains, O
              rhs1_fe->Field() != lhs_fe->Field() )
             return;
 
-        auto rhs_op2 = rhs->GetOp2(); // need to see that it's "y$b"
+        auto rhs_op2 = rhs->GetOp2();
         if ( rhs_op2->Tag() != EXPR_FIELD )
             return;
 
         if ( ! IsArithmetic(rhs_op2->GetType()->Tag()) )
-            // Avoid esoteric forms of adding.
+
             return;
 
         f = rhs_op2->AsFieldExpr();
@@ -839,15 +839,15 @@ static void update_assignment_chains(const StmtPtr& s, OpChain& assign_chains, O
     }
 
     else
-        // Not a RHS we know how to leverage.
+
         return;
 
     auto f_rec = f->GetOp1();
     if ( f_rec->Tag() != EXPR_NAME )
-        // Not a simple RHS, instead something like "y$z$b".
+
         return;
 
-    // If we get here, it's a keeper, record the associated statement.
+
     auto id = f_rec->AsNameExpr()->IdPtr();
     (*c)[id].push_back(s.get());
 }
@@ -859,8 +859,8 @@ static StmtPtr transform_chain(const OpChain& c, ExprTag t, std::set<const Stmt*
         auto orig_s = id_stmts.second;
 
         if ( ! sl )
-            // Now that we have a statement, create our list and associate
-            // its location with the statement.
+
+
             sl = with_location_of(make_intrusive<StmtList>(), orig_s[0]);
 
         ExprPtr e;
@@ -891,9 +891,9 @@ static bool simplify_chain(const std::vector<StmtPtr>& stmts, unsigned int start
         update_assignment_chains(s, assign_chains, add_chains);
     }
 
-    // An add-chain of any size is a win. For an assign-chain to be a win,
-    // it needs to have at least two elements, because a single "x$a = y$b"
-    // can be expressed using one ZAM instruction (but "x$a += y$b" cannot).
+
+
+
     if ( add_chains.empty() ) {
         bool have_useful_assign_chain = false;
         for ( auto& ac : assign_chains )
@@ -903,7 +903,7 @@ static bool simplify_chain(const std::vector<StmtPtr>& stmts, unsigned int start
             }
 
         if ( ! have_useful_assign_chain )
-            // No gains available.
+
             return false;
     }
 
@@ -917,7 +917,7 @@ static bool simplify_chain(const std::vector<StmtPtr>& stmts, unsigned int start
     if ( ad_c )
         f_stmts.push_back(ad_c);
 
-    // At this point, chain_stmts has only the remainders that weren't removed.
+
     for ( auto s : stmts )
         if ( chain_stmts.contains(s.get()) )
             f_stmts.push_back(std::move(s));
@@ -942,20 +942,20 @@ bool StmtList::ReduceStmt(unsigned int& s_i, std::vector<StmtPtr>& f_stmts, Redu
         did_change = true;
 
     if ( c->Optimizing() && stmt->Tag() == STMT_EXPR ) {
-        // There are two potential optimizations that affect
-        // whether we keep assignment statements.  The first is
-        // for potential assignment chains like
-        //
-        //	tmp1 = x;
-        //	tmp2 = tmp1;
-        //
-        // where we can change this pair to simply "tmp2 = x", assuming
-        // no later use of tmp1.
-        //
-        // In addition, if we have "tmp1 = e" and "e" is an expression
-        // already computed into another temporary (say tmp0) that's
-        // safely usable at this point, then we can elide the tmp1
-        // assignment entirely.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         auto s_e = stmt->AsExprStmt();
         auto e = s_e->StmtExpr();
 
@@ -976,31 +976,31 @@ bool StmtList::ReduceStmt(unsigned int& s_i, std::vector<StmtPtr>& f_stmts, Redu
         auto rhs = a->GetOp2();
 
         if ( s_i < stmts.size() - 1 ) {
-            // See if we can compress an assignment chain.
+
             auto& s_i_succ = stmts[s_i + 1];
 
-            // Don't reduce s_i_succ.  If it's what we're
-            // looking for, it's already reduced.  Plus
-            // that's what Reducer::MergeStmts (not that
-            // it really matters, per the comment there).
+
+
+
+
             auto merge = c->MergeStmts(var, rhs, s_i_succ);
             if ( merge ) {
                 f_stmts.push_back(std::move(merge));
 
-                // Skip both this statement and the next,
-                // now that we've substituted the merge.
+
+
                 ++s_i;
                 return true;
             }
         }
 
-        // The following enables constant propagation for temporaries.
-        // The assignment itself will be trimmed by UseDefs::RemoveUnused()
-        // if we were able to replace all instances of the temporary.
+
+
+
         c->CheckForCSE(a, var, rhs.get());
     }
 
-    if ( stmt->Tag() == STMT_LIST ) { // inline the list
+    if ( stmt->Tag() == STMT_LIST ) {
         auto sl = stmt->AsStmtList();
 
         for ( auto& sub_stmt : sl->Stmts() )
@@ -1010,7 +1010,7 @@ bool StmtList::ReduceStmt(unsigned int& s_i, std::vector<StmtPtr>& f_stmts, Redu
     }
 
     else if ( stmt->Tag() == STMT_NULL )
-        // skip it
+
         did_change = true;
 
     else
@@ -1021,12 +1021,12 @@ bool StmtList::ReduceStmt(unsigned int& s_i, std::vector<StmtPtr>& f_stmts, Redu
 
 bool StmtList::NoFlowAfter(bool ignore_break) const {
     for ( auto& s : stmts ) {
-        // For "break" statements, if ignore_break is set then
-        // by construction flow *does* go to after this statement
-        // list.  If we just used the second test below, then
-        // while the "break" would indicate there's flow after it,
-        // if there's dead code following that includes a "return",
-        // this would in fact be incorrect.
+
+
+
+
+
+
         if ( ignore_break && s->Tag() == STMT_BREAK )
             return false;
 
@@ -1046,8 +1046,8 @@ bool StmtList::CouldReturn(bool ignore_break) const {
 }
 
 StmtPtr InitStmt::Duplicate() {
-    // Need to duplicate the initializer list since later reductions
-    // can modify it in place.
+
+
     std::vector<IDPtr> new_inits;
     new_inits.reserve(inits.size());
 
@@ -1179,13 +1179,13 @@ ValPtr CatchReturnStmt::Exec(Frame* f, StmtFlowType& flow) {
     if ( ret_var )
         f->SetElement(ret_var->Id()->Offset(), val);
 
-    // Note, do *not* return the value!  That's taken as a signal
-    // that a full return executed.
+
+
     return nullptr;
 }
 
 bool CatchReturnStmt::IsPure() const {
-    // The ret_var is pure by construction.
+
     return block->IsPure();
 }
 
@@ -1199,8 +1199,8 @@ StmtPtr CatchReturnStmt::DoReduce(Reducer* c) {
     block = block->Reduce(c);
 
     if ( block->Tag() == STMT_RETURN ) {
-        // The whole thing reduced to a bare return.  This can
-        // happen due to constant propagation.
+
+
         auto ret = block->AsReturnStmt();
         auto ret_e = ret->StmtExprPtr();
 
@@ -1271,12 +1271,12 @@ StmtPtr CheckAnyLenStmt::Duplicate() { return SetSucc(new CheckAnyLenStmt(e->Dup
 bool CheckAnyLenStmt::IsReduced(Reducer* c) const { return true; }
 
 StmtPtr CheckAnyLenStmt::DoReduce(Reducer* c) {
-    // These are created in reduced form.
+
     return ThisPtr();
 }
 
 void CheckAnyLenStmt::StmtDescribe(ODesc* d) const {
-    Stmt::StmtDescribe(d); // NOLINT(bugprone-parent-virtual-call)
+    Stmt::StmtDescribe(d);
 
     e->Describe(d);
     if ( ! d->IsBinary() )
@@ -1287,4 +1287,4 @@ void CheckAnyLenStmt::StmtDescribe(ODesc* d) const {
     DescribeDone(d);
 }
 
-} // namespace zeek::detail
+}

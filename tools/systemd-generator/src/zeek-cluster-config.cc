@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek-cluster-config.h"
 
@@ -14,17 +14,17 @@
 #include <regex>
 #include <set>
 #include <stdexcept>
-#include <string> // strerror
+#include <string>
 #include <string_view>
 #include <vector>
 
 #include "utils.h"
 
-/**
- * Implementation for reading the zeek.conf file in C++ without third-party dependencies.
- *
- * Not overly pretty, but fairly straightforward.
- */
+
+
+
+
+
 namespace {
 
 using zeek::detail::is_valid_ip;
@@ -33,7 +33,7 @@ using zeek::detail::parse_int;
 using zeek::detail::Section;
 using zeek::detail::trim;
 
-// Supports K, M, G or T as suffixes. Think systemd MemoryMax notation.
+
 std::optional<std::string> parse_memory(const Option& opt) {
     auto val = opt.Value();
     if ( val.empty() )
@@ -68,25 +68,25 @@ std::optional<int> parse_nice(const Option& opt) {
     return *nice;
 };
 
-} // namespace
+}
 
 namespace zeek::detail {
 
-// Use std::regex to parse ini like
+
 std::pair<std::vector<Section>, std::vector<std::string>> parse_ini_like(const std::string& content) {
     std::vector<std::string> errors;
     std::set<std::string> section_names;
     std::set<std::string> option_names;
     std::vector<Section> sections;
 
-    // Default unnamed section.
+
     Section current_section = Section();
     Option* current_option = nullptr;
 
-    std::regex re_ignore("^(#.*|)$");                // commented or empty line
-    std::regex re_section("^\\[(.+)\\]$");           // [<section_name>]
-    std::regex re_option("^([_0-9a-z][^=]*)=(.*)$"); // key-value with = inbetween, value optional
-    std::regex re_option_cont("^\\s+([^\\s]+.*)$");  // option continuation starts with space
+    std::regex re_ignore("^(#.*|)$");
+    std::regex re_section("^\\[(.+)\\]$");
+    std::regex re_option("^([_0-9a-z][^=]*)=(.*)$");
+    std::regex re_option_cont("^\\s+([^\\s]+.*)$");
 
     for ( const auto line_sv : split(content, '\n') ) {
         auto line = std::string(line_sv.data(), line_sv.size());
@@ -95,10 +95,10 @@ std::pair<std::vector<Section>, std::vector<std::string>> parse_ini_like(const s
         std::smatch smatch;
 
         if ( std::regex_search(line, re_ignore) ) {
-            // ignore
+
         }
         else if ( std::regex_search(line, smatch, re_section) ) {
-            // new section
+
             if ( current_section.HasOptions() || ! current_section.IsUnnamed() ) {
                 section_names.insert(current_section.Name());
                 sections.push_back(std::move(current_section));
@@ -116,7 +116,7 @@ std::pair<std::vector<Section>, std::vector<std::string>> parse_ini_like(const s
             option_names.clear();
         }
         else if ( std::regex_search(line, smatch, re_option) ) {
-            // new option
+
             std::string key = smatch[1];
             std::string value = smatch[2];
             trim(key);
@@ -124,7 +124,7 @@ std::pair<std::vector<Section>, std::vector<std::string>> parse_ini_like(const s
 
             if ( ! option_names.contains(key) ) {
                 option_names.insert(key);
-                // Keep the current option around for continuation lines.
+
                 current_option = current_section.AddOption({std::move(key), std::move(value)});
             }
             else {
@@ -137,7 +137,7 @@ std::pair<std::vector<Section>, std::vector<std::string>> parse_ini_like(const s
             }
         }
         else if ( std::regex_search(line, smatch, re_option_cont) ) {
-            // option value continuation
+
             if ( ! current_option ) {
                 std::string message = "unexpected continuation line '" + line + "'";
                 if ( ! current_section.Name().empty() )
@@ -150,7 +150,7 @@ std::pair<std::vector<Section>, std::vector<std::string>> parse_ini_like(const s
             current_option->AddValue(smatch[1]);
         }
         else {
-            // error
+
             std::string message = "invalid line '" + line + "'";
             if ( ! current_section.Name().empty() )
                 message = message + " in section '" + current_section.Name() + "'";
@@ -160,7 +160,7 @@ std::pair<std::vector<Section>, std::vector<std::string>> parse_ini_like(const s
         }
     }
 
-    // Include the last in-progress section.
+
     if ( current_section.HasOptions() || ! current_section.IsUnnamed() ) {
         section_names.insert(current_section.Name());
         sections.push_back(std::move(current_section));
@@ -182,7 +182,7 @@ std::pair<InterfaceWorkerConfig, std::string> zeek::detail::InterfaceWorkerConfi
         if ( ! std::regex_search(section_name, smatch, section_name_re) )
             return {iwc, "invalid interface name in '" + section_name + "' (must match /interface [-_a-z0-9]+/)"};
 
-        // Re-initialize iwc with the appropriate name.
+
         iwc = InterfaceWorkerConfig(smatch[1]);
     }
 
@@ -196,12 +196,12 @@ std::pair<InterfaceWorkerConfig, std::string> zeek::detail::InterfaceWorkerConfi
         std::string key = option.Key();
         tolower(key);
 
-        // Only env and args options support multiple values.
+
 
         if ( ! key.ends_with("env") && ! key.ends_with("args") && option.Values().size() > 1 )
             return {iwc, "multiple values for '" + key + "' given"};
 
-        // When the next interface option is reached, stop interpreting any keys.
+
         if ( key == "interface" ) {
             iwc.interface = option.Value();
             has_interface = true;
@@ -257,9 +257,9 @@ std::pair<InterfaceWorkerConfig, std::string> zeek::detail::InterfaceWorkerConfi
         }
     }
 
-    // This is probably overdoing it... If workers option is set to anything,
-    // also expect a non-empty interface, else error. An empty interface option
-    // is not allowed in an interface section, only in the unnamed section.
+
+
+
     if ( iwc.Workers() >= 0 && ! has_interface ) {
         std::string message = "found workers but no interface option";
         if ( ! section.Name().empty() )
@@ -291,7 +291,7 @@ ZeekClusterConfig parse_config(const std::filesystem::path& default_zeek_base_di
 
     config.SetExists();
 
-    // Read the whole config file into memory.
+
     auto content = std::string{std::istreambuf_iterator<char>(ifs), {}};
     auto [sections, errors] = parse_ini_like(content);
 
@@ -302,22 +302,22 @@ ZeekClusterConfig parse_config(const std::filesystem::path& default_zeek_base_di
         return config;
     }
 
-    // Empty section to use when there's no [zeek] section.
+
     Section empty_section;
     const Section* zeek_section = nullptr;
 
-    // We support two configuration styles:
-    //
-    // 1) section-less: All configuration keys plainly in zeek.conf. Only a single
-    //    interface is supported. parse_ini_like() returns a single unnamed Section
-    //    with an empty string as the name.
-    //
-    // 2) A [zeek] section + multiple [interface <name>] sections, where name
-    //    is some user controlled identifier that is independent of the actual
-    //    interface used for sniffing.
+
+
+
+
+
+
+
+
+
     if ( sections.size() == 1 && sections[0].Name() == "" ) {
-        // section-less
-        auto [iwc, error] = InterfaceWorkerConfig::from_section(sections[0], /*allow_unknown_options=*/true);
+
+        auto [iwc, error] = InterfaceWorkerConfig::from_section(sections[0], true);
         if ( ! error.empty() )
             config.Error(std::move(error));
 
@@ -325,9 +325,9 @@ ZeekClusterConfig parse_config(const std::filesystem::path& default_zeek_base_di
         zeek_section = &sections[0];
     }
     else {
-        // Iterate through all sections, remember the [zeek] section
-        // and interpret every [interface name] section, too. If there's
-        // an unnamed section, that's an error.
+
+
+
         for ( const auto& section : sections ) {
             if ( section.Name() == "" ) {
                 config.Error("options in unnamed section mixed with options in sections");
@@ -358,9 +358,9 @@ ZeekClusterConfig parse_config(const std::filesystem::path& default_zeek_base_di
     assert(zeek_section);
     assert(zeek_section->Name() == "" || zeek_section->Name() == "zeek");
 
-    // Before we start building a generic configuration framework, we should consider
-    // that the number of options we ever add here should be limited, so maybe that
-    // horrid if-else thing isn't all that bad, and it's obvious what's going on.
+
+
+
     auto options = zeek_section->Options();
 
     for ( size_t i = 0; i < options.size(); i++ ) {
@@ -425,7 +425,7 @@ ZeekClusterConfig parse_config(const std::filesystem::path& default_zeek_base_di
             config.group = option.Value();
         }
         else if ( key == "manager" ) {
-            // manager only support 0 or 1 for now. on or off.
+
             auto result = parse_int(option.Value());
             if ( result == 0 || result == 1 )
                 config.manager = result == 1;
@@ -552,45 +552,45 @@ ZeekClusterConfig parse_config(const std::filesystem::path& default_zeek_base_di
             config.restart_interval_sec = std::atoi(option.Value().c_str());
         }
         else {
-            // Ignore unknown keys if we parse section-less
+
             if ( zeek_section->Name().empty() )
                 continue;
 
-            // Otherwise, it's an error.
+
             config.Error("invalid key '" + key + "' in section '" + zeek_section->Name() + "'");
         }
     }
 
-    // Default to the ZeroMQ backend if none is set.
+
     if ( config.cluster_backend_args.empty() )
         config.cluster_backend_args = "frameworks/cluster/backend/zeromq";
 
-    // If this is a cluster configuration, but no explicit cluster_node_prefix set
-    // in the configuration,  use the hostname part of the filename.
+
+
     if ( ! config.cluster_node_prefix.has_value() && config.HasFilenameHost() )
         config.cluster_node_prefix = config.FilenameHost();
 
-    // If archiver_option wasn't set, default it to "1" if this host
-    // has a manager, or is running loggers.
+
+
     if ( ! config.archiver_option.has_value() && (config.manager || config.loggers > 0) )
         config.archiver_option = "1";
 
-    // Single host mode? Use cluster_address 127.0.0.1 if not set.
+
     if ( ! config.HasFilenameHost() && config.cluster_address.empty() )
         config.cluster_address = "127.0.0.1";
 
-    // Default to local if args is empty - not sure if this is so clever.
+
     if ( config.args.empty() )
         config.args = "local";
 
-    // Assume zeek-cluster-layout-generator is in /bin
+
     config.cluster_layout_generator = config.ZeekBaseDir() / "bin" / "zeek-cluster-layout-generator";
 
     return config;
 }
 
 bool ZeekClusterConfig::HasFilenameHost() const {
-    // Example: xxx/cluster/<hostname>.zeek.conf
+
     auto ext1 = source_path.extension();
     auto ext2 = source_path.stem().extension();
     auto host = source_path.stem().stem();
@@ -598,7 +598,7 @@ bool ZeekClusterConfig::HasFilenameHost() const {
 }
 
 std::string ZeekClusterConfig::FilenameHost() const {
-    // Example: xxx/cluster/host.zeek.conf
+
     if ( ! HasFilenameHost() )
         throw std::logic_error("Do not call FilenameHost() if ! HasFilenameHost()");
 
@@ -606,8 +606,8 @@ std::string ZeekClusterConfig::FilenameHost() const {
 }
 
 std::string ZeekClusterConfig::ClusterLayoutCommand() const {
-    // If a cluster_layout is given in the configuration, copy that
-    // into the generated script directory.
+
+
     if ( cluster_layout.has_value() ) {
         std::vector<std::string> cmd_args = {
             "cp",
@@ -619,9 +619,9 @@ std::string ZeekClusterConfig::ClusterLayoutCommand() const {
         return join(cmd_args);
     }
 
-    // If this configuration is coming from /etc/zeek/cluster, use
-    // the zeek-cluster-layout-generator executable's -C argument to
-    // pass the directory.
+
+
+
     if ( HasFilenameHost() ) {
         std::vector<std::string> cmd_args = {
             cluster_layout_generator.string(),
@@ -634,15 +634,15 @@ std::string ZeekClusterConfig::ClusterLayoutCommand() const {
         return join(cmd_args);
     }
 
-    // First, construct the -W argument. Either it's a single number when
-    // there's only a single unnamed interface, or it's in eth0:2,eth1:2,...
-    // form as to include the interface name/identifier into the worker names.
+
+
+
     std::string worker_arg;
     for ( const auto& iwc : interface_worker_configs ) {
-        // If there is an interface with an empty name, there should only
-        // be a single interface and worker_arg not yet populated.
-        //
-        // If this throws, there must be some config validation error earlier.
+
+
+
+
         if ( iwc.Name().empty() ) {
             if ( ! worker_arg.empty() || interface_worker_configs.size() != 1 )
                 throw std::logic_error("empty name but worker_arg already populated?");
@@ -657,7 +657,7 @@ std::string ZeekClusterConfig::ClusterLayoutCommand() const {
         worker_arg += (iwc.Name() + ":" + std::to_string(iwc.Workers()));
     }
 
-    // If there weren't any workers at all, pass zero.
+
     if ( worker_arg.empty() )
         worker_arg = "0";
 
@@ -679,19 +679,19 @@ std::string ZeekClusterConfig::ClusterLayoutCommand() const {
         cluster_address,
     };
 
-    // Just in case - if there's no manager, disable it.
+
     if ( ! Manager() ) {
         cmd_args.emplace_back("-M");
         cmd_args.emplace_back("0");
     }
 
-    // Add -x if a cluster_node_prefix was given.
+
     if ( cluster_node_prefix.has_value() && ! cluster_node_prefix->empty() ) {
         cmd_args.emplace_back("-x");
         cmd_args.emplace_back(*cluster_node_prefix);
     }
 
-    // Where to store the generated file.
+
     cmd_args.emplace_back("-o");
     cmd_args.emplace_back((GeneratedScriptsDir() / "cluster-layout.zeek").string());
 
@@ -724,7 +724,7 @@ std::string ZeekClusterConfig::ArchiverCommand() const {
 }
 
 std::string ZeekClusterConfig::ZeekPath() const {
-    // TODO: Are these somewhere available as definition in a header or define?
+
     std::vector<std::filesystem::path> suffixes = {
         "share/zeek",
         "share/zeek/policy",
@@ -773,4 +773,4 @@ std::optional<std::string> gethostname() {
     return buf;
 }
 
-} // namespace zeek::detail
+}

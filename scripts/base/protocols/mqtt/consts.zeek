@@ -1,4 +1,4 @@
-##! Constants definitions for MQTT.
+
 
 module MQTT;
 

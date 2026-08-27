@@ -65,8 +65,8 @@ def git_generic_info(d: pathlib.Path):
         "dirty": git_is_dirty(d),
     }
 
-    # git describe fails on Cirrus CI due to no tags being available
-    # in the shallow clone. Instead of using --all, just skip over it.
+
+
     try:
         info["describe"] = git("-C", str(d), "describe", "--tags").strip()
     except subprocess.CalledProcessError:
@@ -103,7 +103,7 @@ def collect_submodule_info(zeek_dir: pathlib.Path):
         try:
             sm_info["version"] = (zeek_dir / path / "VERSION").read_text().strip()
         except FileNotFoundError:
-            # The external ones usually don't have a version.
+
             pass
 
         submodules.append(sm_info)
@@ -142,8 +142,8 @@ def read_plugin_version(plugin_dir: pathlib.Path):
 
 def collect_plugin_info(plugin_dir: pathlib.Path):
     """ """
-    # A plugin's name is not part of it's metadata/information, use
-    # the basename of its directory.
+
+
     result = {
         "name": plugin_dir.parts[-1],
     }
@@ -187,9 +187,9 @@ def main():
         logger.error("git not found and --only-git provided")
         return 1
 
-    # Attempt to collect info from git first and alternatively
-    # fall back to a repo-info.json file within what is assumed
-    # to be a tarball.
+
+
+
     if git_available() and git_is_repo(zeek_dir):
         info = collect_git_info(zeek_dir)
     elif not args.only_git:
@@ -218,7 +218,7 @@ def main():
     info["included_plugins"] = included_plugins_info
 
     zkg_provides_info = copy.deepcopy(included_plugins_info)
-    # Hardcode the former spicy-plugin so that zkg knows Spicy is available.
+
     zkg_provides_info.append(
         {"name": "spicy-plugin", "version": info["version"].split("-")[0]}
     )

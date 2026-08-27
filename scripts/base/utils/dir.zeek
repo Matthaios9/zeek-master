@@ -5,21 +5,21 @@
 module Dir;
 
 export {
-	## The default interval this module checks for files in directories when
-	## using the :zeek:see:`Dir::monitor` function.
+
+
 	option polling_interval = 30sec;
 
-	## Register a directory to monitor with a callback that is called
-	## every time a previously unseen file is seen.  If a file is deleted
-	## and seen to be gone, then the file is available for being seen again
-	## in the future.
-	##
-	## dir: The directory to monitor for files.
-	##
-	## callback: Callback that gets executed with each file name
-	##           that is found.  Filenames are provided with the full path.
-	##
-	## poll_interval: An interval at which to check for new files.
+
+
+
+
+
+
+
+
+
+
+
 	global monitor: function(dir: string, callback: function(fname: string),
 	                         poll_interval: interval &default=polling_interval);
 }
@@ -61,5 +61,3 @@ function monitor(dir: string, callback: function(fname: string),
 	{
 	event Dir::monitor_ev(dir, set(), callback, poll_interval);
 	}
-
-

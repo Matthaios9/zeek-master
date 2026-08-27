@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/storage/Component.h"
 
@@ -37,4 +37,4 @@ void SerializerComponent::DoDescribe(ODesc* d) const {
     d->Add(CanonicalName());
 }
 
-} // namespace zeek::storage
+}

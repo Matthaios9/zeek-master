@@ -1,4 +1,4 @@
-##! Calculate the number of unique values.
+
 
 @load ../main
 
@@ -6,32 +6,32 @@ module SumStats;
 
 export {
 	redef record Reducer += {
-		## Maximum number of unique values to store.
+
 		unique_max: count &optional;
 	};
 
 	redef enum Calculation += {
-		## Calculate the number of unique values.
+
 		UNIQUE
 	};
 
 	redef record ResultVal += {
-		## If cardinality is being tracked, the number of unique
-		## values is tracked here.
+
+
 		unique: count &default=0;
 	};
 }
 
 redef record ResultVal += {
-	# Internal use only.  This is used when multiple ResultVals
-	# are being merged and they need to abide the unique limit
-	# set in the reducer.
+
+
+
 	unique_max: count &optional;
 
-	# Internal use only.  This is not meant to be publicly available
-	# because we don't want to trust that we can inspect the values
-	# since we will likely move to a probabilistic data structure in the future.
-	# TODO: in the future this will optionally be a hyperloglog structure
+
+
+
+
 	unique_vals: set[Observation] &optional;
 };
 

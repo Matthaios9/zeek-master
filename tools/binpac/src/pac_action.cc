@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_action.h"
 
@@ -24,7 +24,7 @@ string AnalyzerAction::action_function() const { return strfmt("Action_%s", acti
 void AnalyzerAction::InstallHook(AnalyzerDecl* analyzer) {
     ASSERT(0);
     analyzer_ = analyzer;
-    // param_->MainDataType()->InstallAction(this);
+
 }
 
 void AnalyzerAction::GenCode(Output* out_h, Output* out_cc, AnalyzerDecl* decl) {
@@ -50,7 +50,7 @@ void AnalyzerAction::GenCode(Output* out_h, Output* out_cc, AnalyzerDecl* decl) 
 string AnalyzerAction::ParamDecls(Env* env) const { return param_->DeclStr(env); }
 
 Type* ActionParam::MainDataType() const {
-    // Note: this is not equal to DataType()
+
     Type* main_type = TypeDecl::LookUpType(type()->type_id());
 
     if ( ! main_type ) {

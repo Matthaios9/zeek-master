@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -17,12 +17,12 @@
 #include "zeek/StmtBase.h"
 #include "zeek/StmtEnums.h"
 #include "zeek/TraverseTypes.h"
-#include "zeek/Type.h" /* for FunctionFlavor */
+#include "zeek/Type.h"
 
-// This is needed in order to chain-include ZVal.h, which is what's
-// actually needed by Func.h. If you don't include Val.h along with
-// ZVal.h, Windows fails to build because of the forward declarations
-// in ZVal.h.
+
+
+
+
 #include "zeek/Val.h"
 #include "zeek/ZeekArgs.h"
 #include "zeek/ZeekList.h"
@@ -50,7 +50,7 @@ class FunctionIngredients;
 
 extern uint64_t max_recursion_depth;
 
-} // namespace detail
+}
 
 class EventGroup;
 using EventGroupPtr = std::shared_ptr<EventGroup>;
@@ -73,39 +73,39 @@ public:
         detail::StmtPtr stmts;
         std::forward_list<EventGroupPtr> groups;
         int priority = 0;
-        // If any of the groups are disabled, this body is disabled.
-        // The disabled field is updated from EventGroup instances.
+
+
         bool disabled = false;
     };
 
     const std::vector<Body>& GetBodies() const { return bodies; }
     bool HasBodies() const { return ! bodies.empty(); }
 
-    /**
-     * Are there bodies and is any one of them enabled?
-     *
-     * @return  true if bodies exist and at least one is enabled.
-     */
+
+
+
+
+
     bool HasEnabledBodies() const { return ! bodies.empty() && has_enabled_bodies; };
 
-    /**
-     * Is every body enabled?
-     *
-     * @return  true if all bodies are enabled. (If no bodies, then true.)
-     */
+
+
+
+
+
     bool HasAllBodiesEnabled() const { return all_bodies_enabled; };
 
-    /**
-     * Calls a Zeek function.
-     * @param args  the list of arguments to the function call.
-     * @param parent  the frame from which the function is being called.
-     * @return  the return value of the function call.
-     */
+
+
+
+
+
+
     virtual ValPtr Invoke(zeek::Args* args, detail::Frame* parent = nullptr) const = 0;
 
-    /**
-     * A version of Invoke() taking a variable number of individual arguments.
-     */
+
+
+
     template<class... Args>
         requires std::is_convertible_v<std::tuple_element_t<0, std::tuple<Args...>>, ValPtr>
     ValPtr Invoke(Args&&... args) const {
@@ -113,19 +113,19 @@ public:
         return Invoke(&zargs);
     }
 
-    // Adds a new event handler to an existing function (event), with the
-    // second argument being used for lambdas to override what's in the
-    // "ingredients".
+
+
+
     void AddBody(const detail::FunctionIngredients& ingr, detail::StmtPtr new_body = nullptr);
 
-    // A version for supporting creating StdFunctionStmt's.
+
     void AddBody(std::function<void(const zeek::Args&, detail::StmtFlowType&)> body, int priority = 0);
 
-    // A richer interface for controlling priority, event groups,
-    // initializations, and frame size.
+
+
     virtual void AddBody(Func::Body&& new_body, const std::vector<detail::IDPtr>& new_inits, size_t new_frame_size);
 
-    // Deprecated interfaces.
+
     [[deprecated("Remove in v9.1. Use AddBody(Func::Body...) interface instead.")]]
     virtual void AddBody(detail::StmtPtr new_body, const std::vector<detail::IDPtr>& new_inits, size_t new_frame_size,
                          int priority, const std::set<EventGroupPtr>& groups);
@@ -155,10 +155,10 @@ public:
 protected:
     Func() = default;
 
-    // Copies this function's state into other.
+
     void CopyStateInto(Func* other) const;
 
-    // Helper function for checking result of plugin hook.
+
     void CheckPluginResult(bool handled, const ValPtr& hook_result, FunctionFlavor flavor) const;
 
     std::vector<Body> bodies;
@@ -168,9 +168,9 @@ protected:
     std::string name;
 
 private:
-    // EventGroup updates Func::Body.disabled and has_enabled_bodies.
-    // This is friend/private with EventGroup here so that we do not
-    // expose accessors in the zeek:: public interface.
+
+
+
     friend class EventGroup;
     bool has_enabled_bodies = true;
     bool all_bodies_enabled = true;
@@ -182,7 +182,7 @@ class ScriptFunc : public Func {
 public:
     ScriptFunc(const IDPtr& id);
 
-    // For compiled scripts.
+
     ScriptFunc(std::string name, FuncTypePtr ft, std::vector<Func::Body> bodies);
 
     ~ScriptFunc() override;
@@ -190,117 +190,117 @@ public:
     bool IsPure() const override;
     ValPtr Invoke(zeek::Args* args, Frame* parent) const override;
 
-    /**
-     * Creates a separate frame for captures and initializes its
-     * elements.  The list of captures comes from the ScriptFunc's
-     * type, so doesn't need to be passed in, just the frame to
-     * use in evaluating the identifiers.
-     *
-     * @param f  the frame used for evaluating the captured identifiers
-     */
+
+
+
+
+
+
+
+
     void CreateCaptures(Frame* f);
 
-    /**
-     * Uses the given set of ZVal's for captures.  Note that this is
-     * different from the method above, which uses its argument to
-     * compute the captures, rather than here where they are pre-computed.
-     *
-     * Makes deep copies if required.
-     *
-     * @param cvec  a vector of ZVal's corresponding to the captures.
-     */
+
+
+
+
+
+
+
+
+
     void CreateCaptures(std::unique_ptr<std::vector<ZVal>> cvec);
 
-    /**
-     * Returns the frame associated with this function for tracking
-     * captures, or nil if there isn't one.
-     *
-     * @return internal frame kept by the function for persisting captures
-     */
+
+
+
+
+
+
     Frame* GetCapturesFrame() const { return captures_frame; }
 
-    /**
-     * Returns the set of ZVal's used for captures.  It's okay to modify
-     * these as long as memory-management is done for managed entries.
-     *
-     * @return internal vector of ZVal's kept for persisting captures
-     */
+
+
+
+
+
+
     auto& GetCapturesVec() const {
         ASSERT(captures_vec);
         return *captures_vec;
     }
 
-    /**
-     * Set the set of ZVal's used for captures.
-     *
-     * Used for script optimization purposes.
-     *
-     * @param cv The value used for captures_vec.
-     */
+
+
+
+
+
+
+
     void SetCapturesVec(std::unique_ptr<std::vector<ZVal>> cv);
 
-    // Same definition as in Frame.h.
+
     using OffsetMap = std::unordered_map<std::string, int>;
 
-    /**
-     * Returns the mapping of captures to slots in the captures frame.
-     *
-     * @return pointer to mapping of captures to slots
-     */
+
+
+
+
+
     const OffsetMap* GetCapturesOffsetMap() const { return captures_offset_mapping; }
 
-    /**
-     * Serializes this function's capture frame.
-     *
-     * @return a serialized version of the function's capture frame.
-     */
+
+
+
+
+
     virtual std::optional<BrokerData> SerializeCaptures() const;
 
-    /**
-     * Sets the captures frame to one built from *data*.
-     *
-     * @param data a serialized frame
-     */
+
+
+
+
+
     bool DeserializeCaptures(BrokerListView data);
 
     using Func::AddBody;
 
     void AddBody(Func::Body&& new_body, const std::vector<detail::IDPtr>& new_inits, size_t new_frame_size) override;
 
-    // Deprecated interface.
+
     void AddBody(detail::StmtPtr new_body, const std::vector<detail::IDPtr>& new_inits, size_t new_frame_size,
                  int priority, const std::set<EventGroupPtr>& groups) override;
 
-    /**
-     * Replaces the given current instance of a function body with
-     * a new one.  If new_body is nil then the current instance is
-     * deleted with no replacement.
-     *
-     * @param old_body  Body to replace.
-     * @param new_body  New body to use; can be nil.
-     */
+
+
+
+
+
+
+
+
     void ReplaceBody(const detail::StmtPtr& old_body, detail::StmtPtr new_body);
 
     const Body& CurrentBody() const { return current_body; }
 
-    /**
-     * Returns the function's frame size.
-     * @return  The number of ValPtr slots in the function's frame.
-     */
+
+
+
+
     int FrameSize() const { return frame_size; }
 
-    /**
-     * Changes the function's frame size to a new size - used for
-     * script optimization/compilation.
-     *
-     * @param new_size  The frame size the function should use.
-     */
+
+
+
+
+
+
     void SetFrameSize(int new_size) { frame_size = new_size; }
 
-    /** Gets this function's outer_id list. */
+
     const IDPList& GetOuterIDs() const { return outer_ids; }
 
-    /** Sets this function's outer_id list. */
+
     void SetOuterIDs(IDPList ids) { outer_ids = std::move(ids); }
 
     void Describe(ODesc* d) const override;
@@ -310,37 +310,37 @@ protected:
 
     StmtPtr AddInits(StmtPtr body, const std::vector<IDPtr>& inits);
 
-    /**
-     * Clones this function along with its captures.
-     */
+
+
+
     FuncPtr DoClone() override;
 
-    /**
-     * Uses the given frame for captures, and generates the
-     * mapping from captured variables to offsets in the frame.
-     * Virtual so it can be modified for script optimization uses.
-     *
-     * @param f  the frame holding the values of capture variables
-     */
+
+
+
+
+
+
+
     virtual void SetCaptures(Frame* f);
 
-    // Captures when using ZVal block instead of a Frame.
+
     std::unique_ptr<std::vector<ZVal>> captures_vec;
 
 private:
     size_t frame_size = 0;
 
-    // List of the outer IDs used in the function.
+
     IDPList outer_ids;
 
-    // Frame for (capture-by-copy) closures.  These persist over the
-    // function's lifetime, providing quasi-globals that maintain
-    // state across individual calls to the function.
+
+
+
     Frame* captures_frame = nullptr;
 
     OffsetMap* captures_offset_mapping = nullptr;
 
-    // A copy of the most recently added/updated Body.
+
     Body current_body;
 };
 
@@ -369,11 +369,11 @@ struct CallInfo {
     Frame* frame = nullptr;
 };
 
-// Class that collects all the specifics defining a Func.
+
 class FunctionIngredients {
 public:
-    // Gathers all of the information from a scope and a function body needed
-    // to build a function.
+
+
     FunctionIngredients(ScopePtr scope, StmtPtr body, const std::string& module_name);
 
     const IDPtr& GetID() const { return id; }
@@ -389,8 +389,8 @@ public:
     const ScopePtr& Scope() const { return scope; }
     const auto& Groups() const { return groups; }
 
-    // Used by script optimization to update lambda ingredients
-    // after compilation.
+
+
     void SetFrameSize(size_t _frame_size) { frame_size = _frame_size; }
 
 private:
@@ -407,26 +407,26 @@ using FunctionIngredientsPtr = std::shared_ptr<FunctionIngredients>;
 
 ZEEK_EXTERN_DATA std::vector<CallInfo> call_stack;
 
-/**
- * Create a single BacktraceElement record val.
- *
- * @param name the name of the function.
- * @param args call argument vector created by MakeCallArgumentVector().
- * @param loc optional location information of the caller.
- *
- * @return record value representing a BacktraceElement.
- */
+
+
+
+
+
+
+
+
+
 zeek::RecordValPtr make_backtrace_element(std::string_view name, const VectorValPtr args,
                                           const zeek::detail::Location* loc);
 
-/**
- * Create a Zeek script Backtrace of the current script call_stack.
- *
- * @return VectorValPtr containing BacktraceElement entries.
- */
+
+
+
+
+
 zeek::VectorValPtr get_current_script_backtrace();
 
-// This is set to true after the built-in functions have been initialized.
+
 ZEEK_EXTERN_DATA bool did_builtin_init;
 ZEEK_EXTERN_DATA std::vector<void (*)()> bif_initializers;
 extern void init_primary_bifs();
@@ -442,13 +442,13 @@ extern void emit_builtin_exception(const char* msg);
 extern void emit_builtin_exception(const char* msg, const ValPtr& arg);
 extern void emit_builtin_exception(const char* msg, Obj* arg);
 
-} // namespace detail
+}
 
 extern std::string render_call_stack();
 
-// These methods are used by BIFs, so they're in the public namespace.
+
 extern void emit_builtin_error(const char* msg);
 extern void emit_builtin_error(const char* msg, const ValPtr&);
 extern void emit_builtin_error(const char* msg, Obj* arg);
 
-} // namespace zeek
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/plugin/Plugin.h"
 
@@ -12,9 +12,9 @@ public:
     zeek::plugin::Configuration Configure() override {
         AddComponent(new zeek::analyzer::Component("SIP", zeek::analyzer::sip::SIP_Analyzer::Instantiate));
 
-        // We don't fully support SIP-over-TCP yet, so we don't activate this component.
-        // AddComponent(new zeek::analyzer::Component("SIP_TCP",
-        // ::analyzer::sip_tcp::SIP_Analyzer::Instantiate));
+
+
+
 
         zeek::plugin::Configuration config;
         config.name = "Zeek::SIP";
@@ -23,4 +23,4 @@ public:
     }
 } plugin;
 
-} // namespace zeek::plugin::detail::Zeek_SIP
+}

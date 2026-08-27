@@ -1,8 +1,8 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/NetVar.h"
 
-// EventHandler.h is needed for event.bif.netvar_init later.
+
 #include "zeek/EventHandler.h"
 #include "zeek/ID.h"
 #include "zeek/Val.h"
@@ -186,11 +186,11 @@ zeek_uint_t bits_per_uid = 0;
 
 zeek_uint_t tunnel_max_changes_per_connection;
 
-} // namespace zeek::detail
-  // files.
+}
 
-// Because of how the BIF include files are built with namespaces already in them,
-// these files need to be included separately before the namespace is opened below.
+
+
+
 
 static void bif_init_event_handlers() {
 #include "event.bif.netvar_init"
@@ -218,7 +218,7 @@ static void init_bif_types() {
 #include "telemetry_types.bif.netvar_def"
 #include "types.bif.netvar_def"
 
-// Re-open the namespace now that the bif headers are all included.
+
 namespace zeek::detail {
 
 void init_event_handlers() { bif_init_event_handlers(); }
@@ -329,4 +329,4 @@ void init_net_var() {
     tunnel_max_changes_per_connection = id::find_val("Tunnel::max_changes_per_connection")->AsCount();
 }
 
-} // namespace zeek::detail
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/spicy/manager.h"
 
@@ -39,7 +39,7 @@
 using namespace zeek;
 using namespace zeek::spicy;
 
-// Split an potentially scoped ID into namespace and local part.
+
 static std::pair<std::string_view, std::string_view> parseID(std::string_view s) {
     if ( auto i = s.rfind("::"); i != std::string::npos )
         return std::make_pair(s.substr(0, i), s.substr(i + 2));
@@ -57,7 +57,7 @@ void Manager::registerSpicyModuleEnd() {
         return;
 
     detail::zeekygen_mgr->AddSpicyModule(std::move(_module_info));
-    // _module_info now back to null
+
 }
 
 void Manager::registerProtocolAnalyzer(const hilti::rt::String& name, hilti::rt::Protocol proto,
@@ -77,15 +77,15 @@ void Manager::registerProtocolAnalyzer(const hilti::rt::String& name, hilti::rt:
     info.protocol = proto;
     info.linker_scope = linker_scope;
 
-    // Store ports in a deterministic order. We can't (easily) sort the
-    // `hilti::rt::Vector` unfortunately.
+
+
     std::ranges::copy(ports, std::back_inserter(info.ports));
     std::ranges::sort(info.ports, [](const ::zeek::spicy::rt::PortRange& l, const ::zeek::spicy::rt::PortRange& r) {
         return l < r;
     });
 
-    // We may have that analyzer already iff it was previously pre-registered
-    // without a linker scope. We'll then only set the scope now.
+
+
     if ( auto t = _analyzer_name_to_tag_type.find(info.name_zeek); t != _analyzer_name_to_tag_type.end() ) {
         SPICY_DEBUG(hilti::rt::fmt("Updating already registered protocol analyzer %s", name));
 
@@ -93,7 +93,7 @@ void Manager::registerProtocolAnalyzer(const hilti::rt::String& name, hilti::rt:
         assert(existing.name_analyzer == name);
         existing.linker_scope = info.linker_scope;
 
-        // If the infos don't match now, we have two separate definitions.
+
         if ( info != existing )
             reporter->FatalError("redefinition of protocol analyzer %s", std::string(info.name_analyzer).c_str());
 
@@ -114,11 +114,11 @@ void Manager::registerProtocolAnalyzer(const hilti::rt::String& name, hilti::rt:
     if ( _module_info )
         _module_info->AddComponent(c);
 
-    // TODO: Should Zeek do this? It has run component intiialization at
-    // this point already, so ours won't get initialized anymore.
+
+
     c->Initialize();
 
-    trackComponent(c, c->Tag().Type()); // Must come after Initialize().
+    trackComponent(c, c->Tag().Type());
 
     info.tag = c->Tag();
     _protocol_analyzers_by_type.resize(info.tag.Type() + 1);
@@ -140,15 +140,15 @@ void Manager::registerFileAnalyzer(const hilti::rt::String& name,
     info.mime_types = mime_types;
     info.linker_scope = linker_scope;
 
-    // We may have that analyzer already iff it was previously pre-registered
-    // without a linker scope. We'll then only set the scope now.
+
+
     if ( auto t = _analyzer_name_to_tag_type.find(info.name_zeek); t != _analyzer_name_to_tag_type.end() ) {
         SPICY_DEBUG(hilti::rt::fmt("Updating already registered packet analyzer %s", name));
 
         auto& existing = _file_analyzers_by_type.at(t->second);
         existing.linker_scope = info.linker_scope;
 
-        // If the infos don't match now, we have two separate definitions.
+
         if ( info != existing )
             reporter->FatalError("redefinition of file analyzer %s", std::string(info.name_analyzer).c_str());
 
@@ -162,11 +162,11 @@ void Manager::registerFileAnalyzer(const hilti::rt::String& name,
     if ( _module_info )
         _module_info->AddComponent(c);
 
-    // TODO: Should Zeek do this? It has run component intiialization at
-    // this point already, so ours won't get initialized anymore.
+
+
     c->Initialize();
 
-    trackComponent(c, c->Tag().Type()); // Must come after Initialize().
+    trackComponent(c, c->Tag().Type());
 
     info.tag = c->Tag();
     _file_analyzers_by_type.resize(info.tag.Type() + 1);
@@ -186,8 +186,8 @@ void Manager::registerPacketAnalyzer(const hilti::rt::String& name, const hilti:
     info.name_zeekygen = hilti::rt::fmt("<Spicy-%s>", info.name_zeek);
     info.linker_scope = linker_scope;
 
-    // We may have that analyzer already iff it was previously pre-registered
-    // without a linker scope. We'll then set the scope now.
+
+
     if ( auto t = _analyzer_name_to_tag_type.find(info.name_zeek); t != _analyzer_name_to_tag_type.end() ) {
         SPICY_DEBUG(hilti::rt::fmt("Updating already registered packet analyzer %s", name));
 
@@ -195,7 +195,7 @@ void Manager::registerPacketAnalyzer(const hilti::rt::String& name, const hilti:
         assert(existing.name_analyzer == name);
         existing.linker_scope = info.linker_scope;
 
-        // If the infos don't match now, we have two separate definitions.
+
         if ( info != existing )
             reporter->FatalError("redefinition of packet analyzer %s", std::string(info.name_analyzer).c_str());
 
@@ -212,11 +212,11 @@ void Manager::registerPacketAnalyzer(const hilti::rt::String& name, const hilti:
     if ( _module_info )
         _module_info->AddComponent(c);
 
-    // TODO: Should Zeek do this? It has run component initialization at
-    // this point already, so ours won't get initialized anymore.
+
+
     c->Initialize();
 
-    trackComponent(c, c->Tag().Type()); // Must come after Initialize().
+    trackComponent(c, c->Tag().Type());
 
     info.tag = c->Tag();
     _packet_analyzers_by_type.resize(info.tag.Type() + 1);
@@ -227,9 +227,9 @@ void Manager::registerType(const hilti::rt::String& id, const TypePtr& type) {
     auto [ns, local] = parseID(id);
 
     if ( const auto& old = detail::lookup_ID(std::string(local).c_str(), std::string(ns).c_str(), true) ) {
-        // This is most likely to trigger for IDs that other Spicy modules
-        // register. If we two Spicy modules need the same type, that's ok as
-        // long as they match.
+
+
+
         if ( ! old->IsType() ) {
             reporter->Error("Zeek type registration failed for '%s': ID already exists, but is not a type",
                             std::string(id).c_str());
@@ -272,10 +272,10 @@ TypePtr Manager::findType(std::string_view id) const {
 }
 
 void Manager::registerEvent(const hilti::rt::String& name) {
-    // Create a Zeek handler for the event.
+
     event_registry->Register(name);
 
-    // Install the ID into the corresponding namespace and export it.
+
     auto n = ::hilti::rt::split(name, "::");
     std::string mod;
 
@@ -285,14 +285,14 @@ void Manager::registerEvent(const hilti::rt::String& name) {
         mod = detail::GLOBAL_MODULE_NAME;
 
     if ( auto id = detail::lookup_ID(std::string(name).c_str(), std::string(mod).c_str(), false, false, false) ) {
-        // Auto-export IDs that already exist.
+
         id->SetExport();
         _events[name] = std::move(id);
     }
     else
-        // This installs & exports the ID, but it doesn't set its type yet.
-        // That will happen as handlers get defined. If there are no handlers,
-        // we set a dummy type in the plugin's InitPostScript
+
+
+
         _events[name] = detail::install_ID(std::string(name).c_str(), mod.c_str(), false, true);
 
     if ( _module_info )
@@ -344,7 +344,7 @@ bool Manager::toggleProtocolAnalyzer(const Tag& tag, bool enable) {
     const auto& analyzer = _protocol_analyzers_by_type[type];
 
     if ( ! analyzer.tag )
-        // not set -> not ours
+
         return false;
 
     if ( enable ) {
@@ -378,7 +378,7 @@ bool Manager::toggleFileAnalyzer(const Tag& tag, bool enable) {
     const auto& analyzer = _file_analyzers_by_type[type];
 
     if ( ! analyzer.tag )
-        // not set -> not ours
+
         return false;
 
     file_analysis::Component* component = file_mgr->Lookup(tag, false);
@@ -386,7 +386,7 @@ bool Manager::toggleFileAnalyzer(const Tag& tag, bool enable) {
         analyzer.replaces ? file_mgr->Lookup(analyzer.replaces, false) : nullptr;
 
     if ( ! component ) {
-        // Shouldn't really happen.
+
         reporter->InternalError("failed to lookup file analyzer component");
         return false;
     }
@@ -422,7 +422,7 @@ bool Manager::togglePacketAnalyzer(const Tag& tag, bool enable) {
     const auto& analyzer = _packet_analyzers_by_type[type];
 
     if ( ! analyzer.tag )
-        // not set -> not ours
+
         return false;
 
     packet_analysis::Component* component = packet_mgr->Lookup(tag, false);
@@ -430,7 +430,7 @@ bool Manager::togglePacketAnalyzer(const Tag& tag, bool enable) {
         analyzer.replaces ? packet_mgr->Lookup(analyzer.replaces, false) : nullptr;
 
     if ( ! component ) {
-        // Shouldn't really happen.
+
         reporter->InternalError("failed to lookup packet analyzer component");
         return false;
     }
@@ -483,21 +483,21 @@ bool Manager::toggleAnalyzer(EnumVal* tag, bool enable) {
 }
 
 static std::unique_ptr<detail::Location> _makeLocation(const hilti::rt::String& location) {
-    static std::set<std::string> filenames; // see comment below in parse_location
+    static std::set<std::string> filenames;
 
     auto parse_location = [](const auto& s) -> std::unique_ptr<detail::Location> {
-        // This is not so great; In the HILTI runtome we pass locations
-        // around as string. To pass them to Zeek, we need to unsplit the
-        // strings into file name and line number. Zeek also won't clean up
-        // the file names, so we need to track them ourselves.
 
-        // Use string_view for uniform handling (the lambda may be called
-        // with std::string or const char*).
+
+
+
+
+
+
         std::string_view sv(s);
 
-        // Find the last ':' that separates filename from line number.
-        // Using rfind avoids misinterpreting the colon in Windows drive
-        // letters (e.g. "C:/path/file.evt:5").
+
+
+
         auto colon = sv.rfind(':');
         if ( colon == std::string_view::npos || colon == 0 )
             return nullptr;
@@ -508,7 +508,7 @@ static std::unique_ptr<detail::Location> _makeLocation(const hilti::rt::String& 
             return nullptr;
 
         auto loc = std::make_unique<detail::Location>();
-        loc->SetFile(filenames.insert(std::string(filename)).first->c_str()); // we retain ownership
+        loc->SetFile(filenames.insert(std::string(filename)).first->c_str());
 
         if ( ! linespec.empty() ) {
             auto y = hilti::rt::split(linespec, "-");
@@ -540,8 +540,8 @@ void Manager::analyzerError(file_analysis::Analyzer* a, std::string_view msg, st
     auto zeek_location = _makeLocation(location);
     reporter->PushLocation(zeek_location.get());
 
-    // We don't have an reporter error for file analyzers, so we log this as a
-    // weird instead.
+
+
     if ( a && a->GetFile() )
         reporter->Weird(a->GetFile(), "file_error", std::string(msg).c_str());
     else
@@ -550,14 +550,14 @@ void Manager::analyzerError(file_analysis::Analyzer* a, std::string_view msg, st
     reporter->PopLocation();
 
     if ( a )
-        a->SetSkip(true); // Imitate what AnalyzerError() does for protocol analyzers.
+        a->SetSkip(true);
 }
 
 void Manager::analyzerError(packet_analysis::Analyzer* a, std::string_view msg, std::string_view location) {
     auto zeek_location = _makeLocation(location);
     reporter->PushLocation(zeek_location.get());
-    // We don't have an reporter error for packet analyzers, so we log
-    // this as a weird instead.
+
+
     reporter->Weird("packet_error", std::string(msg).c_str());
     reporter->PopLocation();
 }
@@ -582,7 +582,7 @@ void Manager::InitPreScript() {
     SPICY_DEBUG("Done with pre-script initialization");
 }
 
-// Returns a port's Zeek-side transport protocol.
+
 static ::TransportProto transport_protocol(const hilti::rt::Port port) {
     switch ( port.protocol().value() ) {
         case hilti::rt::Protocol::TCP: return ::TransportProto::TRANSPORT_TCP;
@@ -622,9 +622,9 @@ void Manager::InitPostScript() {
 
     disableReplacedAnalyzers();
 
-    // If there's no handler for one of our events, it won't have received a
-    // type. Give it a dummy event type in that case, so that we don't walk
-    // around with a nullptr.
+
+
+
     for ( const auto& [name, id] : _events ) {
         if ( ! id->GetType() ) {
             auto args = make_intrusive<RecordType>(new type_decl_list());
@@ -633,12 +633,12 @@ void Manager::InitPostScript() {
         }
     }
 
-    // Init runtime, which will trigger all initialization code to execute.
+
     SPICY_DEBUG("Initializing Spicy runtime");
 
     auto hilti_config = hilti::rt::configuration::get();
 
-    if ( id::find_const("Spicy::enable_print")->AsBool() ) // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
+    if ( id::find_const("Spicy::enable_print")->AsBool() )
         hilti_config.cout = std::cout;
     else
         hilti_config.cout.reset();
@@ -669,7 +669,7 @@ void Manager::InitPostScript() {
         exit(1);
     }
 
-    // Fill in the parser information now that we derived from the ASTs.
+
     auto find_parser = [](const hilti::rt::String& analyzer, const hilti::rt::String& parser,
                           const auto& linker_scope) -> const ::spicy::rt::Parser* {
         if ( parser.empty() )
@@ -683,12 +683,12 @@ void Manager::InitPostScript() {
         reporter->InternalError("Unknown Spicy parser '%s' (scope 0x%" PRIx64 ") requested by analyzer '%s'",
                                 std::string(parser).c_str(), linker_scope.Ref(), std::string(analyzer).c_str());
 
-        return nullptr; // cannot be reached
+        return nullptr;
     };
 
     for ( auto& p : _protocol_analyzers_by_type ) {
         if ( ! p.tag )
-            // vector element not set
+
             continue;
 
         SPICY_DEBUG(hilti::rt::fmt("Registering %s protocol analyzer %s (scope 0x%" PRIx64 ") with Zeek", p.protocol,
@@ -697,7 +697,7 @@ void Manager::InitPostScript() {
         p.parser_orig = find_parser(p.name_analyzer, p.name_parser_orig, p.linker_scope);
         p.parser_resp = find_parser(p.name_analyzer, p.name_parser_resp, p.linker_scope);
 
-        // Register analyzer for its well-known ports.
+
         auto tag = analyzer_mgr->GetAnalyzerTag(std::string(p.name_zeek).c_str());
         if ( ! tag )
             reporter->InternalError("cannot get analyzer tag for '%s'", std::string(p.name_analyzer).c_str());
@@ -705,8 +705,8 @@ void Manager::InitPostScript() {
         auto register_analyzer_for_port = [&](const auto& tag, const hilti::rt::Port& port_) {
             SPICY_DEBUG(hilti::rt::fmt("  Scheduling analyzer for port %s", port_));
 
-            // Well-known ports are registered in scriptland, so we'll raise an
-            // event that will do it for us through a predefined handler.
+
+
             zeek::Args vals = Args();
             vals.emplace_back(tag.AsVal());
             vals.emplace_back(zeek::spicy::rt::to_val(port_, &hilti::rt::type_info::port, base_type(TYPE_PORT)));
@@ -717,16 +717,16 @@ void Manager::InitPostScript() {
         for ( const auto& ports : p.ports ) {
             const auto proto = ports.begin.protocol();
 
-            // Port ranges are closed intervals.
+
             for ( auto port = ports.begin.port(); port <= ports.end.port(); ++port ) {
                 const auto port_ = hilti::rt::Port(port, proto);
                 register_analyzer_for_port(tag, port_);
 
-                // Don't double register in case of single-port ranges.
+
                 if ( ports.begin.port() == ports.end.port() )
                     break;
 
-                // Explicitly prevent overflow.
+
                 if ( port == std::numeric_limits<decltype(port)>::max() )
                     break;
             }
@@ -746,7 +746,7 @@ void Manager::InitPostScript() {
 
     for ( auto& p : _file_analyzers_by_type ) {
         if ( ! p.tag )
-            // vector element not set
+
             continue;
 
         SPICY_DEBUG(hilti::rt::fmt("Registering file analyzer %s (scope 0x%" PRIx64 ") with Zeek", p.name_analyzer,
@@ -754,7 +754,7 @@ void Manager::InitPostScript() {
 
         p.parser = find_parser(p.name_analyzer, p.name_parser, p.linker_scope);
 
-        // Register analyzer for its MIME types.
+
         auto tag = file_mgr->GetComponentTag(std::string(p.name_zeek).c_str());
         if ( ! tag )
             reporter->InternalError("cannot get analyzer tag for '%s'", std::string(p.name_analyzer).c_str());
@@ -762,8 +762,8 @@ void Manager::InitPostScript() {
         auto register_analyzer_for_mime_type = [&](const auto& tag, const hilti::rt::String& mt) {
             SPICY_DEBUG(hilti::rt::fmt("  Scheduling analyzer for MIME type %s", mt));
 
-            // MIME types are registered in scriptland, so we'll raise an
-            // event that will do it for us through a predefined handler.
+
+
             zeek::Args vals = Args();
             vals.emplace_back(tag.AsVal());
             vals.emplace_back(make_intrusive<StringVal>(std::string(mt)));
@@ -782,7 +782,7 @@ void Manager::InitPostScript() {
 
     for ( auto& p : _packet_analyzers_by_type ) {
         if ( ! p.tag )
-            // vector element not set
+
             continue;
 
         SPICY_DEBUG(hilti::rt::fmt("Registering packet analyzer %s (scope 0x%" PRIx64 ") with Zeek", p.name_analyzer,
@@ -801,8 +801,8 @@ void Manager::Done() {
 
 void Manager::loadModule(const hilti::rt::filesystem::path& path) {
     try {
-        // If our auto discovery ends up finding the same module multiple times,
-        // we ignore subsequent requests.
+
+
         std::error_code ec;
         auto canonical_path = hilti::rt::filesystem::canonical(path, ec);
         if ( ec )
@@ -812,7 +812,7 @@ void Manager::loadModule(const hilti::rt::filesystem::path& path) {
         if ( auto [library, inserted] = _libraries.insert({canonical_path_str, hilti::rt::Library(canonical_path)});
              inserted ) {
             SPICY_DEBUG(hilti::rt::fmt("Loading %s", canonical_path.string()));
-            set_location(detail::no_location); // make sure IDs get installed without stale location info
+            set_location(detail::no_location);
             if ( auto load = library->second.open(); ! load )
                 hilti::rt::fatalError(
                     hilti::rt::fmt("could not open library path %s: %s", canonical_path, load.error()));
@@ -857,12 +857,12 @@ void Manager::searchModules(std::string_view paths) {
         auto it = hilti::rt::filesystem::recursive_directory_iterator(trimmed_dir, ec);
         if ( ! ec ) {
             while ( it != hilti::rt::filesystem::recursive_directory_iterator() ) {
-                // Reject loading of modules in dot directories.
+
                 if ( it->is_directory() ) {
-                    // Check the name of the subdirectory (the last path fragment), and do not recurse into it if it
-                    // starts with a dot.
-                    //
-                    // NOTE: `.` and `..` are already removed by `recursive_directory_iterator`.
+
+
+
+
                     if ( const auto& p = it->path().filename().string(); p.empty() || p[0] == '.' )
                         it.disable_recursion_pending();
                 }
@@ -888,12 +888,12 @@ detail::Location Manager::makeLocation(const hilti::rt::String& fname) {
 }
 
 void Manager::autoDiscoverModules() {
-    // Always search Zeek's plugin path for modules, that's where zkg puts
-    // them.
+
+
     searchModules(util::zeek_plugin_path());
 
     if ( auto search_paths = hilti::rt::getenv("ZEEK_SPICY_MODULE_PATH"); search_paths && ! search_paths->empty() )
-        // This overrides all other paths.
+
         searchModules(search_paths->str());
     else
         searchModules(ZEEK_SPICY_MODULE_PATH);
@@ -991,8 +991,8 @@ void Manager::disableReplacedAnalyzers() {
 void Manager::trackComponent(plugin::Component* c, int32_t tag_type) {
     auto i = _analyzer_name_to_tag_type.insert({hilti::rt::String(c->Name()), tag_type});
     if ( ! i.second )
-        // We enforce on our end that an analyzer name can appear only once
-        // across all types of analyzers. Makes things easier and avoids
-        // confusion.
+
+
+
         reporter->FatalError("duplicate analyzer name '%s'", c->Name().c_str());
 }

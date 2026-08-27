@@ -2,8 +2,8 @@
 
 unset ZEEK_DISABLE_ZEEKYGEN
 
-# If running this from btest, unset any of the environment
-# variables that alter default script values.
+
+
 unset ZEEK_DEFAULT_LISTEN_ADDRESS
 unset ZEEK_DEFAULT_LISTEN_RETRY
 unset ZEEK_DEFAULT_CONNECT_RETRY

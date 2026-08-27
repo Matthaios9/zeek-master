@@ -1,78 +1,78 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Classes for tracking information for initializing C++ values used by the
-// generated code.
 
-// Initialization is probably the most complex part of the entire compiler,
-// as there are a lot of considerations.  There are two basic parts: (1) the
-// generation of C++ code for doing run-time initialization, which is covered
-// by the classes in this file, and (2) the execution of that code to do the
-// actual initialization, which is covered by the classes in RuntimeInits.h.
-//
-// There are two fundamental types of initialization, those that create values
-// (such as Zeek Type and Val objects) that will be used during the execution
-// of compiled scripts, and those that perform actions such as registering
-// the presence of a global or a lambda.  In addition, for the former (values
-// used at run-time), some are grouped together into vectors, with the compiled
-// code using a hardwired index to get to a particular value; and some have
-// standalone globals (for example, one for each BiF that a compiled script
-// may call).
-//
-// For each of these types of initialization, our general approach is to have a
-// class that manages a single instance of that type, and an an object that
-// manages all of those instances collectively.  The latter object will, for
-// example, attend to determining the offset into the run-time vector associated
-// with a particular initialized value.
-//
-// An additional complexity is that often the initialization of a particular
-// value will depend on *other* values having already been initialized.  For
-// example, a record type might have a field that is a table, and thus the
-// type corresponding to the table needs to be available before we can create
-// the record type.  However, the table might have a set of attributes
-// associated with it, which have to be initialized before we can create the
-// table type, those in turn requiring the initialization of each of the
-// individual attributes in the set.  One of those attributes might specify
-// a &default function for the table, requiring initializing *that* value
-// (not just the type, but also a way to refer to the particular instance of
-// the function) before initializing the attribute, etc.  Worse, record types
-// can be *indirectly recursive*, which requires first initializing a "stub"
-// for the record type before doing the final initialization.
-//
-// The general strategy for dealing with all of these dependencies is to
-// compute for each initialization its "cohort".  An initialization that
-// doesn't depend on any others is in cohort 0.  An initialization X that
-// depends on an initialization Y will have cohort(X) = cohort(Y) + 1; or,
-// in general, one more than the highest cohort of any initialization it
-// depends on.  (We cut a corner in that, due to how initialization information
-// is constructed, if X and Y are for the same type of object then we can
-// safely use cohort(X) = cohort(Y).)  We then execute run-time initialization
-// in waves, one cohort at a time.
-//
-// Many forms of initialization are specified in terms of indices into globals
-// that hold items of various types.  Thus, the most common initialization
-// information is a vector of integers/indices.  These data structures can
-// be recursive, too, namely we sometimes associate an index with a vector
-// of integers/indices and then we can track multiple such vectors using
-// another vector of integers/indices.
-//
-// Because C++ compilers can struggle when trying to optimize large quantities
-// of code - clang in particular could take many CPU *hours* back when the
-// compiler just generated C++ code snippets for each initialization - rather
-// than producing code that directly executes each given initialization, we
-// instead employ a table-driven approach.  The C++ initializers for the
-// tables contain simple values - often just vectors of integers - that compile
-// quickly.  At run-time we then spin through the elements of the tables (one
-// cohort at a time) to obtain the information needed to initialize any given
-// item.
-//
-// Even this has headaches for very large initializations: both clang and g++
-// are *much* slower to initialize large vectors of simple template types
-// (such as std::pair) than non-template types (such as a struct with two
-// fields, which is all std::pair is, at the end of the day). A similar problem
-// holds for initializing vectors-of-vectors-of-vectors, so we reduce these
-// cases to simpler forms (structs for the first example, a single vector
-// with information embedded within it for how to expand its values into
-// a vector-of-vector-of-vector fr the second).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #include "zeek/File.h"
 #include "zeek/Val.h"
@@ -84,11 +84,11 @@ namespace zeek::detail {
 
 class CPPCompile;
 
-// Abstract class for tracking information about a single initialization item.
+
 class CPP_InitInfo;
 
-// Abstract class for tracking information about a collection of initialization
-// items.
+
+
 class CPP_InitsInfo {
 public:
     CPP_InitsInfo(std::string _tag, const std::string& type) : tag(std::move(_tag)) {
@@ -98,121 +98,121 @@ public:
 
     virtual ~CPP_InitsInfo() = default;
 
-    // Returns the name of the C++ global that will hold the items' values
-    // at run-time, once initialized.  These are all vectors, for which
-    // the generated code accesses a particular item by indexing the vector.
+
+
+
     const std::string& InitsName() const { return base_name; }
 
-    // Returns the name of the C++ global used to hold the table we employ
-    // for table-driven initialization.
+
+
     std::string InitializersName() const { return base_name + "init"; }
 
-    // Returns the "name" of the given element in the run-time vector
-    // associated with this collection of initialization items.  It's not
-    // really a name but rather a vector index, so for example Name(12)
-    // might return "CPP__Pattern__[12]", but we use the term Name because
-    // the representation used to be individualized globals, such as
-    // "CPP__Pattern__12".
+
+
+
+
+
+
     std::string Name(int index) const;
 
-    // Returns the name that will correspond to the next item added to
-    // this set.
+
+
     std::string NextName() const { return Name(size); }
 
-    // The largest initialization cohort of any item in this collection.
+
     int MaxCohort() const { return static_cast<int>(instances.size()) - 1; }
 
-    // Returns the number of initializations in this collection that belong
-    // to the given cohort c.
+
+
     int CohortSize(int c) const { return c > MaxCohort() ? 0 : instances[c].size(); }
 
-    // Populates the given vector with associated identifiers seen
-    // in the cohort, if any.
+
+
     void GetCohortIDs(int c, std::vector<IDPtr>& ids) const;
 
-    // Returns the C++ type associated with this collection's run-time vector.
-    // This might be, for example, "PatternVal"
+
+
     const std::string& CPPType() const { return CPP_type; }
 
-    // Sets the associated C++ type.
+
     virtual void SetCPPType(std::string ct) { CPP_type = std::move(ct); }
 
-    // Whether this initializer is in terms of compound vectors. Used
-    // for avoiding compiler warnings about singleton initializations in
-    // braces.
+
+
+
     virtual bool UsesCompoundVectors() const { return false; }
 
-    // Returns the type associated with the table used for initialization
-    // (i.e., this is the type of the global returned by InitializersName()).
+
+
     std::string InitsType() const { return inits_type; }
 
-    // Add a new initialization instance to the collection.
+
     void AddInstance(std::shared_ptr<CPP_InitInfo> g);
 
-    // Emit code to populate the table used to initialize this collection.
+
     virtual void GenerateInitializers(CPPCompile* c);
 
 protected:
     virtual void GenerateCohorts(CPPCompile* c);
 
-    // Computes offset_set - see below.
+
     void BuildOffsetSet(CPPCompile* c);
 
-    // Returns a declaration suitable for the run-time vector that holds
-    // the initialized items in the collection.
+
+
     std::string Declare() const;
 
-    // For a given cohort, generates the associated table elements for
-    // creating it.
+
+
     void BuildCohort(CPPCompile* c, std::vector<std::shared_ptr<CPP_InitInfo>>& cohort);
 
-    // Given the initialization type and initializers for with a given
-    // cohort element, build the associated table element.
+
+
     virtual void BuildCohortElement(CPPCompile* c, const std::string& init_type, std::vector<std::string>& ivs);
 
-    // Total number of initializers.
+
     int size = 0;
 
-    // Each cohort is represented by a vector whose elements correspond
-    // to the initialization information for a single item.  This variable
-    // holds a vector of cohorts, indexed by the number of the cohort.
-    // (Note, some cohorts may be empty.)
+
+
+
+
     std::vector<std::vector<std::shared_ptr<CPP_InitInfo>>> instances;
 
-    // Which initializations we've already processed, as otherwise sometimes
-    // it's hard to avoid adding the same one more than once.
+
+
     std::unordered_set<std::shared_ptr<CPP_InitInfo>> processed_instances;
 
-    // Each cohort has associated with it a vector of offsets, specifying
-    // positions in the run-time vector of the items in the cohort.
-    //
-    // We reduce each such vector to an index into the collection of
-    // such vectors (as managed by an IndicesManager - see below).
-    //
-    // Once we've done that reduction, we can represent each cohort
-    // using a single index, and thus all of the cohorts using a vector
-    // of indices.  We then reduce *that* vector to a single index,
-    // again using the IndicesManager.  We store that single index
-    // in the "offset_set" variable.
+
+
+
+
+
+
+
+
+
+
+
     int offset_set = 0;
 
-    // Tag used to distinguish a particular collection of constants.
+
     std::string tag;
 
-    // C++ name for this collection of constants.
+
     std::string base_name;
 
-    // C++ type associated with a single instance of these constants.
+
     std::string CPP_type;
 
-    // C++ type associated with the collection of initializers.
+
     std::string inits_type;
 };
 
-// A class for a collection of initialization items for which each item
-// has a "custom" initializer (that is, a bespoke C++ object, rather than
-// a simple C++ type or a vector of indices). These are things like lambdas,
-// global identifiers, or call expressions.
+
+
+
+
 class CPP_CustomInitsInfo : public CPP_InitsInfo {
 public:
     CPP_CustomInitsInfo(std::string _tag, const std::string& _type) : CPP_InitsInfo(std::move(_tag), _type) {
@@ -230,14 +230,14 @@ private:
     void BuildInitType() { inits_type = std::string("CPP_CustomInits<") + CPPType() + ">"; }
 };
 
-// A class for a collection of initialization items corresponding to "basic"
-// constants, i.e., those that can be represented either directly as C++
-// constants, or as indices into a vector of C++ objects.
+
+
+
 class CPP_BasicConstInitsInfo : public CPP_CustomInitsInfo {
 public:
-    // In the following, if "c_type" is non-empty then it specifies the
-    // C++ type used to directly represent the constant.  If empty, it
-    // indicates that we instead use an index into a separate vector.
+
+
+
     CPP_BasicConstInitsInfo(std::string _tag, const std::string& type, const std::string& c_type)
         : CPP_CustomInitsInfo(std::move(_tag), type) {
         if ( c_type.empty() )
@@ -251,21 +251,21 @@ public:
     void BuildCohortElement(CPPCompile* c, const std::string& init_type, std::vector<std::string>& ivs) override;
 };
 
-// A class for a collection of initialization items that are defined using
-// other initialization items.
+
+
 class CPP_CompoundInitsInfo : public CPP_InitsInfo {
 public:
     CPP_CompoundInitsInfo(std::string _tag, const std::string& type) : CPP_InitsInfo(std::move(_tag), type) {
         if ( tag == "Type" )
-            // These need a refined version of CPP_IndexedInits
-            // in order to build different types dynamically.
+
+
             inits_type = "CPP_TypeInits";
         else
             inits_type = std::string("CPP_IndexedInits<") + CPPType() + ">";
     }
 
-    // This isn't true (anymore) because we separately build up the compound
-    // vectors needed for the initialization.
+
+
     bool UsesCompoundVectors() const override { return false; }
 
     void GenerateInitializers(CPPCompile* c) override;
@@ -274,7 +274,7 @@ public:
     void BuildCohortElement(CPPCompile* c, const std::string& init_type, std::vector<std::string>& ivs) override;
 };
 
-// Abstract class for tracking information about a single initialization item.
+
 class CPP_InitInfo {
 public:
     CPP_InitInfo(const IntrusivePtr<Obj>& _o) : o(_o.get()) {}
@@ -282,67 +282,67 @@ public:
 
     virtual ~CPP_InitInfo() = default;
 
-    // Associates this item with an initialization collection and run-time
-    // vector offset.
+
+
     void SetOffset(const CPP_InitsInfo* _inits_collection, int _offset) {
         inits_collection = _inits_collection;
         offset = _offset;
     }
 
-    // Returns the offset for this item into the associated run-time vector.
+
     int Offset() const { return offset; }
 
-    // Returns the name that should be used for referring to this
-    // value in the generated code.
+
+
     virtual std::string Name() const { return inits_collection->Name(offset); }
 
-    // Returns this item's initialization cohort.
+
     int InitCohort() const { return init_cohort; }
 
-    // Returns this item's "final" initialization cohort.  See
-    // discussion below.
+
+
     int FinalInitCohort() const { return final_init_cohort ? final_init_cohort : init_cohort; }
 
-    // Returns the type used for this initializer.
+
     virtual std::string InitializerType() const { return "<shouldn't-be-used>"; }
 
-    // Returns values used for creating this value, one element per
-    // constructor parameter.
+
+
     virtual void InitializerVals(std::vector<std::string>& ivs) const = 0;
 
-    // Returns any associated identifier, or nil if none.
+
     virtual IDPtr InitIdentifier() const { return nullptr; }
 
     const Obj* InitObj() const { return o; }
 
 protected:
-    // Returns an offset (into the run-time vector holding all Zeek
-    // constant values) corresponding to the given value.  Registers
-    // the constant if needed.
+
+
+
     std::string ValElem(CPPCompile* c, ValPtr v);
 
-    // By default, values have no dependencies on other values
-    // being first initialized.  Those that do must increase this
-    // value in their constructors.
+
+
+
     int init_cohort = 0;
 
-    // Some initializers (record and list types, in particular) become
-    // available for other initializers to use them after the first
-    // cohort is initialized; however, the final initialization comes
-    // later.  If non-zero, this variable tracks the latter.
+
+
+
+
     int final_init_cohort = 0;
 
-    // Tracks the collection to which this item belongs.
+
     const CPP_InitsInfo* inits_collection = nullptr;
 
-    // Offset of this item in the collection, or -1 if no association.
+
     int offset = -1;
 
-    // Associated object.  Used for annotating output.
+
     const Obj* o;
 };
 
-// Information associated with initializing a basic (non-compound) constant.
+
 class BasicConstInfo : public CPP_InitInfo {
 public:
     BasicConstInfo(std::string _val) : CPP_InitInfo(nullptr), val(std::move(_val)) {}
@@ -350,12 +350,12 @@ public:
     void InitializerVals(std::vector<std::string>& ivs) const override { ivs.emplace_back(val); }
 
 private:
-    // All we need to track is the C++ representation of the constant.
+
     std::string val;
 };
 
-// Information associated with initializing a constant whose Val constructor
-// takes a string.
+
+
 class DescConstInfo : public CPP_InitInfo {
 public:
     DescConstInfo(CPPCompile* c, ValPtr v);
@@ -376,8 +376,8 @@ public:
     }
 
 private:
-    int e_type; // an index into the enum's Zeek type
-    int e_val;  // integer value of the enum
+    int e_type;
+    int e_val;
 };
 
 class StringConstInfo : public CPP_InitInfo {
@@ -390,8 +390,8 @@ public:
     }
 
 private:
-    int chars; // index into vector of char*'s
-    int len;   // length of the string
+    int chars;
+    int len;
 };
 
 class PatternConstInfo : public CPP_InitInfo {
@@ -406,10 +406,10 @@ public:
     }
 
 private:
-    int exact_pat;           // string representation of "exact" pattern
-    int any_pat;             // same but for "any" pattern
-    int is_case_insensitive; // case-insensitivity flag, 0 or 1
-    int is_single_line;      // single-line flag, 0 or 1
+    int exact_pat;
+    int any_pat;
+    int is_case_insensitive;
+    int is_single_line;
 };
 
 class PortConstInfo : public CPP_InitInfo {
@@ -422,11 +422,11 @@ private:
     zeek_uint_t p;
 };
 
-// Abstract class for compound items (those defined in terms of other items).
+
 class CompoundItemInfo : public CPP_InitInfo {
 public:
-    // The first of these is used for items with custom Zeek types,
-    // the second when the type is generic/inapplicable.
+
+
     CompoundItemInfo(CPPCompile* c, ValPtr v);
     CompoundItemInfo(CPPCompile* _c) : CPP_InitInfo(nullptr), c(_c) { type = -1; }
 
@@ -441,10 +441,10 @@ public:
 protected:
     CPPCompile* c;
     int type;
-    std::vector<std::string> vals; // initialization values
+    std::vector<std::string> vals;
 };
 
-// This next set corresponds to compound Zeek constants of various types.
+
 class ListConstInfo : public CompoundItemInfo {
 public:
     ListConstInfo(CPPCompile* c, ValPtr v);
@@ -485,7 +485,7 @@ public:
     TypeConstInfo(CPPCompile* _c, ValPtr v);
 };
 
-// Initialization information for single attributes and sets of attributes.
+
 class AttrInfo : public CompoundItemInfo {
 public:
     AttrInfo(CPPCompile* c, const AttrPtr& attr);
@@ -496,9 +496,9 @@ public:
     AttrsInfo(CPPCompile* c, const AttributesPtr& attrs);
 };
 
-// A lightweight initializer for a Zeek global that will look it up at
-// initialization time but not create it if missing. If do_init is true,
-// then the global will be (re-)initialized to its value during compilation.
+
+
+
 class GlobalLookupInitInfo : public CPP_InitInfo {
 public:
     GlobalLookupInitInfo(CPPCompile* c, IDPtr g, std::string CPP_name, bool do_init = false);
@@ -512,9 +512,9 @@ protected:
     std::string val;
 };
 
-// Information for initializing a Zeek global.
 
-// Tracks all of the characteristics associated with a global.
+
+
 struct GlobalCharacteristics {
     bool is_exported = false;
     bool is_const = false;
@@ -538,11 +538,11 @@ protected:
     int attrs;
     std::string val;
     GlobalCharacteristics gc;
-    bool func_with_no_val = false; // needed to handle some error situations
+    bool func_with_no_val = false;
 };
 
-// Information for initializing an item corresponding to a Zeek function
-// call, needed to associate complex expressions with attributes.
+
+
 class CallExprInitInfo : public CPP_InitInfo {
 public:
     CallExprInitInfo(CPPCompile* c, ExprPtr e, std::string e_name, std::string wrapper_class);
@@ -550,8 +550,8 @@ public:
     std::string InitializerType() const override { return std::string("CPP_CallExprInit<") + wrapper_class + ">"; }
     void InitializerVals(std::vector<std::string>& ivs) const override { ivs.emplace_back(e_name); }
 
-    // Accessors, since code to initialize these is generated separately
-    // from that of most initialization collections.
+
+
     const ExprPtr& GetExpr() const { return e; }
     std::string Name() const override { return e_name; }
     const std::string& WrapperClass() const { return wrapper_class; }
@@ -562,7 +562,7 @@ protected:
     std::string wrapper_class;
 };
 
-// Information for registering the class/function associated with a lambda.
+
 class LambdaRegistrationInfo : public CPP_InitInfo {
 public:
     LambdaRegistrationInfo(CPPCompile* c, std::string name, FuncTypePtr ft, std::string wrapper_class, p_hash_type h,
@@ -581,7 +581,7 @@ protected:
     bool has_captures;
 };
 
-// Abstract class for representing information for initializing a Zeek type.
+
 class AbstractTypeInfo : public CPP_InitInfo {
 public:
     AbstractTypeInfo(CPPCompile* _c, TypePtr _t) : CPP_InitInfo(_t), c(_c), t(std::move(_t)) {}
@@ -595,10 +595,10 @@ public:
 
 protected:
     CPPCompile* c;
-    TypePtr t; // the type we're initializing
+    TypePtr t;
 };
 
-// The following capture information for different Zeek types.
+
 class BaseTypeInfo : public AbstractTypeInfo {
 public:
     BaseTypeInfo(CPPCompile* _c, TypePtr _t) : AbstractTypeInfo(_c, std::move(_t)) {}
@@ -625,7 +625,7 @@ public:
     void AddInitializerVals(std::vector<std::string>& ivs) const override;
 
 private:
-    TypePtr tt; // the type referred to by t
+    TypePtr tt;
 };
 
 class VectorTypeInfo : public AbstractTypeInfo {
@@ -679,8 +679,8 @@ public:
     void AddInitializerVals(std::vector<std::string>& ivs) const override;
 
 private:
-    // If non-zero, where additional fields begin. Only used for standalone
-    // compilation.
+
+
     int addl_fields;
 
     std::vector<std::string> field_names;
@@ -688,7 +688,7 @@ private:
     std::vector<int> field_attrs;
 };
 
-// Class for initializing a named Zeek type that should be present at startup.
+
 class NamedTypeInfo : public AbstractTypeInfo {
 public:
     NamedTypeInfo(CPPCompile* c, TypePtr _t);
@@ -696,41 +696,41 @@ public:
     void AddInitializerVals(std::vector<std::string>& ivs) const override;
 };
 
-// Much of the table-driven initialization is based on vectors of indices,
-// which we represent as vectors of int's, where each int is used to index a
-// global C++ vector.  This class manages such vectors.  In particular, it
-// reduces a given vector-of-indices to a single value, itself an index, that
-// can be used at run-time to retrieve a reference to the original vector.
-//
-// Note that the notion recurses: if we have several vector-of-indices, we can
-// reduce each to an index, and then take the resulting vector-of-meta-indices
-// and reduce it further to an index.  Doing so allows us to concisely refer
-// to a potentially large, deep set of indices using a single value - such as
-// for CPP_InitsInfo's "offset_set" member variable.
+
+
+
+
+
+
+
+
+
+
+
 
 class IndicesManager {
 public:
     IndicesManager() = default;
 
-    // Adds a new vector-of-indices to the collection we're tracking,
-    // returning the offset that will be associated with it at run-time.
+
+
     int AddIndices(std::vector<int> indices) {
         int n = indices_set.size();
         indices_set.emplace_back(std::move(indices));
         return n;
     }
 
-    // Generates the initializations used to construct the managed
-    // vectors at run-time.
+
+
     void Generate(CPPCompile* c);
 
 private:
-    // Each vector-of-indices being tracked.  We could obtain some
-    // space and time savings by recognizing duplicate vectors
-    // (for example, empty vectors are very common), but as long
-    // as the code compiles and executes without undue overhead,
-    // this doesn't appear necessary.
+
+
+
+
+
     std::vector<std::vector<int>> indices_set;
 };
 
-} // namespace zeek::detail
+}

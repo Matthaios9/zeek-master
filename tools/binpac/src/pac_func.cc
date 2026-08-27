@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_func.h"
 
@@ -33,7 +33,7 @@ void Function::Prepare(Env* env) {
 }
 
 void Function::GenForwardDeclaration(Output* out_h) {
-    // Do nothing
+
 }
 
 void Function::GenCode(Output* out_h, Output* out_cc) {

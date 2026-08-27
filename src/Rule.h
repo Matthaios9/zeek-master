@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -76,28 +76,28 @@ private:
     rule_condition_list conditions;
     rule_action_list actions;
 
-    // Matching of this rule can depend on the state of other rules.
+
     struct Precond {
         const char* id;
-        Rule* rule;        // set by RuleMatcher
-        bool opposite_dir; // if true, rule must match other dir.
-        bool negate;       // negate test
+        Rule* rule;
+        bool opposite_dir;
+        bool negate;
     };
 
     using precond_list = PList<Precond>;
 
     precond_list preconds;
-    rule_list dependents; // rules w/ us as a precondition
-                          // (set by RuleMatcher)
+    rule_list dependents;
+
 
     const char* id;
-    unsigned int idx; // unique index of this rule
-    bool active;      // set the active status of the rule, default true
+    unsigned int idx;
+    bool active;
 
     struct Pattern {
-        char* pattern; // the pattern itself
+        char* pattern;
         PatternType type;
-        int id; // ID of pattern (for identifying it within regexps)
+        int id;
         uint32_t offset;
         uint32_t depth;
     };
@@ -105,17 +105,17 @@ private:
     using pattern_list = PList<Pattern>;
     pattern_list patterns;
 
-    Rule* next; // Linkage within RuleHdrTest tree:
-                // Ptr to next rule using the same RuleHdrTests
+    Rule* next;
+
 
     Location location;
 
-    // Rules and payloads are numbered individually.
+
     static unsigned int rule_counter;
     static unsigned int pattern_counter;
 
-    // Array of rules indexed by payloadid.
+
     static rule_list rule_table;
 };
 
-} // namespace zeek::detail
+}

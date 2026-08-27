@@ -1,15 +1,15 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
-#include <sys/types.h> // for u_char
+#include <sys/types.h>
 #include <set>
 #include <string>
 #include <unordered_set>
 #include <utility>
 
 #include "zeek/IntrusivePtr.h"
-#include "zeek/ZeekString.h" // for byte_vec
+#include "zeek/ZeekString.h"
 #include "zeek/util-types.h"
 
 namespace zeek {
@@ -43,17 +43,17 @@ public:
     void SetShort() { is_short = true; }
     void SetShort(bool s) { is_short = s; }
 
-    // Whether we want to have quotes around strings.
+
     bool WantQuotes() const { return want_quotes; }
     void SetQuotes(bool q) { want_quotes = q; }
 
-    // Whether to ensure deterministic output (for example, when
-    // describing TableVal's).
+
+
     bool WantDeterminism() const { return want_determinism; }
     void SetDeterminism(bool d) { want_determinism = d; }
 
-    // Whether we want to print statistics like access time and execution
-    // count where available.
+
+
     bool IncludeStats() const { return include_stats; }
     void SetIncludeStats(bool s) { include_stats = s; }
 
@@ -92,7 +92,7 @@ public:
     void Add(const IPAddr& addr);
     void Add(const IPPrefix& prefix);
 
-    // Add s as a counted string.
+
     void AddCS(const char* s);
 
     void AddBytes(const String* s);
@@ -128,11 +128,11 @@ public:
             Add("\n", 0);
     }
 
-    // Bypasses the escaping enabled via EnableEscaping().
+
     void AddRaw(const char* s, int len) { AddBytesRaw(s, len); }
     void AddRaw(const std::string& s) { AddBytesRaw(s.data(), s.size()); }
 
-    // Returns the description as a string.
+
     const char* Description() const { return reinterpret_cast<const char*>(base); }
 
     const u_char* Bytes() const { return reinterpret_cast<const u_char*>(base); }
@@ -141,8 +141,8 @@ public:
         base = nullptr;
         size = 0;
 
-        // Don't clear offset, as we want to still support
-        // subsequent calls to Len().
+
+
 
         return reinterpret_cast<byte_vec>(const_cast<void*>(t));
     }
@@ -151,14 +151,14 @@ public:
 
     void Clear();
 
-    // Used to determine recursive types. Records push their types on here;
-    // if the same type (by address) is re-encountered, processing aborts.
+
+
     bool PushType(const Type* type);
     bool PopType(const Type* type);
     bool FindType(const Type* type);
 
-    // Used to detect cycles when describing aggregate values. Returns true
-    // if the val was newly inserted (not already visited).
+
+
     bool PushVal(const Val* v);
     bool PopVal(const Val* v);
 
@@ -168,40 +168,40 @@ protected:
     void AddBytes(const void* bytes, size_t n);
     void AddBytesRaw(const void* bytes, size_t n);
 
-    // Make buffer big enough for n bytes beyond bufp.
+
     void Grow(size_t n);
 
-    /**
-     * Returns the location of the first place in the bytes to be hex-escaped.
-     *
-     * @param bytes the starting memory address to start searching for
-     *        escapable character.
-     * @param n the maximum number of bytes to search.
-     * @return a pair whose first element represents a starting memory address
-     *         to be escaped up to the number of characters indicated by the
-     *         second element.  The first element may be 0 if nothing is
-     *         to be escaped.
-     */
+
+
+
+
+
+
+
+
+
+
+
     std::pair<const char*, size_t> FirstEscapeLoc(const char* bytes, size_t n);
 
-    /**
-     * @param start start of string to check for starting with an escape
-     *              sequence.
-     * @param end one byte past the last character in the string.
-     * @return The number of bytes in the escape sequence that the string
-     *         starts with.
-     */
+
+
+
+
+
+
+
     size_t StartsWithEscapeSequence(const char* start, const char* end);
 
     DescType type;
     DescStyle style;
 
-    void* base;    // beginning of buffer
-    size_t offset; // where we are in the buffer
-    size_t size;   // size of buffer in bytes
+    void* base;
+    size_t offset;
+    size_t size;
 
-    bool utf8;   // whether valid utf-8 sequences may pass through unescaped
-    bool escape; // escape unprintable characters in output?
+    bool utf8;
+    bool escape;
     bool is_short;
     bool want_quotes;
     bool want_determinism;
@@ -212,22 +212,22 @@ protected:
     int indent_level;
 
     using escape_set = std::set<std::string>;
-    escape_set escape_sequences; // additional sequences of chars to escape
+    escape_set escape_sequences;
 
-    File* f; // or the file we're using.
+    File* f;
 
     std::unordered_set<const Type*> encountered_types;
     std::unordered_set<const Val*> encountered_vals;
 };
 
-// Returns a string representation of an object's description.  Used for
-// debugging and error messages.
+
+
 class Obj;
 std::string obj_desc(const Obj* o);
 inline std::string obj_desc(const IntrusivePtr<Obj>& o) { return obj_desc(o.get()); }
 
-// Same as obj_desc(), but ensure it is short and don't include location info.
+
 std::string obj_desc_short(const Obj* o);
 inline std::string obj_desc_short(const IntrusivePtr<Obj>& o) { return obj_desc_short(o.get()); }
 
-} // namespace zeek
+}

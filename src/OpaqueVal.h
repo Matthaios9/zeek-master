@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -8,7 +8,7 @@
 
 #include <broker/expected.hh>
 #include <paraglob/paraglob.h>
-#include <sys/types.h> // for u_char
+#include <sys/types.h>
 #include <optional>
 
 #include "zeek/IntrusivePtr.h"
@@ -39,45 +39,45 @@ using OpaqueValPtr = IntrusivePtr<OpaqueVal>;
 class BloomFilterVal;
 using BloomFilterValPtr = IntrusivePtr<BloomFilterVal>;
 
-/**
- * Singleton that registers all available all available types of opaque
- * values. This facilitates their serialization into Broker values.
- */
+
+
+
+
 class OpaqueMgr {
 public:
     using Factory = OpaqueValPtr();
 
-    /**
-     * Return's a unique ID for the type of an opaque value.
-     * @param v opaque value to return type for; its class must have been
-     * registered with the manager, otherwise this method will abort
-     * execution.
-     *
-     * @return type ID, which can used with *Instantiate()* to create a
-     * new instance of the same type.
-     */
+
+
+
+
+
+
+
+
+
     const std::string& TypeID(const OpaqueVal* v) const;
 
-    /**
-     * Instantiates a new opaque value of a specific opaque type.
-     *
-     * @param id unique type ID for the class to instantiate; this will
-     * normally have been returned earlier by *TypeID()*.
-     *
-     * @return A freshly instantiated value of the OpaqueVal-derived
-     * classes that *id* specifies, with reference count at +1. If *id*
-     * is unknown, this will return null.
-     *
-     */
+
+
+
+
+
+
+
+
+
+
+
     OpaqueValPtr Instantiate(const std::string& id) const;
 
-    /** Returns the global manager singleton object. */
+
     static OpaqueMgr* mgr();
 
-    /**
-     * Internal helper class to register an OpaqueVal-derived classes
-     * with the manager.
-     */
+
+
+
+
     template<class T>
     class Register {
     public:
@@ -88,12 +88,12 @@ private:
     std::unordered_map<std::string, Factory*> _types;
 };
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage)
 
-/**
- * Macro to insert into an OpaqueVal-derived class's declaration. Overrides the "new" serialization methods
- * DoSerializeData and DoUnserializeData.
- */
+
+
+
+
+
 #define DECLARE_OPAQUE_VALUE_DATA(T)                                                                                   \
     friend class zeek::OpaqueMgr::Register<T>;                                                                         \
     friend zeek::IntrusivePtr<T> zeek::make_intrusive<T>();                                                            \
@@ -106,80 +106,80 @@ private:
 #define __OPAQUE_MERGE(a, b) a##b
 #define __OPAQUE_ID(x) __OPAQUE_MERGE(_opaque, x)
 
-/** Macro to insert into an OpaqueVal-derived class's implementation file. */
+
 #define IMPLEMENT_OPAQUE_VALUE(T) static zeek::OpaqueMgr::Register<T> __OPAQUE_ID(__LINE__)(#T);
 
-// NOLINTEND(cppcoreguidelines-macro-usage)
 
-/**
- * Base class for all opaque values. Opaque values are types that are managed
- * completely internally, with no further script-level operators provided
- * (other than bif functions). See OpaqueVal.h for derived classes.
- */
+
+
+
+
+
+
 class OpaqueVal : public Val {
 public:
     explicit OpaqueVal(OpaqueTypePtr t);
 
-    /**
-     * @copydoc Serialize
-     */
+
+
+
     std::optional<BrokerData> SerializeData() const;
 
-    /**
-     * @copydoc Unserialize
-     */
+
+
+
     static OpaqueValPtr UnserializeData(BrokerDataView data);
 
-    /**
-     * @copydoc Unserialize
-     */
+
+
+
     static OpaqueValPtr UnserializeData(BrokerListView data);
 
 protected:
     friend class Val;
     friend class OpaqueMgr;
 
-    /**
-     * Must be overridden to provide a serialized version of the derived
-     * class' state.
-     *
-     * @return the serialized data or an error if serialization
-     * isn't supported or failed.
-     */
+
+
+
+
+
+
+
     virtual std::optional<BrokerData> DoSerializeData() const;
 
-    /**
-     * Must be overridden to recreate the derived class' state from a
-     * serialization.
-     *
-     * @return true if successful.
-     */
+
+
+
+
+
+
     virtual bool DoUnserializeData(BrokerDataView data);
 
-    /**
-     * Internal helper for the serialization machinery. Automatically
-     * overridden by the `DECLARE_OPAQUE_VALUE` macro.
-     */
+
+
+
+
     virtual const char* OpaqueName() const = 0;
 
-    /**
-     * Provides an implementation of *Val::DoClone()* that leverages the
-     * serialization methods to deep-copy an instance. Derived classes
-     * may also override this with a more efficient custom clone
-     * implementation of their own.
-     */
+
+
+
+
+
+
     ValPtr DoClone(CloneState* state) override;
 
-    /**
-     * Helper function for derived class that need to record a type
-     * during serialization.
-     */
+
+
+
+
     static std::optional<BrokerData> SerializeType(const TypePtr& t);
 
-    /**
-     * Helper function for derived class that need to restore a type
-     * during unserialization. Returns the type at reference count +1.
-     */
+
+
+
+
     static TypePtr UnserializeType(BrokerDataView data);
 
     void ValDescribe(ODesc* d) const override;
@@ -214,7 +214,7 @@ protected:
     virtual StringValPtr DoGet();
 
 private:
-    // This flag exists because Get() can only be called once.
+
     bool valid;
 };
 
@@ -426,7 +426,7 @@ public:
     explicit BloomFilterVal(probabilistic::BloomFilter* bf);
     ~BloomFilterVal() override;
 
-    // Disable.
+
     BloomFilterVal(const BloomFilterVal&) = delete;
     BloomFilterVal& operator=(const BloomFilterVal&) = delete;
 
@@ -498,4 +498,4 @@ private:
     std::unique_ptr<paraglob::Paraglob> internal_paraglob;
 };
 
-} // namespace zeek
+}

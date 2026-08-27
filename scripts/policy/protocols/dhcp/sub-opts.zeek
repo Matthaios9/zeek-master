@@ -5,21 +5,21 @@ module DHCP;
 
 export {
 	redef record DHCP::Info += {
-		## Added by DHCP relay agents which terminate switched or
-		## permanent circuits.  It encodes an agent-local identifier
-		## of the circuit from which a DHCP client-to-server packet was
-		## received.  Typically it should represent a router or switch
-		## interface number.
+
+
+
+
+
 		circuit_id:      string &log &optional;
 
-		## A globally unique identifier added by relay agents to identify
-		## the remote host end of the circuit.
+
+
 		agent_remote_id: string &log &optional;
 
-		## The subscriber ID is a value independent of the physical
-		## network configuration so that a customer's DHCP configuration
-		## can be given to them correctly no matter where they are
-		## physically connected.
+
+
+
+
 		subscriber_id:   string &log &optional;
 	};
 }

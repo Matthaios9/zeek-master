@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/ScriptProfile.h"
 
@@ -33,9 +33,9 @@ void ScriptProfile::Report(FILE* f, bool with_traces) const {
     std::string l;
 
     if ( loc.FirstLine() == 0 )
-        // Rather than just formatting the no-location loc, we'd like
-        // a version that doesn't have a funky "line 0" in it, nor
-        // an embedded blank.
+
+
+
         l = "<no-location>";
     else
         l = util::fmt("%s:%d", loc.FileName(), loc.FirstLine());
@@ -203,7 +203,7 @@ void ScriptProfileMgr::EndInvocation() {
 
 std::unique_ptr<ScriptProfileMgr> spm;
 
-} // namespace detail
+}
 
 void activate_script_profiling(const char* fn, bool with_traces) {
     FILE* f;
@@ -224,4 +224,4 @@ void activate_script_profiling(const char* fn, bool with_traces) {
         detail::spm->EnableTraces();
 }
 
-} // namespace zeek
+}

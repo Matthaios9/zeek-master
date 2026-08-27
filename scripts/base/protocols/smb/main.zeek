@@ -10,13 +10,13 @@ export {
 		FILES_LOG
 	};
 
-	## Well-known ports for SMB.
+
 	const ports = { 139/tcp, 445/tcp } &redef;
 
 	global log_policy_files: Log::PolicyHook;
 	global log_policy_mapping: Log::PolicyHook;
 
-	## Abstracted actions for SMB file actions.
+
 	type Action: enum {
 		FILE_READ,
 		FILE_WRITE,
@@ -37,7 +37,7 @@ export {
 		PRINT_CLOSE,
 	};
 
-	## The file actions which are logged.
+
 	option logged_file_actions: set[Action] = {
 		FILE_OPEN,
 		FILE_RENAME,
@@ -47,140 +47,140 @@ export {
 		PRINT_CLOSE,
 	};
 
-	## Whether to reset a connection's SMB script state whenever a
-	## :zeek:see:`smb2_discarded_messages_state` event is raised.
-	##
-	## This setting protects from unbounded script state growth in
-	## environments with high capture loss or traffic anomalies.
+
+
+
+
+
 	option enable_clear_script_state = T;
 
-	## This record is for the smb_files.log
+
 	type FileInfo: record {
-		## Time when the file was first discovered.
+
 		ts				: time    &log &default=network_time();
-		## Unique ID of the connection the file was sent over.
+
 		uid				: string  &log;
-		## ID of the connection the file was sent over.
+
 		id				: conn_id &log;
-		## Unique ID of the file.
+
 		fuid			: string  &log &optional;
 
-		## Action this log record represents.
+
 		action			: Action  &log &optional;
-		## Path pulled from the tree this file was transferred to or from.
+
 		path			: string  &log &optional;
-		## Filename if one was seen.
+
 		name			: string  &log &optional;
-		## Total size of the file.
+
 		size			: count   &log &default=0;
-		## If the rename action was seen, this will be
-		## the file's previous name.
+
+
 		prev_name		: string  &log &optional;
-		## Last time this file was modified.
+
 		times			: SMB::MACTimes &log &optional;
 	};
 
-	## This record is for the smb_mapping.log
+
 	type TreeInfo: record {
-		## Time when the tree was mapped.
+
 		ts                  : time   &log &default=network_time();
-		## Unique ID of the connection the tree was mapped over.
+
 		uid                 : string  &log;
-		## ID of the connection the tree was mapped over.
+
 		id                  : conn_id &log;
 
-		## Name of the tree path.
+
 		path                : string &log &optional;
-		## The type of resource of the tree (disk share, printer share, named pipe, etc.).
+
 		service             : string &log &optional;
-		## File system of the tree.
+
 		native_file_system  : string &log &optional;
-		## If this is SMB2, a share type will be included.  For SMB1,
-		## the type of share will be deduced and included as well.
+
+
 		share_type          : string &log &default="DISK";
 	};
 
-	## This record is for the smb_cmd.log
+
 	type CmdInfo: record {
-		## Timestamp of the command request.
+
 		ts				: time &log &default=network_time();
-		## Unique ID of the connection the request was sent over.
+
 		uid				: string &log;
-		## ID of the connection the request was sent over.
+
 		id				: conn_id &log;
 
-		## The command sent by the client.
+
 		command			: string &log;
-		## The subcommand sent by the client, if present.
+
 		sub_command		: string &log &optional;
-		## Command argument sent by the client, if any.
+
 		argument		: string &log &optional;
 
-		## Server reply to the client's command.
+
 		status			: string &log &optional;
-		## Round trip time from the request to the response.
+
 		rtt				: interval &log &optional;
-		## Version of SMB for the command.
+
 		version			: string &log;
 
-		## Authenticated username, if available.
+
 		username		: string &log &optional;
 
-		## If this is related to a tree, this is the tree
-		## that was used for the current command.
+
+
 		tree			: string &log &optional;
-		## The type of tree (disk share, printer share, named pipe, etc.).
+
 		tree_service	: string &log &optional;
 
-		## If the command referenced a file, store it here.
+
 		referenced_file	: FileInfo &log &optional;
-		## If the command referenced a tree, store it here.
+
 		referenced_tree	: TreeInfo &optional;
 	};
 
-	## This record stores the SMB state of in-flight commands,
-	## the file and tree map of the connection.
+
+
 	type State: record {
-		## A reference to the current command.
+
 		current_cmd    : CmdInfo     &optional;
-		## A reference to the current file.
+
 		current_file   : FileInfo    &optional;
-		## A reference to the current tree.
+
 		current_tree   : TreeInfo    &optional;
 
-		## Indexed on MID to map responses to requests.
+
 		pending_cmds : table[count] of CmdInfo   &optional;
-		## File map to retrieve file information based on the file ID.
+
 		fid_map      : table[count] of FileInfo  &optional;
-		## Tree map to retrieve tree information based on the tree ID.
+
 		tid_map      : table[count] of TreeInfo  &optional;
-		## Pipe map to retrieve UUID based on the file ID of a pipe.
+
 		pipe_map     : table[count] of string    &optional;
 
-		## A set of recent files to avoid logging the same
-		## files over and over in the smb files log.
-		## This only applies to files seen in a single connection.
+
+
+
 		recent_files : set[string] &default=set() &read_expire=3min;
 	};
 
-	## Everything below here is used internally in the SMB scripts.
+
 
 	redef record connection += {
 		smb_state : State &optional;
 	};
 
-	## This is an internally used function.
+
 	const set_current_file: function(smb_state: State, file_id: count) &redef;
 
-	## This is an internally used function.
+
 	const write_file_log: function(state: State) &redef;
 }
 
 redef record FileInfo += {
-	## ID referencing this file.
+
 	fid  : count   &optional;
 
-	## UUID referencing this file if DCE/RPC.
+
 	uuid : string &optional;
 };
 
@@ -210,14 +210,14 @@ function write_file_log(state: State)
 	if ( f?$name &&
 	     f$action in logged_file_actions )
 		{
-		# Everything in this if statement is to avoid overlogging
-		# of the same data from a single connection based on recently
-		# seen files in the SMB::State $recent_files field.
+
+
+
 		if ( f?$times )
 			{
-			# For repeated reads of the same file, the access
-			# time can change, so make a copy of the various times
-			# and zero that one out.
+
+
+
 			local times = copy(f$times);
 			times$accessed_raw = 0;
 			times$accessed = double_to_time(0.0);
@@ -229,7 +229,7 @@ function write_file_log(state: State)
 			                       times);
 			if ( file_ident in state$recent_files )
 				{
-				# We've already seen this file and don't want to log it again.
+
 				return;
 				}
 			else

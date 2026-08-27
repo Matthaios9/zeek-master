@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/CPP/RuntimeOps.h"
 
@@ -29,8 +29,8 @@ bool str_in__CPP(const String* s1, const String* s2) {
 ListValPtr index_val__CPP(const vector<ValPtr>& indices) {
     auto ind_v = make_intrusive<ListVal>(TYPE_ANY);
 
-    // In the future, we could provide N versions of this that
-    // unroll the loop.
+
+
     for ( const auto& i : indices )
         ind_v->Append(i);
 
@@ -152,13 +152,13 @@ SubNetValPtr addr_mask__CPP(const IPAddr& a, uint32_t mask) {
     return make_intrusive<SubNetVal>(a, mask);
 }
 
-// Helper function for reporting invalidation of iterators.
+
 static void check_iterators__CPP(bool invalid) {
     if ( invalid )
         reporter->Warning("possible loop/iterator invalidation in compiled code");
 }
 
-// Template for aggregate assignments of the form "v1[v2] = v3".
+
 template<typename T>
 ValPtr assign_to_index__CPP(T v1, ValPtr v2, ValPtr v3) {
     bool iterators_invalidated = false;
@@ -293,4 +293,4 @@ ValPtr schedule__CPP(double dt, EventHandlerPtr event, vector<ValPtr> args) {
     return nullptr;
 }
 
-} // namespace zeek::detail
+}

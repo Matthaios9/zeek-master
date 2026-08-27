@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -12,16 +12,16 @@
 
 namespace zeek::input::reader::detail {
 
-/**
- * A reader that returns a file (or the output of a command) as a single
- * blob.
- */
+
+
+
+
 class Raw : public ReaderBackend {
 public:
     explicit Raw(ReaderFrontend* frontend);
     ~Raw() override;
 
-    // prohibit copying and moving
+
     Raw(const Raw&) = delete;
     Raw(Raw&&) = delete;
     Raw& operator=(const Raw&) = delete;
@@ -46,7 +46,7 @@ private:
     bool Execute();
     void WriteToStdin();
 
-    std::string fname; // Source with a potential "|" removed.
+    std::string fname;
     std::unique_ptr<FILE, int (*)(FILE*)> file;
     std::unique_ptr<FILE, int (*)(FILE*)> stderrfile;
     bool execute;
@@ -56,12 +56,12 @@ private:
     dev_t dev;
     off_t fsize;
 
-    // options set from the script-level.
-    std::string separator;
-    unsigned int sep_length; // length of the separator
 
-    size_t bufpos;  // Where in buf to read more data.
-    size_t bufsize; // Currently allocated size of buf.
+    std::string separator;
+    unsigned int sep_length;
+
+    size_t bufpos;
+    size_t bufsize;
     std::unique_ptr<char[]> buf;
     std::unique_ptr<char[]> outbuf;
 
@@ -82,8 +82,8 @@ private:
     int childpid;
 
 #ifdef _MSC_VER
-    void* child_process_handle_; // HANDLE, stored as void* to avoid windows.h in header
-    void* child_job_handle_;     // Job Object HANDLE for killing the entire process tree
+    void* child_process_handle_;
+    void* child_job_handle_;
 #endif
 
     enum IoChannels : uint8_t {
@@ -98,4 +98,4 @@ private:
     static const int block_size;
 };
 
-} // namespace zeek::input::reader::detail
+}

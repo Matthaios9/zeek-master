@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/Analyzer.h"
 
@@ -57,8 +57,8 @@ bool Analyzer::IsAnalyzer(const char* name) {
 
 const AnalyzerPtr& Analyzer::Lookup(uint64_t identifier) const { return dispatcher.Lookup(identifier); }
 
-// Find the next inner analyzer using identifier or via DetectProtocol(),
-// otherwise return the default analyzer.
+
+
 const AnalyzerPtr& Analyzer::FindInnerAnalyzer(size_t len, const uint8_t* data, Packet* packet,
                                                uint64_t identifier) const {
     const auto& identifier_based_analyzer = Lookup(identifier);
@@ -72,7 +72,7 @@ const AnalyzerPtr& Analyzer::FindInnerAnalyzer(size_t len, const uint8_t* data, 
     return default_analyzer;
 }
 
-// Find the next inner analyzer via DetectProtocol(), otherwise the default analyzer.
+
 const AnalyzerPtr& Analyzer::FindInnerAnalyzer(size_t len, const uint8_t* data, Packet* packet) const {
     const auto& detect_based_analyzer = DetectInnerAnalyzer(len, data, packet);
     if ( detect_based_analyzer )
@@ -81,7 +81,7 @@ const AnalyzerPtr& Analyzer::FindInnerAnalyzer(size_t len, const uint8_t* data, 
     return default_analyzer;
 }
 
-// Return an analyzer found via DetectProtocol() for the given data, else nil.
+
 const AnalyzerPtr& Analyzer::DetectInnerAnalyzer(size_t len, const uint8_t* data, Packet* packet) const {
     for ( const auto& child : analyzers_to_detect ) {
         if ( child->IsEnabled() && child->DetectProtocol(len, data, packet) ) {
@@ -164,7 +164,7 @@ void Analyzer::EnqueueAnalyzerConfirmationInfo(session::Session* session, const 
     event_mgr.Enqueue(analyzer_confirmation_info, arg_tag.AsVal(), info);
 }
 
-// NOLINTNEXTLINE(performance-unnecessary-value-param)
+
 void Analyzer::AnalyzerConfirmation(session::Session* session, zeek::Tag arg_tag) {
     const auto& effective_tag = arg_tag ? arg_tag : GetAnalyzerTag();
 
@@ -174,7 +174,7 @@ void Analyzer::AnalyzerConfirmation(session::Session* session, zeek::Tag arg_tag
     if ( session->AnalyzerState(effective_tag) == session::AnalyzerConfirmationState::CONFIRMED )
         return;
 
-    // If this session violated previously, we don't allow through a confirmation.
+
     if ( session->AnalyzerState(effective_tag) == session::AnalyzerConfirmationState::VIOLATED )
         return;
 
@@ -201,7 +201,7 @@ void Analyzer::EnqueueAnalyzerViolationInfo(session::Session* session, const cha
 }
 
 void Analyzer::AnalyzerViolation(const char* reason, session::Session* session, const char* data, int len,
-                                 zeek::Tag arg_tag) { // NOLINT(performance-unnecessary-value-param)
+                                 zeek::Tag arg_tag) {
     const auto& effective_tag = arg_tag ? arg_tag : GetAnalyzerTag();
 
     if ( ! session )
@@ -216,4 +216,4 @@ void Analyzer::AnalyzerViolation(const char* reason, session::Session* session, 
         EnqueueAnalyzerViolationInfo(session, reason, data, len, effective_tag);
 }
 
-} // namespace zeek::packet_analysis
+}

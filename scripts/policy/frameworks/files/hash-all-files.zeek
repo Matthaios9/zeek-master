@@ -1,4 +1,4 @@
-##! Perform MD5, SHA1, and SHA256 hashing on all files.
+
 
 @load base/files/hash
 

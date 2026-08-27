@@ -29,11 +29,11 @@ fi
 make update-traces
 cd ..
 
-# When running in CI for internal builds, try to clone the private testsuite.
-# Note that this script is also called when populating the public cache, so
-# the zeek-testing-private dir could have been created/populated already. This
-# requires the host running the build to have access to an SSH key that grants
-# access to the repo, and it will fail otherwise.
+
+
+
+
+
 if [[ -n "${ZEEK_CI}" && ${ZEEK_CI_INTERNAL_BUILD} == 1 && ! -d zeek-testing-private ]]; then
     banner "Trying to clone zeek-testing-private git repo"
     GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" git clone git@github.com:zeek/zeek-testing-private
@@ -42,7 +42,7 @@ fi
 set -e
 
 if [[ -d zeek-testing-private ]]; then
-    # Note that we never cache private pcaps.
+
     banner "Update zeek-testing-private traces"
     cd zeek-testing-private
     git checkout -q $(cat ../commit-hash.zeek-testing-private)

@@ -1,4 +1,4 @@
-##! Enables analysis and logging of SNMP datagrams.
+
 
 @load base/protocols/conn/removal-hooks
 
@@ -7,64 +7,64 @@ module SNMP;
 export {
 	redef enum Log::ID += { LOG };
 
-	## Well-known ports for SNMP.
+
 	const ports = { 161/udp, 162/udp } &redef;
 
 	global log_policy: Log::PolicyHook;
 
-	## Information tracked per SNMP session.
+
 	type Info: record {
-		## Timestamp of first packet belonging to the SNMP session.
+
 		ts: time &log;
-		## The unique ID for the connection.
+
 		uid: string &log;
-		## The connection's 5-tuple of addresses/ports (ports inherently
-		## include transport protocol information)
+
+
 		id: conn_id &log;
-		## The amount of time between the first packet belonging to
-		## the SNMP session and the latest one seen.
+
+
 		duration: interval &log &default=0secs;
-		## The version of SNMP being used.
+
 		version: string &log;
-		## v1/v2c: The community string (v1/v2c) of the first SNMP
-		## packet associated with the session. This is used as part of SNMP's (v1 and v2c)
-		## administrative/security framework.
-		## v3: The username of the first SNMP packet containing a non-zero username.
-		## See :rfc:`1157` (SNMP v1), :rfc:`1901` (SNMP v2), or :rfc:`2570` (SNMP v3).
+
+
+
+
+
 		community: string &log &optional;
 
-		## The number of variable bindings in GetRequest/GetNextRequest PDUs
-		## seen for the session.
+
+
 		get_requests:      count &log &default=0;
-		## The number of variable bindings in GetBulkRequest PDUs seen for
-		## the session.
+
+
 		get_bulk_requests: count &log &default=0;
-		## The number of variable bindings in GetResponse/Response PDUs seen
-		## for the session.
+
+
 		get_responses:     count &log &default=0;
-		## The number of variable bindings in SetRequest PDUs seen for
-		## the session.
+
+
 		set_requests: count &log &default=0;
 
-		## A system description of the SNMP responder endpoint.
+
 		display_string: string &log &optional;
-		## The time at which the SNMP responder endpoint claims it's been
-		## up since.
+
+
 		up_since: time &log &optional;
 	};
 
-	## Maps an SNMP version integer to a human readable string.
+
 	const version_map: table[count] of string = {
 		[0] = "1",
 		[1] = "2c",
 		[3] = "3",
 	} &redef &default="unknown";
 
-	## Event that can be handled to access the SNMP record as it is sent on
-	## to the logging framework.
+
+
 	global log_snmp: event(rec: Info);
 
-	## SNMP finalization hook.  Remaining SNMP info may get logged when it's called.
+
 	global finalize_snmp: Conn::RemovalHook;
 }
 
@@ -187,7 +187,3 @@ event snmp_encrypted_pdu(c: connection, is_orig: bool, header: SNMP::Header) &pr
 	{
 	init_state(c, header);
 	}
-
-#event snmp_unknown_header_version(c: connection, is_orig: bool, version: count) &priority=5
-#	{
-#	}

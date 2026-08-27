@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/storage/Backend.h"
 
@@ -30,7 +30,7 @@ OperationMetrics::OperationMetrics(const telemetry::CounterFamilyPtr& results_fa
       latency(latency_family->GetOrAdd(
           {{"operation", operation_type}, {"type", backend_type}, {"config", backend_config}})) {}
 
-} // namespace detail
+}
 
 RecordValPtr OperationResult::BuildVal() { return MakeVal(code, err_str, value); }
 
@@ -61,7 +61,7 @@ void ResultCallback::Timeout() {
 void ResultCallback::Complete(OperationResult res) {
     UpdateOperationMetrics(res.code);
 
-    // If this is a sync callback, there isn't a trigger to process. Store the result and bail.
+
     if ( IsSyncCallback() ) {
         result = std::move(res);
         return;
@@ -86,7 +86,7 @@ void ResultCallback::UpdateOperationMetrics(EnumValPtr c) {
         else if ( c != ReturnCode::IN_PROGRESS )
             operation_metrics->error->Inc();
 
-        // Store the latency between start and completion in milliseconds.
+
         operation_metrics->latency->Observe(util::current_time(true) - start_time);
     }
 }
@@ -104,8 +104,8 @@ void OpenResultCallback::Complete(OperationResult res) {
         backend->backend->EnqueueBackendOpened();
     }
 
-    // Set the result's value to the backend so that it ends up in the result getting either
-    // passed back to the trigger or the one stored for sync backends.
+
+
     res.value = backend;
 
     ResultCallback::Complete(std::move(res));
@@ -115,9 +115,9 @@ Backend::Backend(uint8_t modes, std::string_view tag_name) : modes(modes) {
     tag = storage_mgr->BackendMgr().GetComponentTag(std::string{tag_name});
     tag_str = zeek::obj_desc_short(tag.AsVal().get());
 
-    // The rest of the metrics are initialized after the backend opens, but this one has
-    // to be here because it's possible it gets used by the open callback before Open()
-    // fully returns.
+
+
+
     backends_opened_metric =
         telemetry_mgr->CounterInstance("zeek", "storage_backends_opened", {}, "Number of backends opened", "");
 }
@@ -145,8 +145,8 @@ OperationResult Backend::Open(OpenResultCallback* cb, RecordValPtr options, Type
     if ( ret.code == ReturnCode::SUCCESS )
         InitMetrics();
 
-    // Complete sync callbacks to make sure the metrics get initialized plus that the
-    // backend_opened event gets posted.
+
+
     if ( cb->IsSyncCallback() )
         CompleteCallback(cb, ret);
 
@@ -158,10 +158,10 @@ OperationResult Backend::Close(ResultCallback* cb) { return DoClose(cb); }
 OperationResult Backend::Put(ResultCallback* cb, ValPtr key, ValPtr value, bool overwrite, double expiration_time) {
     cb->Init(put_metrics.get());
 
-    // The intention for this method is to do some other heavy lifting in regard
-    // to backends that need to pass data through the manager instead of directly
-    // through the workers. For the first versions of the storage framework it
-    // just calls the backend itself directly.
+
+
+
+
     if ( ! same_type(key->GetType(), key_type) ) {
         auto ret = OperationResult{ReturnCode::KEY_TYPE_MISMATCH};
         CompleteCallback(cb, ret);
@@ -183,7 +183,7 @@ OperationResult Backend::Put(ResultCallback* cb, ValPtr key, ValPtr value, bool 
 OperationResult Backend::Get(ResultCallback* cb, ValPtr key) {
     cb->Init(get_metrics.get());
 
-    // See the note in Put().
+
     if ( ! same_type(key->GetType(), key_type) ) {
         auto ret = OperationResult{ReturnCode::KEY_TYPE_MISMATCH};
         CompleteCallback(cb, ret);
@@ -200,7 +200,7 @@ OperationResult Backend::Get(ResultCallback* cb, ValPtr key) {
 OperationResult Backend::Erase(ResultCallback* cb, ValPtr key) {
     cb->Init(erase_metrics.get());
 
-    // See the note in Put().
+
     if ( ! same_type(key->GetType(), key_type) ) {
         auto ret = OperationResult{ReturnCode::KEY_TYPE_MISMATCH};
         CompleteCallback(cb, ret);
@@ -280,20 +280,20 @@ zeek::OpaqueTypePtr detail::backend_opaque;
 IMPLEMENT_OPAQUE_VALUE(detail::BackendHandleVal)
 
 std::optional<BrokerData> detail::BackendHandleVal::DoSerializeData() const {
-    // Cannot serialize.
+
     return std::nullopt;
 }
 
 bool detail::BackendHandleVal::DoUnserializeData(BrokerDataView) {
-    // Cannot unserialize.
+
     return false;
 }
 
 namespace detail {
 
 zeek::expected<storage::detail::BackendHandleVal*, OperationResult> BackendHandleVal::CastFromAny(Val* handle) {
-    // Quick exit by checking the type tag. This should be faster than doing the dynamic
-    // cast below.
+
+
     if ( handle->GetType() != detail::backend_opaque )
         return zeek::unexpected<OperationResult>(
             OperationResult{ReturnCode::OPERATION_FAILED, "Invalid storage handle type"});
@@ -309,6 +309,6 @@ zeek::expected<storage::detail::BackendHandleVal*, OperationResult> BackendHandl
     return b;
 }
 
-} // namespace detail
+}
 
-} // namespace zeek::storage
+}

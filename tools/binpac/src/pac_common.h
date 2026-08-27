@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_common_h
 #define pac_common_h
@@ -18,9 +18,9 @@ extern vector<string> FLAGS_include_directories;
 extern string input_filename;
 extern int line_number;
 
-// Definition of class Object, which is the base class for all objects
-// representing language elements -- identifiers, types, expressions,
-// etc.
+
+
+
 
 class Object {
 public:
@@ -84,7 +84,7 @@ class Type;
 class TypeDecl;
 class WithInputField;
 
-// The ID of the current declaration.
+
 extern const ID* current_decl_id;
 
 using ActionParamList = vector<ActionParam*>;
@@ -104,11 +104,11 @@ using ParamList = vector<Param*>;
 using RecordFieldList = vector<RecordField*>;
 using StateVarList = vector<StateVar*>;
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage,modernize-loop-convert)
+
 #define foreach(i, ct, pc)                                                                                             \
     if ( pc )                                                                                                          \
         for ( ct::iterator i = (pc)->begin(); (i) != (pc)->end(); ++(i) )
-// NOLINTEND(cppcoreguidelines-macro-usage,modernize-loop-convert)
+
 
 template<typename T>
 constexpr void delete_list(T* container) {
@@ -118,7 +118,7 @@ constexpr void delete_list(T* container) {
     delete container;
 }
 
-// Constants
+
 constexpr char kComputeFrameLength[] = "compute_frame_length";
 constexpr char kFlowBufferClass[] = "FlowBuffer";
 constexpr char kFlowBufferVar[] = "flow_buffer";
@@ -132,4 +132,4 @@ constexpr char kParseFuncWithoutBuffer[] = "Parse";
 constexpr char kRefCountClass[] = "binpac::RefCount";
 constexpr char kTypeWithLengthClass[] = "binpac::TypeWithLength";
 
-#endif // pac_common_h
+#endif

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/input/readers/benchmark/Benchmark.h"
 
@@ -74,7 +74,7 @@ double Benchmark::CurrTime() {
     return static_cast<double>(tv.tv_sec) + (static_cast<double>(tv.tv_usec) / 1e6);
 }
 
-// read the entire file and send appropriate thingies back to InputMgr
+
 bool Benchmark::DoUpdate() {
     using std::chrono::microseconds;
 
@@ -85,7 +85,7 @@ bool Benchmark::DoUpdate() {
             field[j] = EntryToVal(Fields()[j]->type, Fields()[j]->subtype);
 
         if ( Info().mode == MODE_STREAM )
-            // do not do tracking, spread out elements over the second that we have...
+
             Put(field);
         else
             SendEntry(field);
@@ -115,10 +115,10 @@ bool Benchmark::DoUpdate() {
 threading::Value* Benchmark::EntryToVal(TypeTag type, TypeTag subtype) {
     auto* val = new threading::Value(type, subtype, true);
 
-    // basically construct something random from the fields that we want.
+
 
     switch ( type ) {
-        case TYPE_ENUM: assert(false); // no enums, please.
+        case TYPE_ENUM: assert(false);
 
         case TYPE_STRING: {
             std::string rnd = RandomString(10);
@@ -128,7 +128,7 @@ threading::Value* Benchmark::EntryToVal(TypeTag type, TypeTag subtype) {
         }
 
         case TYPE_BOOL:
-            val->val.int_val = 1; // we never lie.
+            val->val.int_val = 1;
             break;
 
         case TYPE_INT: val->val.int_val = random(); break;
@@ -154,12 +154,12 @@ threading::Value* Benchmark::EntryToVal(TypeTag type, TypeTag subtype) {
 
         case TYPE_TABLE:
         case TYPE_VECTOR:
-            // First - common initialization
-            // Then - initialization for table.
-            // Then - initialization for vector.
-            // Then - common stuff
+
+
+
+
             {
-                // how many entries do we have...
+
                 unsigned int length = random() / (RAND_MAX / 15);
 
                 threading::Value** lvals = new threading::Value*[length];
@@ -176,7 +176,7 @@ threading::Value* Benchmark::EntryToVal(TypeTag type, TypeTag subtype) {
                     assert(false);
 
                 if ( length == 0 )
-                    break; // empty
+                    break;
 
                 for ( unsigned int pos = 0; pos < length; pos++ ) {
                     threading::Value* newval = EntryToVal(subtype, TYPE_ENUM);
@@ -207,13 +207,13 @@ bool Benchmark::DoHeartbeat(double network_time, double current_time) {
 
     switch ( Info().mode ) {
         case MODE_MANUAL:
-            // yay, we do nothing :)
+
             break;
 
         case MODE_REREAD:
         case MODE_STREAM:
             if ( multiplication_factor != 1 || add != 0 ) {
-                // we have to document at what time we changed the factor to what value.
+
                 threading::Value** v = new threading::Value*[2];
                 v[0] = new threading::Value(TYPE_COUNT, true);
                 v[0]->val.uint_val = num_lines;
@@ -224,10 +224,10 @@ bool Benchmark::DoHeartbeat(double network_time, double current_time) {
             }
 
             if ( autospread != 0.0 )
-                // because executing this in every loop is apparently too expensive.
+
                 autospread_time = static_cast<int>(1000000.0 / (autospread * static_cast<double>(num_lines)));
 
-            Update(); // call update and not DoUpdate, because update actually checks disabled.
+            Update();
 
             SendEvent("HeartbeatDone", 0, nullptr);
             break;
@@ -238,4 +238,4 @@ bool Benchmark::DoHeartbeat(double network_time, double current_time) {
     return true;
 }
 
-} // namespace zeek::input::reader::detail
+}

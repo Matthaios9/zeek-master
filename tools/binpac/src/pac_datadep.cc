@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_datadep.h"
 
@@ -9,7 +9,7 @@
 DataDepElement::DataDepElement(DDE_Type type) : dde_type_(type) {}
 
 bool DataDepElement::Traverse(DataDepVisitor* visitor) {
-    // Avoid infinite loop
+
     if ( in_traversal )
         return true;
     if ( ! visitor->PreProcess(this) )
@@ -36,7 +36,7 @@ bool RequiresAnalyzerContext::PreProcess(DataDepElement* element) {
         default: break;
     }
 
-    // Continue traversal until we know the answer is 'yes'
+
     return ! requires_analyzer_context_;
 }
 
@@ -51,8 +51,8 @@ void RequiresAnalyzerContext::ProcessExpr(Expr* expr) {
 
 bool RequiresAnalyzerContext::compute(DataDepElement* element) {
     RequiresAnalyzerContext visitor;
-    // This result is intentionally ignored. We want to traverse, but always return
-    // the same result.
+
+
     std::ignore = element->Traverse(&visitor);
     return visitor.requires_analyzer_context_;
 }

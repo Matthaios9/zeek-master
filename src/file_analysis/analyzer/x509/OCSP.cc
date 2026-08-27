@@ -1,5 +1,5 @@
 
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/file_analysis/analyzer/x509/OCSP.h"
 
@@ -16,9 +16,9 @@
 #include "zeek/file_analysis/analyzer/x509/X509.h"
 #include "zeek/file_analysis/analyzer/x509/ocsp_events.bif.h"
 
-// helper function of sk_X509_value to avoid namespace problem
-// sk_X509_value(X,Y) = > SKM_sk_value(X509,X,Y)
-// X509 => file_analysis::X509
+
+
+
 X509* helper_sk_X509_value(const STACK_OF(X509) * certs, int i) { return sk_X509_value(certs, i); }
 
 namespace zeek::file_analysis::detail {
@@ -102,8 +102,8 @@ bool OCSP::DeliverStream(const u_char* data, uint64_t len) {
 
 bool OCSP::Undelivered(uint64_t offset, uint64_t len) { return false; }
 
-// we parse the entire OCSP response in EOF, because we just pass it on
-// to OpenSSL.
+
+
 bool OCSP::EndOfFile() {
     const unsigned char* ocsp_char = reinterpret_cast<const unsigned char*>(ocsp_data.data());
 
@@ -145,19 +145,19 @@ struct ASN1Seq {
     ASN1_SEQUENCE_ANY* decoded;
 };
 
-// Re-encode and then parse out ASN1 structures to get at what we need...
-/*-  BasicOCSPResponse       ::= SEQUENCE {
- *      tbsResponseData      ResponseData,
- *      signatureAlgorithm   AlgorithmIdentifier,
- *      signature            BIT STRING,
- *      certs                [0] EXPLICIT SEQUENCE OF Certificate OPTIONAL }
-typedef struct ocsp_basic_response_st {
-    OCSP_RESPDATA *tbsResponseData;
-    X509_ALGOR *signatureAlgorithm;
-    ASN1_BIT_STRING *signature;
-    STACK_OF(X509) *certs;
-} OCSP_BASICRESP;
-*/
+
+
+
+
+
+
+
+
+
+
+
+
+
 static StringValPtr parse_basic_resp_sig_alg(OCSP_BASICRESP* basic_resp, BIO* bio, char* buf, size_t buf_len) {
     int der_basic_resp_len = 0;
     unsigned char* der_basic_resp_dat = nullptr;
@@ -270,20 +270,20 @@ static ValPtr parse_basic_resp_data_version(OCSP_BASICRESP* basic_resp) {
         return val_mgr->Count(-1);
     }
 
-    /*-  ResponseData ::= SEQUENCE {
-     *      version              [0] EXPLICIT Version DEFAULT v1,
-     *      responderID              ResponderID,
-     *      producedAt               GeneralizedTime,
-     *      responses                SEQUENCE OF SingleResponse,
-     *      responseExtensions   [1] EXPLICIT Extensions OPTIONAL }
-     */
+
+
+
+
+
+
+
 
     auto constexpr version_idx = 0u;
     auto version_type = sk_ASN1_TYPE_value(dseq, version_idx);
 
     if ( ASN1_TYPE_get(version_type) != V_ASN1_INTEGER ) {
         OPENSSL_free(der_basic_resp_dat);
-        // Not present, use default value.
+
         return val_mgr->Count(0);
     }
 
@@ -318,7 +318,7 @@ static uint64_t parse_request_version(OCSP_REQUEST* req) {
 
     if ( ASN1_TYPE_get(version_type) != V_ASN1_INTEGER ) {
         OPENSSL_free(der_req_dat);
-        // Not present, use default value.
+
         return 0;
     }
 
@@ -328,13 +328,13 @@ static uint64_t parse_request_version(OCSP_REQUEST* req) {
 }
 
 void OCSP::ParseRequest(OCSP_REQUEST* req) {
-    char buf[OCSP_STRING_BUF_SIZE]; // we need a buffer for some of the openssl functions
+    char buf[OCSP_STRING_BUF_SIZE];
     memset(buf, 0, sizeof(buf));
 
     uint64_t version = 0;
 
     version = parse_request_version(req);
-    // TODO: try to parse out general name ?
+
 
     if ( ocsp_request )
         event_mgr.Enqueue(ocsp_request, GetFile()->ToVal(), val_mgr->Count(version));
@@ -360,7 +360,7 @@ void OCSP::ParseRequest(OCSP_REQUEST* req) {
 }
 
 void OCSP::ParseResponse(OCSP_RESPONSE* resp) {
-    // OCSP_RESPBYTES  *resp_bytes = resp->responseBytes;
+
     OCSP_BASICRESP* basic_resp = nullptr;
     OCSP_RESPDATA* resp_data = nullptr;
     OCSP_RESPID* resp_id = nullptr;
@@ -381,21 +381,21 @@ void OCSP::ParseResponse(OCSP_RESPONSE* resp) {
     if ( ocsp_response_status )
         event_mgr.Enqueue(ocsp_response_status, GetFile()->ToVal(), status_val);
 
-    // if (!resp_bytes)
-    //	{
-    //	Unref(status_val);
-    //	return;
-    //	}
+
+
+
+
+
 
     BIO* bio = BIO_new(BIO_s_mem());
-    // i2a_ASN1_OBJECT(bio, resp_bytes->responseType);
-    // int len = BIO_read(bio, buf, sizeof(buf));
-    // BIO_reset(bio);
+
+
+
 
     zeek::Args vl;
     vl.reserve(8);
 
-    // get the basic response
+
     basic_resp = OCSP_response_get1_basic(resp);
     if ( ! basic_resp )
         goto clean_up;
@@ -405,7 +405,7 @@ void OCSP::ParseResponse(OCSP_RESPONSE* resp) {
 
     vl.emplace_back(parse_basic_resp_data_version(basic_resp));
 
-    // responderID
+
     if ( OCSP_RESPID_bio(basic_resp, bio) ) {
         len = BIO_read(bio, buf, sizeof(buf));
         vl.emplace_back(make_intrusive<StringVal>(len, buf));
@@ -416,12 +416,12 @@ void OCSP::ParseResponse(OCSP_RESPONSE* resp) {
         vl.emplace_back(val_mgr->EmptyString());
     }
 
-    // producedAt
+
     produced_at = OCSP_resp_get0_produced_at(basic_resp);
 
     vl.emplace_back(make_intrusive<TimeVal>(GetTimeFromAsn1(produced_at, GetFile(), reporter)));
 
-    // responses
+
 
     resp_count = OCSP_resp_count(basic_resp);
 
@@ -435,7 +435,7 @@ void OCSP::ParseResponse(OCSP_RESPONSE* resp) {
         rvl.reserve(10);
         rvl.emplace_back(GetFile()->ToVal());
 
-        // cert id
+
         const OCSP_CERTID* cert_id = nullptr;
 
         cert_id = OCSP_SINGLERESP_get0_id(single_resp);
@@ -443,7 +443,7 @@ void OCSP::ParseResponse(OCSP_RESPONSE* resp) {
         ocsp_add_cert_id(cert_id, &rvl, bio);
         BIO_reset(bio);
 
-        // certStatus
+
         int status = V_OCSP_CERTSTATUS_UNKNOWN;
         int reason = OCSP_REVOKED_STATUS_NOSTATUS;
         ASN1_GENERALIZEDTIME* revoke_time = nullptr;
@@ -457,7 +457,7 @@ void OCSP::ParseResponse(OCSP_RESPONSE* resp) {
         const char* cert_status_str = OCSP_cert_status_str(status);
         rvl.emplace_back(make_intrusive<StringVal>(strlen(cert_status_str), cert_status_str));
 
-        // revocation time and reason if revoked
+
         if ( status == V_OCSP_CERTSTATUS_REVOKED ) {
             rvl.emplace_back(make_intrusive<TimeVal>(GetTimeFromAsn1(revoke_time, GetFile(), reporter)));
 
@@ -465,11 +465,11 @@ void OCSP::ParseResponse(OCSP_RESPONSE* resp) {
                 const char* revoke_reason = OCSP_crl_reason_str(reason);
 
 #if OPENSSL_VERSION_NUMBER < 0x30200000L
-                // OpenSSL 3.2.0 and later return the right strings for
-                // OCSP_REVOKED_STATUS_PRIVILEGEWITHDRAWN (9) and
-                // OCSP_REVOKED_STATUS_AACOMPROMISE (10).
-                //
-                // For versions older than that, fix it up by hand.
+
+
+
+
+
                 if ( (reason == 9 || reason == 10) && zeek::util::streq(revoke_reason, "(UNKNOWN)") ) {
                     revoke_reason = reason == 9 ? "privilegeWithdrawn" : "aACompromise";
                 }
@@ -509,10 +509,10 @@ void OCSP::ParseResponse(OCSP_RESPONSE* resp) {
 
     vl.emplace_back(parse_basic_resp_sig_alg(basic_resp, bio, buf, sizeof(buf)));
 
-    // i2a_ASN1_OBJECT(bio, basic_resp->signature);
-    // len = BIO_read(bio, buf, sizeof(buf));
-    // ocsp_resp_record->Assign(7, make_intrusive<StringVal>(len, buf));
-    // BIO_reset(bio);
+
+
+
+
 
     certs_vector = new VectorVal(id::find_type<VectorType>("x509_opaque_vector"));
     vl.emplace_back(AdoptRef{}, certs_vector);
@@ -523,7 +523,7 @@ void OCSP::ParseResponse(OCSP_RESPONSE* resp) {
         int num_certs = sk_X509_num(certs);
         for ( int i = 0; i < num_certs; i++ ) {
             ::X509* this_cert = X509_dup(helper_sk_X509_value(certs, i));
-            //::X509 *this_cert = X509_dup(sk_X509_value(certs, i));
+
             if ( this_cert )
                 certs_vector->Assign(i, make_intrusive<X509Val>(this_cert));
             else
@@ -534,7 +534,7 @@ void OCSP::ParseResponse(OCSP_RESPONSE* resp) {
     if ( ocsp_response_bytes )
         event_mgr.Enqueue(ocsp_response_bytes, std::move(vl));
 
-    // ok, now that we are done with the actual certificate - let's parse extensions :)
+
     num_ext = OCSP_BASICRESP_get_ext_count(basic_resp);
     for ( int k = 0; k < num_ext; ++k ) {
         auto* ex = OCSP_BASICRESP_get_ext(basic_resp, k);
@@ -551,9 +551,9 @@ clean_up:
 }
 
 void OCSP::ParseExtensionsSpecific(openssl_x509_ext_t* ex, bool global, openssl_asn1_obj_t* ext_asn, const char* oid) {
-    // In OpenSSL 1.0.2+, we can get the extension by using NID_ct_cert_scts.
-    // In OpenSSL <= 1.0.1, this is not yet defined yet, so we have to manually
-    // look it up by performing a string comparison on the oid.
+
+
+
 #ifdef NID_ct_cert_scts
     if ( OBJ_obj2nid(ext_asn) == NID_ct_cert_scts )
 #else
@@ -562,4 +562,4 @@ void OCSP::ParseExtensionsSpecific(openssl_x509_ext_t* ex, bool global, openssl_
         ParseSignedCertificateTimestamps(ex);
 }
 
-} // namespace zeek::file_analysis::detail
+}

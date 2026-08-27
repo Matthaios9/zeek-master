@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -17,48 +17,48 @@ class TCP_Endpoint;
 class TCP_Reassembler;
 class TCP_ApplicationAnalyzer;
 
-/**
- * An abstract base class for analyzers for a protocol running on top
- * of TCP.
- */
+
+
+
+
 class TCP_ApplicationAnalyzer : public analyzer::Analyzer {
 public:
     TCP_ApplicationAnalyzer(const char* name, Connection* conn) : Analyzer(name, conn), tcp(nullptr) {}
 
     explicit TCP_ApplicationAnalyzer(Connection* conn) : Analyzer(conn), tcp(nullptr) {}
 
-    // This may be nil if we are not directly associated with a TCP
-    // analyzer (e.g., we're part of a tunnel decapsulation pipeline).
+
+
     packet_analysis::TCP::TCPSessionAdapter* TCP();
 
     void SetTCP(packet_analysis::TCP::TCPSessionAdapter* arg_tcp) { tcp = arg_tcp; }
 
-    // The given endpoint's data delivery is complete.
+
     virtual void EndpointEOF(bool is_orig);
 
-    // Called whenever an end enters TCP_ENDPOINT_CLOSED or
-    // TCP_ENDPOINT_RESET.  If gen_event is true and the connection
-    // is now fully closed, a connection_finished event will be
-    // generated; otherwise not.
+
+
+
+
     virtual void ConnectionClosed(analyzer::tcp::TCP_Endpoint* endpoint, analyzer::tcp::TCP_Endpoint* peer,
                                   bool gen_event);
     virtual void ConnectionFinished(bool half_finished);
     virtual void ConnectionReset();
 
-    // Called whenever a RST packet is seen - sometimes the invocation
-    // of ConnectionReset is delayed.
+
+
     virtual void PacketWithRST();
 
     void DeliverPacket(int len, const u_char* data, bool orig, uint64_t seq, const IP_Hdr* ip, int caplen) override;
     void Init() override;
 
-    // This suppresses violations if the TCP connection wasn't
-    // fully established.
+
+
     void AnalyzerViolation(const char* reason, const char* data = nullptr, int len = 0,
                            zeek::Tag tag = zeek::Tag()) override;
 
-    // "name" and "val" both now belong to this object, which needs to
-    //  delete them when done with them.
+
+
     virtual void SetEnv(bool orig, char* name, char* val);
 
 private:
@@ -70,7 +70,7 @@ public:
     TCP_SupportAnalyzer(const char* name, Connection* conn, bool arg_orig)
         : analyzer::SupportAnalyzer(name, conn, arg_orig) {}
 
-    // These are passed on from TCPSessionAdapter.
+
     virtual void EndpointEOF(bool is_orig) {}
     virtual void ConnectionClosed(TCP_Endpoint* endpoint, TCP_Endpoint* peer, bool gen_event) {}
     virtual void ConnectionFinished(bool half_finished) {}
@@ -117,4 +117,4 @@ protected:
     TCPStats_Endpoint* resp_stats = nullptr;
 };
 
-} // namespace zeek::analyzer::tcp
+}

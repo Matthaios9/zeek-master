@@ -1,5 +1,5 @@
-# ##############################################################################
-# Fuzzing targets
+
+
 
 if (NOT ZEEK_ENABLE_FUZZERS)
     return()
@@ -7,13 +7,13 @@ endif ()
 
 if (NOT DEFINED ZEEK_FUZZING_ENGINE AND DEFINED ENV{LIB_FUZZING_ENGINE})
     if ("$ENV{LIB_FUZZING_ENGINE}" STREQUAL "")
-        # Empty LIB_FUZZING_ENGINE, assume libFuzzer
+
         set(ZEEK_FUZZING_ENGINE "-fsanitize=fuzzer" CACHE INTERNAL "" FORCE)
     else ()
         string(SUBSTRING "$ENV{LIB_FUZZING_ENGINE}" 0 1 _first_char)
 
         if ("${_first_char}" STREQUAL "-" OR EXISTS "$ENV{LIB_FUZZING_ENGINE}")
-            # Looks like a linker flag or valid file, use it
+
             set(ZEEK_FUZZING_ENGINE "$ENV{LIB_FUZZING_ENGINE}" CACHE INTERNAL "" FORCE)
         else ()
             message(WARNING "$ENV{LIB_FUZZING_ENGINE} does not exist, assume libFuzzer")
@@ -22,11 +22,11 @@ if (NOT DEFINED ZEEK_FUZZING_ENGINE AND DEFINED ENV{LIB_FUZZING_ENGINE})
     endif ()
 endif ()
 
-# The bind library is handled a bit hack-ishly since it defaults to linking it
-# as static library by default on Linux, but at least on one common distro, that
-# static library wasn't compiled with -fPIC and so not usable in the shared
-# library we're trying to build.  So instead, the fuzzer executable, not the
-# shared lib, links it.
+
+
+
+
+
 string(REGEX MATCH ".*\\.a$" _have_static_bind_lib "${BIND_LIBRARY}")
 
 macro (SETUP_FUZZ_TARGET _fuzz_target _fuzz_source)
@@ -118,29 +118,13 @@ add_generic_analyzer_fuzz_target(radius udp)
 add_generic_analyzer_fuzz_target(rdp)
 add_generic_analyzer_fuzz_target(rdpeudp udp)
 add_generic_analyzer_fuzz_target(rfb)
-# The rpc based analyzer work with udp and tcp.
-add_generic_analyzer_fuzz_target(mount) # rpc
-add_generic_analyzer_fuzz_target(nfs) # rpc
-add_generic_analyzer_fuzz_target(portmapper) # rpc
+
+add_generic_analyzer_fuzz_target(mount)
+add_generic_analyzer_fuzz_target(nfs)
+add_generic_analyzer_fuzz_target(portmapper)
 add_generic_analyzer_fuzz_target(sip udp)
 add_generic_analyzer_fuzz_target(smb)
 add_generic_analyzer_fuzz_target(snmp udp)
 add_generic_analyzer_fuzz_target(ssh)
 add_generic_analyzer_fuzz_target(ssl)
 add_generic_analyzer_fuzz_target(syslog udp)
-
-# add_generic_analyzer_fuzz_target(finger)  # no pcap files
-# add_generic_analyzer_fuzz_target(gssapi)  # only samples are embedded in smb
-# add_generic_analyzer_fuzz_target(ident)   # no pcap files
-# add_generic_analyzer_fuzz_target(krb)     # should these just be handled by
-# smb? add_generic_analyzer_fuzz_target(krb_tcp) # should these just be handled
-# by smb? add_generic_analyzer_fuzz_target(rsh)     # login - no pcap files
-# add_generic_analyzer_fuzz_target(rlogin)  # login - no pcap files
-# add_generic_analyzer_fuzz_target(telnet)  # login - no pcap files
-# add_generic_analyzer_fuzz_target(netbios) # no pcap files
-# add_generic_analyzer_fuzz_target(ntlm)    # only samples are embedded in
-# dce-rpc or smb add_generic_analyzer_fuzz_target(xdr)     # rpc - no pcap files
-# add_generic_analyzer_fuzz_target(sip_tcp) # unnecessary?
-# add_generic_analyzer_fuzz_target(socks)   # can this one be tested by adding
-# SOCKS pkts to the HTTP corpus? add_generic_analyzer_fuzz_target(xmpp)    # no
-# pcap files

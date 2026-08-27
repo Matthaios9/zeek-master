@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/Manager.h"
 
@@ -23,7 +23,7 @@ Manager::~Manager() {
 }
 
 void Manager::InitPostScript(const std::string& unprocessed_output_file) {
-    // Instantiate objects for all available analyzers
+
     for ( const auto& analyzerComponent : GetComponents() ) {
         if ( AnalyzerPtr newAnalyzer = InstantiateAnalyzer(analyzerComponent->Tag()) ) {
             newAnalyzer->SetEnabled(analyzerComponent->Enabled());
@@ -31,7 +31,7 @@ void Manager::InitPostScript(const std::string& unprocessed_output_file) {
         }
     }
 
-    // Initialize all analyzers
+
     for ( auto& [name, analyzer] : analyzers )
         analyzer->Initialize();
 
@@ -49,7 +49,7 @@ void Manager::InitPostScript(const std::string& unprocessed_output_file) {
     unknown_first_bytes_count = id::find_val("UnknownProtocol::first_bytes_count")->AsCount();
 
     if ( ! unprocessed_output_file.empty() )
-        // This gets automatically cleaned up by iosource_mgr. No need to delete it locally.
+
         unprocessed_dumper = iosource_mgr->OpenPktDumper(unprocessed_output_file, true);
 }
 
@@ -114,7 +114,7 @@ void Manager::ProcessPacket(Packet* packet) {
         dumped_packet = true;
     }
 
-    // Start packet analysis
+
     analyzer_stack.clear();
     root_analyzer->ForwardPacket(packet->cap_len, packet->data, packet, packet->link_type);
 
@@ -133,7 +133,7 @@ void Manager::ProcessPacket(Packet* packet) {
     if ( raw_packet )
         event_mgr.Enqueue(raw_packet, packet->ToRawPktHdrVal());
 
-    // Check whether packet should be recorded based on session analysis
+
     if ( packet->dump_packet && ! dumped_packet )
         DumpPacket(packet, packet->dump_size);
 }
@@ -193,8 +193,8 @@ void Manager::DumpPacket(const Packet* pkt, int len) {
 
 class UnknownProtocolTimer final : public zeek::detail::Timer {
 public:
-    // Represents a combination of an analyzer name and protocol identifier, where the identifier
-    // was reported as unknown by the analyzer.
+
+
     using UnknownProtocolPair = std::pair<std::string, uint32_t>;
 
     UnknownProtocolTimer(double t, UnknownProtocolPair p, double timeout)

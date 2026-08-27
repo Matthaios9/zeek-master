@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -10,10 +10,10 @@
 
 namespace zeek::telemetry {
 
-/**
- * Manages a collection (family) of metrics. All members of the family share
- * the same prefix (namespace), name, and label dimensions.
- */
+
+
+
+
 class MetricFamily {
 public:
     virtual ~MetricFamily() = default;
@@ -33,4 +33,4 @@ protected:
     std::vector<std::string> label_names;
 };
 
-} // namespace zeek::telemetry
+}

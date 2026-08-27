@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
-//
-// Log writer for SQLITE logs.
+
+
+
 
 #pragma once
 
@@ -31,7 +31,7 @@ private:
     int AddParams(threading::Value* val, int pos);
     std::string GetTableType(int, int);
 
-    const threading::Field* const* fields = nullptr; // raw mapping
+    const threading::Field* const* fields = nullptr;
     unsigned int num_fields = 0;
 
     sqlite3* db = nullptr;
@@ -47,4 +47,4 @@ private:
     threading::formatter::Ascii* io;
 };
 
-} // namespace zeek::logging::writer::detail
+}

@@ -1,11 +1,11 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_action_h
 #define pac_action_h
 
 #include <cstdint>
 
-// Classes representing analyzer actions.
+
 
 #include "pac_analyzer.h"
 #include "pac_common.h"
@@ -23,11 +23,11 @@ public:
     AnalyzerDecl* analyzer() const { return analyzer_; }
     string action_function() const;
 
-    // Generate function prototype and code for the action
+
     void GenCode(Output* out_h, Output* out_cc, AnalyzerDecl* decl);
 
-    // Install the hook at the corresponding data type parsing
-    // function to invoke the action.
+
+
     void InstallHook(AnalyzerDecl* analyzer);
 
 private:
@@ -67,4 +67,4 @@ protected:
     const ID *type_id_, *field_id_;
 };
 
-#endif // pac_action_h
+#endif

@@ -1,4 +1,4 @@
-##! WebSocket constants.
+
 
 module WebSocket;
 

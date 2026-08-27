@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/logging/writers/none/None.h"
 
@@ -16,7 +16,7 @@ bool None::DoInit(const WriterInfo& info, int num_fields, const threading::Field
         std::cout << "  rotation_interval=" << info.rotation_interval << "\n";
         std::cout << "  rotation_base=" << info.rotation_base << "\n";
 
-        // Output the config sorted by keys.
+
 
         std::vector<std::pair<std::string, std::string>> keys;
 
@@ -49,4 +49,4 @@ bool None::DoRotate(const char* rotated_path, double open, double close, bool te
     return true;
 }
 
-} // namespace zeek::logging::writer::detail
+}

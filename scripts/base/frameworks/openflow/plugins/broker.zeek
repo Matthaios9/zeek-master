@@ -1,4 +1,4 @@
-##! OpenFlow plugin for interfacing to controllers via Broker.
+
 
 @load base/frameworks/openflow
 @load base/frameworks/broker
@@ -10,27 +10,27 @@ export {
 		BROKER,
 	};
 
-	## Broker controller constructor.
-	##
-	## host: Controller ip.
-	##
-	## host_port: Controller listen port.
-	##
-	## topic: Broker topic to send messages to.
-	##
-	## dpid: OpenFlow switch datapath id.
-	##
-	## Returns: OpenFlow::Controller record.
+
+
+
+
+
+
+
+
+
+
+
 	global broker_new: function(name: string, host: addr, host_port: port, topic: string, dpid: count): OpenFlow::Controller;
 
 	redef record ControllerState += {
-		## Controller ip.
+
 		broker_host: addr &optional;
-		## Controller listen port.
+
 		broker_port: port &optional;
-		## OpenFlow switch datapath id.
+
 		broker_dpid: count &optional;
-		## Topic to send events for this controller to.
+
 		broker_topic: string &optional;
 	};
 
@@ -61,7 +61,7 @@ function broker_flow_clear_fun(state: OpenFlow::ControllerState): bool
 
 function broker_init(state: OpenFlow::ControllerState)
 	{
-	Broker::subscribe(state$broker_topic); # openflow success and failure events are directly sent back via the other plugin via broker.
+	Broker::subscribe(state$broker_topic);
 	Broker::peer(cat(state$broker_host), state$broker_port);
 	}
 
@@ -70,7 +70,7 @@ event Broker::peer_added(endpoint: Broker::EndpointInfo, msg: string)
 	local peer_address = cat(endpoint$network$address);
 	local peer_port = endpoint$network$bound_port;
 	if ( [peer_port, peer_address] !in broker_peers )
-		# ok, this one was none of ours...
+
 		return;
 
 	local p = broker_peers[peer_port, peer_address];
@@ -78,7 +78,7 @@ event Broker::peer_added(endpoint: Broker::EndpointInfo, msg: string)
 	delete broker_peers[peer_port, peer_address];
 	}
 
-# broker controller constructor
+
 function broker_new(name: string, host: addr, host_port: port, topic: string, dpid: count): OpenFlow::Controller
 	{
 	local c = OpenFlow::Controller($state=OpenFlow::ControllerState($broker_host=host, $broker_port=host_port, $broker_dpid=dpid, $broker_topic=topic),

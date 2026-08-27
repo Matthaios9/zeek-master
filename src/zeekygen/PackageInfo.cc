@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/zeekygen/PackageInfo.h"
 
@@ -54,4 +54,4 @@ time_t PackageInfo::DoGetModificationTime() const {
     return get_mtime(readme_file);
 }
 
-} // namespace zeek::zeekygen::detail
+}

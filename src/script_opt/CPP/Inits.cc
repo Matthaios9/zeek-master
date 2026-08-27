@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/module_util.h"
 #include "zeek/script_opt/CPP/Compile.h"
@@ -33,14 +33,14 @@ void CPPCompile::GenInitExpr(const std::shared_ptr<CallExprInitInfo>& ce_init) {
     const auto& ename = ce_init->Name();
     const auto& wc = ce_init->WrapperClass();
 
-    // First, create a CPPFunc that we can compile to compute 'e'.
+
     auto name = string("wrapper_") + ename;
 
-    // Forward declaration of the function that computes 'e'.
+
     Emit("static %s %s(Frame* f__CPP);", FullTypeName(t), name);
 
-    // Create the Func subclass that can be used in a CallExpr to
-    // evaluate 'e'.
+
+
     Emit("class %s final : public CPPFunc", wc);
     StartBlock();
 
@@ -66,7 +66,7 @@ void CPPCompile::GenInitExpr(const std::shared_ptr<CallExprInitInfo>& ce_init) {
     EndBlock();
     EndBlock(true);
 
-    // Now the implementation of computing 'e'.
+
     Emit("static %s %s(Frame* f__CPP)", FullTypeName(t), name);
     StartBlock();
 
@@ -84,7 +84,7 @@ bool CPPCompile::IsSimpleInitExpr(const ExprPtr& e) {
         case EXPR_ARITH_COERCE:
             return e->GetType()->Tag() == TYPE_INT && (e->GetOp1()->IsZero() || e->GetOp1()->IsOne());
 
-        case EXPR_RECORD_COERCE: { // look for coercion of empty record
+        case EXPR_RECORD_COERCE: {
             auto op = e->GetOp1();
 
             if ( op->Tag() != EXPR_RECORD_CONSTRUCTOR )
@@ -116,9 +116,9 @@ void CPPCompile::InitializeFieldMappings() {
         string attrs_arg = "DO_NOT_CONSTRUCT_VALUE_MARKER";
 
         if ( standalone && tda && ! tda->GetAttrs().empty() ) {
-            // We can assess whether this field is one we need to generate
-            // because if it is, it will have an &optional attribute that
-            // is local to one of the compiled source files.
+
+
+
             if ( obj_matches_opt_files(tda) == AnalyzeDecision::SHOULD ) {
                 type_arg = Fmt(TypeOffset(td->type));
                 attrs_arg = Fmt(AttributesOffset(tda));
@@ -207,8 +207,8 @@ void CPPCompile::InitializeGlobal(const IDPtr& g) {
             Emit(GenExpr(*init, GEN_NATIVE, true) + ";");
 
         else {
-            // This branch occurs for += or -= initializations that
-            // use associated functions.
+
+
             string ics;
             if ( *ic == INIT_EXTRA )
                 ics = "INIT_EXTRA";
@@ -244,7 +244,7 @@ void CPPCompile::GenInitHook() {
     Emit("return 0;");
     EndBlock();
 
-    // Trigger the activation of the hook at run-time.
+
     NL();
     Emit("static int dummy = hook_in_init();\n");
 }
@@ -262,13 +262,13 @@ void CPPCompile::GenStandaloneActivation() {
         Emit("add_module(\"%s\");", m);
     NL();
 
-    // For events and hooks, we need to add each compiled body *unless*
-    // it's already there (which could be the case if the standalone
-    // code wasn't run standalone but instead with the original scripts).
-    // For events, we also register them in order to activate the
-    // associated scripts.
 
-    // First, build up a list of per-hook/event handler bodies.
+
+
+
+
+
+
     unordered_map<const Func*, vector<p_hash_type>> func_bodies;
 
     for ( const auto& func : funcs ) {
@@ -280,7 +280,7 @@ void CPPCompile::GenStandaloneActivation() {
         auto bname = Canonicalize(fname) + "_zf";
 
         if ( ! compiled_func_to_zeek_func.contains(bname) )
-            // We didn't wind up compiling it.
+
             continue;
 
         auto bi = body_info.find(bname);
@@ -333,4 +333,4 @@ void CPPCompile::GenLoad() {
     printf("global init_CPP_%llu = load_CPP(%llu);\n", total_hash, total_hash);
 }
 
-} // namespace zeek::detail
+}

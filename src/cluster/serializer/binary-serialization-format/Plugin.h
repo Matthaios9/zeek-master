@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -11,4 +11,4 @@ public:
     zeek::plugin::Configuration Configure() override;
 };
 
-} // namespace zeek::plugin::Zeek_Binary_Serializer
+}

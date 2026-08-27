@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef binpac_exception_h
 #define binpac_exception_h
@@ -14,7 +14,7 @@ public:
     Exception(const char* m = nullptr) : msg_("binpac exception: ") {
         if ( m )
             append(m);
-        // abort();
+
     }
 
     void append(std::string_view m) { msg_ += m; }
@@ -100,6 +100,6 @@ public:
     ExceptionFlowBufferAlloc(const char* reason) { append(binpac_fmt("flowbuffer allocation failed: %s", reason)); }
 };
 
-} // namespace binpac
+}
 
-#endif // binpac_exception_h
+#endif

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/protocol/ip/conn_key/vlan_fivetuple/Factory.h"
 
@@ -18,21 +18,21 @@ inline constexpr uint32_t vlan_unset_val = 0xFF000000;
 
 class IPVlanConnKey : public zeek::IPBasedConnKey {
 public:
-    /**
-     * Constructor.
-     *
-     * Fill any holes in the key struct as we use the full tuple as a key.
-     */
+
+
+
+
+
     IPVlanConnKey() { memset(static_cast<void*>(&key), 0, sizeof(key)); }
 
-    /**
-     * @copydoc
-     */
+
+
+
     detail::PackedConnTuple& PackedTuple() override { return key.tuple; }
 
-    /**
-     * @copydoc
-     */
+
+
+
     const detail::PackedConnTuple& PackedTuple() const override { return key.tuple; }
 
 protected:
@@ -43,7 +43,7 @@ protected:
     void DoPopulateConnIdVal(RecordVal& conn_id, RecordVal& ctx) override {
         IPBasedConnKey::DoPopulateConnIdVal(conn_id, ctx);
 
-        // Nothing to do if we have no VLAN tags at all.
+
         if ( key.vlan == vlan_unset_val && key.inner_vlan == vlan_unset_val )
             return;
 
@@ -90,8 +90,8 @@ private:
 
     struct {
         struct detail::PackedConnTuple tuple;
-        // Add 802.1Q vlan tags to connection tuples. The tag representation
-        // here is as in the Packet class's VlanTag. 0xFF000000 indicates absence.
+
+
         uint32_t vlan;
         uint32_t inner_vlan;
     } __attribute__((packed, aligned)) key;
@@ -127,4 +127,4 @@ zeek::expected<zeek::ConnKeyPtr, std::string> Factory::DoConnKeyFromVal(const ze
     return ck;
 }
 
-} // namespace zeek::conn_key::vlan_fivetuple
+}

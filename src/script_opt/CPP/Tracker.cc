@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/CPP/Tracker.h"
 
@@ -23,7 +23,7 @@ void CPPTracker<T>::AddKey(IntrusivePtr<T> key, p_hash_type h) {
         reps[h] = key.get();
     }
 
-    ASSERT(h != 0); // check for hash botches
+    ASSERT(h != 0);
 
     map[key.get()] = h;
 }
@@ -52,9 +52,9 @@ string CPPTracker<T>::KeyName(const T* key) {
     return full_name;
 }
 
-// Instantiate the templates we'll need.
+
 template class CPPTracker<Type>;
 template class CPPTracker<Attributes>;
 template class CPPTracker<Expr>;
 
-} // namespace zeek::detail
+}

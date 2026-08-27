@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/zeekygen/ScriptInfo.h"
 
@@ -295,16 +295,16 @@ void ScriptInfo::DoInitPostScript() {
         }
 
         if ( id->GetType()->Tag() == TYPE_ENUM )
-            // Enums are always referenced/documented from the type's
-            // documentation.
+
+
             continue;
 
         DBG_LOG(DBG_ZEEKYGEN, "Filter id '%s' in '%s' as a state variable", id->Name(), name.c_str());
         state_vars.push_back(info);
     }
 
-    // The following enum types are automatically created internally in Zeek,
-    // so just manually associating them with scripts for now.
+
+
     if ( name == "base/frameworks/input/main.zeek" ) {
         const auto& id = zeek::detail::global_scope()->Find("Input::Reader");
         types.push_back(new IdentifierInfo(id, this));
@@ -375,7 +375,7 @@ string ScriptInfo::DoReStructuredText(bool roles_only) const {
             string doc = *it;
 
             if ( ! path.empty() && util::is_dir(path.c_str()) )
-                // Reference the package.
+
                 doc += "/index";
 
             rval += util::fmt(":doc:`%s </scripts/%s>`", it->c_str(), doc.c_str());
@@ -384,7 +384,7 @@ string ScriptInfo::DoReStructuredText(bool roles_only) const {
         rval += '\n';
     }
 
-    // rval += util::fmt(":Source File: :download:`/scripts/%s`\n", name.c_str());
+
     rval += '\n';
     rval += make_heading("Summary", '~');
     rval += make_summary("Runtime Options", '#', '=', options);
@@ -403,7 +403,7 @@ string ScriptInfo::DoReStructuredText(bool roles_only) const {
     rval += make_details("Constants", '#', constants);
     rval += make_details("State Variables", '#', state_vars);
     rval += make_details("Types", '#', types);
-    // rval += make_redef_details("Redefinitions", '#', redefs);
+
     rval += make_details("Events", '#', events);
     rval += make_details("Hooks", '#', hooks);
     rval += make_details("Functions", '#', functions);
@@ -435,4 +435,4 @@ time_t ScriptInfo::DoGetModificationTime() const {
     return most_recent;
 }
 
-} // namespace zeek::zeekygen::detail
+}

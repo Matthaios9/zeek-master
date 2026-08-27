@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Reassem.h"
 
@@ -80,7 +80,7 @@ void DataBlockList::Append(DataBlock block, uint64_t limit) {
 }
 
 DataBlockMap::const_iterator DataBlockList::FirstBlockAtOrBefore(uint64_t seq) const {
-    // Upper sequence number doesn't matter for the search
+
     auto it = block_map.upper_bound(seq);
 
     if ( it == block_map.end() )
@@ -106,17 +106,17 @@ DataBlockMap::const_iterator DataBlockList::Insert(uint64_t seq, uint64_t upper,
 
 DataBlockMap::const_iterator DataBlockList::Insert(uint64_t seq, uint64_t upper, const u_char* data,
                                                    DataBlockMap::const_iterator* hint) {
-    // Empty list.
+
     if ( block_map.empty() )
         return Insert(seq, upper, data, block_map.end());
 
     const auto& last = block_map.rbegin()->second;
 
-    // Special check for the common case of appending to the end.
+
     if ( seq == last.upper )
         return Insert(seq, upper, data, block_map.end());
 
-    // Find the first block that doesn't come completely before the new data.
+
     DataBlockMap::const_iterator it;
 
     if ( hint )
@@ -134,18 +134,18 @@ DataBlockMap::const_iterator DataBlockList::Insert(uint64_t seq, uint64_t upper,
     const auto& b = it->second;
 
     if ( b.upper <= seq )
-        // b is the last block, and it comes completely before the new block.
+
         return Insert(seq, upper, data, block_map.end());
 
     if ( upper <= b.seq )
-        // The new block comes completely before b.
+
         return Insert(seq, upper, data, it);
 
     DataBlockMap::const_iterator rval;
 
-    // The blocks overlap.
+
     if ( seq < b.seq ) {
-        // The new block has a prefix that comes before b.
+
         uint64_t prefix_len = b.seq - seq;
 
         rval = Insert(seq, seq + prefix_len, data, it);
@@ -163,7 +163,7 @@ DataBlockMap::const_iterator DataBlockList::Insert(uint64_t seq, uint64_t upper,
     uint64_t overlap_len = min(new_b_len, b_len);
 
     if ( overlap_len < new_b_len ) {
-        // Recurse to resolve remainder of the new data.
+
         data += overlap_len;
         seq += overlap_len;
 
@@ -179,24 +179,24 @@ DataBlockMap::const_iterator DataBlockList::Insert(uint64_t seq, uint64_t upper,
 uint64_t DataBlockList::Trim(uint64_t seq, uint64_t max_old, DataBlockList* old_list) {
     uint64_t num_missing = 0;
 
-    // Do this accounting before looking for Undelivered data,
-    // since that will alter last_reassem_seq.
+
+
 
     if ( ! block_map.empty() ) {
         const auto& first = block_map.begin()->second;
 
         if ( first.seq > reassembler->LastReassemSeq() )
-            // An initial hole.
+
             num_missing += first.seq - reassembler->LastReassemSeq();
     }
     else if ( seq > reassembler->LastReassemSeq() ) {
-        // Trimming data we never delivered.
-        // We won't have any accounting based on blocks for this hole.
+
+
         num_missing += seq - reassembler->LastReassemSeq();
     }
 
     if ( seq > reassembler->LastReassemSeq() ) {
-        // We're trimming data we never delivered.
+
         reassembler->Undelivered(seq);
     }
 
@@ -214,9 +214,9 @@ uint64_t DataBlockList::Trim(uint64_t seq, uint64_t max_old, DataBlockList* old_
                 num_missing += next->second.seq - first.upper;
         }
         else {
-            // No more blocks - did this one make it to seq?
-            // Second half of test is for acks of FINs, which
-            // don't get entered into the sequence space.
+
+
+
             if ( first.upper != seq && first.upper != seq - 1 )
                 num_missing += seq - first.upper;
         }
@@ -231,9 +231,9 @@ uint64_t DataBlockList::Trim(uint64_t seq, uint64_t max_old, DataBlockList* old_
         auto first_it = block_map.begin();
         const auto& first = first_it->second;
 
-        // If we skipped over some undeliverable data, then
-        // it's possible that this block is now deliverable.
-        // Give it a try.
+
+
+
         if ( first.seq == reassembler->LastReassemSeq() )
             reassembler->BlockInserted(first_it);
     }
@@ -252,7 +252,7 @@ void Reassembler::CheckOverlap(const DataBlockList& list, uint64_t seq, uint64_t
     const auto& last = list.LastBlock();
 
     if ( seq == last.upper )
-        // Special case check for common case of appending to the end.
+
         return;
 
     uint64_t upper = (seq + len);
@@ -291,8 +291,8 @@ void Reassembler::CheckOverlap(const DataBlockList& list, uint64_t seq, uint64_t
 }
 
 void Reassembler::NewBlock(double t, uint64_t seq, uint64_t len, const u_char* data) {
-    // Check for overflows - this should be handled by the caller
-    // and possibly reported as a weird or violation if applicable.
+
+
     if ( std::numeric_limits<uint64_t>::max() - seq < len ) {
         zeek::reporter->InternalWarning("Reassembler::NewBlock() truncating block at seq %" PRIx64
                                         " from length %" PRIu64 " to %" PRIu64,
@@ -308,12 +308,12 @@ void Reassembler::NewBlock(double t, uint64_t seq, uint64_t len, const u_char* d
     CheckOverlap(old_block_list, seq, len, data);
 
     if ( upper_seq <= trim_seq )
-        // Old data, don't do any work for it.
+
         return;
 
     CheckOverlap(block_list, seq, len, data);
 
-    if ( seq < trim_seq ) { // Partially old data, just keep the good stuff.
+    if ( seq < trim_seq ) {
         uint64_t amount_old = trim_seq - seq;
 
         data += amount_old;
@@ -337,10 +337,10 @@ uint64_t Reassembler::TotalSize() const { return block_list.DataSize() + old_blo
 void Reassembler::Describe(ODesc* d) const { d->Add("reassembler"); }
 
 void Reassembler::Undelivered(uint64_t up_to_seq) {
-    // TrimToSeq() expects this.
+
     last_reassem_seq = up_to_seq;
 }
 
 uint64_t Reassembler::MemoryAllocation(ReassemblerType rtype) { return Reassembler::sizes[rtype]; }
 
-} // namespace zeek
+}

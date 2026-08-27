@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 #include "systemd-unit.h"
 
 #include <cerrno>
@@ -43,8 +43,8 @@ std::string Unit::ToString() const {
     if ( start_limit_burst.has_value() )
         ss << "StartLimitBurst=" << start_limit_burst.value() << "\n";
 
-    // Create the [Service] section depending the existence of
-    // any ExecStart or ExecStartPre lines.
+
+
     if ( exec_start.size() > 0 || exec_start_pre.size() > 0 ) {
         ss << "\n";
         ss << "[Service]" << "\n";
@@ -143,4 +143,4 @@ bool Unit::WriteDropIn() const {
 
     return false;
 }
-} // namespace zeek::detail::systemd
+}

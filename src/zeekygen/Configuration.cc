@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/zeekygen/Configuration.h"
 
@@ -49,11 +49,11 @@ Config::Config(string arg_file, const string& delim)
         tokens.erase(std::ranges::begin(std::ranges::remove(tokens, "")), std::end(tokens));
 
         if ( tokens.empty() )
-            // Blank line.
+
             continue;
 
         if ( ! tokens[0].empty() && tokens[0][0] == '#' )
-            // Comment
+
             continue;
 
         if ( tokens.size() != 3 )
@@ -93,4 +93,4 @@ time_t Config::GetModificationTime() const {
     return get_mtime(file);
 }
 
-} // namespace zeek::zeekygen::detail
+}

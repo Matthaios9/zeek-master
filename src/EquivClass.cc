@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/EquivClass.h"
 
@@ -41,11 +41,11 @@ EquivClass::~EquivClass() {
 }
 
 void EquivClass::ConvertCCL(CCL* ccl) {
-    // For each character in the class, add the character's
-    // equivalence class to the new "character" class we are
-    // creating.  Thus when we are all done, the character class
-    // will really consist of collections of equivalence classes
-    // instead of collections of characters.
+
+
+
+
+
 
     int_list* c_syms = ccl->Syms();
     int_list* new_syms = new int_list;
@@ -59,8 +59,8 @@ void EquivClass::ConvertCCL(CCL* ccl) {
 }
 
 int EquivClass::BuildECs() {
-    // Create equivalence class numbers.  If bck[x] is nil,
-    // then x is the representative of its equivalence class.
+
+
 
     for ( int i = 0; i < size; ++i )
         if ( bck[i] == ec_nil ) {
@@ -76,8 +76,8 @@ int EquivClass::BuildECs() {
 }
 
 void EquivClass::CCL_Use(CCL* ccl) {
-    // Note that it doesn't matter whether or not the character class is
-    // negated.  The same results will be obtained in either case.
+
+
 
     if ( ! ccl_flags ) {
         ccl_flags = new int[size];
@@ -86,7 +86,7 @@ void EquivClass::CCL_Use(CCL* ccl) {
     }
 
     int_list* csyms = ccl->Syms();
-    for ( size_t i = 0; i < csyms->size(); /* no increment */ ) {
+    for ( size_t i = 0; i < csyms->size();  ) {
         int sym = (*csyms)[i];
 
         int old_ec = bck[sym];
@@ -94,37 +94,37 @@ void EquivClass::CCL_Use(CCL* ccl) {
 
         size_t j = i + 1;
 
-        for ( int k = fwd[sym]; k && k < size; k = fwd[k] ) { // look for the symbol in the character class
+        for ( int k = fwd[sym]; k && k < size; k = fwd[k] ) {
             for ( ; j < csyms->size(); ++j ) {
                 if ( (*csyms)[j] > k )
-                    // Since the character class is sorted,
-                    // we can stop.
+
+
                     break;
 
                 if ( (*csyms)[j] == k && ! ccl_flags[j] ) {
-                    // We found an old companion of sym
-                    // in the ccl.  Link it into the new
-                    // equivalence class and flag it as
-                    // having been processed.
+
+
+
+
                     bck[k] = new_ec;
                     fwd[new_ec] = k;
                     new_ec = k;
 
-                    // Set flag so we don't reprocess.
+
                     ccl_flags[j] = 1;
 
-                    // Get next equivalence class member.
+
                     break;
                 }
             }
 
             if ( j < csyms->size() && (*csyms)[j] == k )
-                // We broke out of the above loop by finding
-                // an old companion - go to the next symbol.
+
+
                 continue;
 
-            // Symbol isn't in character class.  Put it in the old
-            // equivalence class.
+
+
             bck[k] = old_ec;
             if ( old_ec != ec_nil )
                 fwd[old_ec] = k;
@@ -139,16 +139,16 @@ void EquivClass::CCL_Use(CCL* ccl) {
 
         fwd[new_ec] = ec_nil;
 
-        // Find next ccl member to process.
+
         for ( ++i; i < csyms->size() && ccl_flags[i]; ++i )
-            // Reset "doesn't need processing" flag.
+
             ccl_flags[i] = 0;
     }
 }
 
 void EquivClass::UniqueChar(int sym) {
-    // If until now the character has been a proper subset of
-    // an equivalence class, break it away to create a new ec.
+
+
 
     if ( fwd[sym] != ec_nil )
         bck[fwd[sym]] = bck[sym];
@@ -163,10 +163,10 @@ void EquivClass::UniqueChar(int sym) {
 void EquivClass::Dump(FILE* f) {
     fprintf(f, "%d symbols in EC yielded %d ecs\n", size, num_ecs);
     for ( int i = 0; i < size; ++i )
-        if ( SymEquivClass(i) != 0 ) // skip usually huge default ec
+        if ( SymEquivClass(i) != 0 )
             fprintf(f, "map %d ('%c') -> %d\n", i, i, SymEquivClass(i));
 }
 
 int EquivClass::Size() const { return padded_sizeof(*this) + util::pad_size(sizeof(int) * size * (ccl_flags ? 5 : 4)); }
 
-} // namespace zeek::detail
+}

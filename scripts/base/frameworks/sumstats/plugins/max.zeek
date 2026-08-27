@@ -1,4 +1,4 @@
-##! Find the maximum value.
+
 
 @load ../main
 
@@ -6,12 +6,12 @@ module SumStats;
 
 export {
 	redef enum Calculation += {
-		## Find the maximum value.
+
 		MAX
 	};
 
 	redef record ResultVal += {
-		## For numeric data, this tracks the maximum value.
+
 		max: double &optional;
 	};
 }
@@ -36,5 +36,3 @@ hook compose_resultvals_hook(result: ResultVal, rv1: ResultVal, rv2: ResultVal)
 	else if ( rv2?$max )
 		result$max = rv2$max;
 	}
-
-

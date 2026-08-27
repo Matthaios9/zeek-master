@@ -1,8 +1,8 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// We use deprecated OpenSSL APIs for MD5, SHA1 and SHA256 because there is no API that lets you
-// store the internal state of hashing functions. For more information, see
-// https://github.com/zeek/zeek/issues/1379 and https://github.com/openssl/openssl/issues/14222
+
+
+
+
 
 #define OPENSSL_SUPPRESS_DEPRECATED
 
@@ -28,8 +28,8 @@
 
 namespace zeek {
 
-// Helper to retrieve a broker count out of a list at a specified index, and
-// casted to the expected destination type.
+
+
 template<typename V, typename D>
 bool get_vector_idx_if_count(V& v, size_t i, D* dst) {
     if ( i >= v.Size() || ! v[i].IsCount() )
@@ -107,13 +107,13 @@ std::optional<BrokerData> OpaqueVal::SerializeType(const TypePtr& t) {
     BrokerListBuilder builder;
 
     if ( t->InternalType() == TYPE_INTERNAL_OTHER ) {
-        // Serialize by name.
+
         assert(! t->GetName().empty());
         builder.Add(true);
         builder.Add(t->GetName());
     }
     else {
-        // A base type.
+
         builder.Add(false);
         builder.Add(static_cast<uint64_t>(t->Tag()));
     }
@@ -130,7 +130,7 @@ TypePtr OpaqueVal::UnserializeType(BrokerDataView data) {
     if ( v.Size() != 2 || ! v[0].IsBool() )
         return nullptr;
 
-    if ( v[0].ToBool() ) // Get by name?
+    if ( v[0].ToBool() )
     {
         if ( ! v[1].IsString() )
             return nullptr;
@@ -222,7 +222,7 @@ constexpr size_t SHA384VAL_STATE_SIZE = sizeof(SHA512_CTX);
 
 constexpr size_t SHA512VAL_STATE_SIZE = sizeof(SHA512_CTX);
 
-// -- MD5
+
 
 auto* to_native_ptr(MD5Val::StatePtr ptr) { return reinterpret_cast<MD5_CTX*>(ptr); }
 
@@ -244,7 +244,7 @@ void do_unserialize(MD5Val::StatePtr ptr, const char* bytes, size_t len) { memcp
 
 void do_destroy(MD5Val::StatePtr ptr) { delete to_native_ptr(ptr); }
 
-// -- SHA1
+
 
 auto* to_native_ptr(SHA1Val::StatePtr ptr) { return reinterpret_cast<SHA_CTX*>(ptr); }
 
@@ -266,7 +266,7 @@ void do_unserialize(SHA1Val::StatePtr ptr, const char* bytes, size_t len) { memc
 
 void do_destroy(SHA1Val::StatePtr ptr) { delete to_native_ptr(ptr); }
 
-// -- SHA224
+
 
 auto* to_native_ptr(SHA224Val::StatePtr ptr) { return reinterpret_cast<SHA256_CTX*>(ptr); }
 
@@ -288,7 +288,7 @@ void do_unserialize(SHA224Val::StatePtr ptr, const char* bytes, size_t len) { me
 
 void do_destroy(SHA224Val::StatePtr ptr) { delete to_native_ptr(ptr); }
 
-// -- SHA256
+
 
 auto* to_native_ptr(SHA256Val::StatePtr ptr) { return reinterpret_cast<SHA256_CTX*>(ptr); }
 
@@ -310,7 +310,7 @@ void do_unserialize(SHA256Val::StatePtr ptr, const char* bytes, size_t len) { me
 
 void do_destroy(SHA256Val::StatePtr ptr) { delete to_native_ptr(ptr); }
 
-// -- SHA384
+
 
 auto* to_native_ptr(SHA384Val::StatePtr ptr) { return reinterpret_cast<SHA512_CTX*>(ptr); }
 
@@ -332,7 +332,7 @@ void do_unserialize(SHA384Val::StatePtr ptr, const char* bytes, size_t len) { me
 
 void do_destroy(SHA384Val::StatePtr ptr) { delete to_native_ptr(ptr); }
 
-// -- SHA512
+
 
 auto* to_native_ptr(SHA512Val::StatePtr ptr) { return reinterpret_cast<SHA512_CTX*>(ptr); }
 
@@ -354,7 +354,7 @@ void do_unserialize(SHA512Val::StatePtr ptr, const char* bytes, size_t len) { me
 
 void do_destroy(SHA512Val::StatePtr ptr) { delete to_native_ptr(ptr); }
 
-} // namespace
+}
 
 MD5Val::MD5Val() : HashVal(md5_type) {}
 
@@ -433,7 +433,7 @@ bool MD5Val::DoUnserializeData(BrokerDataView data) {
         return false;
 
     if ( ! d[0].ToBool() ) {
-        assert(! IsValid()); // default set by ctor
+        assert(! IsValid());
         return true;
     }
 
@@ -516,7 +516,7 @@ bool SHA1Val::DoUnserializeData(BrokerDataView data) {
         return false;
 
     if ( ! d[0].ToBool() ) {
-        assert(! IsValid()); // default set by ctor
+        assert(! IsValid());
         return true;
     }
 
@@ -601,7 +601,7 @@ bool SHA224Val::DoUnserializeData(BrokerDataView data) {
         return false;
 
     if ( ! d[0].ToBool() ) {
-        assert(! IsValid()); // default set by ctor
+        assert(! IsValid());
         return true;
     }
 
@@ -686,7 +686,7 @@ bool SHA256Val::DoUnserializeData(BrokerDataView data) {
         return false;
 
     if ( ! d[0].ToBool() ) {
-        assert(! IsValid()); // default set by ctor
+        assert(! IsValid());
         return true;
     }
 
@@ -771,7 +771,7 @@ bool SHA384Val::DoUnserializeData(BrokerDataView data) {
         return false;
 
     if ( ! d[0].ToBool() ) {
-        assert(! IsValid()); // default set by ctor
+        assert(! IsValid());
         return true;
     }
 
@@ -856,7 +856,7 @@ bool SHA512Val::DoUnserializeData(BrokerDataView data) {
         return false;
 
     if ( ! d[0].ToBool() ) {
-        assert(! IsValid()); // default set by ctor
+        assert(! IsValid());
         return true;
     }
 
@@ -888,7 +888,7 @@ bool EntropyVal::Get(double* r_ent, double* r_chisq, double* r_mean, double* r_m
 IMPLEMENT_OPAQUE_VALUE(EntropyVal)
 
 std::optional<BrokerData> EntropyVal::DoSerializeData() const {
-    constexpr size_t numMembers = 14; // RandTest has 14 non-array members.
+    constexpr size_t numMembers = 14;
 
     BrokerListBuilder builder;
     builder.Reserve(numMembers + std::size(state.ccount) + std::size(state.monte));
@@ -1026,7 +1026,7 @@ bool BloomFilterVal::Empty() const { return bloom_filter->Empty(); }
 std::string BloomFilterVal::InternalState() const { return bloom_filter->InternalState(); }
 
 BloomFilterValPtr BloomFilterVal::Merge(const BloomFilterVal* x, const BloomFilterVal* y) {
-    if ( x->Type() && // any one 0 is ok here
+    if ( x->Type() &&
          y->Type() && ! same_type(x->Type(), y->Type()) ) {
         reporter->Error("cannot merge Bloom filters with different types");
         return nullptr;
@@ -1058,7 +1058,7 @@ BloomFilterValPtr BloomFilterVal::Merge(const BloomFilterVal* x, const BloomFilt
 }
 
 BloomFilterValPtr BloomFilterVal::Intersect(const BloomFilterVal* x, const BloomFilterVal* y) {
-    if ( x->Type() && // any one 0 is ok here
+    if ( x->Type() &&
          y->Type() && ! same_type(x->Type(), y->Type()) ) {
         reporter->Error("cannot merge Bloom filters with different types");
         return nullptr;
@@ -1294,4 +1294,4 @@ ValPtr ParaglobVal::DoClone(CloneState* state) {
     }
 }
 
-} // namespace zeek
+}

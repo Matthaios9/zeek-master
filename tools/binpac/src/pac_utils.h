@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_utils_h
 #define pac_utils_h
@@ -11,4 +11,4 @@ char* copy_string(const char* s);
 string strfmt(const char* fmt, ...);
 char* nfmt(const char* fmt, ...);
 
-#endif /* pac_utils_h */
+#endif

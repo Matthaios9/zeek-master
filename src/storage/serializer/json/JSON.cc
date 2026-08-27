@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/storage/serializer/json/JSON.h"
 
@@ -44,4 +44,4 @@ zeek::expected<ValPtr, std::string> JSON::Unserialize(byte_buffer_span buf, Type
     return zeek::detail::ValFromJSON(text.substr(semicolon + 1), type, Func::nil);
 }
 
-} // namespace zeek::storage::serializer::json
+}

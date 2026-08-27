@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/CPP/Compile.h"
 
@@ -33,7 +33,7 @@ bool CPPCompile::IsNativeType(const TypePtr& t) const {
         case TYPE_TABLE:
         case TYPE_TYPE:
         case TYPE_VECTOR:
-        // These occur when initializing tables.
+
         case TYPE_LIST: return false;
 
         default: reporter->InternalError("bad type in CPPCompile::IsNativeType"); return false;
@@ -47,7 +47,7 @@ string CPPCompile::NativeToGT(const string& expr, const TypePtr& t, GenType gt) 
     if ( gt == GEN_NATIVE || ! IsNativeType(t) )
         return expr;
 
-    // Need to convert to a ValPtr.
+
     switch ( t->Tag() ) {
         case TYPE_VOID: return expr;
 
@@ -187,15 +187,15 @@ shared_ptr<CPP_InitInfo> CPPCompile::RegisterType(const TypePtr& tp) {
 
     processed_types[t] = nullptr;
 
-    // When doing standalone compilation, if the type is a record *and*
-    // (1) it's not one that we're fully generating (i.e., it's not solely
-    // defined in the scripts that we're compiling-to-standalone), and (2) the
-    // scripts we're compiling extend the record using "redef += record ...",
-    // then we need to track the offset where those record extensions start,
-    // so that when initializing the standalone code, we can add in those
-    // record fields.
-    //
-    // If any of those conditions don't hold, then this variable will remain 0.
+
+
+
+
+
+
+
+
+
     int addl_fields = 0;
 
     bool type_init_needed = standalone && obj_matches_opt_files(tp) == AnalyzeDecision::SHOULD;
@@ -325,4 +325,4 @@ const char* CPPCompile::IntrusiveVal(const TypePtr& t) {
     }
 }
 
-} // namespace zeek::detail
+}

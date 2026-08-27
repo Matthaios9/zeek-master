@@ -1,4 +1,4 @@
-##! Perform validation of stapled OCSP responses.
+
 #!
 #! Note: this _only_ performs validation of stapled OCSP responded. It does
 #! not validate OCSP responses that are retrieved via HTTP, because we do not
@@ -12,23 +12,23 @@ module SSL;
 
 export {
 	redef enum Notice::Type += {
-		## This indicates that the OCSP response was not deemed
-		## to be valid.
+
+
 		Invalid_Ocsp_Response
 	};
 
 	redef record Info += {
-		## Result of ocsp validation for this connection.
+
 		ocsp_status: string &log &optional;
-		## ocsp response as string.
+
 		ocsp_response: string &optional;
 	};
 
 }
 
-# SHA256 hash values for recently validated chains along with the OCSP validation
-# status are kept in this table to avoid constant validation every time the same
-# certificate chain is seen.
+
+
+
 global recently_ocsp_validated: table[string] of string = table() &read_expire=5mins;
 
 event ssl_stapled_ocsp(c: connection, is_client: bool, response: string) &priority=3

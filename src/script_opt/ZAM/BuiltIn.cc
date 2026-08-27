@@ -1,7 +1,7 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// ZAM methods associated with instructions that replace calls to
-// built-in functions.
+
+
+
 
 #include "zeek/script_opt/ZAM/BuiltIn.h"
 
@@ -11,7 +11,7 @@
 
 namespace zeek::detail {
 
-// Maps BiF names to their associated ZBI class.
+
 std::unordered_map<std::string, const ZAMBuiltIn*> builtins;
 
 ZAMBuiltIn::ZAMBuiltIn(const std::string& name, bool _ret_val_matters) : ret_val_matters(_ret_val_matters) {
@@ -48,9 +48,9 @@ bool SimpleZBI::Build(ZAMCompiler* zam, const NameExpr* n, const ExprPList& args
 
         else {
             if ( const_op == OP_NOP )
-                // This can happen for BiFs that aren't foldable, and for
-                // which it's implausible they'll be called with a constant
-                // argument.
+
+
+
                 return false;
 
             if ( n )
@@ -77,15 +77,15 @@ bool CondZBI::BuildCond(ZAMCompiler* zam, const ExprPList& args, int& branch_v) 
         return false;
 
     if ( nargs == 1 && args[0]->Tag() != EXPR_NAME )
-        // ZBI-worthy predicates called with constant arguments will generally
-        // have been folded. If not, for simplicity we don't support the
-        // flavor where they're called with a constant.
+
+
+
         return false;
 
-    // If we get here, then the ZBI is good-to-go.
+
 
     if ( ! zam )
-        // This was just a check, not an actual build.
+
         return true;
 
     ZInstI z;
@@ -142,7 +142,7 @@ bool CatZBI::Build(ZAMCompiler* zam, const NameExpr* n, const ExprPList& args) c
     ZInstI z;
 
     if ( args.empty() ) {
-        // Weird, but easy enough to support.
+
         z = ZInstI(OP_CAT1_VC, nslot);
         z.SetType(n->GetType());
         z.c = ZVal(val_mgr->EmptyString());
@@ -202,9 +202,9 @@ ZInstAux* CatZBI::BuildCatAux(ZAMCompiler* zam, const ExprPList& args) const {
 
         if ( a_i->Tag() == EXPR_CONST ) {
             auto c = a_i->AsConstExpr()->ValuePtr();
-            aux->Add(i, c); // we add it to consume a slot, but it'll be ignored
+            aux->Add(i, c);
 
-            // Convert it up front and transform into a fixed string.
+
             auto sv = ZAM_val_cat(c);
             auto s = sv->AsString();
             auto b = reinterpret_cast<char*>(s->Bytes());
@@ -241,7 +241,7 @@ ZInstAux* CatZBI::BuildCatAux(ZAMCompiler* zam, const ExprPList& args) const {
 }
 
 bool SortZBI::Build(ZAMCompiler* zam, const NameExpr* n, const ExprPList& args) const {
-    // The checks the sort() BiF does can all be computed statically.
+
     if ( args.size() > 2 )
         return false;
 
@@ -258,7 +258,7 @@ bool SortZBI::Build(ZAMCompiler* zam, const NameExpr* n, const ExprPList& args) 
         return OptAssignZBI::Build(zam, n, args);
     }
 
-    // If we get here, then there's a comparison function.
+
     const auto& comp_val = args[1];
     if ( ! IsFunc(comp_val->GetType()->Tag()) )
         return false;
@@ -303,7 +303,7 @@ bool MultiZBI::Build(ZAMCompiler* zam, const NameExpr* n, const ExprPList& args)
 
     auto bif_arg_info = ai->find(ComputeArgsType(args));
     if ( bif_arg_info == ai->end() )
-        // Not a Constant/Variable combination this ZBI supports.
+
         return false;
 
     const auto& bi = bif_arg_info->second;
@@ -410,12 +410,12 @@ BiFArgsType MultiZBI::ComputeArgsType(const ExprPList& args) const {
     return BiFArgsType(mask);
 }
 
-////////////////////////////////////////////////////////////////////////
 
-// To create a new built-in, add it to the following collection. We chose
-// this style with an aim to making the entries both easy to update & readable.
-// The names of the variables don't matter, so we keep them short to aid
-// readability.
+
+
+
+
+
 
 SimpleZBI an_ZBI{"Analyzer::__name", OP_ANALYZER_NAME_VC, OP_ANALYZER_NAME_VV};
 SimpleZBI ae_ZBI{"Files::__analyzer_enabled", OP_ANALYZER_ENABLED_VC, OP_ANALYZER_ENABLED_VV};
@@ -441,14 +441,14 @@ CondZBI iv6_ZBI{"is_v6_addr", OP_IS_V6_ADDR_VV, OP_IS_V6_ADDR_COND_Vb, 1};
 CondZBI rlt_ZBI{"reading_live_traffic", OP_READING_LIVE_TRAFFIC_V, OP_READING_LIVE_TRAFFIC_COND_b, 0};
 CondZBI rt_ZBI{"reading_traces", OP_READING_TRACES_V, OP_READING_TRACES_COND_b, 0};
 
-// These have a different form to avoid invoking copy constructors.
+
 auto cat_ZBI = CatZBI();
 auto sort_ZBI = SortZBI();
 
-// For the following, clang-format makes them hard to follow compared to
-// a manual layout.
-//
-// clang-format off
+
+
+
+
 
 OptAssignZBI bfl_ZBI{ "Broker::__flush_logs",
     OP_BROKER_FLUSH_LOGS_V, OP_BROKER_FLUSH_LOGS_X,
@@ -536,29 +536,29 @@ MultiZBI sb_ZBI{ "sub_bytes", true,
      {{CCV}, {OP_SUB_BYTES2_VCVi, OP_VVVC_I3}}}
 };
 
-// clang-format on
 
-////////////////////////////////////////////////////////////////////////
 
-// Helper function that extracts the underlying Func* from a CallExpr
-// node. Returns nil if it's not accessible.
+
+
+
+
 static const Func* get_func(const CallExpr* c) {
     auto func_expr = c->Func();
     if ( func_expr->Tag() != EXPR_NAME )
-        // An indirect call.
+
         return nullptr;
 
     auto func_val = func_expr->AsNameExpr()->Id()->GetVal();
     if ( ! func_val )
-        // A call to a function that hasn't been defined.
+
         return nullptr;
 
     return func_val->AsFunc();
 }
 
 bool IsZAM_BuiltIn(ZAMCompiler* zam, const Expr* e) {
-    // The expression e is either directly a call (in which case there's
-    // no return value), or an assignment to a call.
+
+
     const CallExpr* c;
 
     if ( e->Tag() == EXPR_CALL )
@@ -572,12 +572,12 @@ bool IsZAM_BuiltIn(ZAMCompiler* zam, const Expr* e) {
 
     auto fn = func->GetName();
 
-    // It's useful to intercept any lingering calls to the script-level
-    // Log::write as well as the Log::__write BiF. When inlining there can
-    // still be script-level calls if the calling function got too big to
-    // inline them. We could do this for other script-level functions that
-    // are simply direct wrappers for BiFs, but this is only one that has
-    // turned up as significant in profiling.
+
+
+
+
+
+
     if ( fn == "Log::write" )
         fn = "Log::__write";
 
@@ -587,7 +587,7 @@ bool IsZAM_BuiltIn(ZAMCompiler* zam, const Expr* e) {
 
     const auto& bi = b->second;
 
-    const NameExpr* n = nullptr; // name to assign to, if any
+    const NameExpr* n = nullptr;
     if ( e->Tag() != EXPR_CALL )
         n = e->GetOp1()->AsRefExpr()->GetOp1()->AsNameExpr();
 
@@ -595,17 +595,17 @@ bool IsZAM_BuiltIn(ZAMCompiler* zam, const Expr* e) {
         if ( ! n ) {
             reporter->Warning("return value from built-in function ignored");
 
-            // The call is a no-op. We could return false here and have it
-            // execute (for no purpose). We can also return true, which will
-            // have the effect of just ignoring the statement.
+
+
+
             return true;
         }
     }
     else if ( n && ! bi->HaveBothReturnValAndNon() )
-        // Because the return value "doesn't matter", we've built the
-        // corresponding ZIB assuming we don't need a version that does
-        // the assignment. If we *do* have an assignment, let the usual
-        // call take place.
+
+
+
+
         return false;
 
     return bi->Build(zam, n, c->Args()->Exprs());
@@ -624,8 +624,8 @@ bool IsZAM_BuiltInCond(ZAMCompiler* zam, const CallExpr* c, int& branch_v) {
 }
 
 bool IsZAM_BuiltInCond(const CallExpr* c) {
-    int branch_v; // ignored
+    int branch_v;
     return IsZAM_BuiltInCond(nullptr, c, branch_v);
 }
 
-} // namespace zeek::detail
+}

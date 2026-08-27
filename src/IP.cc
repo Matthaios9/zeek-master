@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/IP.h"
 
@@ -33,14 +33,14 @@ static VectorValPtr BuildOptionsVal(const u_char* data, int len) {
         rv->Assign(0, opt->ip6o_type);
 
         if ( opt->ip6o_type == 0 ) {
-            // Pad1 option
+
             rv->Assign(1, 0);
             rv->Assign(2, val_mgr->EmptyString());
             data += sizeof(uint8_t);
             len -= sizeof(uint8_t);
         }
         else {
-            // PadN or other option
+
             uint16_t off = 2 * sizeof(uint8_t);
 
             if ( len < opt->ip6o_len + off )
@@ -140,8 +140,8 @@ RecordValPtr IPv6_Hdr::ToVal(VectorValPtr chain) const {
             rv->Assign(3, static_cast<uint32_t>(ntohl(reinterpret_cast<const uint32_t*>(data)[1])));
 
             if ( Length() >= 12 ) {
-                // Sequence Number and ICV fields can only be extracted if
-                // Payload Len was non-zero for this header.
+
+
                 rv->Assign(4, static_cast<uint32_t>(ntohl(reinterpret_cast<const uint32_t*>(data)[2])));
                 uint16_t off = 3 * sizeof(uint32_t);
                 rv->Assign(5, new String(data + off, Length() - off, true));
@@ -336,7 +336,7 @@ RecordValPtr IP_Hdr::ToIPHdrVal() const {
         rval->Assign(3, ntohs(ip4->ip_id));
         rval->Assign(4, DF());
         rval->Assign(5, MF());
-        rval->Assign(6, FragOffset()); // 13 bit offset as multiple of 8
+        rval->Assign(6, FragOffset());
         rval->Assign(7, ip4->ip_ttl);
         rval->Assign(8, ip4->ip_p);
         rval->Assign(9, ntohs(ip4->ip_sum));
@@ -365,11 +365,11 @@ RecordValPtr IP_Hdr::ToPktHdrVal(RecordValPtr pkt_hdr, int sindex) const {
     else
         pkt_hdr->Assign(sindex + 1, ToIPHdrVal());
 
-    // Sanity check that we have enough data captured to parse the payload.
+
     if ( len > 0 && len < HdrLen() + PayloadLen() )
         return pkt_hdr;
 
-    // L4 header.
+
     const u_char* data = Payload();
 
     int proto = NextProto();
@@ -383,8 +383,8 @@ RecordValPtr IP_Hdr::ToPktHdrVal(RecordValPtr pkt_hdr, int sindex) const {
 
             int tcp_hdr_len = tp->th_off * 4;
 
-            // account for cases in which the payload length in the TCP header is not set,
-            // or is set to an impossible value. In these cases, return 0.
+
+
             int data_len = 0;
             auto payload_len = PayloadLen();
             if ( payload_len >= tcp_hdr_len )
@@ -446,7 +446,7 @@ RecordValPtr IP_Hdr::ToPktHdrVal(RecordValPtr pkt_hdr, int sindex) const {
         }
 
         default: {
-            // This is not a protocol we understand.
+
             break;
         }
     }
@@ -484,8 +484,8 @@ void IPv6_Hdr_Chain::Init(const struct ip6_hdr* ip6, uint64_t total_len, bool se
     }
 
     do {
-        // We can't determine a given header's length if there's less than
-        // two bytes of data available (2nd byte of extension headers is length)
+
+
         if ( total_len < 2 )
             return;
 
@@ -495,7 +495,7 @@ void IPv6_Hdr_Chain::Init(const struct ip6_hdr* ip6, uint64_t total_len, bool se
         next_type = p.NextHdr();
         uint16_t cur_len = p.Length();
 
-        // If this header is truncated, don't add it to chain, don't go further.
+
         if ( cur_len > total_len )
             return;
 
@@ -506,11 +506,11 @@ void IPv6_Hdr_Chain::Init(const struct ip6_hdr* ip6, uint64_t total_len, bool se
 
         chain.emplace_back(p);
 
-        // Check for routing headers and remember final destination address.
+
         if ( current_type == IPPROTO_ROUTING )
             ProcessRoutingHeader(reinterpret_cast<const ip6_rthdr*>(hdrs), cur_len);
 
-        // Only Mobile IPv6 has a destination option we care about right now.
+
         if ( current_type == IPPROTO_DSTOPTS )
             ProcessDstOpts(reinterpret_cast<const ip6_dest*>(hdrs), cur_len);
 
@@ -557,16 +557,16 @@ IPAddr IPv6_Hdr_Chain::DstAddr() const {
 
 void IPv6_Hdr_Chain::ProcessRoutingHeader(const struct ip6_rthdr* r, uint16_t len) {
     if ( finalDst ) {
-        // RFC 2460 section 4.1 says Routing should occur at most once.
+
         reporter->Weird(SrcAddr(), DstAddr(), "multiple_routing_headers");
         return;
     }
 
-    // Last 16 bytes of header (for all known types) is the address we want.
+
     const in6_addr* addr = reinterpret_cast<const in6_addr*>(reinterpret_cast<const u_char*>(r) + len - 16);
 
     switch ( r->ip6r_type ) {
-        case 0: // Defined by RFC 2460, deprecated by RFC 5095
+        case 0:
         {
             if ( r->ip6r_segleft > 0 && r->ip6r_len >= 2 ) {
                 if ( r->ip6r_len % 2 == 0 )
@@ -575,11 +575,11 @@ void IPv6_Hdr_Chain::ProcessRoutingHeader(const struct ip6_rthdr* r, uint16_t le
                     reporter->Weird(SrcAddr(), DstAddr(), "odd_routing0_len");
             }
 
-            // Always raise a weird since this type is deprecated.
+
             reporter->Weird(SrcAddr(), DstAddr(), "routing0_hdr");
         } break;
 
-        case 2: // Defined by Mobile IPv6 RFC 6275.
+        case 2:
         {
             if ( r->ip6r_segleft > 0 ) {
                 if ( r->ip6r_len == 2 )
@@ -594,10 +594,10 @@ void IPv6_Hdr_Chain::ProcessRoutingHeader(const struct ip6_rthdr* r, uint16_t le
 }
 
 void IPv6_Hdr_Chain::ProcessDstOpts(const struct ip6_dest* d, uint16_t len) {
-    // Skip two bytes to get the beginning of the first option structure. These
-    // two bytes are the protocol for the next header and extension header length,
-    // already known to exist before calling this method.  See header format:
-    // https://datatracker.ietf.org/doc/html/rfc8200#section-4.6
+
+
+
+
     assert(len >= 2);
 
     const u_char* data = reinterpret_cast<const u_char*>(d);
@@ -608,22 +608,22 @@ void IPv6_Hdr_Chain::ProcessDstOpts(const struct ip6_dest* d, uint16_t len) {
         const struct ip6_opt* opt = reinterpret_cast<const struct ip6_opt*>(data);
         switch ( opt->ip6o_type ) {
             case 0:
-                // If option type is zero, it's a Pad0 and can be just a single
-                // byte in width. Skip over it.
+
+
                 data += sizeof(uint8_t);
                 len -= sizeof(uint8_t);
                 break;
             default: {
-                // Double-check that the len can hold the whole option structure.
-                // Otherwise we get a buffer-overflow when we check the option_len.
-                // Also check that it holds everything for the option itself.
+
+
+
                 if ( len < sizeof(struct ip6_opt) || len < sizeof(struct ip6_opt) + opt->ip6o_len ) {
                     reporter->Weird(SrcAddr(), DstAddr(), "bad_ipv6_dest_opt_len");
                     len = 0;
                     break;
                 }
 
-                if ( opt->ip6o_type == 201 ) // Home Address Option, Mobile IPv6 RFC 6275 section 6.3
+                if ( opt->ip6o_type == 201 )
                 {
                     if ( opt->ip6o_len == sizeof(struct in6_addr) ) {
                         if ( homeAddr )
@@ -717,4 +717,4 @@ IPv6_Hdr_Chain* IPv6_Hdr_Chain::Copy(const ip6_hdr* new_hdr) const {
     return rval;
 }
 
-} // namespace zeek
+}

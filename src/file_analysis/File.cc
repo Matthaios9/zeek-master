@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/file_analysis/File.h"
 
@@ -193,7 +193,7 @@ void File::SetTotalBytes(uint64_t size) {
 }
 
 bool File::IsComplete() const {
-    // If total_bytes hasn't been initialized yet, file is certainly not complete.
+
     if ( ! val->HasRawField(total_bytes_idx) )
         return false;
 
@@ -311,7 +311,7 @@ bool File::BufferBOF(const u_char* data, uint64_t len) {
 
 void File::DeliverStream(const u_char* data, uint64_t len) {
     bool bof_was_full = bof_buffer.full;
-    // Buffer enough data for the BOF buffer
+
     BufferBOF(data, len);
 
     if ( ! did_metadata_inference && bof_buffer.full && LookupFieldDefaultCount(missing_bytes_idx) == 0 )
@@ -331,13 +331,13 @@ void File::DeliverStream(const u_char* data, uint64_t len) {
             int num_bof_chunks_behind = bof_buffer.chunks.size();
 
             if ( ! bof_was_full )
-                // We just added a chunk to the BOF buffer, don't count it
-                // as it will get delivered on its own.
+
+
                 num_bof_chunks_behind -= 1;
 
             uint64_t bytes_delivered = 0;
 
-            // Catch this analyzer up with the BOF buffer.
+
             for ( int i = 0; i < num_bof_chunks_behind; ++i ) {
                 if ( ! a->Skipping() ) {
                     if ( ! a->DeliverStream(bof_buffer.chunks[i]->Bytes(), bof_buffer.chunks[i]->Len()) ) {
@@ -350,8 +350,8 @@ void File::DeliverStream(const u_char* data, uint64_t len) {
             }
 
             a->SetGotStreamDelivery();
-            // May need to catch analyzer up on missed gap?
-            // Analyzer should be fully caught up to stream_offset now.
+
+
         }
 
         if ( ! a->Skipping() ) {
@@ -374,7 +374,7 @@ void File::DeliverChunk(const u_char* data, uint64_t len, uint64_t offset) {
         len = std::numeric_limits<uint64_t>::max() - offset;
     }
 
-    // Potentially handle reassembly and deliver to the stream analyzers.
+
     if ( file_reassembler ) {
         if ( reassembly_max_buffer > 0 && reassembly_max_buffer < file_reassembler->TotalSize() ) {
             uint64_t current_offset = stream_offset;
@@ -386,22 +386,22 @@ void File::DeliverChunk(const u_char* data, uint64_t len, uint64_t offset) {
             }
         }
 
-        // Forward data to the reassembler.
+
         file_reassembler->NewBlock(run_state::network_time, offset, len, data);
     }
     else if ( stream_offset == offset ) {
-        // This is the normal case where a file is transferred linearly.
-        // Nothing special should be done here.
+
+
         DeliverStream(data, len);
     }
     else if ( reassembly_enabled ) {
-        // This is data that doesn't match the offset and the reassembler
-        // needs to be enabled.
+
+
         file_reassembler = new FileReassembler(this, stream_offset);
         file_reassembler->NewBlock(run_state::network_time, offset, len, data);
     }
     else {
-        // We can't reassemble so we throw out the data for streaming.
+
         overflow_bytes += len;
     }
 
@@ -449,9 +449,9 @@ void File::EndOfFile() {
         file_reassembler->Flush();
     }
 
-    // Mark the bof_buffer as full in case it isn't yet
-    // so that the whole thing can be flushed out to
-    // any stream analyzers.
+
+
+
     if ( ! bof_buffer.full ) {
         DBG_LOG(DBG_FILE_ANALYSIS, "[%s] File over but bof_buffer not full.", id.c_str());
         bof_buffer.full = true;
@@ -478,7 +478,7 @@ void File::Gap(uint64_t offset, uint64_t len) {
 
     if ( file_reassembler && ! file_reassembler->IsCurrentlyFlushing() ) {
         file_reassembler->FlushTo(offset + len);
-        // The reassembler will call us back with all the gaps we need to know.
+
         return;
     }
 
@@ -524,7 +524,7 @@ void File::FileEvent(EventHandlerPtr h, Args args) {
 
     if ( h == file_new || h == file_over_new_connection || h == file_sniff || h == file_timeout ||
          h == file_extraction_limit ) {
-        // immediate feedback is required for these events.
+
         event_mgr.Drain();
         analyzers.DrainModifications();
     }
@@ -534,4 +534,4 @@ bool File::PermitWeird(const char* name, uint64_t threshold, uint64_t rate, doub
     return zeek::detail::PermitWeird(weird_state, name, threshold, rate, duration);
 }
 
-} // namespace zeek::file_analysis
+}

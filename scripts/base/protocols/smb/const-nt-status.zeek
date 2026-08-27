@@ -1,4 +1,4 @@
-# NT status codes.
+
 @load ./consts
 
 module SMB;

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Conn.h"
 
@@ -142,7 +142,7 @@ void Connection::Done() {
 
 void Connection::NextPacket(double t, bool is_orig, const IP_Hdr* ip, int len, int caplen, const u_char*& data,
                             int& record_packet, int& record_content,
-                            // arguments for reproducing packets
+
                             const Packet* pkt) {
     run_state::current_timestamp = t;
     run_state::current_pkt = pkt;
@@ -181,8 +181,8 @@ const RecordValPtr& Connection::GetVal() {
 
         constexpr int ctx_offset = 5;
 
-        // If the conn_id_ctx type has no fields at all, set it to the singleton instance,
-        // otherwise the instance is initialized on first access through GetField() below.
+
+
         if ( conn_id_ctx_singleton ) {
             assert(id::conn_id_ctx->NumFields() == 0);
             id_val->Assign(ctx_offset, conn_id_ctx_singleton);
@@ -190,7 +190,7 @@ const RecordValPtr& Connection::GetVal() {
 
         auto ctx = id_val->GetField<zeek::RecordVal>(ctx_offset);
 
-        // Allow customized ConnKeys to augment conn_id and ctx.
+
         key->PopulateConnIdVal(*id_val, *ctx);
 
         auto orig_endp = make_intrusive<RecordVal>(id::endpoint);
@@ -219,11 +219,11 @@ const RecordValPtr& Connection::GetVal() {
         conn_val->Assign(0, std::move(id_val));
         conn_val->Assign(1, std::move(orig_endp));
         conn_val->Assign(2, std::move(resp_endp));
-        // 3 and 4 are set below.
-        // Do not assign to 5 (service). It is a non-optional set, which will be default-initialized
-        // using the script-level settings; this easily applies the &ordered attribute to it.
-        // conn_val->Assign(5, make_intrusive<TableVal>(id::ordered_string_set)); // service
-        conn_val->Assign(6, val_mgr->EmptyString()); // history
+
+
+
+
+        conn_val->Assign(6, val_mgr->EmptyString());
 
         if ( ! uid )
             uid.Set(zeek::detail::bits_per_uid);
@@ -243,7 +243,7 @@ const RecordValPtr& Connection::GetVal() {
     if ( adapter )
         adapter->UpdateConnVal(conn_val.get());
 
-    conn_val->AssignTime(3, start_time); // ###
+    conn_val->AssignTime(3, start_time);
     conn_val->AssignInterval(4, last_time - start_time);
 
     if ( ! history.empty() ) {
@@ -305,19 +305,19 @@ void Connection::FlipRoles() {
     orig_flow_label = tmp_flow;
 
     if ( conn_val ) {
-        // Delegate flipping of conn_id and ctx records to the key instance.
+
         auto id_val = conn_val->GetField<zeek::RecordVal>(0);
         auto* ctx = id_val->GetFieldAs<zeek::RecordVal>(5);
         key->FlipRoles(*id_val, *ctx);
 
-        // Flip the connection's endpoints
+
         const auto& tmp_endp = conn_val->GetField<zeek::RecordVal>(1);
         conn_val->Assign(1, conn_val->GetField(2));
         conn_val->Assign(2, tmp_endp);
     }
     else {
-        // Even we haven't yet allocated a connection value, still need to flip the key's
-        // idea of originator and responder
+
+
         key->FlipRoles();
     }
 
@@ -411,4 +411,4 @@ bool Connection::PermitWeird(const char* name, uint64_t threshold, uint64_t rate
     return detail::PermitWeird(*weird_state, name, threshold, rate, duration);
 }
 
-} // namespace zeek
+}

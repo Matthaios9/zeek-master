@@ -1,7 +1,7 @@
-##! This script adds authoritative and additional responses for the current
-##! query to the DNS log.  It can cause severe overhead due to the need
-##! for all authoritative and additional responses to have events generated.
-##! This script is not recommended for use on heavily loaded links.
+
+
+
+
 
 @load base/protocols/dns/main
 
@@ -12,9 +12,9 @@ module DNS;
 
 export {
 	redef record Info += {
-		## Authoritative responses for the query.
+
 		auth:       set[string] &log &optional;
-		## Additional responses for the query.
+
 		addl:       set[string] &log &optional;
 	};
 }
@@ -22,12 +22,12 @@ export {
 hook DNS::do_reply(c: connection, msg: dns_msg, ans: dns_answer, reply: string) &priority=5
 	{
 	if ( msg$opcode != 0 )
-		# Currently only standard queries are tracked.
+
 		return;
 
 	if ( ! msg$QR )
-		# This is weird: the inquirer must also be providing answers in
-		# the request, which is not what we want to track.
+
+
 		return;
 
 	if ( ans$answer_type == DNS_AUTH )

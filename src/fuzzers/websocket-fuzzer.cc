@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include <binpac.h>
 
@@ -53,7 +53,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         abort();
     }
 
-    // Would be nice to have that in LLVMFuzzerInitialize, oh well...
+
     static bool one_time_setup = false;
     if ( ! one_time_setup ) {
         zeek::analyzer_mgr->DisableAllAnalyzers();
@@ -74,8 +74,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
     auto [a, adapter] = add_analyzer(conn, analyzer_tag);
 
-    // WebSocket specific initialization. May also want to fuzz
-    // this in the future.
+
+
     static const auto& config_type = zeek::id::find_type<zeek::RecordType>("WebSocket::AnalyzerConfig");
     static const auto& config_rec = zeek::make_intrusive<zeek::RecordVal>(config_type);
     auto wsa = static_cast<zeek::analyzer::websocket::WebSocket_Analyzer*>(a);
@@ -92,10 +92,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         } catch ( const binpac::Exception& e ) {
         }
 
-        chunk = {}; // Release buffer before draining events.
+        chunk = {};
         zeek::event_mgr.Drain();
 
-        // Has the analyzer been disabled during event processing?
+
         if ( ! adapter->HasChildAnalyzer(analyzer_tag) )
             break;
     }

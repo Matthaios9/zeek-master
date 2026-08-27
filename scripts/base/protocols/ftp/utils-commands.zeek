@@ -2,27 +2,27 @@ module FTP;
 
 export {
 	type CmdArg: record {
-		## Time when the command was sent.
+
 		ts:   time;
-		## Command.
+
 		cmd:  string &default="<unknown>";
-		## Argument for the command if one was given.
+
 		arg:  string &default="";
-		## Counter to track how many commands have been executed.
+
 		seq:  count &default=0;
-		## Flag indicating if the arg of this CmdArg has been used
-		## to update cwd of c$ftp.
+
+
 		cwd_consumed: bool &default=F;
 	};
 
-	## Structure for tracking pending commands in the event that the client
-	## sends a large number of commands before the server has a chance to
-	## reply.
+
+
+
 	type PendingCmds: table[count] of CmdArg;
 
-	## Possible response codes for a wide variety of FTP commands.
+
 	option cmd_reply_code: set[string, count] = {
-		# According to RFC 959
+
 		["<init>", [120, 220, 421]],
 		["USER", [230, 331, 332, 421, 530, 500, 501]],
 		["PASS", [230, 202, 332, 421, 530, 500, 501, 503]],
@@ -58,23 +58,23 @@ export {
 		["SITE", [200, 202, 214, 500, 501, 502, 530]],
 		["NOOP", [200, 421, 500]],
 
-		# Extensions
-		["LPRT", [500, 501, 521]],                # RFC1639
-		["FEAT", [211, 500, 502]],                # RFC2389
-		["OPTS", [200, 451, 501]],                # RFC2389
-		["EPSV", [229, 500, 501]],                # RFC2428
-		["EPRT", [200, 500, 501, 522]],           # RFC2428
-		["SIZE", [213, 500, 501, 550]],           # RFC3659
-		["MDTM", [213, 500, 501, 550]],           # RFC3659
-		["MLST", [150, 226, 250, 500, 501, 550]], # RFC3659
-		["MLSD", [150, 226, 250, 500, 501, 550]], # RFC3659
 
-		["CLNT", [200, 500]],           # No RFC (indicate client software)
-		["MACB", [200, 500, 550]],      # No RFC (test for MacBinary support)
+		["LPRT", [500, 501, 521]],
+		["FEAT", [211, 500, 502]],
+		["OPTS", [200, 451, 501]],
+		["EPSV", [229, 500, 501]],
+		["EPRT", [200, 500, 501, 522]],
+		["SIZE", [213, 500, 501, 550]],
+		["MDTM", [213, 500, 501, 550]],
+		["MLST", [150, 226, 250, 500, 501, 550]],
+		["MLSD", [150, 226, 250, 500, 501, 550]],
 
-		["<init>", 0],    # unexpected command-reply pair
-		["<missing>", 0], # unexpected command-reply pair
-		["QUIT", 0],      # unexpected command-reply pair
+		["CLNT", [200, 500]],
+		["MACB", [200, 500, 550]],
+
+		["<init>", 0],
+		["<missing>", 0],
+		["QUIT", 0],
 	};
 }
 
@@ -86,11 +86,11 @@ function add_pending_cmd(pc: PendingCmds, seq: count, cmd: string, arg: string):
 	return ca;
 	}
 
-# Determine which is the best command to match with based on the
-# response code and message.
+
+
 function get_pending_cmd(pc: PendingCmds, reply_code: count, reply_msg: string): CmdArg
 	{
-	local best_match: CmdArg &is_assigned;	# &is_assigned for $ts field
+	local best_match: CmdArg &is_assigned;
 	local best_seq = 0;
 	local best_score: int = -1;
 
@@ -98,19 +98,19 @@ function get_pending_cmd(pc: PendingCmds, reply_code: count, reply_msg: string):
 		{
 		local score: int = 0;
 
-		# if the command is compatible with the reply code
-		# code 500 (syntax error) is compatible with all commands
+
+
 		if ( reply_code == 500 || [cmd$cmd, reply_code] in cmd_reply_code )
 			score = score + 100;
 
-		# if the command or the command arg appears in the reply message
+
 		if ( strstr(reply_msg, cmd$cmd) > 0 )
 			score = score + 20;
 		if ( strstr(reply_msg, cmd$arg) > 0 )
 			score = score + 10;
 
 		if ( score > best_score ||
-		     ( score == best_score && best_seq > cmd_seq ) ) # break tie with sequence number
+		     ( score == best_score && best_seq > cmd_seq ) )
 			{
 			best_score = score;
 			best_seq = cmd_seq;
@@ -118,10 +118,10 @@ function get_pending_cmd(pc: PendingCmds, reply_code: count, reply_msg: string):
 			}
 		}
 
-	#if ( [best_match$cmd, reply_code] !in cmd_reply_code )
-	#	{
-	#	# TODO: maybe do something when best match doesn't have an expected response code?
-	#	}
+
+
+
+
 	return best_match;
 	}
 

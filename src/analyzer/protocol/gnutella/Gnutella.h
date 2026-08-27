@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -34,7 +34,7 @@ public:
     unsigned int payload_left;
 };
 
-} // namespace detail
+}
 
 class Gnutella_Analyzer : public analyzer::tcp::TCP_ApplicationAnalyzer {
 public:
@@ -70,4 +70,4 @@ private:
     detail::GnutellaMsgState* ms;
 };
 
-} // namespace zeek::analyzer::gnutella
+}

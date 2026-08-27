@@ -1,13 +1,13 @@
-##! File extraction and introspection for DCC transfers over IRC.
-##!
-##! There is a major problem with this script in the cluster context because
-##! we might see A send B a message that a DCC connection is to be expected,
-##! but that connection will actually be between B and C which could be
-##! analyzed on a different worker.
-##!
 
-# Example line from IRC server indicating that the DCC SEND is about to start:
-#    PRIVMSG my_nick :^ADCC SEND whateverfile.zip 3640061780 1026 41709^A
+
+
+
+
+
+
+
+
+
 
 @load ./main
 @load base/utils/files
@@ -18,16 +18,16 @@ module IRC;
 
 export {
 	redef record Info += {
-		## DCC filename requested.
+
 		dcc_file_name:         string &log &optional;
-		## Size of the DCC transfer as indicated by the sender.
+
 		dcc_file_size:         count  &log &optional;
-		## Sniffed mime type of the file.
+
 		dcc_mime_type:         string &log &optional;
 	};
 
-	## IRC DCC data finalization hook.  Remaining expected IRC DCC state may be
-	## purged when it's called.
+
+
 	global finalize_irc_data: Conn::RemovalHook;
 }
 
@@ -38,7 +38,7 @@ function dcc_relay_topic(): string &is_used
 	local rval = Cluster::rr_topic(Cluster::proxy_pool, "dcc_transfer_rr_key");
 
 	if ( rval == "" )
-		# No proxy is alive, so relay via manager instead.
+
 		return Cluster::manager_topic;
 
 	return rval;
@@ -81,8 +81,8 @@ function log_dcc(f: fa_file)
 		Log::write(IRC::LOG, irc);
 		irc$command = tmp;
 
-		# Delete these values in case another DCC transfer
-		# happens during the IRC session.
+
+
 		delete irc$dcc_file_name;
 		delete irc$dcc_file_size;
 		delete irc$dcc_mime_type;

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include <unistd.h>
 #include <cctype>
@@ -8,9 +8,9 @@
 #include "pac_exception.h"
 #include "pac_id.h"
 #include "pac_output.h"
-// NOLINTBEGIN
+
 #include "pac_parse.h"
-// NOLINTEND
+
 #include "pac_type.h"
 #include "pac_utils.h"
 
@@ -37,7 +37,7 @@ void add_to_include_directories(string dirs) {
 
         string dir = dirs.substr(dir_begin, dir_end - dir_begin);
 
-        // Add a trailing '/' if necessary
+
         if ( dir.length() > 0 && *(dir.end() - 1) != '/' )
             dir += '/';
 
@@ -104,7 +104,7 @@ int compile(const char* filename) {
     string basename;
 
     if ( ! FLAGS_output_directory.empty() ) {
-        // Strip leading directories of filename
+
         const char* last_slash = strrchr(filename, '/');
         if ( last_slash )
             basename = last_slash + 1;
@@ -115,7 +115,7 @@ int compile(const char* filename) {
     else
         basename = filename;
 
-    // If the file name ends with ".pac"
+
     if ( basename.length() > 4 && basename.substr(basename.length() - 4) == ".pac" ) {
         basename = basename.substr(0, basename.length() - 4);
     }
@@ -188,7 +188,7 @@ void usage() {
     exit(1);
 }
 
-// GCC uses __SANITIZE_ADDRESS__, Clang uses __has_feature
+
 #if defined(__SANITIZE_ADDRESS__)
 #define USING_ASAN
 #endif
@@ -199,7 +199,7 @@ void usage() {
 #endif
 #endif
 
-// FreeBSD and macOS don't support LeakSanitizer
+
 #if defined(USING_ASAN) && ! defined(__FreeBSD__) && ! defined(__APPLE__)
 #include <sanitizer/lsan_interface.h>
 #define BINPAC_LSAN_DISABLE() __lsan_disable()
@@ -208,9 +208,9 @@ void usage() {
 #endif
 
 int main(int argc, char* argv[]) {
-    // We generally do not care at all if binpac is leaking and other
-    // projects that use it, like Zeek, only have their build tripped up
-    // by the default behavior of LSAN to treat leaks as errors.
+
+
+
     BINPAC_LSAN_DISABLE();
 
 #ifdef HAVE_MALLOC_OPTIONS
@@ -228,7 +228,7 @@ int main(int argc, char* argv[]) {
             case 'q': FLAGS_quiet = true; break;
 
             case 'I':
-                // Add to FLAGS_include_directories
+
                 add_to_include_directories(optarg);
                 break;
 
@@ -238,12 +238,12 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Strip the trailing '/'s
+
     while ( ! FLAGS_output_directory.empty() && *(FLAGS_output_directory.end() - 1) == '/' ) {
         FLAGS_output_directory.erase(FLAGS_output_directory.end() - 1);
     }
 
-    // Add the current directory to FLAGS_include_directories
+
     add_to_include_directories(".");
 
     pac_init();

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/plugin/Plugin.h"
 
@@ -19,7 +19,7 @@ namespace zeek::plugin {
 
 const char* hook_name(HookType h) {
     static constexpr const char* hook_names[static_cast<int>(NUM_HOOKS) + 1] = {
-        // Order must match that of HookType.
+
         "LoadFile",
         "LoadFileExtended",
         "CallFunction",
@@ -33,10 +33,10 @@ const char* hook_name(HookType h) {
         "UnprocessedPacket",
         "ObjDtor",
         "PublishEvent",
-        // MetaHooks
+
         "MetaHookPre",
         "MetaHookPost",
-        // End marker.
+
         "<end>",
     };
 
@@ -207,7 +207,7 @@ void HookArgument::Describe(ODesc* d) const {
             d->Add(input_file.first);
             d->Add(", ");
             if ( input_file.second )
-                d->Add(input_file.second->substr(0, 20)); // cut content off
+                d->Add(input_file.second->substr(0, 20));
             else
                 d->Add("<no content>");
 
@@ -296,8 +296,8 @@ void Plugin::AddBifItem(const std::string& name, BifItem::Type type) {
 void Plugin::AddComponent(Component* c) {
     components.push_back(c);
 
-    // Sort components by name to make sure we have a deterministic
-    // order.
+
+
     components.sort(component_cmp);
 }
 
@@ -438,4 +438,4 @@ void Plugin::Describe(ODesc* d) const {
     }
 }
 
-} // namespace zeek::plugin
+}

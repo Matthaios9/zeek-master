@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -24,7 +24,7 @@ protected:
     RecordValPtr ExtractCallItRequest(const u_char*& buf, int& len);
 };
 
-} // namespace detail
+}
 
 class Portmapper_Analyzer : public RPC_Analyzer {
 public:
@@ -34,4 +34,4 @@ public:
     static analyzer::Analyzer* Instantiate(Connection* conn) { return new Portmapper_Analyzer(conn); }
 };
 
-} // namespace zeek::analyzer::rpc
+}

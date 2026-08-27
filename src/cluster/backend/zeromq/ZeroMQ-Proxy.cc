@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/cluster/backend/zeromq/ZeroMQ-Proxy.h"
 
@@ -14,11 +14,11 @@ using namespace zeek::cluster::zeromq;
 
 namespace {
 
-/**
- * Function that runs zmq_proxy() that provides a central XPUB/XSUB
- * broker for other Zeek nodes to connect and exchange subscription
- * information.
- */
+
+
+
+
+
 void thread_fun(ProxyThread::Args* args) {
     zeek::util::detail::set_thread_name("zmq-proxy-thread");
 
@@ -26,7 +26,7 @@ void thread_fun(ProxyThread::Args* args) {
 
     while ( ! done ) {
         try {
-            zmq::proxy_steerable(args->xsub, args->xpub, /*capture=*/zmq::socket_ref{}, /*control=*/args->control);
+            zmq::proxy_steerable(args->xsub, args->xpub, zmq::socket_ref{}, args->control);
         } catch ( zmq::error_t& err ) {
             if ( err.num() == EINTR )
                 continue;
@@ -44,33 +44,33 @@ void thread_fun(ProxyThread::Args* args) {
     }
 }
 
-} // namespace
+}
 
 bool ProxyThread::Start() {
     ctx.set(zmq::ctxopt::io_threads, io_threads);
 
-    // Enable IPv6 support for all subsequently created sockets, if configured.
+
     ctx.set(zmq::ctxopt::ipv6, ipv6);
 
     zmq::socket_t xpub(ctx, zmq::socket_type::xpub);
     zmq::socket_t xsub(ctx, zmq::socket_type::xsub);
 
-    // Enable XPUB_VERBOSER unconditional to enforce nodes receiving
-    // notifications about any new and removed subscriptions, even if
-    // they have seen them before. This is needed for the subscribe
-    // callback and shared subscription removal notification to work
-    // reliably.
+
+
+
+
+
     xpub.set(zmq::sockopt::xpub_verboser, 1);
 
     xpub.set(zmq::sockopt::xpub_nodrop, xpub_nodrop);
 
-    // Setup curve encryption on the two sockets if enabled. The central XPUB/XSUB
-    // sockets act as curve servers and connecting Zeek processe as curve clients.
-    //
-    // Additionally, start a separate thread with a REP socket in the same
-    // context bound to the well known zeromq.zap.01 address. While we do not
-    // use ZAP extensively at this point, this puts a bit of infrastructure
-    // in place if we ever wanted to.
+
+
+
+
+
+
+
     if ( curve_config.IsServerEnabled() ) {
         curve_config.ConfigureServerCurveSockOpts(xpub);
         curve_config.ConfigureServerCurveSockOpts(xsub);

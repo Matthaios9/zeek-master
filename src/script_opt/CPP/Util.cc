@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/CPP/Util.h"
 
@@ -12,7 +12,7 @@ namespace zeek::detail {
 using namespace std;
 
 string Fmt(double d) {
-    // Special hack to preserve the signed-ness of the magic -0.0.
+
     if ( d == 0.0 && signbit(d) )
         return "-0.0";
 
@@ -26,8 +26,8 @@ string Fmt(double d) {
     if ( isnan(d) )
         return "std::numeric_limits<double>::quiet_NaN()";
 
-    // Unfortunately, to_string(double) is hardwired to use %f with
-    // default of 6 digits precision.
+
+
     char buf[8192];
     snprintf(buf, sizeof buf, "%.17g", d);
     return buf;
@@ -38,7 +38,7 @@ string scope_prefix(const string& scope) { return "zeek::detail::CPP_" + scope; 
 string scope_prefix(int scope) { return scope_prefix(to_string(scope)); }
 
 bool is_CPP_compilable(const ProfileFunc* pf, const char** reason) {
-    auto func = pf->ProfiledFunc(); // can be nil for lambdas
+    auto func = pf->ProfiledFunc();
 
     if ( func ) {
         auto& scope_id = pf->ProfiledScope()->GetID();
@@ -120,4 +120,4 @@ string CPPEscape(const char* b, int len) {
     return res;
 }
 
-} // namespace zeek::detail
+}

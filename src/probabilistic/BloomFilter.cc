@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/probabilistic/BloomFilter.h"
 
@@ -24,12 +24,12 @@ std::optional<BrokerData> BloomFilter::SerializeData() const {
     auto h = hasher->Serialize();
 
     if ( ! h )
-        return std::nullopt; // Cannot serialize
+        return std::nullopt;
 
     auto d = DoSerializeData();
 
     if ( ! d )
-        return std::nullopt; // Cannot serialize
+        return std::nullopt;
 
     BrokerListBuilder builder;
     builder.Reserve(3);
@@ -170,7 +170,7 @@ void BasicBloomFilter::Add(const zeek::detail::HashKey* key) {
 }
 
 bool BasicBloomFilter::Decrement(const zeek::detail::HashKey* key) {
-    // operation not supported by basic bloom filter
+
     return false;
 }
 
@@ -264,7 +264,7 @@ CountingBloomFilter* CountingBloomFilter::Clone() const {
 
 std::string CountingBloomFilter::InternalState() const { return util::fmt("%" PRIu64, cells->Hash()); }
 
-// TODO: Use partitioning in add/count to allow for reusing CMS bounds.
+
 void CountingBloomFilter::Add(const zeek::detail::HashKey* key) {
     detail::Hasher::digest_vector h = hasher->Hash(key);
 
@@ -273,7 +273,7 @@ void CountingBloomFilter::Add(const zeek::detail::HashKey* key) {
 }
 
 bool CountingBloomFilter::Decrement(const zeek::detail::HashKey* key) {
-    // Only decrement if a member.
+
     if ( Count(key) == 0 )
         return false;
 
@@ -310,4 +310,4 @@ bool CountingBloomFilter::DoUnserializeData(BrokerDataView data) {
     return true;
 }
 
-} // namespace zeek::probabilistic
+}

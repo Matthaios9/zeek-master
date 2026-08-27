@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -6,7 +6,7 @@
 
 #include "zeek/storage/Backend.h"
 
-// Forward declare these to avoid including sqlite3.h here
+
 struct sqlite3;
 struct sqlite3_stmt;
 
@@ -18,9 +18,9 @@ public:
 
     static BackendPtr Instantiate();
 
-    /**
-     * Returns whether the backend is opened.
-     */
+
+
+
     bool IsOpen() override { return db != nullptr; }
 
 private:
@@ -35,23 +35,23 @@ private:
     void DoExpire(double current_network_time) override;
     std::string DoGetConfigMetricsLabel() const override;
 
-    /**
-     * Checks whether a status code returned by an sqlite call is a success.
-     *
-     * @return A result structure containing a result code and an optional error
-     * string based on the status code.
-     */
+
+
+
+
+
+
     OperationResult CheckError(int code);
 
-    /**
-     * Abstracts calls to sqlite3_step to properly create an OperationResult
-     * structure based on the result.
-     */
+
+
+
+
     OperationResult Step(sqlite3_stmt* stmt, const StepResultParser& parser, bool is_pragma = false);
 
-    /**
-     * Helper utility for running pragmas on the database.
-     */
+
+
+
     OperationResult RunPragma(std::string_view name, std::optional<std::string_view> value = std::nullopt,
                               const StepResultParser& value_parser = nullptr);
 
@@ -83,4 +83,4 @@ private:
     double last_file_size_value = 0.0;
 };
 
-} // namespace zeek::storage::backend::sqlite
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/storage/Manager.h"
 
@@ -17,11 +17,11 @@ void detail::ExpirationTimer::Dispatch(double t, bool is_expire) {
     if ( is_expire )
         return;
 
-    // If there isn't an active thread, spin up a new one. Expiration may take
-    // some time to complete and we want it to get all the way done before we
-    // start another one running. If this causes us to skip a cycle, that's not
-    // a big deal as the next cycle will catch anything that should be expired
-    // in the interim.
+
+
+
+
+
     if ( ! expire_running.test_and_set() && storage_mgr->BackendCount() > 0 ) {
         DBG_LOG(DBG_STORAGE, "Starting new expiration thread");
         storage_mgr->expiration_thread = zeek::jthread([t]() { storage_mgr->Expire(t); });
@@ -35,14 +35,14 @@ Manager::Manager()
       serializer_mgr(plugin::ComponentManager<storage::SerializerComponent>("Storage", "Serializer")) {}
 
 Manager::~Manager() {
-    // TODO: should we shut down any existing backends? force-poll until all of their existing
-    // operations finish and close them?
 
-    // Don't leave all of these static objects to leak.
+
+
+
     ReturnCode::Cleanup();
 
-    // NOTE: The expiration_thread object is a jthread and will be automatically joined
-    // here as the object is destroyed.
+
+
 }
 
 void Manager::InitPostScript() {
@@ -104,9 +104,9 @@ OperationResult Manager::OpenBackend(BackendPtr backend, OpenResultCallback* cb,
 }
 
 OperationResult Manager::CloseBackend(BackendPtr backend, ResultCallback* cb) {
-    // Expiration runs on a separate thread and loops over the vector of backends. The mutex
-    // here ensures exclusive access. This one happens in a block because we can remove the
-    // backend from the vector before actually closing it.
+
+
+
     {
         std::unique_lock<std::mutex> lk(backends_mtx);
         auto it = std::ranges::find(backends, backend);
@@ -118,8 +118,8 @@ OperationResult Manager::CloseBackend(BackendPtr backend, ResultCallback* cb) {
 }
 
 void Manager::Expire(double t) {
-    // Expiration runs on a separate thread and loops over the vector of backends. The mutex
-    // here ensures exclusive access.
+
+
     std::unique_lock<std::mutex> lk(backends_mtx);
 
     for ( auto it = backends.begin(); it != backends.end() && ! run_state::terminating; ++it ) {
@@ -138,8 +138,8 @@ void Manager::StartExpirationTimer() {
 }
 
 void Manager::RegisterBackend(BackendPtr backend) {
-    // Expiration runs on a separate thread and loops over the vector of backends. The mutex
-    // here ensures exclusive access.
+
+
     std::unique_lock<std::mutex> lk(backends_mtx);
 
     backends.push_back(std::move(backend));
@@ -147,10 +147,10 @@ void Manager::RegisterBackend(BackendPtr backend) {
 }
 
 size_t Manager::BackendCount() {
-    // Expiration runs on a separate thread and loops over the vector of backends. The mutex
-    // here ensures exclusive access.
+
+
     std::unique_lock<std::mutex> lk(backends_mtx);
     return backends.size();
 }
 
-} // namespace zeek::storage
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/logging/WriterFrontend.h"
 
@@ -16,7 +16,7 @@ using zeek::threading::Value;
 
 namespace zeek::logging {
 
-// Messages sent from frontend to backend (i.e., "InputMessages").
+
 
 class InitMessage final : public threading::InputMessage<WriterBackend> {
 public:
@@ -89,12 +89,12 @@ private:
     double network_time;
 };
 
-// Frontend methods.
+
 
 WriterFrontend::WriterFrontend(const WriterBackend::WriterInfo& arg_info, EnumVal* arg_stream, EnumVal* arg_writer,
                                bool arg_local, bool arg_remote)
     : write_buffer(detail::WriteBuffer(BifConst::Log::write_buffer_size)) {
-    // The header's fields are initialized in Init()
+
     header = detail::LogWriteHeader{{zeek::NewRef{}, arg_stream},
                                     {zeek::NewRef{}, arg_writer},
                                     arg_info.filter_name,
@@ -135,7 +135,7 @@ void WriterFrontend::Stop() {
 
     if ( backend ) {
         backend->SignalStop();
-        backend = nullptr; // Thread manager will clean it up once it finishes.
+        backend = nullptr;
     }
 }
 
@@ -148,12 +148,12 @@ void WriterFrontend::Init(int arg_num_fields, const Field* const* arg_fields) {
 
     initialized = true;
 
-    // Initialize the LogWriterHeader fields and field_pointers.
+
     header.fields.reserve(arg_num_fields);
     for ( int i = 0; i < arg_num_fields; i++ )
         header.fields.emplace_back(*arg_fields[i]);
 
-    // Now populate field_pointers with stable pointers.
+
     header.field_pointers.reserve(arg_num_fields);
     for ( int i = 0; i < arg_num_fields; i++ )
         header.field_pointers.emplace_back(&header.fields[i]);
@@ -163,8 +163,8 @@ void WriterFrontend::Init(int arg_num_fields, const Field* const* arg_fields) {
     }
 
     if ( backend )
-        // InitMessage takes ownership of the pointer passed in here and deletes it and
-        // the fields when done processing the message.
+
+
         backend->SendIn(new InitMessage(backend, arg_num_fields, arg_fields));
     else {
         for ( int i = 0; i < arg_num_fields; i++ )
@@ -185,35 +185,35 @@ void WriterFrontend::Write(detail::LogRecord&& arg_vals) {
         return;
     }
 
-    // If remote logging is enabled *and* broker is used as cluster backend,
-    // push the single log record directly to broker_mgr, it uses its own
-    // buffering logic currently.
-    //
-    // Other cluster backends leverage the write buffering logic in the
-    // WriterFrontend. See FlushWriteBuffer().
+
+
+
+
+
+
     const bool broker_is_cluster_backend = zeek::cluster::backend == zeek::broker_mgr;
 
     if ( remote ) {
         if ( broker_is_cluster_backend ) {
             zeek::broker_mgr->PublishLogWrite(header.stream_id.get(), header.writer_id.get(), info->path, vals);
 
-            if ( ! backend ) // nothing left do do if we do not log locally
+            if ( ! backend )
                 return;
         }
     }
     else if ( ! backend ) {
         assert(! remote);
-        // Not remote and no backend, we're done.
+
         return;
     }
 
-    // Either non-broker remote or local logging.
+
     assert(backend || (remote && ! broker_is_cluster_backend));
 
     write_buffer.WriteRecord(std::move(vals));
 
     if ( write_buffer.Full() || ! buf || run_state::terminating )
-        // Buffer full (or no buffering desired or terminating).
+
         FlushWriteBuffer();
 }
 
@@ -222,13 +222,13 @@ void WriterFrontend::FlushWriteBuffer() {
         return;
 
     if ( write_buffer.Empty() )
-        // Nothing to do.
+
         return;
 
     auto records = std::move(write_buffer).TakeRecords();
 
-    // We've already pushed to broker during Write(). If another backend
-    // is used, push all the buffered log records to it now.
+
+
     const bool broker_is_cluster_backend = zeek::cluster::backend == zeek::broker_mgr;
     if ( remote && ! broker_is_cluster_backend )
         zeek::cluster::backend->PublishLogWrites(header, std::span{records});
@@ -247,7 +247,7 @@ void WriterFrontend::SetBuf(bool enabled) {
         backend->SendIn(new SetBufMessage(backend, enabled));
 
     if ( ! buf )
-        // Make sure no longer buffer any still queued data.
+
         FlushWriteBuffer();
 }
 
@@ -270,8 +270,8 @@ void WriterFrontend::Rotate(const char* rotated_path, double open, double close,
     if ( backend )
         backend->SendIn(new RotateMessage(backend, this, rotated_path, open, close, terminating));
     else
-        // Still signal log manager that we're done.
+
         log_mgr->FinishedRotation(this, nullptr, nullptr, 0, 0, false, terminating);
 }
 
-} // namespace zeek::logging
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_withinput.h"
 
@@ -37,7 +37,7 @@ void WithInputField::GenEval(Output* out_cc, Env* env) {
 void WithInputField::GenParseCode(Output* out_cc, Env* env) {
     out_cc->println("// Parse \"%s\"", id_->Name());
     if ( type_->attr_if_expr() ) {
-        // A conditional field
+
         env->Evaluate(out_cc, type_->has_value_var());
         out_cc->println("if ( %s ) {", env->RValue(type_->has_value_var()));
         out_cc->inc_indent();

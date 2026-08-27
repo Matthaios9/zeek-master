@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/FuncInfo.h"
 
@@ -6,46 +6,46 @@
 
 namespace zeek::detail {
 
-// See script_opt/ZAM/maint/README for maintenance of the attributes
-// in this file.
 
-// Attributes associated with functions. Currently these are mutually
-// exclusive (i.e., no function will have more than one), but for now
-// we use a bitmask-style approach so we can accommodate future attributes
-// that might overlap.
 
-// BiF Functions that are not listed are assumed to have Unknown side effects.
-// (These are described in comments after the table definition.)  Script
-// functions that are not listed are assumed to not be "special", i.e. known
-// to the event engine.
 
-// Does not change script-level state (though may change internal state).
+
+
+
+
+
+
+
+
+
+
+
 constexpr unsigned int ATTR_NO_SCRIPT_SIDE_EFFECTS = 0x1;
 
-// Does not change any Zeek state, internal or external. (May change
-// state outside of Zeek, such as file system elements.) Implies
-// ATTR_NO_SCRIPT_SIDE_EFFECTS.
+
+
+
 constexpr unsigned int ATTR_NO_ZEEK_SIDE_EFFECTS = 0x2;
 
-// Calls made with the same arguments yield the same results, if made
-// after full Zeek initialization. Implies ATTR_NO_ZEEK_SIDE_EFFECTS.
+
+
 constexpr unsigned int ATTR_IDEMPOTENT = 0x4;
 
-// Calls with constant arguments can always be folded, even prior to
-// full Zeek initialization. Such functions must not have the potential
-// to generate errors. Implies ATTR_IDEMPOTENT.
+
+
+
 constexpr unsigned int ATTR_FOLDABLE = 0x8;
 
-// The event engine knows about this script function and may call it
-// during its processing.
+
+
 constexpr unsigned int ATTR_SPECIAL_SCRIPT_FUNC = 0x10;
 
-// ZAM knows about this script function and will replace it with specialized
-// instructions.
+
+
 constexpr unsigned int ATTR_ZAM_REPLACEABLE_SCRIPT_FUNC = 0x20;
 
 static std::unordered_map<std::string, unsigned int> func_attrs = {
-    // Script functions.
+
     {"Analyzer::disabling_analyzer", ATTR_SPECIAL_SCRIPT_FUNC},
     {"Log::__default_rotation_postprocessor", ATTR_SPECIAL_SCRIPT_FUNC},
     {"Log::empty_post_delay_cb", ATTR_SPECIAL_SCRIPT_FUNC},
@@ -63,7 +63,7 @@ static std::unordered_map<std::string, unsigned int> func_attrs = {
 
     {"id_string", ATTR_ZAM_REPLACEABLE_SCRIPT_FUNC},
 
-    // BiFs.
+
     {"Analyzer::__disable_all_analyzers", ATTR_NO_SCRIPT_SIDE_EFFECTS},
     {"Analyzer::__disable_analyzer", ATTR_NO_SCRIPT_SIDE_EFFECTS},
     {"Analyzer::__enable_analyzer", ATTR_NO_SCRIPT_SIDE_EFFECTS},
@@ -216,13 +216,13 @@ static std::unordered_map<std::string, unsigned int> func_attrs = {
     {"bloomfilter_intersect", ATTR_NO_SCRIPT_SIDE_EFFECTS},
     {"bloomfilter_lookup", ATTR_NO_SCRIPT_SIDE_EFFECTS},
     {"bloomfilter_merge", ATTR_NO_SCRIPT_SIDE_EFFECTS},
-    {"bytestring_to_count", ATTR_IDEMPOTENT},  // can error
-    {"bytestring_to_double", ATTR_IDEMPOTENT}, // can error
-    {"bytestring_to_float", ATTR_IDEMPOTENT},  // can error
+    {"bytestring_to_count", ATTR_IDEMPOTENT},
+    {"bytestring_to_double", ATTR_IDEMPOTENT},
+    {"bytestring_to_float", ATTR_IDEMPOTENT},
     {"bytestring_to_hexstr", ATTR_FOLDABLE},
     {"calc_next_rotate", ATTR_NO_ZEEK_SIDE_EFFECTS},
     {"cat", ATTR_FOLDABLE},
-    {"cat_sep", ATTR_IDEMPOTENT}, // can error
+    {"cat_sep", ATTR_IDEMPOTENT},
     {"ceil", ATTR_FOLDABLE},
     {"check_subnet", ATTR_FOLDABLE},
     {"clean", ATTR_FOLDABLE},
@@ -235,19 +235,19 @@ static std::unordered_map<std::string, unsigned int> func_attrs = {
     {"count_substr", ATTR_FOLDABLE},
     {"count_to_double", ATTR_FOLDABLE},
     {"count_to_port", ATTR_FOLDABLE},
-    {"count_to_v4_addr", ATTR_IDEMPOTENT}, // can error
-    {"counts_to_addr", ATTR_IDEMPOTENT},   // can error
+    {"count_to_v4_addr", ATTR_IDEMPOTENT},
+    {"counts_to_addr", ATTR_IDEMPOTENT},
     {"current_analyzer", ATTR_NO_ZEEK_SIDE_EFFECTS},
     {"current_event_time", ATTR_NO_ZEEK_SIDE_EFFECTS},
     {"current_time", ATTR_NO_ZEEK_SIDE_EFFECTS},
-    {"decode_base64", ATTR_IDEMPOTENT}, // can error
+    {"decode_base64", ATTR_IDEMPOTENT},
     {"decode_base64_conn", ATTR_NO_SCRIPT_SIDE_EFFECTS},
     {"decode_netbios_name", ATTR_FOLDABLE},
     {"decode_netbios_name_type", ATTR_FOLDABLE},
     {"disable_event_group", ATTR_NO_SCRIPT_SIDE_EFFECTS},
     {"disable_module_events", ATTR_NO_SCRIPT_SIDE_EFFECTS},
     {"do_profiling", ATTR_NO_SCRIPT_SIDE_EFFECTS},
-    {"double_to_count", ATTR_IDEMPOTENT}, // can error
+    {"double_to_count", ATTR_IDEMPOTENT},
     {"double_to_int", ATTR_FOLDABLE},
     {"double_to_interval", ATTR_FOLDABLE},
     {"double_to_time", ATTR_FOLDABLE},
@@ -264,7 +264,7 @@ static std::unordered_map<std::string, unsigned int> func_attrs = {
     {"entropy_test_finish", ATTR_NO_SCRIPT_SIDE_EFFECTS},
     {"entropy_test_init", ATTR_NO_SCRIPT_SIDE_EFFECTS},
     {"enum_names", ATTR_IDEMPOTENT},
-    {"enum_to_int", ATTR_IDEMPOTENT}, // can error
+    {"enum_to_int", ATTR_IDEMPOTENT},
     {"escape_string", ATTR_FOLDABLE},
     {"exit", ATTR_NO_SCRIPT_SIDE_EFFECTS},
     {"exp", ATTR_FOLDABLE},
@@ -276,13 +276,13 @@ static std::unordered_map<std::string, unsigned int> func_attrs = {
     {"find_all_ordered", ATTR_FOLDABLE},
     {"find_entropy", ATTR_FOLDABLE},
     {"find_first", ATTR_FOLDABLE},
-    {"find_in_zeekpath", ATTR_IDEMPOTENT}, // can error
+    {"find_in_zeekpath", ATTR_IDEMPOTENT},
     {"find_last", ATTR_FOLDABLE},
     {"find_str", ATTR_FOLDABLE},
     {"floor", ATTR_FOLDABLE},
     {"flush_all", ATTR_NO_SCRIPT_SIDE_EFFECTS},
     {"fmt", ATTR_FOLDABLE},
-    {"fmt_ftp_port", ATTR_IDEMPOTENT}, // can error
+    {"fmt_ftp_port", ATTR_IDEMPOTENT},
     {"fnv1a32", ATTR_FOLDABLE},
     {"fnv1a64", ATTR_FOLDABLE},
     {"generate_all_events", ATTR_NO_SCRIPT_SIDE_EFFECTS},
@@ -333,7 +333,7 @@ static std::unordered_map<std::string, unsigned int> func_attrs = {
     {"have_spicy_analyzers", ATTR_IDEMPOTENT},
     {"haversine_distance", ATTR_FOLDABLE},
     {"hexdump", ATTR_FOLDABLE},
-    {"hexstr_to_bytestring", ATTR_IDEMPOTENT}, // can error
+    {"hexstr_to_bytestring", ATTR_IDEMPOTENT},
     {"hll_cardinality_add", ATTR_NO_SCRIPT_SIDE_EFFECTS},
     {"hll_cardinality_copy", ATTR_NO_SCRIPT_SIDE_EFFECTS},
     {"hll_cardinality_estimate", ATTR_NO_ZEEK_SIDE_EFFECTS},
@@ -345,13 +345,13 @@ static std::unordered_map<std::string, unsigned int> func_attrs = {
     {"install_dst_net_filter", ATTR_NO_SCRIPT_SIDE_EFFECTS},
     {"install_src_addr_filter", ATTR_NO_SCRIPT_SIDE_EFFECTS},
     {"install_src_net_filter", ATTR_NO_SCRIPT_SIDE_EFFECTS},
-    {"int_to_count", ATTR_IDEMPOTENT}, // can error
+    {"int_to_count", ATTR_IDEMPOTENT},
     {"int_to_double", ATTR_FOLDABLE},
     {"interval_to_double", ATTR_FOLDABLE},
     {"is_alnum", ATTR_FOLDABLE},
     {"is_alpha", ATTR_FOLDABLE},
     {"is_ascii", ATTR_FOLDABLE},
-    {"is_event_handled", ATTR_IDEMPOTENT}, // can error
+    {"is_event_handled", ATTR_IDEMPOTENT},
     {"is_file_analyzer", ATTR_NO_ZEEK_SIDE_EFFECTS},
     {"is_icmp_port", ATTR_FOLDABLE},
     {"is_local_interface", ATTR_IDEMPOTENT},
@@ -397,7 +397,7 @@ static std::unordered_map<std::string, unsigned int> func_attrs = {
     {"mkdir", ATTR_NO_ZEEK_SIDE_EFFECTS},
     {"mmdb_open_asn_db", ATTR_NO_SCRIPT_SIDE_EFFECTS},
     {"mmdb_open_location_db", ATTR_NO_SCRIPT_SIDE_EFFECTS},
-    {"modulo", ATTR_IDEMPOTENT}, // can error
+    {"modulo", ATTR_IDEMPOTENT},
     {"network_time", ATTR_NO_ZEEK_SIDE_EFFECTS},
     {"open", ATTR_NO_SCRIPT_SIDE_EFFECTS},
     {"open_for_append", ATTR_NO_SCRIPT_SIDE_EFFECTS},
@@ -416,10 +416,10 @@ static std::unordered_map<std::string, unsigned int> func_attrs = {
     {"preserve_prefix", ATTR_NO_SCRIPT_SIDE_EFFECTS},
     {"preserve_subnet", ATTR_NO_SCRIPT_SIDE_EFFECTS},
     {"print_raw", ATTR_NO_SCRIPT_SIDE_EFFECTS},
-    {"ptr_name_to_addr", ATTR_IDEMPOTENT}, // can error
+    {"ptr_name_to_addr", ATTR_IDEMPOTENT},
     {"rand", ATTR_NO_SCRIPT_SIDE_EFFECTS},
-    {"raw_bytes_to_v4_addr", ATTR_IDEMPOTENT}, // can error
-    {"raw_bytes_to_v6_addr", ATTR_IDEMPOTENT}, // can error
+    {"raw_bytes_to_v4_addr", ATTR_IDEMPOTENT},
+    {"raw_bytes_to_v6_addr", ATTR_IDEMPOTENT},
     {"reading_live_traffic", ATTR_IDEMPOTENT},
     {"reading_traces", ATTR_IDEMPOTENT},
     {"record_fields", ATTR_FOLDABLE},
@@ -433,7 +433,7 @@ static std::unordered_map<std::string, unsigned int> func_attrs = {
     {"rmdir", ATTR_NO_ZEEK_SIDE_EFFECTS},
     {"rotate_file", ATTR_NO_ZEEK_SIDE_EFFECTS},
     {"rotate_file_by_name", ATTR_NO_ZEEK_SIDE_EFFECTS},
-    {"routing0_data_to_addrs", ATTR_IDEMPOTENT}, // can error
+    {"routing0_data_to_addrs", ATTR_IDEMPOTENT},
     {"rstrip", ATTR_FOLDABLE},
     {"safe_shell_quote", ATTR_FOLDABLE},
     {"same_object", ATTR_IDEMPOTENT},
@@ -481,7 +481,7 @@ static std::unordered_map<std::string, unsigned int> func_attrs = {
     {"split_string1", ATTR_FOLDABLE},
     {"split_string_all", ATTR_FOLDABLE},
     {"split_string_n", ATTR_FOLDABLE},
-    {"sqrt", ATTR_IDEMPOTENT}, // can error
+    {"sqrt", ATTR_IDEMPOTENT},
     {"srand", ATTR_NO_SCRIPT_SIDE_EFFECTS},
     {"starts_with", ATTR_FOLDABLE},
     {"str_smith_waterman", ATTR_FOLDABLE},
@@ -510,15 +510,15 @@ static std::unordered_map<std::string, unsigned int> func_attrs = {
     {"table_values", ATTR_NO_ZEEK_SIDE_EFFECTS},
     {"terminate", ATTR_NO_SCRIPT_SIDE_EFFECTS},
     {"time_to_double", ATTR_FOLDABLE},
-    {"to_addr", ATTR_IDEMPOTENT},   // can error
-    {"to_count", ATTR_IDEMPOTENT},  // can error
-    {"to_double", ATTR_IDEMPOTENT}, // can error
-    {"to_int", ATTR_IDEMPOTENT},    // can error
+    {"to_addr", ATTR_IDEMPOTENT},
+    {"to_count", ATTR_IDEMPOTENT},
+    {"to_double", ATTR_IDEMPOTENT},
+    {"to_int", ATTR_IDEMPOTENT},
     {"to_json", ATTR_FOLDABLE},
     {"to_lower", ATTR_FOLDABLE},
-    {"to_port", ATTR_IDEMPOTENT}, // can error
+    {"to_port", ATTR_IDEMPOTENT},
     {"to_string_literal", ATTR_FOLDABLE},
-    {"to_subnet", ATTR_IDEMPOTENT}, // can error
+    {"to_subnet", ATTR_IDEMPOTENT},
     {"to_title", ATTR_FOLDABLE},
     {"to_upper", ATTR_FOLDABLE},
     {"topk_add", ATTR_NO_SCRIPT_SIDE_EFFECTS},
@@ -561,49 +561,49 @@ static std::unordered_map<std::string, unsigned int> func_attrs = {
     {"zfill", ATTR_FOLDABLE},
 };
 
-// Ones not listed:
-//
-// Broker::*
-//	These can manipulate unspecified (at script level) records.
-//
-// Cluster::apply_table_change_infos
-//	Alters internals of the given table.
-//
-// Cluster::publish_hrw
-// Cluster::publish_rr
-//	These call script functions to get topic names.
-//
-// Log::__delay
-//	Can invoke a callback function specified at run-time.
-//
-// Log::__write
-//	Calls log policy functions.
-//
-// Option::set
-//	Both explicitly changes a global and potentially calls a
-//	function specified at run-time.
-//
-// clear_table
-//	Both clears a set/table and potentially calls an &on_change handler.
-//
-// disable_analyzer
-//	Can call Analyzer::disabling_analyzer hook.
-//
-// from_json
-//	Can call a normalization function.
-//
-// order
-//	Can call a comparison function.
-//
-// resize
-//	Changes a vector in place.
-//
-// sort
-//	Both changes a vector in place and can call an arbitrary comparison
-//	function.
-//
-// Some of these have side effects that could be checked for in a specific
-// context, but the gains from doing so likely aren't worth the complexity.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 bool is_special_script_func(const std::string& func_name) {
     auto f_attr = func_attrs.find(func_name);
@@ -628,11 +628,11 @@ bool is_foldable(const std::string& func_name) {
 bool has_script_side_effects(const std::string& func_name) {
     auto f_attr = func_attrs.find(func_name);
     if ( f_attr == func_attrs.end() )
-        // We don't know about it, so be conservative.
+
         return true;
 
     return (f_attr->second &
             (ATTR_NO_SCRIPT_SIDE_EFFECTS | ATTR_NO_ZEEK_SIDE_EFFECTS | ATTR_IDEMPOTENT | ATTR_FOLDABLE)) == 0;
 }
 
-} // namespace zeek::detail
+}

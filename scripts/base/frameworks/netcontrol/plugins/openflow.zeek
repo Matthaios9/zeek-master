@@ -1,4 +1,4 @@
-##! OpenFlow plugin for the NetControl framework.
+
 
 @load ../main
 @load ../plugin
@@ -7,75 +7,75 @@
 module NetControl;
 
 export {
-	## This record specifies the configuration that is passed to :zeek:see:`NetControl::create_openflow`.
-	type OfConfig: record {
-		monitor: bool &default=T; ##< Accept rules that target the monitor path.
-		forward: bool &default=T; ##< Accept rules that target the forward path.
-		idle_timeout: count &default=0; ##< Default OpenFlow idle timeout.
-		table_id: count &optional; ##< Default OpenFlow table ID.
-		priority_offset: int &default=+0; ##< Add this to all rule priorities. Can be useful if you want the openflow priorities be offset from the netcontrol priorities without having to write a filter function.
 
-		## Predicate that is called on rule insertion or removal.
-		##
-		## p: Current plugin state.
-		##
-		## r: The rule to be inserted or removed.
-		##
-		## Returns: T if the rule can be handled by the current backend, F otherwise.
+	type OfConfig: record {
+		monitor: bool &default=T;
+		forward: bool &default=T;
+		idle_timeout: count &default=0;
+		table_id: count &optional;
+		priority_offset: int &default=+0;
+
+
+
+
+
+
+
+
 		check_pred: function(p: PluginState, r: Rule): bool &optional;
 
-		## This predicate is called each time an OpenFlow match record is created.
-		## The predicate can modify the match structure before it is sent on to the
-		## device.
-		##
-		## p: Current plugin state.
-		##
-		## r: The rule to be inserted or removed.
-		##
-		## m: The openflow match structures that were generated for this rules.
-		##
-		## Returns: The modified OpenFlow match structures that will be used in place of the structures passed in m.
+
+
+
+
+
+
+
+
+
+
+
 		match_pred: function(p: PluginState, e: Entity, m: vector of OpenFlow::ofp_match): vector of OpenFlow::ofp_match &optional;
 
-		## This predicate is called before a FlowMod message is sent to the OpenFlow
-		## device. It can modify the FlowMod message before it is passed on.
-		##
-		## p: Current plugin state.
-		##
-		## r: The rule to be inserted or removed.
-		##
-		## m: The OpenFlow FlowMod message.
-		##
-		## Returns: The modified FlowMod message that is used in lieu of m.
+
+
+
+
+
+
+
+
+
+
 		flow_mod_pred: function(p: PluginState, r: Rule, m: OpenFlow::ofp_flow_mod): OpenFlow::ofp_flow_mod &optional;
 	};
 
 	redef record PluginState += {
-		## OpenFlow controller for NetControl OpenFlow plugin.
+
 		of_controller: OpenFlow::Controller &optional;
-		## OpenFlow configuration record that is passed on initialization.
+
 		of_config: OfConfig &optional;
 	};
 
 	type OfTable: record {
 		p: PluginState;
 		r: Rule;
-		c: count &default=0; # how many replies did we see so far? needed for ids where we have multiple rules...
+		c: count &default=0;
 		packet_count: count &default=0;
 		byte_count: count &default=0;
 		duration_sec: double &default=0.0;
 	};
 
-	## The time interval after which an openflow message is considered to be timed out
-	## and we delete it from our internal tracking.
+
+
 	const openflow_message_timeout = 20secs &redef;
 
-	## The time interval after we consider a flow timed out. This should be fairly high (or
-	## even disabled) if you expect a lot of long flows. However, one also will have state
-	## buildup for quite a while if keeping this around...
+
+
+
 	const openflow_flow_timeout = 24hrs &redef;
 
-	## Instantiates an openflow plugin for the NetControl framework.
+
 	global create_openflow: function(controller: OpenFlow::Controller, config: OfConfig &default=[]) : PluginState;
 }
 
@@ -158,8 +158,8 @@ function entity_to_match(p: PluginState, e: Entity): vector of OpenFlow::ofp_mat
 
 	if ( e$ty == CONNECTION )
 		{
-		v += OpenFlow::match_conn(e$conn); # forward and...
-		v += OpenFlow::match_conn(e$conn, T); # reverse
+		v += OpenFlow::match_conn(e$conn);
+		v += OpenFlow::match_conn(e$conn, T);
 		return openflow_match_pred(p, e, v);
 		}
 
@@ -195,7 +195,7 @@ function entity_to_match(p: PluginState, e: Entity): vector of OpenFlow::ofp_mat
 		return openflow_match_pred(p, e, v);
 		}
 
-	# local proto = OpenFlow::IP_TCP;
+
 
 	if ( e$ty == FLOW )
 		{
@@ -245,11 +245,11 @@ function openflow_rule_to_flow_mod(p: PluginState, r: Rule) : OpenFlow::ofp_flow
 	local c = p$of_config;
 
 	local flow_mod = OpenFlow::ofp_flow_mod(
-		$cookie=OpenFlow::generate_cookie(r$cid*2), # leave one space for the cases in which we need two rules.
+		$cookie=OpenFlow::generate_cookie(r$cid*2),
 		$command=OpenFlow::OFPFC_ADD,
 		$idle_timeout=c$idle_timeout,
 		$priority=(r$priority + c$priority_offset) as count,
-		$flags=OpenFlow::OFPFF_SEND_FLOW_REM # please notify us when flows are removed
+		$flags=OpenFlow::OFPFF_SEND_FLOW_REM
 	);
 
 	if ( r?$expire )
@@ -259,16 +259,16 @@ function openflow_rule_to_flow_mod(p: PluginState, r: Rule) : OpenFlow::ofp_flow
 
 	if ( r$ty == DROP )
 		{
-		# default, nothing to do. We simply do not add an output port to the rule...
+
 		}
 	else if ( r$ty == WHITELIST )
 		{
-		# at the moment our interpretation of whitelist is to hand this off to the switches L2/L3 routing.
+
 		flow_mod$actions$out_ports = vector(OpenFlow::OFPP_NORMAL);
 		}
 	else if ( r$ty == MODIFY )
 		{
-		# if no ports are given, just assume normal pipeline...
+
 		flow_mod$actions$out_ports = vector(OpenFlow::OFPP_NORMAL);
 
 		local mod = r$mod;
@@ -290,7 +290,7 @@ function openflow_rule_to_flow_mod(p: PluginState, r: Rule) : OpenFlow::ofp_flow
 		}
 	else if ( r$ty == REDIRECT )
 		{
-		# redirect to port c
+
 		flow_mod$actions$out_ports = vector(r$out_port);
 		}
 	else
@@ -342,7 +342,7 @@ function openflow_remove_rule(p: PluginState, r: Rule, reason: string) : bool
 			return F;
 			}
 
-	# if this was an address or mac match, we also need to remove the reverse
+
 	if ( r$entity$ty == ADDRESS || r$entity$ty == MAC )
 		{
 		local flow_mod_2 = copy(flow_mod);
@@ -366,7 +366,7 @@ event OpenFlow::flow_mod_success(name: string, match: OpenFlow::ofp_match, flow_
 		{
 		++of_messages[id,flow_mod$command]$c;
 		if ( of_messages[id,flow_mod$command]$c < 2 )
-			return; # will do stuff once the second part arrives...
+			return;
 		}
 
 	delete of_messages[id,flow_mod$command];
@@ -407,7 +407,7 @@ event OpenFlow::flow_removed(name: string, match: OpenFlow::ofp_match, cookie: c
 		{
 		++of_flows[id]$c;
 		if ( of_flows[id]$c < 2 )
-			return; # will do stuff once the second part arrives...
+			return;
 		else
 			event NetControl::rule_timeout(r, FlowInfo($duration=double_to_interval((rec$duration_sec+duration_sec)/2), $packet_count=packet_count+rec$packet_count, $byte_count=byte_count+rec$byte_count), p);
 
@@ -425,7 +425,7 @@ function openflow_init(p: PluginState)
 
 	of_instances[name] = p;
 
-	# let's check, if our OpenFlow controller is already active. If not, we have to wait for it to become active.
+
 	if ( p$of_controller$state$_activated )
 		plugin_activated(p);
 	}
@@ -440,7 +440,7 @@ global openflow_plugin = Plugin(
 	$name=openflow_name,
 	$can_expire = T,
 	$init = openflow_init,
-#	$done = openflow_done,
+
 	$add_rule = openflow_add_rule,
 	$remove_rule = openflow_remove_rule
 	);

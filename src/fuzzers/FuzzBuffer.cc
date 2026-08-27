@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #if ! defined(_GNU_SOURCE)
 #define _GNU_SOURCE
@@ -74,11 +74,11 @@ std::optional<FuzzBuffer::Chunk> FuzzBuffer::Next() {
     rval.size = begin - chunk_begin;
 
     if ( rval.size ) {
-        // The point of allocating a new buffer here is to better detect
-        // analyzers that may over-read within a chunk  -- ASan wouldn't
-        // complain if that happens to land within the full input buffer
-        // provided by the fuzzing engine, but will if we allocate a new buffer
-        // for each chunk.
+
+
+
+
+
         rval.data = std::make_unique<unsigned char[]>(rval.size);
         memcpy(rval.data.get(), chunk_begin, rval.size);
         return {std::move(rval)};
@@ -87,4 +87,4 @@ std::optional<FuzzBuffer::Chunk> FuzzBuffer::Next() {
     return {};
 }
 
-} // namespace zeek::detail
+}

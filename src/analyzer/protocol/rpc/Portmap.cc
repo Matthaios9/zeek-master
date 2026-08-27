@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/rpc/Portmap.h"
 
@@ -119,8 +119,8 @@ bool PortmapperInterp::RPC_BuildReply(RPC_CallInfo* c, BifEnum::rpc_status statu
                 auto mappings = make_intrusive<TableVal>(pm_mappings);
                 uint32_t nmap = 0;
 
-                // Each call in the loop test pulls the next "opted"
-                // element to see if there are more mappings.
+
+
                 while ( extract_XDR_uint32(buf, n) && buf ) {
                     auto m = ExtractMapping(buf, n);
                     if ( ! m )
@@ -188,7 +188,7 @@ RecordValPtr PortmapperInterp::ExtractPortRequest(const u_char*& buf, int& len) 
 
     bool is_tcp = extract_XDR_uint32(buf, len) == IPPROTO_TCP;
     pr->Assign(2, is_tcp);
-    (void)extract_XDR_uint32(buf, len); // consume the bogus port
+    (void)extract_XDR_uint32(buf, len);
 
     if ( ! buf )
         return nullptr;
@@ -250,7 +250,7 @@ void PortmapperInterp::Event(EventHandlerPtr f, ValPtr request, BifEnum::rpc_sta
     analyzer->EnqueueConnEvent(f, std::move(vl));
 }
 
-} // namespace detail
+}
 
 Portmapper_Analyzer::Portmapper_Analyzer(Connection* conn)
     : RPC_Analyzer("PORTMAPPER", conn, new detail::PortmapperInterp(this)) {
@@ -268,4 +268,4 @@ void Portmapper_Analyzer::Init() {
     }
 }
 
-} // namespace zeek::analyzer::rpc
+}

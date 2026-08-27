@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/protocol/null/Null.h"
 
@@ -14,6 +14,6 @@ bool NullAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* packet
 
     uint32_t protocol = (static_cast<uint32_t>(data[3]) << 24) + (static_cast<uint32_t>(data[2]) << 16) +
                         (static_cast<uint32_t>(data[1]) << 8) + data[0];
-    // skip link header
+
     return ForwardPacket(len - 4, data + 4, packet, protocol);
 }

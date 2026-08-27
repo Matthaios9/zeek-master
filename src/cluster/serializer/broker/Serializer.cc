@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/cluster/serializer/broker/Serializer.h"
 
@@ -59,13 +59,13 @@ std::optional<broker::zeek::Event> detail::to_broker_event(const zeek::cluster::
     xs.reserve(ev.Args().size());
 
     for ( const auto& a : ev.Args() ) {
-        if ( auto res = zeek::Broker::detail::val_to_data(a.get(), /*unwrap_broker_data=*/true) )
+        if ( auto res = zeek::Broker::detail::val_to_data(a.get(), true) )
             xs.emplace_back(std::move(res.value()));
         else
             return std::nullopt;
     }
 
-    // Convert metadata from the cluster::detail::Event event to broker's event metadata format.
+
     if ( const auto* meta = ev.Metadata(); meta != nullptr ) {
         broker::vector broker_meta;
         broker_meta.reserve(meta->size());
@@ -76,7 +76,7 @@ std::optional<broker::zeek::Event> detail::to_broker_event(const zeek::cluster::
                 broker_meta.emplace_back(std::move(entry));
             }
             else {
-                // Just for sanity - we should never get here.
+
                 zeek::reporter->Error("failure converting metadata '%s' to broker data",
                                       obj_desc_short(m.Val()).c_str());
             }
@@ -112,11 +112,11 @@ std::optional<zeek::cluster::Event> detail::to_zeek_event(const broker::zeek::Ev
     for ( size_t i = 0; i < args.size(); ++i ) {
         const auto& expected_type = arg_types[i];
         auto arg = args[i].to_data();
-        // XXX: data_to_val() uses Broker::Data for `any` type parameters, exposing
-        //      Broker::Data to the script-layer even if Broker isn't used.
-        //
-        //      This might be part of the API, but seems we could also use the concrete
-        //      Val type if the serializer encodes that information in the message.
+
+
+
+
+
         auto val = zeek::Broker::detail::data_to_val(arg, expected_type.get());
         if ( val )
             vl.emplace_back(std::move(val));
@@ -141,11 +141,11 @@ bool detail::BrokerBinV1_Serializer::SerializeEvent(byte_buffer& buf, const zeek
     if ( ! ev )
         return false;
 
-    // The produced broker::zeek::Event is already in bin::v1 format after
-    // constructing it, so we can take the raw bytes directly rather than
-    // going through encode() again.
-    //
-    // broker::format::bin::v1::encode(ev->move_data(), std::back_inserter(buf));
+
+
+
+
+
     assert(ev->raw()->shared_envelope() != nullptr);
     auto [raw, size] = ev->raw().shared_envelope()->raw_bytes();
     buf.insert(buf.begin(), raw, raw + size);
@@ -163,9 +163,9 @@ std::optional<zeek::cluster::Event> detail::BrokerBinV1_Serializer::UnserializeE
 }
 
 
-// Convert char to std::byte during push_back() so that
-// we don't need to copy from std::vector<char> to a
-// std::vector<std::byte> when rendering JSON.
+
+
+
 template<typename T>
 struct PushBackAdapter {
     explicit PushBackAdapter(T& c) : container(&c) {}
@@ -208,13 +208,13 @@ TEST_CASE("roundtrip") {
     zeek::cluster::Event e{handler, zeek::Args{zeek::make_intrusive<zeek::StringVal>("TEST"), zeek::val_mgr->Count(42)},
                            nullptr};
 
-    // Register network timestamp metadata. This is idempotent.
+
     auto nts = zeek::id::find_val<zeek::EnumVal>("EventMetadata::NETWORK_TIMESTAMP");
     REQUIRE(nts);
     bool registered = zeek::event_registry->RegisterMetadata(nts, zeek::base_type(zeek::TYPE_TIME));
     REQUIRE(registered);
 
-    // Add network timestamp metadata to the event. In previous Zeek versions this happened magically under the hood.
+
     bool added = e.AddMetadata(nts, zeek::make_intrusive<zeek::TimeVal>(0.0));
     REQUIRE(added);
 

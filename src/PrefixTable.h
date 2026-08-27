@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -34,31 +34,31 @@ public:
     }
     ~PrefixTable() { Destroy_Patricia(tree, delete_function); }
 
-    // Addr in network byte order. If data is zero, acts like a set.
-    // Returns ptr to old data if already existing.
-    // For existing items without data, returns non-nil if found.
+
+
+
     void* Insert(const IPAddr& addr, int width, void* data = nullptr);
 
-    // Value may be addr or subnet.
+
     void* Insert(const Val* value, void* data = nullptr);
 
-    // Returns nil if not found, pointer to data otherwise.
-    // For items without data, returns non-nil if found.
-    // If exact is false, performs exact rather than longest-prefix match.
+
+
+
     void* Lookup(const IPAddr& addr, int width, bool exact = false) const;
     void* Lookup(const Val* value, bool exact = false) const;
 
-    // Returns list of all found matches or empty list otherwise.
+
     std::list<std::tuple<IPPrefix, void*>> FindAll(const IPAddr& addr, int width) const;
     std::list<std::tuple<IPPrefix, void*>> FindAll(const SubNetVal* value) const;
 
-    // Returns pointer to data or nil if not found.
+
     void* Remove(const IPAddr& addr, int width);
     void* Remove(const Val* value);
 
     void Clear() { Clear_Patricia(tree, delete_function); }
 
-    // Sets a function to call for each node when table is cleared/destroyed.
+
     void SetDeleteFunction(data_fn_t del_fn) { delete_function = del_fn; }
 
     iterator InitIterator();
@@ -72,5 +72,5 @@ private:
     data_fn_t delete_function;
 };
 
-} // namespace detail
-} // namespace zeek
+}
+}

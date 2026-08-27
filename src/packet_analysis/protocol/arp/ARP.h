@@ -1,12 +1,12 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
-// clang-format off
+
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <net/if_arp.h>
-// clang-format on
+
 
 #include "zeek/packet_analysis/Analyzer.h"
 #include "zeek/packet_analysis/Component.h"
@@ -33,4 +33,4 @@ private:
     void RequestReplyEvent(EventHandlerPtr e, const u_char* src, const u_char* dst, const struct arp_pkthdr* hdr);
 };
 
-} // namespace zeek::packet_analysis::ARP
+}

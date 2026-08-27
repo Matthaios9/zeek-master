@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/socks/SOCKS.h"
 
@@ -41,11 +41,11 @@ void SOCKS_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
         return;
 
     if ( orig_done && resp_done ) {
-        // Finished decapsulating tunnel layer. Now do standard processing
-        // with the rest of the connection.
-        //
-        // Note that we assume that no payload data arrives before both endpoints
-        // are done with their part of the SOCKS protocol.
+
+
+
+
+
         if ( ! pia ) {
             pia = new analyzer::pia::PIA_TCP(Conn());
             if ( AddChildAnalyzer(pia) ) {
@@ -72,4 +72,4 @@ void SOCKS_Analyzer::Undelivered(uint64_t seq, int len, bool orig) {
     interp->NewGap(orig, len);
 }
 
-} // namespace zeek::analyzer::socks
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/cluster/BifSupport.h"
 
@@ -12,12 +12,12 @@
 #include "zeek/Reporter.h"
 #include "zeek/Type.h"
 #include "zeek/Val.h"
-#include "zeek/broker/Manager.h" // For publishing to broker_mgr directly.
+#include "zeek/broker/Manager.h"
 #include "zeek/cluster/Backend.h"
 
 namespace {
 
-// Convert a script-level Cluster::Event to a cluster::Event.
+
 std::optional<zeek::cluster::Event> to_cluster_event(const zeek::cluster::Backend* backend,
                                                      const zeek::RecordValPtr& rec) {
     const auto& func = rec->GetField<zeek::FuncVal>(0);
@@ -26,14 +26,14 @@ std::optional<zeek::cluster::Event> to_cluster_event(const zeek::cluster::Backen
     if ( ! func )
         return std::nullopt;
 
-    // Need to copy from VectorVal to zeek::Args
+
     zeek::Args args(vargs->Size());
     for ( size_t i = 0; i < vargs->Size(); i++ )
         args[i] = vargs->ValAt(i);
 
     return backend->MakeClusterEvent(func, std::span{args});
 }
-} // namespace
+}
 
 
 namespace zeek::cluster::detail::bif {
@@ -61,14 +61,14 @@ zeek::RecordValPtr make_event(zeek::ArgsSpan args) {
     if ( ! checked_args )
         return rec;
 
-    // Making a copy from zeek::Args to a VectorVal and then back again on publish.
+
     auto vec = zeek::make_intrusive<zeek::VectorVal>(any_vec_type);
     vec->Reserve(checked_args->size());
     rec->Assign(0, maybe_func_val);
     for ( const auto& arg : *checked_args )
         vec->Append(arg);
 
-    rec->Assign(1, vec); // Args
+    rec->Assign(1, vec);
 
     return rec;
 }
@@ -97,7 +97,7 @@ bool publish_event(const zeek::ValPtr& topic, zeek::ArgsSpan args) {
         return false;
     }
     else if ( args[0]->GetType()->Tag() == zeek::TYPE_RECORD ) {
-        if ( args[0]->GetType() == cluster_event_type ) { // Handling Cluster::Event record type
+        if ( args[0]->GetType() == cluster_event_type ) {
             auto ev = to_cluster_event(zeek::cluster::backend, zeek::cast_intrusive<zeek::RecordVal>(args[0]));
             if ( ! ev )
                 return false;
@@ -105,8 +105,8 @@ bool publish_event(const zeek::ValPtr& topic, zeek::ArgsSpan args) {
             return zeek::cluster::backend->PublishEvent(topic_str, *ev);
         }
         else if ( args[0]->GetType() == broker_event_type ) {
-            // Handling Broker::Event record type created by Broker::make_event()
-            // only works if the backend is broker_mgr!
+
+
             if ( zeek::cluster::backend != zeek::broker_mgr ) {
                 zeek::emit_builtin_error(
                     zeek::util::fmt("Publish of Broker::Event record instance with type '%s' to a non-Broker backend",
@@ -167,4 +167,4 @@ zeek::VectorValPtr make_string_vec(std::span<const std::string> strings) {
     return vec;
 }
 
-} // namespace zeek::cluster::detail::bif
+}

@@ -1,10 +1,10 @@
-##! Functions for parsing and manipulating IP and MAC addresses.
+
 
 module GLOBAL;
 
 export {
 
-	# Regular expressions for matching IP addresses in strings.
+
 
 	const ipv4_decim = /[0-9]{1}|[0-9]{2}|0[0-9]{2}|1[0-9]{2}|2[0-4][0-9]|25[0-5]/;
 
@@ -67,39 +67,39 @@ export {
 
 	const ip_addr_regex = ipv4_addr_regex | ipv6_addr_regex;
 
-	## Checks if all elements of a string array are a valid octet value.
-	##
-	## octets: an array of strings to check for valid octet values.
-	##
-	## Returns: T if every element is between 0 and 255, inclusive, else F.
+
+
+
+
+
 	global has_valid_octets: function(octets: string_vec): bool;
 
-	## Extracts all IP (v4 or v6) address strings from a given string.
-	##
-	## input: a string that may contain an IP address anywhere within it.
-	##
-	## check_wrapping: if true, will only return IP addresses that are wrapped in matching pairs of spaces, square brackets, curly braces, or parens. This can be used to avoid extracting strings that look like IPs from innocuous strings, such as SMTP headers.
-	##
-	## Returns: an array containing all valid IP address strings found in *input*.
+
+
+
+
+
+
+
 	global extract_ip_addresses: function(input: string, check_wrapping: bool &default=F): string_vec;
 
 
-	## Returns the string representation of an IP address suitable for inclusion
-	## in a URI.  For IPv4, this does no special formatting, but for IPv6, the
-	## address is included in square brackets.
-	##
-	## a: the address to make suitable for URI inclusion.
-	##
-	## Returns: the string representation of the address suitable for URI inclusion.
+
+
+
+
+
+
+
 	global addr_to_uri: function(a: addr): string;
 
-	## Given a string, extracts the hex digits and returns a MAC address in
-	## the format: 00:a0:32:d7:81:8f. If the string doesn't contain 12 or 16 hex
-	## digits, an empty string is returned.
-	##
-	## a: the string to normalize.
-	##
-	## Returns: a normalized MAC address, or an empty string in the case of an error.
+
+
+
+
+
+
+
 	global normalize_mac: function(a: string): string;
 }
 

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -19,4 +19,4 @@ protected:
     binpac::RDPEUDP::RDPEUDP_Conn* interp;
 };
 
-} // namespace zeek::analyzer::rdpeudp
+}

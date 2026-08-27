@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_exttype_h
 #define pac_exttype_h
@@ -7,10 +7,10 @@
 
 #include "pac_type.h"
 
-// ExternType represent external C++ types that are not defined in
-// PAC specification (therefore they cannot appear in data layout
-// specification, e.g., in a record field). The type name is copied
-// literally to the compiled code.
+
+
+
+
 
 class ExternType : public Type {
 public:
@@ -47,4 +47,4 @@ public:
 #include "pac_externtype.def"
 #undef EXTERNTYPE
 
-#endif // pac_exttype_h
+#endif

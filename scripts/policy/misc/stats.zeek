@@ -1,4 +1,4 @@
-##! Log memory/packet/lag statistics.
+
 
 @load base/frameworks/notice
 @load base/frameworks/telemetry
@@ -11,81 +11,81 @@ export {
 
 	global log_policy: Log::PolicyHook;
 
-	## How often stats are reported.
+
 	option report_interval = 5min;
 
 	type Info: record {
-		## Timestamp for the measurement.
+
 		ts:            time      &log;
-		## Peer that generated this log.  Mostly for clusters.
+
 		peer:          string    &log;
-		## Amount of memory currently in use in MB.
+
 		mem:           count     &log;
-		## Number of packets processed since the last stats interval.
+
 		pkts_proc:     count     &log;
-		## Number of bytes received since the last stats interval if
-		## reading live traffic.
+
+
 		bytes_recv:    count     &log;
 
-		## Number of packets dropped since the last stats interval if
-		## reading live traffic.
+
+
 		pkts_dropped:  count     &log &optional;
-		## Number of packets seen on the link since the last stats
-		## interval if reading live traffic.
+
+
 		pkts_link:     count     &log &optional;
-		## Lag between the wall clock and packet timestamps if reading
-		## live traffic.
+
+
 		pkt_lag:       interval  &log &optional;
-		## Number of packets filtered from the link since the last
-		## stats interval if reading live traffic.
+
+
 		pkts_filtered: count     &log &optional;
 
-		## Number of events processed since the last stats interval.
+
 		events_proc:   count     &log;
-		## Number of events that have been queued since the last stats
-		## interval.
+
+
 		events_queued: count     &log;
 
-		## TCP connections currently in memory.
+
 		active_tcp_conns: count  &log;
-		## UDP connections currently in memory.
+
 		active_udp_conns: count &log;
-		## ICMP connections currently in memory.
+
 		active_icmp_conns: count &log;
 
-		## TCP connections seen since last stats interval.
+
 		tcp_conns:        count  &log;
-		## UDP connections seen since last stats interval.
+
 		udp_conns:        count &log;
-		## ICMP connections seen since last stats interval.
+
 		icmp_conns:        count &log;
 
-		## Number of timers scheduled since last stats interval.
+
 		timers: count &log;
-		## Current number of scheduled timers.
+
 		active_timers: count &log;
 
-		## Number of files seen since last stats interval.
+
 		files: count &log;
-		## Current number of files actively being seen.
+
 		active_files: count &log;
 
-		## Number of DNS requests seen since last stats interval.
+
 		dns_requests: count &log;
-		## Current number of DNS requests awaiting a reply.
+
 		active_dns_requests: count &log;
 
-		## Current size of TCP data in reassembly.
+
 		reassem_tcp_size: count &log;
-		## Current size of File data in reassembly.
+
 		reassem_file_size: count &log;
-		## Current size of packet fragment data in reassembly.
+
 		reassem_frag_size: count &log;
-		## Current size of unknown data in reassembly (this is only PIA buffer right now).
+
 		reassem_unknown_size: count &log;
 	};
 
-	## Event to catch stats as they are written to the logging stream.
+
 	global log_stats: event(rec: Info);
 }
 
@@ -131,8 +131,8 @@ global packet_lag_gf = Telemetry::register_gauge_family(Telemetry::MetricOpts(
     $help_text="Difference of network time and wallclock time in seconds.",
 ));
 
-# Gauge as motivated by:
-# https://www.robustperception.io/are-increasing-timestamps-counters-or-gauges/
+
+
 global network_time_cf = Telemetry::register_gauge_family(Telemetry::MetricOpts(
     $prefix="zeek",
     $name="net-timestamp",
@@ -209,8 +209,8 @@ event check_stats(then: time, last_ns: NetStats, last_cs: ConnStats, last_ps: Pr
 	                  $dns_requests=ds$requests - last_ds$requests,
 	                  $active_dns_requests=ds$pending);
 
-	# Someone's going to have to explain what this is and add a field to the Info record.
-	# info$util = 100.0*((ps$user_time + ps$system_time) - (last_ps$user_time + last_ps$system_time))/(now-then);
+
+
 
 	if ( reading_live_traffic() )
 		{
@@ -218,8 +218,8 @@ event check_stats(then: time, last_ns: NetStats, last_cs: ConnStats, last_ps: Pr
 		info$pkts_dropped = ns$pkts_dropped  - last_ns$pkts_dropped;
 		info$pkts_link = ns$pkts_link  - last_ns$pkts_link;
 
-		# This makes the assumption that if pkts_filtered is valid, it's been valid in
-		# all of the previous calls.
+
+
 		if ( ns?$pkts_filtered )
 			info$pkts_filtered = ns$pkts_filtered - last_ns$pkts_filtered;
 		}
@@ -227,8 +227,8 @@ event check_stats(then: time, last_ns: NetStats, last_cs: ConnStats, last_ps: Pr
 	Log::write(Stats::LOG, info);
 
 	if ( zeek_is_terminating() )
-		# No more stats will be written or scheduled when Zeek is
-		# shutting down.
+
+
 		return;
 
 	schedule report_interval { check_stats(nettime, ns, cs, ps, es, rs, ts, fs, ds) };

@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Implementation of breakpoints.
+
+
 
 #include "zeek/DbgBreakpoint.h"
 
@@ -19,7 +19,7 @@
 
 namespace zeek::detail {
 
-// BreakpointTimer used for time-based breakpoints
+
 class BreakpointTimer final : public Timer {
 public:
     BreakpointTimer(DbgBreakpoint* arg_bp, double arg_t) : Timer(arg_t, TIMER_BREAKPOINT) { bp = arg_bp; }
@@ -54,7 +54,7 @@ DbgBreakpoint::DbgBreakpoint() {
 }
 
 DbgBreakpoint::~DbgBreakpoint() {
-    SetEnable(false); // clean up any active state
+    SetEnable(false);
     RemoveFromGlobalMap();
 }
 
@@ -62,7 +62,7 @@ bool DbgBreakpoint::SetEnable(bool do_enable) {
     bool old_value = enabled;
     enabled = do_enable;
 
-    // Update statement counts.
+
     if ( do_enable && ! old_value )
         AddToStmt();
 
@@ -73,7 +73,7 @@ bool DbgBreakpoint::SetEnable(bool do_enable) {
 }
 
 void DbgBreakpoint::AddToGlobalMap() {
-    // Make sure it's not there already.
+
     RemoveFromGlobalMap();
 
     g_debugger_state.breakpoint_map.insert(BPMapType::value_type(at_stmt, this));
@@ -185,14 +185,14 @@ bool DbgBreakpoint::Reset() {
         case BP_STMT:
         case BP_LINE:
             plr.type = PLR_FUNCTION;
-            // ### How to deal with wildcards?
-            // ### perhaps save user choices?--tough...
+
+
             break;
     }
 
     reporter->InternalError("DbgBreakpoint::Reset function incomplete.");
 
-    // Cannot be reached.
+
     return false;
 }
 
@@ -213,7 +213,7 @@ BreakCode DbgBreakpoint::HasHit() {
     }
 
     if ( ! condition.empty() ) {
-        // TODO: ### evaluate using debugger frame too
+
         auto yes = dbg_eval_expr(condition.c_str());
 
         if ( ! yes ) {
@@ -270,8 +270,8 @@ BreakCode DbgBreakpoint::ShouldBreak(Stmt* s) {
         default: reporter->InternalError("Invalid breakpoint type in DbgBreakpoint::ShouldBreak");
     }
 
-    // If we got here, that means that the breakpoint could hit,
-    // except potentially if it has a special condition or a repeat count.
+
+
 
     BreakCode code = HasHit();
     if ( code )
@@ -320,4 +320,4 @@ void DbgBreakpoint::PrintHitMsg() {
     }
 }
 
-} // namespace zeek::detail
+}

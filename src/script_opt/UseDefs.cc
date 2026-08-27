@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/UseDefs.h"
 
@@ -22,7 +22,7 @@ UseDefs::UseDefs(StmtPtr _body, std::shared_ptr<Reducer> _rc, FuncTypePtr _ft) {
 }
 
 void UseDefs::Analyze() {
-    // Start afresh.
+
     use_defs_map.clear();
     UDs_are_copies.clear();
     stmts.clear();
@@ -77,15 +77,15 @@ bool UseDefs::RemoveUnused(int iter) {
                 if ( is_atomic_type(id->GetType()) || ! CheckIfUnused(s, id, false) )
                     used_ids.emplace_back(id);
 
-            if ( used_ids.empty() ) { // There aren't any ID's to keep.
+            if ( used_ids.empty() ) {
                 rc->AddStmtToOmit(s);
                 continue;
             }
 
             if ( used_ids.size() < inits.size() ) {
-                // Need to replace the current Init statement
-                // with one that only includes the actually
-                // used identifiers.
+
+
+
 
                 auto new_init = with_location_of(make_intrusive<InitStmt>(used_ids), s);
                 rc->AddStmtToReplace(s, std::move(new_init));
@@ -94,8 +94,8 @@ bool UseDefs::RemoveUnused(int iter) {
             continue;
         }
 
-        // The only other statements we might revise or remove
-        // are assignments.
+
+
 
         if ( s->Tag() != STMT_EXPR )
             continue;
@@ -109,8 +109,8 @@ bool UseDefs::RemoveUnused(int iter) {
         auto a = e->AsAssignExpr();
         auto r = a->GetOp1();
 
-        // Because we're dealing with reduced statements, the
-        // assignment expression should be to a simple variable.
+
+
         if ( r->Tag() != EXPR_REF )
             reporter->InternalError("lhs ref inconsistency in UseDefs::RemoveUnused");
 
@@ -124,17 +124,17 @@ bool UseDefs::RemoveUnused(int iter) {
         auto rt = rhs->Tag();
 
         if ( rt == EXPR_CALL && ! rhs->IsPure() )
-            // Need to do the call for the side effects.
-            // Could prune out the assignment and just
-            // keep the call, but not clear that that's
-            // worth the complexity.
+
+
+
+
             continue;
 
         if ( rt == EXPR_EVENT || rt == EXPR_SCHEDULE )
-            // These always have side effects.
+
             continue;
 
-        // Check for degenerate assignment "x = x".
+
         bool degen = rt == EXPR_NAME && id == rhs->AsNameExpr()->Id();
 
         if ( CheckIfUnused(s, id, iter == 1) || degen ) {
@@ -184,7 +184,7 @@ UDs UseDefs::PropagateUDs(const Stmt* s, UDs succ_UDs, const Stmt* succ_stmt, bo
 
                 const Stmt* succ;
 
-                if ( i == static_cast<int>(stmts.size()) - 1 ) { // Very last statement.
+                if ( i == static_cast<int>(stmts.size()) - 1 ) {
                     succ = succ_stmt;
                     if ( successor2.contains(s) ) {
                         om.AddObj(s_i);
@@ -213,10 +213,10 @@ UDs UseDefs::PropagateUDs(const Stmt* s, UDs succ_UDs, const Stmt* succ_stmt, bo
         case STMT_NEXT:
         case STMT_BREAK:
         case STMT_FALLTHROUGH:
-            // When we back up to one of these, its successor isn't
-            // actually succ_stmt (other than for STMT_NULL).  However,
-            // in the contexts in which these can occur, it doesn't
-            // actually do any harm to use the successor anyway.
+
+
+
+
             return UseUDs(s, std::move(succ_UDs));
 
         case STMT_PRINT: return CreateExprUDs(s, s->AsPrintStmt()->ExprList(), succ_UDs);
@@ -238,12 +238,12 @@ UDs UseDefs::PropagateUDs(const Stmt* s, UDs succ_UDs, const Stmt* succ_stmt, bo
             if ( e->Tag() != EXPR_ASSIGN )
                 return CreateExprUDs(s, e, succ_UDs);
 
-            // Change in use-defs as here we have a definition.
+
             auto a = e->AsAssignExpr();
             auto lhs_ref = a->GetOp1();
 
             if ( lhs_ref->Tag() != EXPR_REF )
-                // Since we're working on reduced form ...
+
                 reporter->InternalError("lhs inconsistency in UseDefs::ExprUDs");
 
             auto lhs_var = lhs_ref->GetOp1();
@@ -331,7 +331,7 @@ UDs UseDefs::PropagateUDs(const Stmt* s, UDs succ_UDs, const Stmt* succ_stmt, bo
             if ( sw->HasDefault() )
                 FoldInUDs(sw_UDs, e_UDs);
             else
-                // keep successor definitions in the mix
+
                 FoldInUDs(sw_UDs, succ_UDs, e_UDs);
 
             return CreateUDs(s, std::move(sw_UDs));
@@ -341,8 +341,8 @@ UDs UseDefs::PropagateUDs(const Stmt* s, UDs succ_UDs, const Stmt* succ_stmt, bo
             auto f = s->AsForStmt();
             auto body = f->LoopBody();
 
-            // The loop body has two potential successors, itself
-            // and the successor of the entire "for" statement.
+
+
             om.AddObj(body);
             successor2[body] = succ_stmt;
             auto body_UDs = PropagateUDs(body, succ_UDs, body, second_pass);
@@ -351,7 +351,7 @@ UDs UseDefs::PropagateUDs(const Stmt* s, UDs succ_UDs, const Stmt* succ_stmt, bo
             auto f_UDs = ExprUDs(e);
             FoldInUDs(f_UDs, body_UDs);
 
-            // Confluence: loop the top UDs back around to the bottom.
+
             auto bottom_UDs = UD_Union(f_UDs, succ_UDs);
             (void)PropagateUDs(body, std::move(bottom_UDs), body, true);
 
@@ -363,7 +363,7 @@ UDs UseDefs::PropagateUDs(const Stmt* s, UDs succ_UDs, const Stmt* succ_stmt, bo
             if ( val_var )
                 RemoveUDFrom(f_UDs, val_var);
 
-            // The loop might not execute at all.
+
             FoldInUDs(f_UDs, succ_UDs);
 
             return CreateUDs(s, std::move(f_UDs));
@@ -374,8 +374,8 @@ UDs UseDefs::PropagateUDs(const Stmt* s, UDs succ_UDs, const Stmt* succ_stmt, bo
             auto body = w->Body();
             auto cond_stmt = w->CondPredStmt();
 
-            // See note above for STMT_FOR regarding propagating
-            // around the loop.
+
+
             auto succ = cond_stmt ? cond_stmt : body;
             om.AddObj(body.get());
             successor2[body.get()] = succ_stmt;
@@ -386,8 +386,8 @@ UDs UseDefs::PropagateUDs(const Stmt* s, UDs succ_UDs, const Stmt* succ_stmt, bo
             FoldInUDs(w_UDs, body_UDs);
 
             if ( cond_stmt ) {
-                // Create a successor for the cond_stmt
-                // that has the correct UDs associated with it.
+
+
                 const auto& c_as_s = w->ConditionAsStmt();
                 auto c_as_s_UDs = std::make_shared<UseDefSet>(w_UDs);
                 CreateUDs(c_as_s.get(), std::move(c_as_s_UDs));
@@ -395,11 +395,11 @@ UDs UseDefs::PropagateUDs(const Stmt* s, UDs succ_UDs, const Stmt* succ_stmt, bo
                 w_UDs = PropagateUDs(cond_stmt, w_UDs, c_as_s, second_pass);
             }
 
-            // Confluence: loop the top UDs back around to the bottom.
+
             auto bottom_UDs = UD_Union(w_UDs, succ_UDs);
             (void)PropagateUDs(body, std::move(bottom_UDs), succ, true);
 
-            // The loop might not execute at all.
+
             FoldInUDs(w_UDs, succ_UDs);
 
             return CreateUDs(s, std::move(w_UDs));
@@ -553,7 +553,7 @@ void UseDefs::AddInExprUDs(const UDs& uds, const Expr* e) {
         case EXPR_INCR:
         case EXPR_DECR: AddInExprUDs(uds, e->GetOp1()->AsRefExprPtr()->GetOp1().get()); break;
 
-        case EXPR_ASSIGN: // can occur inside a table constructor
+        case EXPR_ASSIGN:
         case EXPR_ADD_TO:
         case EXPR_REMOVE_FROM:
             AddInExprUDs(uds, e->GetOp1().get());
@@ -563,7 +563,7 @@ void UseDefs::AddInExprUDs(const UDs& uds, const Expr* e) {
         case EXPR_FIELD_ASSIGN: AddInExprUDs(uds, static_cast<const FieldAssignExpr*>(e)->Op()); break;
 
         case EXPR_FIELD:
-            // This happens for append-to-field.
+
             AddInExprUDs(uds, e->AsFieldExpr()->Op());
             break;
 
@@ -575,7 +575,7 @@ void UseDefs::AddInExprUDs(const UDs& uds, const Expr* e) {
         }
 
         case EXPR_CONST:
-            // Nothing to do.
+
             break;
 
         default: reporter->InternalError("bad tag in UseDefs::AddInExprUDs"); break;
@@ -621,7 +621,7 @@ void UseDefs::UpdateUDs(const Stmt* s, const UDs& uds) {
     auto curr_uds = FindUsage(s);
 
     if ( ! curr_uds || UDs_are_copies.contains(s) ) {
-        // Copy-on-write.
+
         auto new_uds = std::make_shared<UseDefSet>();
 
         if ( curr_uds )
@@ -676,4 +676,4 @@ UDs UseDefs::CreateUDs(const Stmt* s, UDs uds) {
     return uds;
 }
 
-} // namespace zeek::detail
+}

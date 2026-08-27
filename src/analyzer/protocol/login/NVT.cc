@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/login/NVT.h"
 
@@ -36,7 +36,7 @@ void TelnetOption::RecvOption(unsigned int type) {
         return;
     }
 
-    // WILL/WONT/DO/DONT are messages we've *received* from our peer.
+
     switch ( type ) {
         case TELNET_OPT_WILL:
             if ( SaidDont() || peer->SaidWont() || peer->IsActive() )
@@ -82,11 +82,11 @@ void TelnetOption::RecvOption(unsigned int type) {
     }
 }
 
-void TelnetOption::RecvSubOption(u_char* /* data */, int /* len */) {}
+void TelnetOption::RecvSubOption(u_char* , int ) {}
 
 void TelnetOption::SetActive(bool is_active) { active = is_active; }
 
-void TelnetOption::InconsistentOption(unsigned int /* type */) { endp->Event(inconsistent_option); }
+void TelnetOption::InconsistentOption(unsigned int ) { endp->Event(inconsistent_option); }
 
 void TelnetOption::BadOption() { endp->Event(bad_option); }
 
@@ -196,8 +196,8 @@ void TelnetAuthenticateOption::RecvSubOption(u_char* data, int len) {
             else if ( data[1] == AUTH_ACCEPT )
                 endp->AuthenticationAccepted();
             else {
-                // Don't complain, there may be replies we don't
-                // know about.
+
+
             }
             break;
 
@@ -227,7 +227,7 @@ void TelnetEnvironmentOption::RecvSubOption(u_char* data, int len) {
     }
 
     if ( data[0] == ENVIRON_SEND )
-        // ### We should track the dialog and make sure both sides agree.
+
         return;
 
     if ( data[0] != ENVIRON_IS && data[0] != ENVIRON_INFO ) {
@@ -235,7 +235,7 @@ void TelnetEnvironmentOption::RecvSubOption(u_char* data, int len) {
         return;
     }
 
-    --len; // Discard code.
+    --len;
     ++data;
 
     while ( len > 0 ) {
@@ -245,7 +245,7 @@ void TelnetEnvironmentOption::RecvSubOption(u_char* data, int len) {
         char* var_val = ExtractEnv(data, len, code2);
 
         if ( ! var_name || ! var_val || (code1 != ENVIRON_VAR && code1 != ENVIRON_USERVAR) || code2 != ENVIRON_VAL ) {
-            // One of var_name/var_val might be set; avoid leak.
+
             delete[] var_name;
             delete[] var_val;
 
@@ -266,11 +266,11 @@ char* TelnetEnvironmentOption::ExtractEnv(u_char*& data, int& len, int& code) {
     if ( code != ENVIRON_VAR && code != ENVIRON_VAL && code != ENVIRON_USERVAR )
         return nullptr;
 
-    // Move past code.
+
     --len;
     ++data;
 
-    // Find the end of this piece of the option.
+
     u_char* data_end = data + len;
     u_char* d;
     for ( d = data; d < data_end; ++d ) {
@@ -278,7 +278,7 @@ char* TelnetEnvironmentOption::ExtractEnv(u_char*& data, int& len, int& code) {
             break;
 
         if ( *d == ENVIRON_ESC ) {
-            ++d; // move past ESC
+            ++d;
             if ( d >= data_end )
                 return nullptr;
             break;
@@ -288,7 +288,7 @@ char* TelnetEnvironmentOption::ExtractEnv(u_char*& data, int& len, int& code) {
     int size = d - data;
     char* env = new char[size + 1];
 
-    // Now copy into env.
+
     int d_ind = 0;
     int i;
     for ( i = 0; i < size; ++i ) {
@@ -312,13 +312,13 @@ void TelnetBinaryOption::SetActive(bool is_active) {
     active = is_active;
 }
 
-void TelnetBinaryOption::InconsistentOption(unsigned int /* type */) {
-    // I don't know why, but this gets turned on redundantly -
-    // doesn't do any harm, so ignore it.  Example is
-    // in ex/redund-binary-opt.trace.
+void TelnetBinaryOption::InconsistentOption(unsigned int ) {
+
+
+
 }
 
-} // namespace detail
+}
 
 NVT_Analyzer::NVT_Analyzer(Connection* conn, bool orig) : analyzer::tcp::ContentLine_Analyzer("NVT", conn, orig) {}
 
@@ -336,7 +336,7 @@ TelnetOption* NVT_Analyzer::FindOption(unsigned int code) {
             return options[i];
 
     TelnetOption* opt = nullptr;
-    if ( i < NUM_TELNET_OPTIONS ) { // Maybe we haven't created this option yet.
+    if ( i < NUM_TELNET_OPTIONS ) {
         switch ( code ) {
             case TELNET_OPTION_BINARY: opt = new detail::TelnetBinaryOption(this); break;
 
@@ -402,23 +402,23 @@ void NVT_Analyzer::DoDeliver(int len, const u_char* data) {
 }
 
 void NVT_Analyzer::DeliverChunk(int& len, const u_char*& data) {
-    // This code is very similar to that for TCP_ContentLine.  We
-    // don't virtualize out the differences because some of them
-    // would require per-character function calls, too expensive.
 
-    // Add data up to IAC or end.
+
+
+
+
     for ( ; len > 0; --len, ++data ) {
         if ( offset >= buf_len ) {
             if ( ! InitBufferSafe(buf_len * 2) ) {
                 LimitReachedWeird("nvt_line_size_exceeded", buf_len);
 
-                // Reset the offset to keep going. Try to forward the data, since
-                // it's handling lines.
+
+
                 buf[buf_len - 1] = '\0';
                 ForwardStream(buf_len - 1, buf, IsOrig());
                 offset = 0;
 
-                // Keep parsing, but just use the buffer we have here.
+
                 continue;
             }
         }
@@ -442,10 +442,10 @@ void NVT_Analyzer::DeliverChunk(int& len, const u_char*& data) {
             case '\n':
                 if ( last_char == '\r' ) {
                     if ( CRLFAsEOL() & tcp::CR_as_EOL )
-                        // we already emitted, skip
+
                         ;
                     else {
-                        --offset; // remove '\r'
+                        --offset;
                         buf[offset] = '\0';
                         ForwardStream(offset, buf, IsOrig());
                         offset = 0;
@@ -467,9 +467,9 @@ void NVT_Analyzer::DeliverChunk(int& len, const u_char*& data) {
 
             case '\0':
                 if ( last_char == '\r' )
-                    // Allow a NUL just after a \r - Solaris
-                    // Telnet servers generate these, and they
-                    // appear harmless.
+
+
+
                     ;
 
                 else if ( flag_NULs )
@@ -505,12 +505,12 @@ void NVT_Analyzer::ScanOption(int& len, const u_char*& data) {
     if ( len <= 0 )
         return;
 
-    if ( IAC_pos == offset - 1 ) { // All we've seen so far is the IAC.
+    if ( IAC_pos == offset - 1 ) {
         unsigned int code = data[0];
 
         if ( code == TELNET_IAC ) {
-            // An escaped 255, throw away the second
-            // instance and drop the IAC state.
+
+
             pending_IAC = false;
             last_char = code;
         }
@@ -535,10 +535,10 @@ void NVT_Analyzer::ScanOption(int& len, const u_char*& data) {
         }
 
         else {
-            // We've got the whole 2-byte option.
+
             SawOption(code);
 
-            // Throw it and the IAC away.
+
             --offset;
             pending_IAC = false;
         }
@@ -549,11 +549,11 @@ void NVT_Analyzer::ScanOption(int& len, const u_char*& data) {
     }
 
     if ( ! is_suboption ) {
-        // We now have the full 3-byte option.
+
         SawOption(static_cast<u_char>(buf[offset - 1]), data[0]);
 
-        // Delete the option.
-        offset -= 2; // code + IAC
+
+        offset -= 2;
         pending_IAC = false;
 
         --len;
@@ -561,13 +561,13 @@ void NVT_Analyzer::ScanOption(int& len, const u_char*& data) {
         return;
     }
 
-    // A suboption.  Spin looking for end.
+
     for ( ; len > 0; --len, ++data ) {
         if ( offset >= buf_len ) {
             if ( ! InitBufferSafe(buf_len * 2) ) {
                 LimitReachedWeird("nvt_option_size_exceeded", buf_len);
 
-                // Just abort suboption parsing; we aren't getting anything useful anyway.
+
                 pending_IAC = false;
                 is_suboption = false;
                 offset = 0;
@@ -581,16 +581,16 @@ void NVT_Analyzer::ScanOption(int& len, const u_char*& data) {
             last_was_IAC = false;
 
             if ( code == TELNET_IAC ) {
-                // This is an escaped IAC, eat
-                // the second copy.
+
+
                 continue;
             }
 
             if ( code != TELNET_OPT_SE )
-                // BSD Telnet treats this case as terminating
-                // the suboption, so that's what we do here
-                // too.  Below we make sure to munch on the
-                // new IAC.
+
+
+
+
                 BadOptionTermination(code);
 
             int opt_start = IAC_pos + 2;
@@ -598,7 +598,7 @@ void NVT_Analyzer::ScanOption(int& len, const u_char*& data) {
             int opt_len = opt_stop - opt_start;
             SawSubOption(reinterpret_cast<const char*>(&buf[opt_start]), opt_len);
 
-            // Delete suboption.
+
             offset = IAC_pos;
             pending_IAC = is_suboption = false;
 
@@ -607,7 +607,7 @@ void NVT_Analyzer::ScanOption(int& len, const u_char*& data) {
                 ++data;
             }
             else {
-                // Munch on the new (broken) option.
+
                 pending_IAC = true;
                 IAC_pos = offset;
                 buf[offset++] = TELNET_IAC;
@@ -622,7 +622,7 @@ void NVT_Analyzer::ScanOption(int& len, const u_char*& data) {
     }
 }
 
-void NVT_Analyzer::SawOption(unsigned int /* code */) {}
+void NVT_Analyzer::SawOption(unsigned int ) {}
 
 void NVT_Analyzer::SawOption(unsigned int code, unsigned int subcode) {
     TelnetOption* opt = FindOption(subcode);
@@ -641,6 +641,6 @@ void NVT_Analyzer::SawSubOption(const char* subopt, int len) {
         opt->RecvSubOption(const_cast<u_char*>(reinterpret_cast<const u_char*>(subopt)), len);
 }
 
-void NVT_Analyzer::BadOptionTermination(unsigned int /* code */) { Event(bad_option_termination); }
+void NVT_Analyzer::BadOptionTermination(unsigned int ) { Event(bad_option_termination); }
 
-} // namespace zeek::analyzer::login
+}

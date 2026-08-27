@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/rpc/MOUNT.h"
 
@@ -16,7 +16,7 @@ bool MOUNT_Interp::RPC_BuildCall(RPC_CallInfo* c, const u_char*& buf, int& n) {
         Weird("bad_RPC_program", util::fmt("%d", c->Program()));
 
     uint32_t proc = c->Proc();
-    // The call arguments, depends on the call type obviously ...
+
     RecordValPtr callarg;
 
     switch ( proc ) {
@@ -28,21 +28,21 @@ bool MOUNT_Interp::RPC_BuildCall(RPC_CallInfo* c, const u_char*& buf, int& n) {
 
         default:
             if ( proc < BifEnum::MOUNT3::PROC_END_OF_PROCS ) {
-                // We know the procedure but haven't implemented it.
-                // Otherwise DeliverRPC would complain about
-                // excess_RPC.
+
+
+
                 n = 0;
             }
             else
                 Weird("unknown_MOUNT_request", util::fmt("%u", proc));
 
-            // Return 1 so that replies to unprocessed calls will still
-            // be processed, and the return status extracted.
+
+
             return true;
     }
 
     if ( ! buf )
-        // There was a parse error while trying to extract the call arguments.
+
         return false;
 
     c->AddVal(callarg);
@@ -56,7 +56,7 @@ bool MOUNT_Interp::RPC_BuildReply(RPC_CallInfo* c, BifEnum::rpc_status rpc_statu
     BifEnum::MOUNT3::status_t mount_status = BifEnum::MOUNT3::MNT3_OK;
     bool rpc_success = (rpc_status == BifEnum::RPC_SUCCESS);
 
-    // Reply always starts with the MOUNT status.
+
     if ( rpc_success ) {
         if ( n >= 4 ) {
             uint32_t raw_mount_status = extract_XDR_uint32(buf, n);
@@ -77,9 +77,9 @@ bool MOUNT_Interp::RPC_BuildReply(RPC_CallInfo* c, BifEnum::rpc_status rpc_statu
     }
 
     if ( ! rpc_success ) {
-        // We set the buffer to NULL, the function that extract the
-        // reply from the data stream will then return empty records.
-        //
+
+
+
         buf = nullptr;
         n = 0;
     }
@@ -101,9 +101,9 @@ bool MOUNT_Interp::RPC_BuildReply(RPC_CallInfo* c, BifEnum::rpc_status rpc_statu
 
         default:
             if ( c->Proc() < BifEnum::MOUNT3::PROC_END_OF_PROCS ) {
-                // We know the procedure but haven't implemented it.
-                // Otherwise DeliverRPC would complain about
-                // excess_RPC.
+
+
+
                 n = 0;
                 reply = BifType::Enum::MOUNT3::proc_t->GetEnumVal(c->Proc());
                 event = mount_proc_not_implemented;
@@ -113,17 +113,17 @@ bool MOUNT_Interp::RPC_BuildReply(RPC_CallInfo* c, BifEnum::rpc_status rpc_statu
     }
 
     if ( rpc_success && ! buf ) {
-        // There was a parse error.
+
         reply = nullptr;
         return false;
     }
 
-    // Note: if reply == 0, it won't be added to the val_list for the
-    // event. While we can check for that on the policy layer it's kinda
-    // ugly, because it's contrary to the event prototype. But having
-    // this optional argument to the event is really helpful. Otherwise I
-    // have to let reply point to a RecordVal where all fields are
-    // optional and all are set to 0 ...
+
+
+
+
+
+
     if ( event ) {
         auto request = c->TakeRequestVal();
 
@@ -145,8 +145,8 @@ bool MOUNT_Interp::RPC_BuildReply(RPC_CallInfo* c, BifEnum::rpc_status rpc_statu
 Args MOUNT_Interp::event_common_vl(RPC_CallInfo* c, BifEnum::rpc_status rpc_status,
                                    BifEnum::MOUNT3::status_t mount_status, double rep_start_time, double rep_last_time,
                                    int reply_len, int extra_elements) {
-    // Returns a new val_list that already has a conn_val, and mount3_info.
-    // These are the first parameters for each mount_* event ...
+
+
     Args vl;
     vl.reserve(2 + extra_elements);
     vl.emplace_back(analyzer->ConnVal());
@@ -235,7 +235,7 @@ RecordValPtr MOUNT_Interp::mount3_mnt_reply(const u_char*& buf, int& n, BifEnum:
                 auth_flavors->Append(std::move(af));
 
         if ( auth_flavors_count_in_reply > max_auth_flavors )
-            // Prevent further "excess RPC" weirds
+
             n = 0;
 
         rep->Assign(1, std::move(auth_flavors));
@@ -244,7 +244,7 @@ RecordValPtr MOUNT_Interp::mount3_mnt_reply(const u_char*& buf, int& n, BifEnum:
     return rep;
 }
 
-} // namespace detail
+}
 
 MOUNT_Analyzer::MOUNT_Analyzer(Connection* conn) : RPC_Analyzer("MOUNT", conn, new detail::MOUNT_Interp(this)) {
     orig_rpc = resp_rpc = nullptr;
@@ -261,4 +261,4 @@ void MOUNT_Analyzer::Init() {
     }
 }
 
-} // namespace zeek::analyzer::rpc
+}

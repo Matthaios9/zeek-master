@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Discard.h"
 
@@ -6,7 +6,7 @@
 
 #include "zeek/Func.h"
 #include "zeek/IP.h"
-#include "zeek/Reporter.h" // for InterpreterException
+#include "zeek/Reporter.h"
 #include "zeek/Val.h"
 #include "zeek/Var.h"
 #include "zeek/ZeekString.h"
@@ -44,23 +44,23 @@ bool Discarder::NextPacket(const std::shared_ptr<IP_Hdr>& ip, int len, int caple
             return discard_packet;
     }
 
-    // If the caplen is less than the reported length from the packet, we can't decode
-    // the rest of the protocols.
+
+
     if ( caplen < len )
         return false;
 
     int proto = ip->NextProto();
     if ( proto != IPPROTO_TCP && proto != IPPROTO_UDP && proto != IPPROTO_ICMP )
-        // This is not a protocol we understand.
+
         return false;
 
-    // XXX shall we only check the first packet???
+
     if ( ip->IsFragment() )
-        // Never check any fragment.
+
         return false;
 
     int ip_hdr_len = ip->HdrLen();
-    len -= ip_hdr_len; // remove IP header
+    len -= ip_hdr_len;
     caplen -= ip_hdr_len;
 
     bool is_tcp = (proto == IPPROTO_TCP);
@@ -68,11 +68,11 @@ bool Discarder::NextPacket(const std::shared_ptr<IP_Hdr>& ip, int len, int caple
     int min_hdr_len = is_tcp ? sizeof(struct tcphdr) : (is_udp ? sizeof(struct udphdr) : sizeof(struct icmp));
 
     if ( len < min_hdr_len || caplen < min_hdr_len )
-        // we don't have a complete protocol header
+
         return false;
 
-    // Where the data starts - if this is a protocol we know about,
-    // this gets advanced past the transport header.
+
+
     const u_char* data = ip->Payload();
 
     if ( is_tcp ) {
@@ -144,4 +144,4 @@ Val* Discarder::BuildData(const u_char* data, int hdrlen, int len, int caplen) {
     return new StringVal(new String(data, len, true));
 }
 
-} // namespace zeek::detail
+}

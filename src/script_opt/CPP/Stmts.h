@@ -1,10 +1,10 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Methods for generating code corresponding with Zeek statement AST nodes
-// (Stmt objects).  For the most part, code generation is straightforward as
-// it matches the Exec/DoExec methods of the corresponding Stmt subclasses.
-//
-// This file is included by Compile.h to insert into the CPPCompiler class.
+
+
+
+
+
+
 
 void GenStmt(const StmtPtr& s) { GenStmt(s.get()); }
 void GenStmt(const Stmt* s);
@@ -29,6 +29,6 @@ void GenForOverString(const ExprPtr& str, const IDPList* loop_vars);
 
 void GenAssertStmt(const AssertStmt* a);
 
-// Nested level of loops/switches for which "break"'s should be
-// C++ breaks rather than a "hook" break.
+
+
 int break_level = 0;

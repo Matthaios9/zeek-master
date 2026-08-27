@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_let.h"
 
@@ -52,11 +52,11 @@ void LetField::GenParseCode(Output* out_cc, Env* env) {
         return;
 
     if ( type_->attr_if_expr() ) {
-        // A conditional field
+
 
         env->Evaluate(out_cc, type_->has_value_var());
 
-        // force evaluation of IDs contained in this expr
+
         expr()->ForceIDEval(out_cc, env);
 
         out_cc->println("if ( %s ) {", env->RValue(type_->has_value_var()));
@@ -107,7 +107,7 @@ void LetDecl::GenCode(Output* out_h, Output* out_cc) {
     GenEval(out_cc, global_env());
 }
 
-void LetDecl::GenEval(Output* out_cc, Env* /* env */) {
+void LetDecl::GenEval(Output* out_cc, Env* ) {
     Env* env = global_env();
     string tmp = strfmt("%s const", type_->DataTypeStr().c_str());
     out_cc->println("%s %s = %s;", tmp.c_str(), env->LValue(id_), expr_->EvalExpr(out_cc, env));

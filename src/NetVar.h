@@ -1,9 +1,9 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
-// These includes are needed for the inclusion of the bif headers at the end
-// of this file.
+
+
 #include "zeek/zeek-config.h"
 
 #include "zeek/EventRegistry.h"
@@ -96,14 +96,14 @@ ZEEK_EXTERN_DATA zeek_uint_t bits_per_uid;
 
 ZEEK_EXTERN_DATA zeek_uint_t tunnel_max_changes_per_connection;
 
-// Initializes globals that don't pertain to network/event analysis.
+
 extern void init_general_global_var();
 
 extern void init_event_handlers();
 extern void init_net_var();
 extern void init_builtin_types();
 
-} // namespace zeek::detail
+}
 
 #include "zeek/const.bif.netvar_h"
 #include "zeek/event.bif.netvar_h"

@@ -1,14 +1,14 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/iosource/Manager.h"
 
 #include <cassert>
-// These two files have to remain in the same order or FreeBSD builds
-// stop working.
-// clang-format off
+
+
+
 #include <sys/types.h>
 #include <sys/event.h>
-// clang-format on
+
 #include <sys/time.h>
 #include <unistd.h>
 
@@ -33,8 +33,8 @@ Manager::WakeupHandler::~WakeupHandler() { iosource_mgr->UnregisterFd(flare.FD()
 void Manager::WakeupHandler::Process() { flare.Extinguish(); }
 
 void Manager::WakeupHandler::Ping(std::string_view where) {
-    // Calling DBG_LOG calls fprintf, which isn't safe to call in a signal
-    // handler.
+
+
     if ( signal_val != 0 )
         DBG_LOG(DBG_MAINLOOP, "Pinging WakeupHandler from %.*s", static_cast<int>(where.size()), where.data());
 
@@ -51,7 +51,7 @@ Manager::~Manager() {
     delete wakeup;
     wakeup = nullptr;
 
-    // Make sure all of the sources are done before we try to delete any of them.
+
     for ( auto& src : sources )
         src->src->Done();
 
@@ -71,17 +71,17 @@ Manager::~Manager() {
 
     pkt_dumpers.clear();
 
-    // Was registered without lifetime management.
+
     delete pkt_src;
 
 #ifndef _MSC_VER
-    // There's a bug here with builds on Windows that causes an assertion with debug builds
-    // related to libkqueue returning a zero for the file descriptor. The assert happens
-    // because something else has already closed FD zero by the time we get here, and Windows
-    // doesn't like that very much. We only do this close when shutting down, so it should
-    // be fine to just skip it.
-    //
-    // See https://github.com/mheily/libkqueue/issues/151 for more details.
+
+
+
+
+
+
+
     if ( event_queue != -1 )
         close(event_queue);
 #endif
@@ -93,7 +93,7 @@ void Manager::InitPostScript() {
 }
 
 void Manager::RemoveAll() {
-    // We're cheating a bit here ...
+
     dont_counts = sources.size();
 }
 
@@ -131,8 +131,8 @@ void Manager::FindReadySources(ReadySources* ready) {
         time_to_poll = true;
     }
 
-    // Find the source with the next timeout value.
-    for ( auto i = sources.begin(); i != sources.end(); /* noop */ ) {
+
+    for ( auto i = sources.begin(); i != sources.end();  ) {
         auto* src = *i;
         auto iosource = src->src;
         if ( iosource->IsOpen() ) {
@@ -143,21 +143,21 @@ void Manager::FindReadySources(ReadySources* ready) {
                 timeout_src = iosource;
             }
 
-            // If a source has a zero timeout then it's ready. Just add it to the
-            // list already. Only do this if it's not time to poll though, since
-            // we don't want things in the vector passed into Poll() or it'll end
-            // up inserting duplicates. A source with a zero timeout that was not
-            // selected as the timeout_src can be safely added, whether it's time
-            // to poll or not though.
+
+
+
+
+
+
             if ( next == 0 && (! time_to_poll || iosource != timeout_src) ) {
                 ready->push_back({iosource, -1, 0});
             }
             else if ( iosource == pkt_src ) {
                 if ( pkt_src->IsLive() ) {
                     if ( ! time_to_poll )
-                        // Avoid calling Poll() if we can help it since on very
-                        // high-traffic networks, we spend too much time in
-                        // Poll() and end up dropping packets.
+
+
+
                         ready->push_back({pkt_src, -1, 0});
                 }
             }
@@ -169,8 +169,8 @@ void Manager::FindReadySources(ReadySources* ready) {
         }
     }
 
-    // If there aren't any sources and exit_only_after_terminate is false, just
-    // return an empty set of sources. We want the main loop to end.
+
+
     if ( Size() == 0 && (! BifConst::exit_only_after_terminate || run_state::terminating) ) {
         ready->clear();
         return;
@@ -178,9 +178,9 @@ void Manager::FindReadySources(ReadySources* ready) {
 
     DBG_LOG(DBG_MAINLOOP, "timeout: %f   ready size: %zu   time_to_poll: %d\n", timeout, ready->size(), time_to_poll);
 
-    // If we didn't find any IOSources with zero timeouts or it's time to
-    // force a poll, do that and return. Otherwise return the set of ready
-    // sources that we have.
+
+
+
     if ( ready->empty() || time_to_poll )
         Poll(ready, timeout, timeout_src);
 }
@@ -191,20 +191,20 @@ void Manager::Poll(ReadySources* ready, double timeout, IOSource* timeout_src) {
 
     int ret = kevent(event_queue, nullptr, 0, events.data(), events.size(), &kqueue_timeout);
     if ( ret == -1 ) {
-        // Ignore interrupts since we may catch one during shutdown and we don't want the
-        // error to get printed.
+
+
         if ( errno != EINTR )
             reporter->InternalWarning("Error calling kevent: %s", strerror(errno));
     }
     else if ( ret == 0 ) {
-        // If a timeout_src was provided and nothing else was ready, we timed out
-        // according to the given source's timeout and can add it as ready.
+
+
         if ( timeout_src )
             ready->push_back({timeout_src, -1, 0});
     }
     else {
-        // kevent returns the number of events that are ready, so we only need to loop
-        // over that many of them.
+
+
         bool timeout_src_added = false;
         for ( int i = 0; i < ret; i++ ) {
             if ( events[i].filter == EVFILT_READ ) {
@@ -218,21 +218,21 @@ void Manager::Poll(ReadySources* ready, double timeout, IOSource* timeout_src) {
                     ready->push_back({it->second, static_cast<int>(events[i].ident), IOSource::ProcessFlags::WRITE});
             }
 
-            // If we added a source that is the same as the passed timeout_src, take
-            // note as to avoid adding it twice.
+
+
             timeout_src_added |= ready->empty() ? false : ready->back().src == timeout_src;
         }
 
-        // A timeout_src with a zero timeout can be considered ready.
+
         if ( timeout_src && timeout == 0.0 && ! timeout_src_added )
             ready->push_back({timeout_src, -1, 0});
     }
 }
 
 void Manager::ConvertTimeout(double timeout, struct timespec& spec) {
-    // If timeout ended up -1, set it to some nominal value just to keep the loop
-    // from blocking forever. This is the case of exit_only_after_terminate when
-    // there isn't anything else going on.
+
+
+
     if ( timeout < 0 ) {
         spec.tv_sec = 0;
         spec.tv_nsec = 1e8;
@@ -315,9 +315,9 @@ bool Manager::UnregisterFd(int fd, IOSource* src, int flags) {
             return true;
         }
 
-        // We don't care about failure here. If it failed to unregister, it's likely because
-        // the file descriptor was already closed, and kqueue already automatically removed
-        // it.
+
+
+
     }
     else {
         reporter->Error("Attempted to unregister an unknown file descriptor %d from %s", fd, src->Tag());
@@ -328,12 +328,12 @@ bool Manager::UnregisterFd(int fd, IOSource* src, int flags) {
 }
 
 void Manager::Register(IOSource* src, bool dont_count, bool manage_lifetime) {
-    // First see if we already have registered that source. If so, just
-    // adjust dont_count.
+
+
     for ( const auto& iosrc : sources ) {
         if ( iosrc->src == src ) {
             if ( iosrc->dont_count != dont_count )
-                // Adjust the global counter.
+
                 dont_counts += (dont_count ? 1 : -1);
 
             return;
@@ -356,23 +356,23 @@ void Manager::Register(PktSrc* src) {
 
     Register(src, false, false);
 
-    // Once we know if the source is live or not, adapt the
-    // poll_interval accordingly.
-    //
-    // Note that src->IsLive() is only valid after calling Register().
+
+
+
+
     if ( src->IsLive() )
         poll_interval = BifConst::io_poll_interval_live;
     else if ( run_state::pseudo_realtime )
         poll_interval = 1;
 }
 
-/**
- * Checks if the path comes with a prefix telling us which type of PktSrc to use. If no
- * prefix exists, return an empty string.
- */
+
+
+
+
 static std::pair<std::string, std::string> split_prefix(std::string path) {
-    // See if the path comes with a prefix telling us which type of
-    // PktSrc to use. If not, choose default.
+
+
     std::string prefix;
 
     std::string::size_type i = path.find("::");
@@ -387,14 +387,14 @@ static std::pair<std::string, std::string> split_prefix(std::string path) {
 PktSrc* Manager::OpenPktSrc(const std::string& path, bool is_live) {
     auto [prefix, npath] = split_prefix(path);
 
-    // Find the component providing packet sources of the requested prefix. Yes, looping over
-    // this twice is dumb, but check magic numbers first and then check for prefixes.
+
+
 
     PktSrcComponent* component = nullptr;
     std::list<PktSrcComponent*> all_components = plugin_mgr->Components<PktSrcComponent>();
 
-    // If we got a prefix from the path, the user wanted a specific packet source. IF we
-    // didn't get one, try ooking at the magic number at the header of the file first.
+
+
     if ( ! is_live && prefix.empty() ) {
         uint32_t magic_num = 0;
         if ( auto f = fopen(path.c_str(), "rb") ) {
@@ -412,7 +412,7 @@ PktSrc* Manager::OpenPktSrc(const std::string& path, bool is_live) {
     }
 
     if ( ! component ) {
-        // If we didn't get a prefix from the path, default to using the pcap component.
+
         if ( prefix.empty() )
             prefix = "pcap";
 
@@ -420,7 +420,7 @@ PktSrc* Manager::OpenPktSrc(const std::string& path, bool is_live) {
             if ( (is_live && ! c->DoesLive()) || (! is_live && ! c->DoesTrace()) )
                 continue;
 
-            // Prefer magic number over prefixes.
+
             if ( c->HandlesPrefix(prefix) ) {
                 component = c;
                 break;
@@ -431,7 +431,7 @@ PktSrc* Manager::OpenPktSrc(const std::string& path, bool is_live) {
     if ( ! component )
         reporter->FatalError("type of packet source '%s' not recognized, or mode not supported", prefix.c_str());
 
-    // Instantiate packet source.
+
 
     PktSrc* ps = (*component->Factory())(npath, is_live);
     assert(ps);
@@ -447,7 +447,7 @@ PktDumper* Manager::OpenPktDumper(const std::string& path, bool append) {
     if ( prefix.empty() )
         prefix = "pcap";
 
-    // Find the component providing packet dumpers of the requested prefix.
+
 
     PktDumperComponent* component = nullptr;
 
@@ -462,13 +462,13 @@ PktDumper* Manager::OpenPktDumper(const std::string& path, bool append) {
     if ( ! component )
         reporter->FatalError("type of packet dumper '%s' not recognized", prefix.c_str());
 
-    // Instantiate packet dumper.
+
 
     PktDumper* pd = (*component->Factory())(npath, append);
     assert(pd);
 
     if ( ! pd->IsOpen() && pd->IsError() )
-        // Set an error message if it didn't open successfully.
+
         pd->Error("could not open");
 
     DBG_LOG(DBG_PKTIO, "Created packer dumper of type %s for %s", component->Name().c_str(), npath.c_str());
@@ -479,4 +479,4 @@ PktDumper* Manager::OpenPktDumper(const std::string& path, bool append) {
     return pd;
 }
 
-} // namespace zeek::iosource
+}

@@ -1,11 +1,11 @@
-##! Types, errors, and fields for analyzing DHCP data.  A helper file
-##! for DHCP analysis scripts.
+
+
 
 module DHCP;
 
 export {
-	## Types of DHCP messages. See :rfc:`1533`, :rfc:`3203`,
-	## :rfc:`4388`, :rfc:`6926`, and :rfc:`7724`.
+
+
 	const message_types = {
 		[1]  = "DISCOVER",
 		[2]  = "OFFER",
@@ -15,19 +15,19 @@ export {
 		[6]  = "NAK",
 		[7]  = "RELEASE",
 		[8]  = "INFORM",
-		[9]  = "FORCERENEW",       # RFC3203
-		[10] = "LEASEQUERY",       # RFC4388
-		[11] = "LEASEUNASSIGNED",  # RFC4388
-		[12] = "LEASEUNKNOWN",     # RFC4388
-		[13] = "LEASEACTIVE",      # RFC4388
-		[14] = "BULKLEASEQUERY",   # RFC6926
-		[15] = "LEASEQUERYDONE",   # RFC6926
-		[16] = "ACTIVELEASEQUERY", # RFC7724
-		[17] = "LEASEQUERYSTATUS", # RFC7724
-		[18] = "TLS",              # RFC7724
+		[9]  = "FORCERENEW",
+		[10] = "LEASEQUERY",
+		[11] = "LEASEUNASSIGNED",
+		[12] = "LEASEUNKNOWN",
+		[13] = "LEASEACTIVE",
+		[14] = "BULKLEASEQUERY",
+		[15] = "LEASEQUERYDONE",
+		[16] = "ACTIVELEASEQUERY",
+		[17] = "LEASEQUERYSTATUS",
+		[18] = "TLS",
 	} &default = function(n: count): string { return fmt("unknown-message-type-%d", n); };
 
-	## Option types mapped to their names.
+
 	const option_types = {
 		[0] = "Pad",
 		[1] = "Subnet Mask",

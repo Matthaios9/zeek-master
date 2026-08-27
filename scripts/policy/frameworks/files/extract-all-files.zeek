@@ -1,4 +1,4 @@
-##! Extract all files to disk.
+
 
 @load base/files/extract
 

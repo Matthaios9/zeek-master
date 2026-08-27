@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/file_analysis/Component.h"
 
@@ -29,4 +29,4 @@ void Component::DoDescribe(ODesc* d) const {
     d->Add(Enabled() ? "enabled" : "disabled");
 }
 
-} // namespace zeek::file_analysis
+}

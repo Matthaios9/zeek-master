@@ -1,11 +1,11 @@
-##! This script provides a default set of actions to take for "weird activity"
-##! events generated from Zeek's event engine.  Weird activity is defined as
-##! unusual or exceptional activity that can indicate malformed connections,
-##! traffic that doesn't conform to a particular protocol, malfunctioning
-##! or misconfigured hardware, or even an attacker attempting to avoid/confuse
-##! a sensor.  Without context, it's hard to judge whether a particular
-##! category of weird activity is interesting, but this script provides
-##! a starting point for the user.
+
+
+
+
+
+
+
+
 
 @load base/utils/conn-ids
 @load base/utils/site
@@ -14,84 +14,84 @@
 module Weird;
 
 export {
-	## The weird logging stream identifier.
+
 	redef enum Log::ID += { LOG };
 
-	## A default logging policy hook for the stream.
+
 	global log_policy: Log::PolicyHook;
 
 	redef enum Notice::Type += {
-		## Generic unusual but notice-worthy weird activity.
+
 		Activity,
 	};
 
-	## The record which is used for representing and logging weirds.
+
 	type Info: record {
-		## The time when the weird occurred.
+
 		ts:     time    &log;
 
-		## If a connection is associated with this weird, this will be
-		## the connection's unique ID.
+
+
 		uid:    string  &log &optional;
 
-		## conn_id for the optional connection.
+
 		id:     conn_id &log &optional;
 
-		## A shorthand way of giving the uid and id to a weird.
+
 		conn:   connection &optional;
 
-		## The name of the weird that occurred.
+
 		name:   string  &log;
 
-		## Additional information accompanying the weird if any.
+
 		addl:   string  &log &optional;
 
-		## Indicate if this weird was also turned into a notice.
+
 		notice:  bool   &log &default=F;
 
-		## The peer that originated this weird.  This is helpful in
-		## cluster deployments if a particular cluster node is having
-		## trouble to help identify which node is having trouble.
+
+
+
 		peer:   string  &log &default=peer_description;
 
-		## The source of the weird. When reported by an analyzer, this
-		## should be the name of the analyzer.
+
+
 		source: string  &log &optional;
 
-		## This field is to be provided when a weird is generated for
-		## the purpose of deduplicating weirds. The identifier string
-		## should be unique for a single instance of the weird. This field
-		## is used to define when a weird is conceptually a duplicate of
-		## a previous weird.
+
+
+
+
+
 		identifier: string &optional;
 	};
 
-	## Types of actions that may be taken when handling weird activity events.
+
 	type Action: enum {
-		## A dummy action indicating the user does not care what
-		## internal decision is made regarding a given type of weird.
+
+
 		ACTION_UNSPECIFIED,
-		## No action is to be taken.
+
 		ACTION_IGNORE,
-		## Log the weird event every time it occurs.
+
 		ACTION_LOG,
-		## Log the weird event only once.
+
 		ACTION_LOG_ONCE,
-		## Log the weird event once per connection.
+
 		ACTION_LOG_PER_CONN,
-		## Log the weird event once per originator host.
+
 		ACTION_LOG_PER_ORIG,
-		## Always generate a notice associated with the weird event.
+
 		ACTION_NOTICE,
-		## Generate a notice associated with the weird event only once.
+
 		ACTION_NOTICE_ONCE,
-		## Generate a notice for the weird event once per connection.
+
 		ACTION_NOTICE_PER_CONN,
-		## Generate a notice for the weird event once per originator host.
+
 		ACTION_NOTICE_PER_ORIG,
 	};
 
-	## A table specifying default/recommended actions per weird type.
+
 	const actions: table[string] of Action = {
 		["unsolicited_SYN_response"]            = ACTION_IGNORE,
 		["above_hole_data_without_any_acks"]    = ACTION_LOG,
@@ -253,7 +253,7 @@ export {
 		["fragment_overlap"]                    = ACTION_LOG_PER_ORIG,
 		["fragment_protocol_inconsistency"]     = ACTION_LOG,
 		["fragment_size_inconsistency"]         = ACTION_LOG_PER_ORIG,
-		# These do indeed happen!
+
 		["fragment_with_DF"]                    = ACTION_LOG,
 		["incompletely_captured_fragment"]      = ACTION_LOG,
 		["bad_IP_checksum"]                     = ACTION_LOG_PER_ORIG,
@@ -265,43 +265,43 @@ export {
 		["SSH_max_string_length_exceeded"]      = ACTION_LOG_PER_ORIG,
 	} &default=ACTION_LOG &redef;
 
-	## To completely ignore a specific weird for a host, add the host
-	## and weird name into this set.
+
+
 	option ignore_hosts: set[addr, string] = {};
 
-	## Don't ignore repeats for weirds in this set.  For example,
-	## it's handy keeping track of clustered checksum errors.
+
+
 	option weird_do_not_ignore_repeats = {
 		"bad_IP_checksum", "bad_TCP_checksum", "bad_UDP_checksum",
 		"bad_ICMP_checksum",
 	};
 
-	## This table is used to track identifier and name pairs that should be
-	## temporarily ignored because the problem has already been reported.
-	## This helps reduce the volume of high volume weirds by only allowing
-	## a unique weird every ``create_expire`` interval.
+
+
+
+
 	global weird_ignore: set[string, string] &create_expire=10min &redef;
 
-	## A state set which tracks unique weirds solely by name to reduce
-	## duplicate logging.  This is deliberately not synchronized because it
-	## could cause overload during storms.
+
+
+
 	global did_log: set[string, string] &create_expire=1day &redef;
 
-	## A state set which tracks unique weirds solely by name to reduce
-	## duplicate notices from being raised.
+
+
 	global did_notice: set[string, string] &create_expire=1day &redef;
 
-	## Handlers of this event are invoked once per write to the weird
-	## logging stream before the data is actually written.
-	##
-	## rec: The weird columns about to be logged to the weird stream.
+
+
+
+
 	global log_weird: event(rec: Info);
 
 	global weird: function(w: Weird::Info) &deprecated="Remove in v9.1. Use Reporter::<granularity>_weird instead.";
 }
 
-# These actions result in the output being limited and further redundant
-# weirds not progressing to being logged or noticed.
+
+
 const limiting_actions = {
 	ACTION_LOG_ONCE,
 	ACTION_LOG_PER_CONN,
@@ -311,8 +311,8 @@ const limiting_actions = {
 	ACTION_NOTICE_PER_ORIG,
 };
 
-# This is an internal set to track which Weird::Action values lead to notice
-# creation.
+
+
 const notice_actions = {
 	ACTION_NOTICE,
 	ACTION_NOTICE_PER_CONN,
@@ -343,7 +343,7 @@ function do_weird(w: Weird::Info)
 			identifier = id_string(w$id);
 		}
 
-	# If this weird is to be ignored let's drop out of here very early.
+
 	if ( action == ACTION_IGNORE || [w$name, identifier] in weird_ignore )
 		return;
 
@@ -365,26 +365,26 @@ function do_weird(w: Weird::Info)
 		local notice_identifier = identifier;
 		if ( action in notice_actions )
 			{
-			# Handle notices
+
 			if ( w?$id && action == ACTION_NOTICE_PER_ORIG )
 				notice_identifier = fmt("%s", w$id$orig_h);
 			else if ( action == ACTION_NOTICE_ONCE )
 				notice_identifier = "";
 
-			# If this weird was already noticed then we're done.
+
 			if ( [w$name, notice_identifier] in did_notice )
 				return;
 			add did_notice[w$name, notice_identifier];
 			}
 		else
 			{
-			# Handle logging.
+
 			if ( w?$id && action == ACTION_LOG_PER_ORIG )
 				notice_identifier = fmt("%s", w$id$orig_h);
 			else if ( action == ACTION_LOG_ONCE )
 				notice_identifier = "";
 
-			# If this weird was already logged then we're done.
+
 			if ( [w$name, notice_identifier] in did_log )
 				return;
 
@@ -413,20 +413,20 @@ function do_weird(w: Weird::Info)
 		NOTICE(n);
 		}
 
-	# This is for the temporary ignoring to reduce volume for identical weirds.
+
 	if ( w$name !in weird_do_not_ignore_repeats )
 		add weird_ignore[w$name, identifier];
 
 	Log::write(Weird::LOG, w);
 	}
 
-# Old wrapped weird function until deprecation.
+
 function weird(w: Weird::Info)
 	{
 	do_weird(w);
 	}
 
-# The following events come from core generated weirds typically.
+
 event conn_weird(name: string, c: connection, addl: string, source: string)
 	{
 	local i = Info($ts=network_time(), $name=name, $conn=c, $identifier=id_string(c$id));
@@ -455,8 +455,8 @@ event expired_conn_weird(name: string, id: conn_id, uid: string, addl: string, s
 
 event flow_weird(name: string, src: addr, dst: addr, addl: string, source: string)
 	{
-	# We add the source and destination as port 0/unknown because that is
-	# what fits best here.
+
+
 	local id = conn_id($orig_h=src, $orig_p=count_to_port(0, unknown_transport),
 	                   $resp_h=dst, $resp_p=count_to_port(0, unknown_transport));
 

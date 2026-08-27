@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -30,4 +30,4 @@ protected:
     binpac::DCE_RPC::DCE_RPC_Conn* interp;
 };
 
-} // namespace zeek::analyzer::dce_rpc
+}

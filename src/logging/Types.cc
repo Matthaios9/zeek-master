@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/logging/Types.h"
 
@@ -39,4 +39,4 @@ bool LogWriteHeader::PopulateEnumVals() {
     return true;
 }
 
-} // namespace zeek::logging::detail
+}

@@ -1,8 +1,8 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/rpc/XDR.h"
 
-// Needed for ntohl()
+
 #include <arpa/inet.h>
 #include <algorithm>
 #include <cstring>
@@ -16,7 +16,7 @@ uint32_t zeek::analyzer::rpc::extract_XDR_uint32(const u_char*& buf, int& len) {
         return 0;
     }
 
-    // Takes care of alignment and endianness differences.
+
     uint32_t buf_bits32;
     memcpy(&buf_bits32, buf, 4);
     uint32_t bits32 = ntohl(buf_bits32);
@@ -60,12 +60,12 @@ const u_char* zeek::analyzer::rpc::extract_XDR_opaque(const u_char*& buf, int& l
     if ( short_buf_ok )
         n = std::min(n, len);
 
-    if ( n < 0 || n > len || n > max_len ) { // ### Should really flag this as a different sort of error.
+    if ( n < 0 || n > len || n > max_len ) {
         buf = nullptr;
         return nullptr;
     }
 
-    int n4 = ((n + 3) >> 2) << 2; // n rounded up to next multiple of 4
+    int n4 = ((n + 3) >> 2) << 2;
 
     len -= n4;
     const u_char* opaque = buf;
@@ -81,7 +81,7 @@ const u_char* zeek::analyzer::rpc::extract_XDR_opaque_fixed(const u_char*& buf, 
         buf = nullptr;
         return nullptr;
     }
-    int n4 = ((n + 3) >> 2) << 2; // n rounded up to next multiple of 4
+    int n4 = ((n + 3) >> 2) << 2;
 
     len -= n4;
     const u_char* opaque = buf;

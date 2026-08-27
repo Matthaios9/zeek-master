@@ -1,4 +1,4 @@
-##! Implements base functionality for IGMP analysis.
+
 
 module IGMP;
 

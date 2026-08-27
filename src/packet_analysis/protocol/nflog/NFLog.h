@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -16,4 +16,4 @@ public:
     static AnalyzerPtr Instantiate() { return std::make_shared<NFLogAnalyzer>(); }
 };
 
-} // namespace zeek::packet_analysis::NFLog
+}

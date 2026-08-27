@@ -1,11 +1,11 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Methods for ZAM compilation of statement AST nodes (Stmt's).
-//
-// This file is included by Compile.h to insert into the ZAMCompiler class.
 
-// Note, we first list the AST nodes and then the helper functions, though
-// in the definitions source these are intermingled.
+
+
+
+
+
+
 ZAMStmt CompileStmt(const StmtPtr& body) { return CompileStmt(body.get()); }
 ZAMStmt CompileStmt(const Stmt* body);
 
@@ -28,7 +28,7 @@ ZAMStmt CompileFallThrough() { return GenGoTo(fallthroughs.back()); }
 ZAMStmt CompileCatchReturn() { return GenGoTo(catches.back()); }
 
 ZAMStmt IfElse(const Expr* e, const Stmt* s1, const Stmt* s2);
-// Second argument is which instruction slot holds the branch target.
+
 ZAMStmt GenCond(const Expr* e, int& branch_v);
 
 ZAMStmt While(const Stmt* cond_stmt, const Expr* cond, const Stmt* body);

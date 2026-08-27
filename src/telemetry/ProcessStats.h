@@ -1,8 +1,8 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
-#include "zeek/zeek-config.h" // Needed for HAVE_LINUX
+#include "zeek/zeek-config.h"
 
 #include <cstdint>
 
@@ -23,4 +23,4 @@ process_stats get_process_stats();
 
 #endif
 
-} // namespace zeek::telemetry::detail
+}

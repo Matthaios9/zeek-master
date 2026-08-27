@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
-//
-// See ConnSize.h for more extensive comments.
+
+
+
 
 #include "zeek/analyzer/protocol/conn-size/ConnSize.h"
 
@@ -120,7 +120,7 @@ void ConnSize_Analyzer::SetByteAndPacketThreshold(uint64_t threshold, bool bytes
             resp_pkts_thresh = threshold;
     }
 
-    // Check if threshold is already crossed.
+
     CheckThresholds(orig);
 }
 
@@ -142,7 +142,7 @@ uint64_t ConnSize_Analyzer::GetByteAndPacketThreshold(bool bytes, bool orig) {
 void ConnSize_Analyzer::SetDurationThreshold(double duration) {
     duration_thresh = duration;
 
-    // for duration thresholds, it does not matter which direction we check.
+
     CheckThresholds(true);
 }
 
@@ -177,4 +177,4 @@ void ConnSize_Analyzer::FlipRoles() {
     resp_pkts = tmp;
 }
 
-} // namespace zeek::analyzer::conn_size
+}

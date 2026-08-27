@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Pipe.h"
 
@@ -86,7 +86,7 @@ Pipe::Pipe(int flags0, int flags1, int status_flags0, int status_flags1, int* ar
         fds[1] = arg_fds[1];
     }
     else {
-        // pipe2 can set flags atomically, but not yet available everywhere.
+
         if ( ::pipe(fds) )
             pipe_fail(errno);
     }
@@ -108,10 +108,10 @@ void Pipe::UnsetFlags(int arg_flags) {
 }
 
 Pipe::~Pipe() {
-    // Guard against close(-1): on Windows the CRT invalid parameter handler
-    // calls __fastfail, crashing the process.  Pipe may be constructed with
-    // fds[1] = -1 for one-directional pipes (e.g. via _open_osfhandle in the
-    // Supervisor).
+
+
+
+
     if ( fds[0] >= 0 )
         close(fds[0]);
 
@@ -147,4 +147,4 @@ PipePair::PipePair(int flags, int status_flags, int* fds)
     : pipes{Pipe(flags, flags, status_flags, status_flags, fds ? fds + 0 : nullptr),
             Pipe(flags, flags, status_flags, status_flags, fds ? fds + 2 : nullptr)} {}
 
-} // namespace zeek::detail
+}

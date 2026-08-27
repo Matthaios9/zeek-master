@@ -1,4 +1,4 @@
-##! Cluster support for the NetControl framework.
+
 
 @load ./main
 @load base/frameworks/cluster
@@ -6,19 +6,19 @@
 module NetControl;
 
 export {
-	## This is the event used to transport add_rule calls to the manager.
+
 	global cluster_netcontrol_add_rule: event(r: Rule);
 
-	## This is the event used to transport remove_rule calls to the manager.
+
 	global cluster_netcontrol_remove_rule: event(id: string, reason: string);
 
-	## This is the event used to transport delete_rule calls to the manager.
+
 	global cluster_netcontrol_delete_rule: event(id: string, reason: string);
 }
 
 function activate(p: PluginState, priority: int)
 	{
-	# We only run the activate function on the manager.
+
 	if ( Cluster::local_node_type() != Cluster::MANAGER )
 		return;
 
@@ -33,9 +33,9 @@ function add_rule(r: Rule) : string
 		return add_rule_impl(r);
 	else
 		{
-		# We sync rule entities across the cluster, so we
-		# actually can test if the rule already exists. If yes,
-		# refuse insertion already at the node.
+
+
+
 
 		if ( [r$entity, r$ty] in rule_entities )
 			{
@@ -58,7 +58,7 @@ function delete_rule(id: string, reason: string &default="") : bool
 	else
 		{
 		Cluster::publish(Cluster::manager_topic, NetControl::cluster_netcontrol_delete_rule, id, reason);
-		return T; # well, we can't know here. So - just hope...
+		return T;
 		}
 	}
 
@@ -69,7 +69,7 @@ function remove_rule(id: string, reason: string &default="") : bool
 	else
 		{
 		Cluster::publish(Cluster::manager_topic, NetControl::cluster_netcontrol_remove_rule, id, reason);
-		return T; # well, we can't know here. So - just hope...
+		return T;
 		}
 	}
 
@@ -146,7 +146,7 @@ event rule_destroyed(r: Rule)
 	}
 @endif
 
-# Workers use the events to keep track in their local state tables
+
 @if ( Cluster::local_node_type() != Cluster::MANAGER )
 
 event rule_new(r: Rule) &priority=5

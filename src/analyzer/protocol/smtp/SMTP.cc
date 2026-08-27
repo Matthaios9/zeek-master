@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/smtp/SMTP.h"
 
@@ -17,8 +17,8 @@
 #undef SMTP_CMD_DEF
 #define SMTP_CMD_DEF(cmd) #cmd,
 
-// This could be constexpr too but it would require changing the macro above. It doesn't
-// matter that much though.
+
+
 static const char* smtp_cmd_word[] = {
 #include "SMTP_cmd.def"
 };
@@ -37,9 +37,9 @@ SMTP_Analyzer::SMTP_Analyzer(Connection* conn) : analyzer::tcp::TCP_ApplicationA
     first_cmd = detail::SMTP_CMD_CONN_ESTABLISHMENT;
     pending_reply = 0;
 
-    // Some clients appear to assume pipelining is always enabled
-    // and do not bother to check whether "PIPELINING" appears in
-    // the server reply to EHLO.
+
+
+
     pipelining = true;
 
     skip_data = false;
@@ -86,8 +86,8 @@ void SMTP_Analyzer::Undelivered(uint64_t seq, int len, bool is_orig) {
     Unexpected(is_orig, "content gap", buf_len, buf);
 
     if ( state == detail::SMTP_IN_DATA || state == detail::SMTP_IN_BDAT ) {
-        // Record the SMTP data gap and terminate the
-        // ongoing mail transaction.
+
+
         if ( mail )
             mail->Undelivered(len);
 
@@ -109,28 +109,28 @@ void SMTP_Analyzer::Undelivered(uint64_t seq, int len, bool is_orig) {
 
     first_cmd = last_replied_cmd = -1;
 
-    // Missing either the sender's packets or their replies
-    // (e.g. code 354) is critical, so we set state to SMTP_AFTER_GAP
-    // in both cases
+
+
+
     state = detail::SMTP_AFTER_GAP;
 }
 
 void SMTP_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
     analyzer::tcp::TCP_ApplicationAnalyzer::DeliverStream(length, line, orig);
 
-    // If an TLS transaction has been initiated, forward to child and abort.
+
     if ( state == detail::SMTP_IN_TLS ) {
         ForwardStream(length, line, orig);
         return;
     }
 
-    // NOTE: do not use IsOrig() here, because of TURN command.
+
     bool is_sender = orig_is_sender ? orig : ! orig;
 
     if ( length > 0 && is_sender && bdat ) {
-        // We're processing BDAT and have switched the ContentLine analyzer
-        // into plain mode to send us the full chunk. Ensure we only use up
-        // as much as we need in case we get more.
+
+
+
         int bdat_len = length;
         if ( bdat->RemainingChunkSize() < static_cast<uint64_t>(bdat_len) )
             bdat_len = static_cast<int>(bdat->RemainingChunkSize());
@@ -142,7 +142,7 @@ void SMTP_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
                 Rfc822MsgDataIn(bdat_len, line);
         }
 
-        // All BDAT chunks seen?
+
         if ( bdat->IsLastChunk() && bdat->RemainingChunkSize() == 0 )
             UpdateState(detail::SMTP_CMD_END_OF_DATA, 0, orig);
 
@@ -150,9 +150,9 @@ void SMTP_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
         length -= bdat_len;
         assert(length >= 0);
 
-        // Anything left? Usually the remainder is zero as we're doing
-        // plain delivery. However, a "BDAT 0 LAST" empty chunk isn't
-        // delivered by the ContentLineAnalyzer.
+
+
+
         if ( length == 0 )
             return;
     }
@@ -163,8 +163,8 @@ void SMTP_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
 		Unexpected(is_sender, "line does not end with <CR><LF>", length, line);
 #endif
 
-    // Some weird client uses '\r\r\n' for end-of-line sequence
-    // So we make a compromise here to allow /(\r)*\n/ as end-of-line sequences
+
+
     if ( length > 0 && line[length - 1] == '\r' ) {
         Unexpected(is_sender, "more than one <CR> at the end of line", length, reinterpret_cast<const char*>(line));
         do
@@ -187,7 +187,7 @@ void SMTP_Analyzer::ProcessLine(int length, const char* line, bool orig) {
     int cmd_len = 0;
     const char* cmd = "";
 
-    // NOTE: do not use IsOrig() here, because of TURN command.
+
     bool is_sender = orig_is_sender ? orig : ! orig;
 
     if ( ! pipelining && ((is_sender && ! expect_sender) || (! is_sender && ! expect_recver)) )
@@ -197,8 +197,8 @@ void SMTP_Analyzer::ProcessLine(int length, const char* line, bool orig) {
         int cmd_code = -1;
 
         if ( state == detail::SMTP_AFTER_GAP ) {
-            // Don't know whether it is a command line or
-            // a data line.
+
+
             delete line_after_gap;
 
             line_after_gap = new String(reinterpret_cast<const u_char*>(line), length, true);
@@ -215,8 +215,8 @@ void SMTP_Analyzer::ProcessLine(int length, const char* line, bool orig) {
         }
 
         else if ( state == detail::SMTP_IN_DATA ) {
-            // Check "." for end of data for non-BDAT transfers.
-            expect_recver = false; // ?? MAY server respond to mail data?
+
+            expect_recver = false;
 
             if ( line[0] == '.' )
                 ++line;
@@ -224,11 +224,11 @@ void SMTP_Analyzer::ProcessLine(int length, const char* line, bool orig) {
             int data_len = end_of_line - line;
 
             if ( ! mail )
-                // This can happen if we're already shut
-                // down the connection due to seeing a RST
-                // but are now processing packets sent
-                // afterwards (because, e.g., the RST was
-                // dropped or ignored).
+
+
+
+
+
                 BeginData(orig);
 
             ProcessData(data_len, line);
@@ -261,14 +261,14 @@ void SMTP_Analyzer::ProcessLine(int length, const char* line, bool orig) {
                 NewCmd(cmd_code);
         }
 
-        // Generate smtp_request event
+
         if ( cmd_code >= 0 ) {
-            // In order for all MIME events nested
-            // between SMTP command DATA and END_OF_DATA,
-            // we need to call UpdateState(), which in
-            // turn calls BeginData() and EndData(),  and
-            // RequestEvent() in different orders for the
-            // two commands.
+
+
+
+
+
+
             if ( cmd_code == detail::SMTP_CMD_END_OF_DATA )
                 UpdateState(cmd_code, 0, orig);
 
@@ -279,17 +279,17 @@ void SMTP_Analyzer::ProcessLine(int length, const char* line, bool orig) {
                     RequestEvent(cmd_len, cmd, data_len, line);
             }
 
-            // See above, might have already done so.
+
             bool do_update_state = cmd_code != detail::SMTP_CMD_END_OF_DATA;
 
             if ( cmd_code == detail::SMTP_CMD_BDAT )
-                // Do not update state if this isn't a valid BDAT command.
+
                 do_update_state = ProcessBdatArg(end_of_line - line, line, orig);
             else if ( bdat ) {
-                // Non-BDAT command from client but still have BDAT state,
-                // close it out. This can happen when a client started to
-                // send BDAT chunks, but starts sending other commands without
-                // a last BDAT chunk.
+
+
+
+
                 Weird("smtp_missing_bdat_last_chunk");
                 EndData();
             }
@@ -308,32 +308,32 @@ void SMTP_Analyzer::ProcessLine(int length, const char* line, bool orig) {
         else
             reply_code = -1;
 
-        // The first digit of reply code must be between 1 and 5,
-        // and the second between 0 and 5 (RFC 2821).  But sometimes
-        // we see 5xx codes larger than 559, so we still tolerate that.
+
+
+
         if ( reply_code < 100 || reply_code > 599 ) {
             reply_code = -1;
             Unexpected(is_sender, "reply code out of range", length, line);
             AnalyzerViolation(util::fmt("reply code %d out of range", reply_code), line, length);
         }
 
-        else { // Valid reply code.
+        else {
             if ( pending_reply && reply_code != pending_reply ) {
                 Unexpected(is_sender, "reply code does not match the continuing reply", length, line);
                 pending_reply = 0;
             }
 
             if ( ! pending_reply && reply_code >= 0 )
-                // It is not a continuation.
+
                 NewReply(reply_code, orig);
 
-            // Update pending_reply.
-            if ( reply_code >= 0 && length > 3 && line[3] == '-' ) { // A continued reply.
+
+            if ( reply_code >= 0 && length > 3 && line[3] == '-' ) {
                 pending_reply = reply_code;
                 line = util::skip_whitespace(line + 4, end_of_line);
             }
 
-            else { // This is the end of the reply.
+            else {
                 line = util::skip_whitespace(line + 3, end_of_line);
 
                 pending_reply = 0;
@@ -341,7 +341,7 @@ void SMTP_Analyzer::ProcessLine(int length, const char* line, bool orig) {
                 expect_recver = false;
             }
 
-            // Generate events.
+
             if ( smtp_reply && reply_code >= 0 ) {
                 int cmd_code = last_replied_cmd;
                 switch ( cmd_code ) {
@@ -358,7 +358,7 @@ void SMTP_Analyzer::ProcessLine(int length, const char* line, bool orig) {
             }
         }
 
-        // Process SMTP extensions, e.g. PIPELINING.
+
         if ( last_replied_cmd == detail::SMTP_CMD_EHLO && reply_code == 250 ) {
             const char* ext;
             int ext_len;
@@ -389,8 +389,8 @@ void SMTP_Analyzer::NewCmd(int cmd_code) {
 }
 
 void SMTP_Analyzer::StartTLS() {
-    // STARTTLS was successful. Remove SMTP support analyzers, add SSL
-    // analyzer, and throw event signifying the change.
+
+
     state = detail::SMTP_IN_TLS;
     expect_sender = expect_recver = true;
 
@@ -405,34 +405,34 @@ void SMTP_Analyzer::StartTLS() {
         EnqueueConnEvent(smtp_starttls, ConnVal());
 }
 
-// Here we keep a SMTP state machine and update it on each reply.
-// However, the purpose is NOT to check correctness of SMTP commands
-// and replies, but to guess the state of the SMTP session and,
-// particularly, to know when we are in the SMTP_IN_DATA state.
-//
-// That is why state transition does not depend on the previous state,
-// but only depend on the <command, reply> pair.
-//
-// Why not simply have two-state machine, IN_DATA/NOT_IN_DATA?  Because
-// we want to understand the behavior of SMTP and check how far it may
-// deviate from our knowledge.
+
+
+
+
+
+
+
+
+
+
+
 
 void SMTP_Analyzer::NewReply(int reply_code, bool orig) {
     if ( state == detail::SMTP_AFTER_GAP && reply_code > 0 ) {
         state = detail::SMTP_GAP_RECOVERY;
         RequestEvent(strlen(unknown_cmd), unknown_cmd, 0, "");
-        /*
-        if ( line_after_gap )
-            ProcessLine(sender, line_after_gap->Len(), (const char *) line_after_gap->Bytes());
-        */
+
+
+
+
     }
 
-    // Make all parameters constants.
+
     int cmd_code = first_cmd;
 
-    // To recover from a gap, we detect replies -- the critical
-    // assumptions here are 1) receiver does not reply during a DATA
-    // session; 2) there is no TURN in the gap.
+
+
+
 
     last_replied_cmd = first_cmd;
     first_cmd = -1;
@@ -445,12 +445,12 @@ void SMTP_Analyzer::NewReply(int reply_code, bool orig) {
     UpdateState(cmd_code, reply_code, orig);
 }
 
-// Note: reply_code == 0 means we haven't seen the reply, in which case we
-// still update the state as if the command will succeed, and later
-// adjust the state if it turns out otherwise. This is because some
-// clients are really aggressive in pipelining (beyond the restrictions
-// in the RPC), and as a result we have to update the state following
-// the commands in addition to the replies.
+
+
+
+
+
+
 
 void SMTP_Analyzer::UpdateState(int cmd_code, int reply_code, bool orig) {
     int st = state;
@@ -463,9 +463,9 @@ void SMTP_Analyzer::UpdateState(int cmd_code, int reply_code, bool orig) {
             switch ( reply_code ) {
                 case 0:
                     if ( st != detail::SMTP_CONNECTED ) {
-                        // Impossible state, because the command
-                        // CONN_ESTABLISHMENT should only appear
-                        // in the very beginning.
+
+
+
                         UnexpectedCommand(cmd_code, reply_code);
                     }
                     state = detail::SMTP_INITIATED;
@@ -539,8 +539,8 @@ void SMTP_Analyzer::UpdateState(int cmd_code, int reply_code, bool orig) {
                     state = detail::SMTP_RCPT_OK;
                     break;
 
-                case 250: // NOLINT(bugprone-branch-clone)
-                case 251: // ?? Shall we catch 251? (RFC 2821)
+                case 250:
+                case 251:
                     break;
 
                 case 421:
@@ -551,10 +551,10 @@ void SMTP_Analyzer::UpdateState(int cmd_code, int reply_code, bool orig) {
                 case 501:
                 case 503:
                 case 550:
-                case 551: // ?? Shall we catch 551?
+                case 551:
                 case 552:
                 case 553:
-                case 554: // = transaction failed/recipient refused
+                case 554:
                     break;
 
                 default: UnexpectedReply(cmd_code, reply_code); break;
@@ -606,22 +606,22 @@ void SMTP_Analyzer::UpdateState(int cmd_code, int reply_code, bool orig) {
                     state = detail::SMTP_IN_BDAT;
                     break;
 
-                case 250: // server accepted BDAT transfer.
+                case 250:
                 case 421:
                 case 500:
                 case 501:
                 case 503:
                 case 451:
                 case 554:
-                    // Client will continue completing the inflight chunk no matter
-                    // what the server replies, so we don't call EndData() here as
-                    // it might be interesting what the client does actually send,
-                    // even if the server isn't accepting it.
+
+
+
+
                     break;
 
                 default:
                     UnexpectedReply(cmd_code, reply_code);
-                    // Chunks might still be in-flight. See above.
+
                     break;
             }
             break;
@@ -677,7 +677,7 @@ void SMTP_Analyzer::UpdateState(int cmd_code, int reply_code, bool orig) {
 
             switch ( reply_code ) {
                 case 0:
-                    // Here we wait till there's a reply.
+
                     break;
 
                 case 334: state = detail::SMTP_IN_AUTH; break;
@@ -701,7 +701,7 @@ void SMTP_Analyzer::UpdateState(int cmd_code, int reply_code, bool orig) {
 
             switch ( reply_code ) {
                 case 0:
-                    // Here we wait till there's a reply.
+
                     break;
 
                 case 334: state = detail::SMTP_IN_AUTH; break;
@@ -718,11 +718,11 @@ void SMTP_Analyzer::UpdateState(int cmd_code, int reply_code, bool orig) {
 
             switch ( reply_code ) {
                 case 0:
-                    // Here we wait till there's a reply.
+
                     break;
 
                 case 250:
-                    // flip-side
+
                     orig_is_sender = ! orig_is_sender;
 
                     state = detail::SMTP_CONNECTED;
@@ -742,7 +742,7 @@ void SMTP_Analyzer::UpdateState(int cmd_code, int reply_code, bool orig) {
 
             switch ( reply_code ) {
                 case 0:
-                    // Here we wait till there's a reply.
+
                     break;
 
                 case 220: StartTLS(); break;
@@ -757,9 +757,9 @@ void SMTP_Analyzer::UpdateState(int cmd_code, int reply_code, bool orig) {
         case detail::SMTP_CMD_EXPN:
         case detail::SMTP_CMD_HELP:
         case detail::SMTP_CMD_NOOP:
-            // These commands do not affect state.
-            // ?? However, later we may want to add reply
-            // and state check code.
+
+
+
 
         default:
             if ( st == detail::SMTP_GAP_RECOVERY && reply_code == 354 ) {
@@ -768,10 +768,10 @@ void SMTP_Analyzer::UpdateState(int cmd_code, int reply_code, bool orig) {
             break;
     }
 
-        // A hack: whenever the server makes a valid reply during a DATA
-        // section, we assume that the DATA section has ended (the end
-        // of data line might have been lost due to gaps in trace).  Note,
-        // BeginData() won't be called till the next DATA command.
+
+
+
+
 #if 0
 	if ( state == detail::SMTP_IN_DATA && reply_code >= 400 )
 		{
@@ -802,7 +802,7 @@ int SMTP_Analyzer::ParseCmd(int cmd_len, const char* cmd) {
     if ( ! cmd )
         return -1;
 
-    // special case because we cannot define our usual macros with "-"
+
     if ( istrequal(cmd, "X-ANONYMOUSTLS", cmd_len) )
         return detail::SMTP_CMD_X_ANONYMOUSTLS;
 
@@ -826,7 +826,7 @@ void SMTP_Analyzer::RequestEvent(int cmd_len, const char* cmd, int arg_len, cons
 }
 
 void SMTP_Analyzer::Unexpected(bool is_sender, const char* msg, int detail_len, const char* detail) {
-    // Either party can send a line after an unexpected line.
+
     expect_sender = expect_recver = true;
 
     if ( smtp_unexpected ) {
@@ -840,8 +840,8 @@ void SMTP_Analyzer::Unexpected(bool is_sender, const char* msg, int detail_len, 
 }
 
 void SMTP_Analyzer::UnexpectedCommand(int cmd_code, int reply_code) {
-    // If this happens, please fix the SMTP state machine!
-    // ### Eventually, these should be turned into "weird" events.
+
+
     static char buf[512];
     int len = snprintf(buf, sizeof(buf), "%s reply = %d state = %d", SMTP_CMD_WORD(cmd_code), reply_code, state);
     if ( len > static_cast<int>(sizeof(buf)) )
@@ -850,8 +850,8 @@ void SMTP_Analyzer::UnexpectedCommand(int cmd_code, int reply_code) {
 }
 
 void SMTP_Analyzer::UnexpectedReply(int cmd_code, int reply_code) {
-    // If this happens, please fix the SMTP state machine!
-    // ### Eventually, these should be turned into "weird" events.
+
+
     static char buf[512];
     int len =
         snprintf(buf, sizeof(buf), "%d state = %d, last command = %s", reply_code, state, SMTP_CMD_WORD(cmd_code));
@@ -859,7 +859,7 @@ void SMTP_Analyzer::UnexpectedReply(int cmd_code, int reply_code) {
 }
 
 void SMTP_Analyzer::ProcessData(int length, const char* line) {
-    mail->Deliver(length, line, true /* trailing_CRLF */);
+    mail->Deliver(length, line, true );
 
     if ( ! rfc822_msg_fuid.empty() ) {
         Rfc822MsgDataIn(length, reinterpret_cast<const u_char*>(line));
@@ -868,18 +868,18 @@ void SMTP_Analyzer::ProcessData(int length, const char* line) {
 }
 
 bool SMTP_Analyzer::ProcessBdatArg(int arg_len, const char* arg, bool orig) {
-    // For the BDAT command, parse out the chunk-size from the line
-    // and switch the ContentLineAnalyzer into plain delivery mode
-    // assuming things look valid.
+
+
+
     const auto [chunk_size, is_last_chunk, error] = detail::parse_bdat_arg(arg_len, arg);
     if ( error ) {
         Weird("smtp_invalid_bdat_command", error);
         return false;
     }
 
-    // The ContentLine analyzer only supports int64_t, but BDAT could deal
-    // with uint64_t sized chunks. Weird if the chunk size is larger and
-    // do not configure the ContentLine analyzer for plain delivery.
+
+
+
     if ( chunk_size > std::numeric_limits<int64_t>::max() ) {
         const char* addl = zeek::util::fmt("%" PRIu64, chunk_size);
         Weird("smtp_huge_bdat_chunk", addl);
@@ -890,14 +890,14 @@ bool SMTP_Analyzer::ProcessBdatArg(int arg_len, const char* arg, bool orig) {
     cl->SetPlainDelivery(chunk_size);
 
     if ( ! bdat ) {
-        // This is the first BDAT chunk.
+
         BeginData(orig, detail::SMTP_IN_BDAT);
         bdat = std::make_unique<detail::SMTP_BDAT_Analyzer>(Conn(), mail, zeek::BifConst::SMTP::bdat_max_line_length);
     }
 
     bdat->NextChunk(is_last_chunk ? detail::ChunkType::Last : detail::ChunkType::Intermediate, chunk_size);
 
-    // All good.
+
     return true;
 }
 
@@ -913,7 +913,7 @@ void SMTP_Analyzer::Rfc822MsgGap(int len) {
 
 void SMTP_Analyzer::BeginData(bool orig, detail::SMTP_State new_state) {
     state = new_state;
-    skip_data = false; // reset the flag at the beginning of the mail
+    skip_data = false;
     if ( mail != nullptr ) {
         Weird("smtp_nested_mail_transaction");
         mail->Done();
@@ -955,4 +955,4 @@ void SMTP_Analyzer::EndData() {
     }
 }
 
-} // namespace zeek::analyzer::smtp
+}

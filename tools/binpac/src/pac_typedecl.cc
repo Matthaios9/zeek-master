@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_typedecl.h"
 
@@ -32,7 +32,7 @@ TypeDecl::~TypeDecl() {
 void TypeDecl::ProcessAttr(Attr* a) { type_->ProcessAttr(a); }
 
 void TypeDecl::AddParam(Param* param) {
-    // Cannot work after Prepare()
+
     ASSERT(! env_);
     params_->push_back(param);
 }
@@ -43,8 +43,8 @@ void TypeDecl::Prepare() {
     if ( type_->tot() != Type::EXTERN && type_->tot() != Type::DUMMY )
         SetAnalyzerContext();
 
-    // As a type ID can be used in the same way function is, add the
-    // id as a FUNC_ID and set it as evaluated.
+
+
     global_env()->AddID(id(), FUNC_ID, type_);
     global_env()->SetEvaluated(id());
 
@@ -52,7 +52,7 @@ void TypeDecl::Prepare() {
 
     foreach (i, ParamList, params_) {
         Param* p = *i;
-        // p->Prepare(env_);
+
         type_->AddField(p->param_field());
     }
 
@@ -67,14 +67,14 @@ void TypeDecl::Prepare() {
 string TypeDecl::class_name() const { return id_->Name(); }
 
 void TypeDecl::GenForwardDeclaration(Output* out_h) {
-    // Do not generate declaration for external types
+
     if ( type_->tot() == Type::EXTERN )
         return;
     out_h->println("class %s;", class_name().c_str());
 }
 
 void TypeDecl::GenCode(Output* out_h, Output* out_cc) {
-    // Do not generate code for external types
+
     if ( type_->tot() == Type::EXTERN || type_->tot() == Type::STRING )
         return;
 
@@ -89,7 +89,7 @@ void TypeDecl::GenCode(Output* out_h, Output* out_cc) {
         env_->AddMacro(context_macro_id, new Expr(analyzer_context_id->clone()));
     }
 
-    // Add parameter "byteorder"
+
     if ( type_->RequiresByteOrder() && ! type_->attr_byteorder_expr() ) {
         env_->AddID(byteorder_id, TEMP_VAR, extern_type_int);
         env_->SetEvaluated(byteorder_id);
@@ -102,7 +102,7 @@ void TypeDecl::GenCode(Output* out_h, Output* out_cc) {
     if ( type_->attr_refcount() )
         base_classes.emplace_back(kRefCountClass);
 
-    // The first line of class definition
+
     out_h->println("");
     out_h->print("class %s final", class_name().c_str());
     bool first = true;
@@ -117,7 +117,7 @@ void TypeDecl::GenCode(Output* out_h, Output* out_cc) {
     }
     out_h->println(" {");
 
-    // Public members
+
     out_h->println("public:");
     out_h->inc_indent();
 
@@ -148,11 +148,11 @@ void TypeDecl::GenCode(Output* out_h, Output* out_cc) {
 }
 
 void TypeDecl::GenPubDecls(Output* out_h, Output* out_cc) {
-    // GenParamPubDecls(params_, out_h, env_);
+
 }
 
 void TypeDecl::GenPrivDecls(Output* out_h, Output* out_cc) {
-    // GenParamPrivDecls(params_, out_h, env_);
+
 }
 
 void TypeDecl::GenInitCode(Output* out_cc) {}
@@ -170,7 +170,7 @@ void TypeDecl::GenConstructorFunc(Output* out_h, Output* out_cc) {
     out_cc->println("%s::%s {", class_name().c_str(), proto.c_str());
     out_cc->inc_indent();
 
-    // GenParamAssignments(params_, out_cc, env_);
+
 
     type_->GenInitCode(out_cc, env_);
     GenInitCode(out_cc);
@@ -223,12 +223,12 @@ string TypeDecl::ParseFuncPrototype(Env* env) {
         params += strfmt(", %s %s", param_type->DataTypeConstRefStr().c_str(), env->LValue(analyzer_context_id));
     }
 
-    // Add parameter "byteorder"
+
     if ( type_->RequiresByteOrder() && ! type_->attr_byteorder_expr() ) {
         params += strfmt(", int %s", env->LValue(byteorder_id));
     }
 
-    // Returns "<return type> %s<func name>(<params>)%s".
+
     return strfmt("%s %%s%s(%s)%%s", return_type, func_name, params.c_str());
 }
 
@@ -249,8 +249,8 @@ void TypeDecl::GenParsingEnd(Output* out_cc, Env* env, const DataPtr& data) {
     }
 
     if ( type_->incremental_parsing() && (type_->tot() == Type::RECORD || type_->tot() == Type::ARRAY) ) {
-        // In which case parsing may jump to label
-        // "need_more_data" ...
+
+
         out_cc->println("BINPAC_ASSERT(%s);", type_->parsing_complete(env).c_str());
         out_cc->println("return %s;", ret_val_0.c_str());
 
@@ -270,7 +270,7 @@ void TypeDecl::GenParseFunc(Output* out_h, Output* out_cc) {
     if ( type_->tot() == Type::DUMMY )
         return;
 
-    // Env within the parse function
+
     Env p_func_env(env_, this);
     Env* env = &p_func_env;
 
@@ -324,7 +324,7 @@ void TypeDecl::GenInitialBufferLengthFunc(Output* out_h, Output* out_cc) {
 
     int init_buffer_length = type_->InitialBufferLength();
 
-    if ( init_buffer_length < 0 ) // cannot be statically determined
+    if ( init_buffer_length < 0 )
     {
         throw Exception(type()->attr_length_expr(), strfmt("cannot determine initial buffer length"
                                                            " for type %s",

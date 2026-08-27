@@ -1,14 +1,14 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Generic protocol analyzer fuzzer.
-//
-// Expects ZEEK_FUZZ_ANALYZER and ZEEK_FUZZ_ANALYZER_TRANSPORT to be set.
-//
-// ZEEK_FUZZER_ANALYZER_TRANSPORT can be "tcp" or "udp" and determines if
-// fuzzing happens via NextStream() or NextPacket().
-//
-// Fuzzing both codepaths at the same time isn't currently supported.
-// Further note that TCP analyzers may use DeliverPacket() as well.
+
+
+
+
+
+
+
+
+
+
 #include <binpac.h>
 
 #include "zeek/Conn.h"
@@ -26,7 +26,7 @@
 #include "zeek/packet_analysis/protocol/udp/UDPSessionAdapter.h"
 #include "zeek/session/Manager.h"
 
-// Simple macros for converting a compiler define into a string.
+
 #define VAL(str) #str
 #define TOSTRING(str) VAL(str)
 
@@ -84,23 +84,23 @@ public:
             } catch ( const binpac::Exception& e ) {
             }
 
-            chunk = {}; // Release buffer before draining events.
+            chunk = {};
             zeek::event_mgr.Drain();
 
-            // Has the analyzer been disabled during event processing?
+
             if ( ! adapter->HasChildAnalyzer(analyzer_tag) )
                 break;
         }
     }
 
-    // Hook methods to be implemented by specific fuzzers.
+
     virtual zeek::packet_analysis::IP::SessionAdapter* BuildAnalyzerTree(zeek::Connection* conn,
                                                                          zeek::analyzer::Analyzer* analyzer) = 0;
     virtual void NextChunk(zeek::analyzer::Analyzer* analyzer, zeek::detail::FuzzBuffer::Chunk& chunk) = 0;
 
     void Cleanup() { zeek::detail::fuzzer_cleanup_one_input(); }
 
-    // Create a Fuzzer given FUZZ_ANALYZER_NAME and FUZZ_ANALYZER_TRANSPORT globals.
+
     static std::unique_ptr<Fuzzer> Create();
 
 protected:
@@ -146,7 +146,7 @@ public:
     }
 };
 
-// Create a Fuzzer given FUZZ_ANALYZER_NAME and FUZZ_ANALYZER_TRANSPORT globals.
+
 std::unique_ptr<Fuzzer> Fuzzer::Create() {
     const auto& tag = zeek::analyzer_mgr->GetComponentTag(FUZZ_ANALYZER_NAME);
     if ( ! tag ) {
@@ -163,7 +163,7 @@ std::unique_ptr<Fuzzer> Fuzzer::Create() {
     abort();
 }
 
-// Fuzzing entry point.
+
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     zeek::detail::FuzzBuffer fb{data, size};
 

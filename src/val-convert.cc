@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/val-convert.h"
 
@@ -202,4 +202,4 @@ ValPtr convert_counts_to_addr(const VectorVal* vv, std::string& err) {
     return nullptr;
 }
 
-} // namespace zeek::detail
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_flow_h
 #define pac_flow_h
@@ -45,4 +45,4 @@ private:
     static ParameterizedType* flow_buffer_type_;
 };
 
-#endif // pac_flow_h
+#endif

@@ -1,11 +1,11 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
 #include <cstdint>
 
-// Bytes used as Monte Carlo co-ordinates. This should be no more bits than the mantissa
-// of your "double" floating point type.
+
+
 constexpr int RT_MONTEN = 6;
 
 namespace zeek {
@@ -22,8 +22,8 @@ public:
 private:
     friend class zeek::EntropyVal;
 
-    int64_t ccount[256] = {0}; /* Bins to count occurrences of values */
-    int64_t totalc = 0;        /* Total bytes counted */
+    int64_t ccount[256] = {0};
+    int64_t totalc = 0;
     int mp = 0;
     int sccfirst = 1;
     unsigned int monte[RT_MONTEN] = {0};
@@ -42,5 +42,5 @@ private:
     double scct3 = 0.0;
 };
 
-} // namespace detail
-} // namespace zeek
+}
+}

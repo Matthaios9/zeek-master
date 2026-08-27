@@ -1,22 +1,22 @@
-##! This is a utility script that implements the controller interface for the
-##! control framework.  It's intended to be run to control a remote Zeek
-##! and then shutdown.
-##!
-##! It's intended to be used from the command line like this::
-##!
-##!     zeek <scripts> frameworks/control/controller Control::host=<host_addr> Control::host_port=<host_port> Control::cmd=<command> [Control::arg=<arg>]
+
+
+
+
+
+
+
 
 @load base/frameworks/control
 @load base/frameworks/broker
 
 module Control;
 
-# Do some sanity checking and rework the communication nodes.
+
 event zeek_init() &priority=5
 	{
-	# We know that some command was given because this script wouldn't be
-	# loaded if there wasn't so we can feel free to throw an error here and
-	# shutdown.
+
+
+
 	if ( cmd !in commands )
 		{
 		Reporter::error(fmt("The '%s' control command is unknown.", cmd));
@@ -64,13 +64,13 @@ function configurable_ids(): id_table
 
 		local t = globals[id];
 
-		# Skip it if the variable isn't redefinable or not const.
-		# We don't want to update non-const globals because that's usually
-		# where state is stored and those values will frequently be declared
-		# with &redef so that attributes can be redefined.
-		#
-		# NOTE: functions are currently not fully supported for serialization and hence
-		# aren't sent.
+
+
+
+
+
+
+
 		if ( t$constant && t$redefinable && t$type_name != "func" )
 			rval[id] = t;
 		}
@@ -116,7 +116,7 @@ event Broker::peer_added(endpoint: Broker::EndpointInfo, msg: string) &priority=
 
 	if ( cmd == "configuration_update" )
 		{
-		# Send all &redef'able consts to the peer.
+
 		local ids = configurable_ids();
 		local publish_count = 0;
 

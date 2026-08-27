@@ -1,11 +1,11 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/telemetry/Manager.h"
 
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+
 #define RAPIDJSON_HAS_STDSTRING 1
 
-// CivetServer is from the civetweb submodule in prometheus-cpp
+
 #include <CivetServer.h>
 #include <fnmatch.h>
 #include <prometheus/collectable.h>
@@ -31,10 +31,10 @@
 
 namespace zeek::telemetry {
 
-/**
- * Prometheus Collectable interface used to insert Zeek callback processing
- * before the Prometheus registry's collection of metric data.
- */
+
+
+
+
 class ZeekCollectable : public prometheus::Collectable {
 public:
     std::vector<prometheus::MetricFamily> Collect() const override {
@@ -74,7 +74,7 @@ void Manager::InitPostScript() {
                               []() { return static_cast<double>(get_stats()->fds); });
 #endif
 
-    // These two metrics get set at startup and are never modified after.
+
     process_start_time = GaugeInstance("process", "start_time", {}, "Process start time", "seconds");
     process_start_time->Set(run_state::zeek_start_time);
 
@@ -84,7 +84,7 @@ void Manager::InitPostScript() {
 }
 
 void Manager::ListenPrometheus(std::string_view metrics_address, int metrics_port, bool expose_services_json) {
-    // Metrics port setting is used to calculate a URL for prometheus scraping
+
     std::string prometheus_url =
         util::fmt("%.*s:%u", static_cast<int>(metrics_address.size()), metrics_address.data(), metrics_port);
 
@@ -94,11 +94,11 @@ void Manager::ListenPrometheus(std::string_view metrics_address, int metrics_por
 
         callbacks = new CivetCallbacks();
         callbacks->begin_request = [](struct mg_connection* conn) -> int {
-            // Handle the services.json request ourselves by building up a response based on
-            // the cluster configuration.
+
+
             auto req_info = mg_get_request_info(conn);
             if ( strcmp(req_info->request_uri, "/services.json") == 0 ) {
-                // send a request to a topic for data from workers
+
                 auto json = telemetry_mgr->GetClusterJson();
                 mg_send_http_ok(conn, "application/json", static_cast<long long>(json.size()));
                 mg_write(conn, json.data(), json.size());
@@ -113,17 +113,17 @@ void Manager::ListenPrometheus(std::string_view metrics_address, int metrics_por
         prometheus_exposer =
             std::make_unique<prometheus::Exposer>(prometheus_url, BifConst::Telemetry::civetweb_threads, callbacks);
 
-        // CivetWeb stores a copy of the callbacks, so we're safe to delete the pointer here
+
         delete callbacks;
     } catch ( const CivetException& exc ) {
         reporter->FatalError("Failed to setup Prometheus endpoint: %s. Attempted to bind to %s.", exc.what(),
                              prometheus_url.c_str());
     }
 
-    // This has to be inserted before the registry below. The exposer
-    // processes the collectors in order of insertion. We want to make
-    // sure that the callbacks get called and the values in the metrics
-    // are updated before prometheus-cpp scrapes them.
+
+
+
+
     zeek_collectable = std::make_shared<ZeekCollectable>();
     prometheus_exposer->RegisterCollectable(zeek_collectable);
 
@@ -131,28 +131,28 @@ void Manager::ListenPrometheus(std::string_view metrics_address, int metrics_por
 }
 
 void Manager::Terminate() {
-    // Notify the collector condition so that it doesn't hang waiting for
-    // a collector request to complete.
+
+
     collector_cv.notify_all();
 
-    // Shut down the exposer first of all so we stop getting requests for
-    // data. This keeps us from getting a request on another thread while
-    // we're shutting down.
+
+
+
     prometheus_exposer.reset();
 
     iosource_mgr->UnregisterFd(collector_flare.FD(), this);
 }
 
-// -- collect metric stuff -----------------------------------------------------
+
 
 RecordValPtr Manager::GetMetricOptsRecord(const prometheus::MetricFamily& metric_family) {
-    // Avoid recreating this repeatedly.
-    // TODO: this may cause problems if new metrics are added or removed by external users,
-    // since the validation of label names needs to happen.
+
+
+
     if ( auto it = opts_records.find(metric_family.name); it != opts_records.end() )
         return it->second;
 
-    // Get the opt record
+
     static auto string_vec_type = zeek::id::find_type<zeek::VectorType>("string_vec");
     static auto metric_opts_type = zeek::id::find_type<zeek::RecordType>("Telemetry::MetricOpts");
 
@@ -167,10 +167,10 @@ RecordValPtr Manager::GetMetricOptsRecord(const prometheus::MetricFamily& metric
     record_val->Assign(name_idx, make_intrusive<zeek::StringVal>(metric_family.name));
     record_val->Assign(help_text_idx, make_intrusive<zeek::StringVal>(metric_family.help));
 
-    // prometheus-cpp doesn't store the prefix information separately. we pull the word
-    // before the first underscore as the prefix instead. The Prometheus docs state
-    // that the prefix "should exist" not "must exist" so it's possible this could result
-    // in incorrect data, but it should be correct for all of our uses.
+
+
+
+
     std::string prefix;
     auto first_underscore = metric_family.name.find('_');
     if ( first_underscore != std::string::npos )
@@ -178,7 +178,7 @@ RecordValPtr Manager::GetMetricOptsRecord(const prometheus::MetricFamily& metric
 
     record_val->Assign(prefix_idx, make_intrusive<zeek::StringVal>(prefix));
 
-    // Assume that a metric ending with _total is always a summed metric so we can set that.
+
     record_val->Assign(is_total_idx, val_mgr->Bool(metric_family.name.ends_with("_total")));
 
     if ( metric_family.type == prometheus::MetricType::Counter )
@@ -298,8 +298,8 @@ ValPtr Manager::CollectMetrics(std::string_view prefix_pattern, std::string_view
 
     VectorValPtr ret_val = make_intrusive<VectorVal>(metrics_vector_type);
 
-    // Due to the name containing the full information about a metric including a potential unit add an
-    // asterisk to the end of the full pattern so matches work correctly.
+
+
     std::string full_pattern = util::fmt("%.*s_%.*s", static_cast<int>(prefix_pattern.size()), prefix_pattern.data(),
                                          static_cast<int>(name_pattern.size()), name_pattern.data());
     if ( full_pattern[full_pattern.size() - 1] != '*' )
@@ -341,11 +341,11 @@ ValPtr Manager::CollectMetrics(std::string_view prefix_pattern, std::string_view
         }
     }
 
-    // If running under test, there are issues with the non-deterministic
-    // ordering of the metrics coming out of prometheus-cpp, which uses
-    // std::hash on the label values to sort them. Check for that case and sort
-    // the results to some fixed order so that the tests have consistent
-    // results.
+
+
+
+
+
     if ( ret_val->Size() > 0 ) {
         static auto running_under_test = id::find_val("running_under_test")->AsBool();
         if ( running_under_test ) {
@@ -380,8 +380,8 @@ ValPtr Manager::CollectHistogramMetrics(std::string_view prefix_pattern, std::st
 
     VectorValPtr ret_val = make_intrusive<VectorVal>(metrics_vector_type);
 
-    // Due to the name containing the full information about a metric including a potential unit add an
-    // asterisk to the end of the full pattern so matches work correctly.
+
+
     std::string full_pattern = util::fmt("%.*s_%.*s", static_cast<int>(prefix_pattern.size()), prefix_pattern.data(),
                                          static_cast<int>(name_pattern.size()), name_pattern.data());
     if ( full_pattern[full_pattern.size() - 1] != '*' )
@@ -424,7 +424,7 @@ ValPtr Manager::CollectHistogramMetrics(std::string_view prefix_pattern, std::st
                 boundaries.push_back(b.upper_bound);
             }
 
-            // TODO: these could be stored somehow to avoid recreating them repeatedly
+
             auto bounds_vec = make_intrusive<zeek::VectorVal>(double_vec_type);
             for ( auto b : boundaries )
                 bounds_vec->Append(zeek::make_intrusive<DoubleVal>(b));
@@ -441,11 +441,11 @@ ValPtr Manager::CollectHistogramMetrics(std::string_view prefix_pattern, std::st
         }
     }
 
-    // If running under btest, there are issues with the non-deterministic
-    // ordering of the metrics coming out of prometheus-cpp, which uses
-    // std::hash on the label values to sort them. Check for that case and sort
-    // the results to some fixed order so that the tests have consistent
-    // results.
+
+
+
+
+
     if ( ret_val->Size() > 0 ) {
         static auto running_under_test = id::find_val("running_under_test")->AsBool();
         if ( running_under_test ) {
@@ -624,8 +624,8 @@ void Manager::WaitForPrometheusCallbacks() {
     uint64_t expected_idx = collector_request_idx;
     collector_flare.Fire();
 
-    // It should *not* take 5 seconds to go through all of the callbacks, but
-    // set this to have a timeout anyways just to avoid a deadlock.
+
+
     bool res = collector_cv.wait_for(lk,
                                      std::chrono::microseconds(
                                          static_cast<long>(BifConst::Telemetry::callback_timeout * 1000000)),
@@ -638,9 +638,9 @@ void Manager::WaitForPrometheusCallbacks() {
         fprintf(stderr, "Timeout waiting for prometheus callbacks\n");
 }
 
-} // namespace zeek::telemetry
+}
 
-// -- unit tests ---------------------------------------------------------------
+
 
 using namespace std::literals;
 using namespace zeek::telemetry;

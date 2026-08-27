@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_enum_h
 #define pac_enum_h
@@ -34,4 +34,4 @@ private:
     TypeDecl* extern_typedecl_;
 };
 
-#endif // pac_enum_h
+#endif

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/threading/SerialTypes.h"
 
@@ -8,7 +8,7 @@
 
 #include "zeek/Reporter.h"
 #include "zeek/SerializationFormat.h"
-// The following are required for ValueToVal.
+
 #include "zeek/Expr.h"
 #include "zeek/ID.h"
 #include "zeek/IPAddr.h"
@@ -71,8 +71,8 @@ bool Field::Write(detail::SerializationFormat* fmt) const {
 std::string Field::TypeName() const {
     std::string n;
 
-    // We do not support tables, if the internal Zeek type is table it
-    // always is a set.
+
+
     if ( type == TYPE_TABLE )
         n = "set";
     else
@@ -123,7 +123,7 @@ Value::Value(const Value& other) {
             break;
         }
         default: {
-            // Deal with simple/atomic types.
+
             val = other.val;
             break;
         }
@@ -136,7 +136,7 @@ Value::Value(Value&& other) noexcept {
     subtype = other.subtype;
     line_number = other.line_number;
 
-    val = other.val; // take ownership.
+    val = other.val;
 
     other.val = _val();
     other.line_number = -1;
@@ -212,20 +212,20 @@ bool Value::IsCompatibleType(Type* t, bool atomic_only) {
     return false;
 }
 
-// Read size elements from fmt, allocating the pointer array dynamically. Returns nullopt on error.
+
 static std::optional<std::vector<Value*>> read_elements(detail::SerializationFormat* fmt, zeek_int_t size) {
     if ( size < 0 )
         return std::nullopt;
 
-    // Only reserve up to 1024 pointers and rely on dynamic
-    // reallocation of std::vector past that many elements.
+
+
     std::vector<Value*> vec;
     vec.reserve(std::min<size_t>(size, 1024));
 
     for ( zeek_int_t i = 0; i < size; ++i ) {
         vec.emplace_back(new Value);
         if ( ! vec.back()->Read(fmt) ) {
-            // Free on error.
+
             for ( auto* v : vec )
                 delete v;
 
@@ -285,7 +285,7 @@ bool Value::Read(detail::SerializationFormat* fmt) {
                 default: return false;
             }
 
-            // Can't be reached.
+
         }
 
         case TYPE_SUBNET: {
@@ -308,7 +308,7 @@ bool Value::Read(detail::SerializationFormat* fmt) {
                 default: return false;
             }
 
-            // Can't be reached.
+
         }
 
         case TYPE_DOUBLE:
@@ -324,7 +324,7 @@ bool Value::Read(detail::SerializationFormat* fmt) {
             if ( ! fmt->Read(&val.set_val.size, "set_size") )
                 return false;
 
-            // XXX: Why have we never checked the table's subtype?
+
 
             auto result = read_elements(fmt, val.set_val.size);
 
@@ -342,7 +342,7 @@ bool Value::Read(detail::SerializationFormat* fmt) {
             if ( ! fmt->Read(&val.vector_val.size, "vector_size") )
                 return false;
 
-            // XXX: Why have we never checked the vector's subtype?
+
 
             auto result = read_elements(fmt, val.vector_val.size);
 
@@ -363,7 +363,7 @@ bool Value::Read(detail::SerializationFormat* fmt) {
         }
     }
 
-    // unreachable
+
     return false;
 }
 
@@ -394,7 +394,7 @@ bool Value::Write(detail::SerializationFormat* fmt) const {
                            fmt->Write(val.addr_val.in.in6, "addr-in6");
             }
 
-            // Can't be reached.
+
             abort();
         }
 
@@ -412,7 +412,7 @@ bool Value::Write(detail::SerializationFormat* fmt) const {
                            fmt->Write(val.subnet_val.prefix.in.in6, "subnet-in6");
             }
 
-            // Can't be reached.
+
             abort();
         }
 
@@ -458,7 +458,7 @@ bool Value::Write(detail::SerializationFormat* fmt) const {
         }
     }
 
-    // unreachable
+
     return false;
 }
 
@@ -474,7 +474,7 @@ Val* Value::ValueToVal(const std::string& source, const Value* val, bool& have_e
         return nullptr;
 
     if ( ! val->present )
-        return nullptr; // unset field
+        return nullptr;
 
     switch ( val->type ) {
         case TYPE_BOOL: return val_mgr->Bool(val->val.int_val)->Ref();
@@ -540,10 +540,10 @@ Val* Value::ValueToVal(const std::string& source, const Value* val, bool& have_e
         case TYPE_TABLE: {
             TypeListPtr set_index;
             if ( val->val.set_val.size == 0 && (val->subtype == TYPE_VOID || val->subtype == TYPE_ENUM) )
-                // don't know type - unspecified table.
+
                 set_index = make_intrusive<TypeList>();
             else {
-                // all entries have to have the same type...
+
                 TypeTag stag = val->subtype;
                 if ( stag == TYPE_VOID )
                     stag = val->val.set_val.vals[0]->type;
@@ -551,7 +551,7 @@ Val* Value::ValueToVal(const std::string& source, const Value* val, bool& have_e
                 TypePtr index_type;
 
                 if ( stag == TYPE_ENUM ) {
-                    // Enums are not a base-type, so need to look it up.
+
                     const auto& sv = val->val.set_val.vals[0]->val.string_val;
                     std::string enum_name(sv.data, sv.length);
                     const auto& enum_id = detail::global_scope()->Find(enum_name);
@@ -590,14 +590,14 @@ Val* Value::ValueToVal(const std::string& source, const Value* val, bool& have_e
             TypePtr type;
 
             if ( val->val.vector_val.size == 0 && (val->subtype == TYPE_VOID || val->subtype == TYPE_ENUM) )
-                // don't know type - unspecified table.
+
                 type = base_type(TYPE_ANY);
             else {
-                // all entries have to have the same type...
+
                 if ( val->subtype == TYPE_VOID )
                     type = base_type(val->val.vector_val.vals[0]->type);
                 else if ( val->subtype == TYPE_ENUM ) {
-                    // Enums are not a base-type, so need to look it up.
+
                     const auto& sv = val->val.vector_val.vals[0]->val.string_val;
                     std::string enum_name(sv.data, sv.length);
                     const auto& enum_id = detail::global_scope()->Find(enum_name);
@@ -631,11 +631,11 @@ Val* Value::ValueToVal(const std::string& source, const Value* val, bool& have_e
         }
 
         case TYPE_ENUM: {
-            // Convert to string first to not have to deal with missing
-            // \0's...
+
+
             std::string enum_string(val->val.string_val.data, val->val.string_val.length);
 
-            // let's try looking it up by global ID.
+
             const auto& id = detail::lookup_ID(enum_string.c_str(), detail::GLOBAL_MODULE_NAME);
 
             if ( ! id || ! id->IsEnumConst() ) {
@@ -666,4 +666,4 @@ Val* Value::ValueToVal(const std::string& source, const Value* val, bool& have_e
     return nullptr;
 }
 
-} // namespace zeek::threading
+}

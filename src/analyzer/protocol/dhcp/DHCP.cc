@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/dhcp/DHCP.h"
 
@@ -20,4 +20,4 @@ void DHCP_Analyzer::DeliverPacket(int len, const u_char* data, bool orig, uint64
     }
 }
 
-} // namespace zeek::analyzer::dhcp
+}

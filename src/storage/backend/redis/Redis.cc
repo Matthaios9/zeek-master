@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/storage/backend/redis/Redis.h"
 
@@ -16,47 +16,47 @@
 #include "hiredis/async.h"
 #include "hiredis/hiredis.h"
 
-// Anonymous callback handler methods for the hiredis async API.
+
 namespace {
 
 class Tracer {
 public:
-    Tracer(std::string where) : where(std::move(where)) {} // DBG_LOG(zeek::DBG_STORAGE, "%s", where.c_str()); }
-    ~Tracer() = default;                                   // { DBG_LOG(zeek::DBG_STORAGE, "%s done", where.c_str()); }
+    Tracer(std::string where) : where(std::move(where)) {}
+    ~Tracer() = default;
     std::string where;
 };
 
-/**
- * Callback handler for OnConnect events from hiredis.
- *
- * @param ctx The async context that called this callback.
- * @param status The status of the connection attempt.
- */
+
+
+
+
+
+
 void redisOnConnect(const redisAsyncContext* ctx, int status) {
     auto t = Tracer("connect");
     auto backend = static_cast<zeek::storage::backend::redis::Redis*>(ctx->data);
     backend->OnConnect(status);
 }
 
-/**
- * Callback handler for OnDisconnect events from hiredis.
- *
- * @param ctx The async context that called this callback.
- * @param status The status of the disconnection attempt.
- */
+
+
+
+
+
+
 void redisOnDisconnect(const redisAsyncContext* ctx, int status) {
     auto t = Tracer("disconnect");
     auto backend = static_cast<zeek::storage::backend::redis::Redis*>(ctx->data);
     backend->OnDisconnect(status);
 }
 
-/**
- * Callback handler for SET commands.
- *
- * @param ctx The async context that called this callback.
- * @param reply The reply from the server for the command.
- * @param privdata A pointer to private data passed in the command.
- */
+
+
+
+
+
+
+
 void redisPut(redisAsyncContext* ctx, void* reply, void* privdata) {
     auto t = Tracer("put");
     auto backend = static_cast<zeek::storage::backend::redis::Redis*>(ctx->data);
@@ -64,13 +64,13 @@ void redisPut(redisAsyncContext* ctx, void* reply, void* privdata) {
     backend->HandlePutResult(static_cast<redisReply*>(reply), callback);
 }
 
-/**
- * Callback handler for GET commands.
- *
- * @param ctx The async context that called this callback.
- * @param reply The reply from the server for the command.
- * @param privdata A pointer to private data passed in the command.
- */
+
+
+
+
+
+
+
 void redisGet(redisAsyncContext* ctx, void* reply, void* privdata) {
     auto t = Tracer("get");
     auto backend = static_cast<zeek::storage::backend::redis::Redis*>(ctx->data);
@@ -78,13 +78,13 @@ void redisGet(redisAsyncContext* ctx, void* reply, void* privdata) {
     backend->HandleGetResult(static_cast<redisReply*>(reply), callback);
 }
 
-/**
- * Callback handler for DEL commands.
- *
- * @param ctx The async context that called this callback.
- * @param reply The reply from the server for the command.
- * @param privdata A pointer to private data passed in the command.
- */
+
+
+
+
+
+
+
 void redisErase(redisAsyncContext* ctx, void* reply, void* privdata) {
     auto t = Tracer("erase");
     auto backend = static_cast<zeek::storage::backend::redis::Redis*>(ctx->data);
@@ -92,81 +92,81 @@ void redisErase(redisAsyncContext* ctx, void* reply, void* privdata) {
     backend->HandleEraseResult(static_cast<redisReply*>(reply), callback);
 }
 
-/**
- * Callback handler for ZADD commands.
- *
- * @param ctx The async context that called this callback.
- * @param reply The reply from the server for the command.
- * @param privdata A pointer to private data passed in the command.
- */
+
+
+
+
+
+
+
 void redisZADD(redisAsyncContext* ctx, void* reply, void* privdata) {
     auto t = Tracer("zadd");
     auto backend = static_cast<zeek::storage::backend::redis::Redis*>(ctx->data);
 
-    // We don't care about the reply from the ZADD, mostly because blocking to poll
-    // for it adds a bunch of complication to DoPut() with having to handle the
-    // reply from SET first.
+
+
+
     backend->HandleGeneric(nullptr);
     freeReplyObject(reply);
 }
 
-/**
- * Callback handler for commands where there isn't a specific handler in the Redis class.
- *
- * @param ctx The async context that called this callback.
- * @param reply The reply from the server for the command.
- * @param privdata A pointer to private data passed in the command.
- */
+
+
+
+
+
+
+
 void redisGeneric(redisAsyncContext* ctx, void* reply, void* privdata) {
     auto t = Tracer("generic");
     auto backend = static_cast<zeek::storage::backend::redis::Redis*>(ctx->data);
     backend->HandleGeneric(static_cast<redisReply*>(reply));
 }
 
-/**
- * Callback handler for INFO commands.
- *
- * @param ctx The async context that called this callback.
- * @param reply The reply from the server for the command.
- * @param privdata A pointer to private data passed in the command.
- */
+
+
+
+
+
+
+
 void redisINFO(redisAsyncContext* ctx, void* reply, void* privdata) {
     auto t = Tracer("info");
     auto backend = static_cast<zeek::storage::backend::redis::Redis*>(ctx->data);
     backend->HandleInfoResult(static_cast<redisReply*>(reply));
 }
 
-/**
- * Callback handler for AUTH commands.
- *
- * @param ctx The async context that called this callback.
- * @param reply The reply from the server for the command.
- * @param privdata A pointer to private data passed in the command.
- */
+
+
+
+
+
+
+
 void redisAUTH(redisAsyncContext* ctx, void* reply, void* privdata) {
     auto t = Tracer("auth");
     auto backend = static_cast<zeek::storage::backend::redis::Redis*>(ctx->data);
     backend->HandleAuthResult(static_cast<redisReply*>(reply));
 }
 
-// Because we called redisPollAttach in DoOpen(), privdata here is a
-// redisPollEvents object. We can go through that object to get the context's
-// data, which contains the backend. Because we overrode these callbacks in
-// DoOpen, we still want to mimic their callbacks to redisPollTick functions
-// correctly.
-//
-// Additionally, if we're in the middle of running a manual Expire() because
-// we're reading a pcap, don't add the file descriptor into iosource_mgr. Manual
-// calls to Poll() during that will handle reading/writing any data, and we
-// don't want the contention with the main loop.
 
-/**
- * Callback from hiredis when a new reader is added to the context. This is called when
- * data is ready to be read from the context for a command.
- *
- * @param privdata Private data passed back to the callback when it fires. We use this to
- * get access to the redis backend object.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void redisAddRead(void* privdata) {
     auto t = Tracer("addread");
     auto rpe = static_cast<redisPollEvents*>(privdata);
@@ -177,13 +177,13 @@ void redisAddRead(void* privdata) {
     rpe->reading = 1;
 }
 
-/**
- * Callback from hiredis when a new reader is added to the context. This is called when no
- * more data is ready to be read from the context for a command.
- *
- * @param privdata Private data passed back to the callback when it fires. We use this to
- * get access to the redis backend object.
- */
+
+
+
+
+
+
+
 void redisDelRead(void* privdata) {
     auto t = Tracer("delread");
     auto rpe = static_cast<redisPollEvents*>(privdata);
@@ -194,13 +194,13 @@ void redisDelRead(void* privdata) {
     rpe->reading = 0;
 }
 
-/**
- * Callback from hiredis when a new writer is added to the context. This is called when
- * data is ready to be written to the context for a command.
- *
- * @param privdata Private data passed back to the callback when it fires. We use this to
- * get access to the redis backend object.
- */
+
+
+
+
+
+
+
 void redisAddWrite(void* privdata) {
     auto t = Tracer("addwrite");
     auto rpe = static_cast<redisPollEvents*>(privdata);
@@ -211,13 +211,13 @@ void redisAddWrite(void* privdata) {
     rpe->writing = 1;
 }
 
-/**
- * Callback from hiredis when a writer is removed from the context. This is called when no
- * more data is ready to be written to the context for a command.
- *
- * @param privdata Private data passed back to the callback when it fires. We use this to
- * get access to the redis backend object.
- */
+
+
+
+
+
+
+
 void redisDelWrite(void* privdata) {
     auto rpe = static_cast<redisPollEvents*>(privdata);
     auto t = Tracer("delwrite");
@@ -228,17 +228,17 @@ void redisDelWrite(void* privdata) {
     rpe->writing = 0;
 }
 
-// Creates a unique_lock based on a condition against a mutex. This is used to
-// conditionally lock the expire_mutex. We only need to do it while reading
-// pcaps. The only thread contention happens during Expire(), which only happens
-// when reading pcaps. It's not worth the cycles to lock the mutex otherwise,
-// and hiredis will deal with other cross-command contention correctly as long
-// as it's in a single thread.
+
+
+
+
+
+
 std::unique_lock<std::mutex> conditionally_lock(bool condition, std::mutex& mutex) {
     return condition ? std::unique_lock<std::mutex>(mutex) : std::unique_lock<std::mutex>();
 }
 
-} // namespace
+}
 
 namespace zeek::storage::backend::redis {
 
@@ -257,9 +257,9 @@ std::string Redis::DoGetConfigMetricsLabel() const {
     return tag;
 }
 
-/**
- * Called by the manager system to open the backend.
- */
+
+
+
 OperationResult Redis::DoOpen(OpenResultCallback* cb, RecordValPtr options) {
     RecordValPtr backend_options = options->GetField<RecordVal>("redis");
     if ( ! backend_options )
@@ -305,14 +305,14 @@ OperationResult Redis::DoOpen(OpenResultCallback* cb, RecordValPtr options) {
     if ( password_field )
         password = password_field->ToStdString();
 
-    // The connection request below should be operation #1.
+
     active_ops = 1;
 
     async_ctx = redisAsyncConnectWithOptions(&opt);
     if ( async_ctx == nullptr || async_ctx->err ) {
-        // This block doesn't necessarily mean the connection failed. It means
-        // that hiredis failed to set up the async context. Connection failure
-        // is returned later via the OnConnect callback.
+
+
+
         std::string errmsg = util::fmt("Failed to open connection to Redis server at %s", server_addr.c_str());
         if ( async_ctx ) {
             errmsg.append(": ");
@@ -324,16 +324,16 @@ OperationResult Redis::DoOpen(OpenResultCallback* cb, RecordValPtr options) {
         return {ReturnCode::CONNECTION_FAILED, errmsg};
     }
 
-    // There's no way to pass privdata down to the connect handler like there is for
-    // the other callbacks. Store the open callback so that it can be dealt with from
-    // OnConnect().
+
+
+
     open_cb = cb;
 
-    // TODO: Sort out how to pass the zeek callbacks for both open/done to the async
-    // callbacks from hiredis so they can return errors.
 
-    // The context is passed to the handler methods. Setting this data object
-    // pointer allows us to look up the backend in the handlers.
+
+
+
+
     async_ctx->data = this;
 
     redisPollAttach(async_ctx);
@@ -344,20 +344,20 @@ OperationResult Redis::DoOpen(OpenResultCallback* cb, RecordValPtr options) {
     struct timeval op_timeout = util::double_to_timeval(op_timeout_opt);
     redisAsyncSetTimeout(async_ctx, op_timeout);
 
-    // redisAsyncSetConnectCallback sets the flag in the redisPollEvent for writing
-    // so we can add this to our loop as well.
+
+
     zeek::iosource_mgr->RegisterFd(async_ctx->c.fd, this, zeek::iosource::IOSource::WRITE);
 
-    // These four callbacks handle the file descriptor coming and going for read
-    // and write operations for hiredis. Their subsequent callbacks will
-    // register/unregister with iosource_mgr as needed. I tried just registering
-    // full time for both read and write but it leads to weird syncing issues
-    // within the hiredis code. This is safer in regards to the library, even if
-    // it results in waking up our IO loop more frequently.
-    //
-    // redisPollAttach sets these to functions internal to the poll attachment,
-    // but we override them for our own uses. See the callbacks for more info
-    // about why.
+
+
+
+
+
+
+
+
+
+
     async_ctx->ev.addRead = redisAddRead;
     async_ctx->ev.delRead = redisDelRead;
     async_ctx->ev.addWrite = redisAddWrite;
@@ -366,9 +366,9 @@ OperationResult Redis::DoOpen(OpenResultCallback* cb, RecordValPtr options) {
     return {ReturnCode::IN_PROGRESS};
 }
 
-/**
- * Finalizes the backend when it's being closed.
- */
+
+
+
 OperationResult Redis::DoClose(ResultCallback* cb) {
     auto locked_scope = conditionally_lock(zeek::run_state::reading_traces, expire_mutex);
 
@@ -381,11 +381,11 @@ OperationResult Redis::DoClose(ResultCallback* cb) {
     return {ReturnCode::IN_PROGRESS};
 }
 
-/**
- * The workhorse method for Put(). This must be implemented by plugins.
- */
+
+
+
 OperationResult Redis::DoPut(ResultCallback* cb, ValPtr key, ValPtr value, bool overwrite, double expiration_time) {
-    // The async context will queue operations until it's connected fully.
+
     if ( ! connected && ! async_ctx )
         return {ReturnCode::NOT_CONNECTED};
 
@@ -404,8 +404,8 @@ OperationResult Redis::DoPut(ResultCallback* cb, ValPtr key, ValPtr value, bool 
         return {ReturnCode::SERIALIZATION_FAILED, "Failed to serialize value"};
 
     int status;
-    // Use built-in expiration if reading live data, since time will move
-    // forward consistently. If reading pcaps, we'll do something else.
+
+
     if ( expiration_time > 0.0 && ! zeek::run_state::reading_traces ) {
         format.append(" PXAT %" PRIu64);
         status = redisAsyncCommand(async_ctx, redisPut, cb, format.c_str(), key_prefix.data(), key_data->data(),
@@ -423,8 +423,8 @@ OperationResult Redis::DoPut(ResultCallback* cb, ValPtr key, ValPtr value, bool 
 
     ++active_ops;
 
-    // If reading pcaps insert into a secondary set that's ordered by expiration
-    // time that gets checked by Expire().
+
+
     if ( expiration_time > 0.0 && zeek::run_state::reading_traces ) {
         format = "ZADD %s_expire";
         if ( ! overwrite )
@@ -442,11 +442,11 @@ OperationResult Redis::DoPut(ResultCallback* cb, ValPtr key, ValPtr value, bool 
     return {ReturnCode::IN_PROGRESS};
 }
 
-/**
- * The workhorse method for Get(). This must be implemented for plugins.
- */
+
+
+
 OperationResult Redis::DoGet(ResultCallback* cb, ValPtr key) {
-    // The async context will queue operations until it's connected fully.
+
     if ( ! connected && ! async_ctx )
         return {ReturnCode::NOT_CONNECTED};
 
@@ -464,16 +464,16 @@ OperationResult Redis::DoGet(ResultCallback* cb, ValPtr key) {
 
     ++active_ops;
 
-    // There isn't a result to return here. That happens in HandleGetResult for
-    // async operations.
+
+
     return {ReturnCode::IN_PROGRESS};
 }
 
-/**
- * The workhorse method for Erase(). This must be implemented for plugins.
- */
+
+
+
 OperationResult Redis::DoErase(ResultCallback* cb, ValPtr key) {
-    // The async context will queue operations until it's connected fully.
+
     if ( ! connected && ! async_ctx )
         return {ReturnCode::NOT_CONNECTED};
 
@@ -495,7 +495,7 @@ OperationResult Redis::DoErase(ResultCallback* cb, ValPtr key) {
 }
 
 void Redis::DoExpire(double current_network_time) {
-    // Expiration is handled natively by Redis if not reading traces.
+
     if ( ! connected || ! zeek::run_state::reading_traces )
         return;
 
@@ -507,7 +507,7 @@ void Redis::DoExpire(double current_network_time) {
                                    key_prefix.data(), current_network_time);
 
     if ( status == REDIS_ERR ) {
-        // TODO: do something with the error?
+
         printf("ZRANGEBYSCORE command failed: %s\n", async_ctx->errstr);
         expire_running = false;
         return;
@@ -515,8 +515,8 @@ void Redis::DoExpire(double current_network_time) {
 
     ++active_ops;
 
-    // Expire always happens in a synchronous fashion. Block here until we've received
-    // a response.
+
+
     Poll();
     redisReply* reply = reply_queue.front();
     reply_queue.pop_front();
@@ -533,14 +533,14 @@ void Redis::DoExpire(double current_network_time) {
     for ( size_t i = 0; i < reply->elements; i++ )
         elements.emplace_back(reply->element[i]->str, reply->element[i]->len);
 
-    // TODO: it's possible to pass multiple keys to a DEL operation but it requires
-    // building an array of the strings, building up the DEL command with entries,
-    // and passing the array as a block somehow. There's no guarantee it'd be faster
-    // anyways.
+
+
+
+
     for ( const auto& e : elements ) {
-        // redisAsyncCommand usually takes a printf-style string, except the parser used by
-        // hiredis doesn't handle lengths passed with strings correctly (it hangs indefinitely).
-        // Use util::fmt here instead it handles it.
+
+
+
         status = redisAsyncCommand(async_ctx, redisGeneric, nullptr,
                                    util::fmt("DEL %s:%.*s", key_prefix.data(), static_cast<int>(e.size()), e.data()));
         ++active_ops;
@@ -549,14 +549,14 @@ void Redis::DoExpire(double current_network_time) {
         redisReply* del_reply = reply_queue.front();
         reply_queue.pop_front();
         freeReplyObject(del_reply);
-        // TODO: do we care if this failed?
+
     }
 
     IncExpiredEntriesMetric(elements.size());
 
     freeReplyObject(reply);
 
-    // Remove all of the elements from the range-set that match the time range.
+
     redisAsyncCommand(async_ctx, redisGeneric, nullptr, "ZREMRANGEBYSCORE %s_expire -inf %f", key_prefix.data(),
                       current_network_time);
 
@@ -566,7 +566,7 @@ void Redis::DoExpire(double current_network_time) {
     redisReply* rem_range_reply = reply_queue.front();
     reply_queue.pop_front();
     freeReplyObject(rem_range_reply);
-    // TODO: do we care if this failed?
+
 }
 
 void Redis::HandlePutResult(redisReply* reply, ResultCallback* callback) {
@@ -578,7 +578,7 @@ void Redis::HandlePutResult(redisReply* reply, ResultCallback* callback) {
     else if ( ! reply )
         res = {ReturnCode::OPERATION_FAILED, "put operation returned null reply"};
     else if ( reply->type == REDIS_REPLY_NIL )
-        // For a SET operation, a NIL reply indicates a conflict with the NX flag.
+
         res = {ReturnCode::KEY_EXISTS};
     else if ( reply->type == REDIS_REPLY_ERROR )
         res = ParseReplyError("put", reply->str);
@@ -650,11 +650,11 @@ void Redis::HandleInfoResult(redisReply* reply) {
         std::string_view version_sv{REQUIRED_VERSION};
 
         for ( const auto& e : lines ) {
-            // Skip empty lines and comments
+
             if ( e.empty() || e[0] == '#' )
                 continue;
 
-            // We only care about the redis_version entry. Skip anything else.
+
             if ( ! e.starts_with("redis_version:") )
                 continue;
 
@@ -704,11 +704,11 @@ void Redis::HandleAuthResult(redisReply* reply) {
 void Redis::SendInfoRequest() {
     DBG_LOG(DBG_STORAGE, "Redis backend: Sending INFO request");
 
-    // Request the INFO block from the server that should contain the version information.
+
     int status = redisAsyncCommand(async_ctx, redisINFO, nullptr, "INFO server");
 
     if ( status == REDIS_ERR ) {
-        // TODO: do something with the error?
+
         DBG_LOG(DBG_STORAGE, "INFO command failed: %s err=%d", async_ctx->errstr, async_ctx->err);
         CompleteCallback(open_cb, {ReturnCode::OPERATION_FAILED,
                                    util::fmt("INFO command failed to retrieve server info: %s", async_ctx->errstr)});
@@ -726,8 +726,8 @@ void Redis::OnConnect(int status) {
     if ( status == REDIS_OK ) {
         bool made_auth_request = false;
 
-        // If the username and/or password are set, send an AUTH command. Fail to
-        // connect if the authentication fails. We want to pause here while opening.
+
+
         if ( ! username.empty() && ! password.empty() ) {
             status = redisAsyncCommand(async_ctx, redisAUTH, nullptr, "AUTH %s %s", username.c_str(), password.c_str());
             made_auth_request = true;
@@ -737,8 +737,8 @@ void Redis::OnConnect(int status) {
             made_auth_request = true;
         }
 
-        // This will be reset by the sync calls above if we make them and they fail. The
-        // condition will always be false if we don't make any auth call.
+
+
         if ( status == REDIS_ERR ) {
             DBG_LOG(DBG_STORAGE, "AUTH command failed: %s err=%d", async_ctx->errstr, async_ctx->err);
             CompleteCallback(open_cb, {ReturnCode::OPERATION_FAILED,
@@ -749,7 +749,7 @@ void Redis::OnConnect(int status) {
         if ( made_auth_request )
             ++active_ops;
         else
-            // This will be called from the handler of the auth event if that succeeds.
+
             SendInfoRequest();
     }
     else {
@@ -758,7 +758,7 @@ void Redis::OnConnect(int status) {
                          {ReturnCode::CONNECTION_FAILED, util::fmt("Connection failed: %s", async_ctx->errstr)});
     }
 
-    // TODO: we could attempt to reconnect here
+
 }
 
 void Redis::OnDisconnect(int status) {
@@ -766,8 +766,8 @@ void Redis::OnDisconnect(int status) {
 
     connected = false;
     if ( status == REDIS_ERR ) {
-        // An error status indicates that the connection was lost unexpectedly and not
-        // via a request from backend.
+
+
         EnqueueBackendLost(async_ctx->errstr);
     }
     else {
@@ -810,4 +810,4 @@ void Redis::DoPoll() {
         int status = redisPollTick(async_ctx, 0.5);
 }
 
-} // namespace zeek::storage::backend::redis
+}

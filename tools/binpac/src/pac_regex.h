@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_regex_h
 #define pac_regex_h
@@ -37,4 +37,4 @@ private:
     RegEx* regex_;
 };
 
-#endif // pac_regex_h
+#endif

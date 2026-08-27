@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/zeekygen/IdentifierInfo.h"
 
@@ -138,8 +138,8 @@ string IdentifierInfo::DoReStructuredText(bool roles_only) const {
 }
 
 time_t IdentifierInfo::DoGetModificationTime() const {
-    // Could probably get away with just checking the set of scripts that
-    // contributed to the ID declaration/redefinitions, but this is easier...
+
+
     if ( declaring_script )
         return declaring_script->GetModificationTime();
 
@@ -159,4 +159,4 @@ IdentifierInfo::Redefinition::~Redefinition() = default;
 
 IdentifierInfo::RecordField::~RecordField() { delete field; }
 
-} // namespace zeek::zeekygen::detail
+}

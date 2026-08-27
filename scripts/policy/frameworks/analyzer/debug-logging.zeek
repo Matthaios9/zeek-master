@@ -1,4 +1,4 @@
-##! Logging analyzer confirmations and violations into analyzer-debug.log
+
 
 @load base/frameworks/config
 @load base/frameworks/logging
@@ -7,62 +7,62 @@
 module Analyzer::DebugLogging;
 
 export {
-	## Add the analyzer logging stream identifier.
+
 	redef enum Log::ID += { LOG };
 
-	## A default logging policy hook for the stream.
+
 	global log_policy: Log::PolicyHook;
 
-	## The record type defining the columns to log in the analyzer logging stream.
+
 	type Info: record {
-		## Timestamp of confirmation or violation.
+
 		ts:             time              &log;
-		## What caused this log entry to be produced. This can
-		## currently be "violation", "confirmation", or "disabled".
+
+
 		cause:          string            &log;
-		## The kind of analyzer involved. Currently "packet", "file"
-		## or "protocol".
+
+
 		analyzer_kind:  string            &log;
-		## The name of the analyzer as produced by :zeek:see:`Analyzer::name`
-		## for the analyzer's tag.
+
+
 		analyzer_name:  string            &log;
-		## Connection UID if available.
+
 		uid:            string            &log &optional;
-		## File UID if available.
+
 		fuid:           string            &log &optional;
-		## Connection identifier if available
+
 		id:             conn_id           &log &optional;
 
-		## Failure or violation reason, if available.
+
 		failure_reason: string            &log &optional;
 
-		## Data causing failure or violation if available. Truncated
-		## to :zeek:see:`Analyzer::DebugLogging::failure_data_max_size`.
+
+
 		failure_data:   string            &log &optional;
 	};
 
-	## Enable logging of analyzer violations and optionally confirmations
-	## when :zeek:see:`Analyzer::DebugLogging::include_confirmations` is set.
+
+
 	option enable = T;
 
-	## Enable analyzer_confirmation. They are usually less interesting
-	## outside of development of analyzers or troubleshooting scenarios.
-	## Setting this option may also generated multiple log entries per
-	## connection, minimally one for each conn.log entry with a populated
-	## service field.
+
+
+
+
+
 	option include_confirmations = T;
 
-	## Enable tracking of analyzers getting disabled. This is mostly
-	## interesting for troubleshooting of analyzers in DPD scenarios.
-	## Setting this option may also generated multiple log entries per
-	## connection.
+
+
+
+
 	option include_disabling = T;
 
-	## If a violation contains information about the data causing it,
-	## include at most this many bytes of it in the log.
+
+
 	option failure_data_max_size = 40;
 
-	## Set of analyzers for which to not log confirmations or violations.
+
 	option ignore_analyzers: set[AllAnalyzers::Tag] = set();
 }
 
@@ -107,8 +107,8 @@ event zeek_init() &priority=5
 	Option::set_change_handler("Analyzer::DebugLogging::include_disabling",
 	                           include_disabling_handler);
 
-	# Call the handlers directly with the current values to avoid config
-	# framework interactions like creating entries in config.log.
+
+
 	enable_handler("Analyzer::DebugLogging::enable", Analyzer::DebugLogging::enable);
 	include_confirmations_handler("Analyzer::DebugLogging::include_confirmations",
 	                              Analyzer::DebugLogging::include_confirmations);
@@ -126,8 +126,8 @@ function populate_from_conn(rec: Info, c: connection)
 function populate_from_file(rec: Info, f: fa_file)
 	{
 	rec$fuid = f$id;
-	# If the confirmation didn't have a connection, but the
-	# fa_file object has exactly one, use it.
+
+
 	if ( ! rec?$uid && f?$conns && |f$conns| == 1 )
 		{
 		for ( _, c in f$conns )

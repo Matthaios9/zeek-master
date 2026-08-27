@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -28,4 +28,4 @@ protected:
     uint64_t stream_len_orig, stream_len_resp;
 };
 
-} // namespace zeek::analyzer::bittorrent
+}

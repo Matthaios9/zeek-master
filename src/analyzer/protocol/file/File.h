@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Analyzer for connections that transfer binary data.
+
+
 
 #pragma once
 
@@ -20,8 +20,8 @@ public:
 
     void Undelivered(uint64_t seq, int len, bool orig) override;
 
-    //	static analyzer::Analyzer* Instantiate(Connection* conn)
-    //		{ return new File_Analyzer(conn); }
+
+
 
 protected:
     void Identify();
@@ -40,4 +40,4 @@ public:
     static Analyzer* Instantiate(Connection* conn) { return new FTP_Data(conn); }
 };
 
-} // namespace zeek::analyzer::file
+}

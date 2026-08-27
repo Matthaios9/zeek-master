@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/PolicyFile.h"
 
@@ -100,8 +100,8 @@ bool LoadPolicyFileText(const char* policy_filename, const std::optional<std::st
         pf->lmtime = st.st_mtime;
         off_t size = st.st_size;
 
-        // ### This code is not necessarily Unicode safe!
-        // (probably fine with UTF-8)
+
+
         pf->filedata = new char[size + 1];
         size_t n = fread(pf->filedata, 1, size, f);
         if ( ferror(f) )
@@ -110,7 +110,7 @@ bool LoadPolicyFileText(const char* policy_filename, const std::optional<std::st
         fclose(f);
     }
 
-    // Separate the string by newlines.
+
     pf->lines.push_back(pf->filedata);
 
     for ( char* iter = pf->filedata; *iter; ++iter ) {
@@ -127,7 +127,7 @@ bool LoadPolicyFileText(const char* policy_filename, const std::optional<std::st
     return true;
 }
 
-// REMEMBER: line number arguments are indexed from 0.
+
 bool PrintLines(const char* policy_filename, unsigned int start_line, unsigned int how_many_lines, bool show_numbers) {
     if ( ! policy_filename )
         return true;
@@ -175,4 +175,4 @@ bool PrintLines(const char* policy_filename, unsigned int start_line, unsigned i
     return true;
 }
 
-} // namespace zeek::detail
+}

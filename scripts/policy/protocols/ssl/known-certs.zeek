@@ -1,5 +1,5 @@
-##! Log information about certificates while attempting to avoid duplicate
-##! logging.
+
+
 
 @load base/utils/directions-and-hosts
 @load base/protocols/ssl
@@ -18,33 +18,33 @@ export {
 	global log_policy_certs: Log::PolicyHook;
 
 	type CertsInfo: record {
-		## The timestamp when the certificate was detected.
+
 		ts:             time   &log;
-		## The address that offered the certificate.
+
 		host:           addr   &log;
-		## If the certificate was handed out by a server, this is the
-		## port that the server was listening on.
+
+
 		port_num:       port   &log &optional;
-		## Certificate subject.
+
 		subject:        string &log &optional;
-		## Certificate issuer subject.
+
 		issuer_subject: string &log &optional;
-		## Serial number for the certificate.
+
 		serial:         string &log &optional;
 	};
 
-	## The certificates whose existence should be logged and tracked.
-	## Choices are: LOCAL_HOSTS, REMOTE_HOSTS, ALL_HOSTS, NO_HOSTS.
+
+
 	option cert_tracking = LOCAL_HOSTS;
 
-	## Use the storage framework to enable persistence of the stored
-	## certs between runs.
+
+
 	const enable_certs_persistence = F &redef;
 
-	## Toggles between different implementations of this script.
-	## When true, use a Broker data store, else use a regular Zeek set
-	## with keys uniformly distributed over proxy nodes in cluster
-	## operation.
+
+
+
+
 	const use_cert_store = F &redef &deprecated="Remove in v9.1. Store support has been disabled by default since Zeek 6.0 due to performance issues and will be removed.";
 
 	type AddrCertHashPair: record {
@@ -52,60 +52,60 @@ export {
 		hash: string;
 	};
 
-	## Storage configuration for Broker stores
 
-	## Holds the set of all known certs.  Keys in the store are
-	## :zeek:type:`Known::AddrPortServTriplet` and their associated value is
-	## always the boolean value of "true".
+
+
+
+
 	global cert_broker_store: Cluster::StoreInfo;
 
-	## The Broker topic name to use for :zeek:see:`Known::cert_broker_store`.
+
 	const cert_store_name = "zeek/known/certs" &redef;
 
-	## Storage configuration for storage framework stores
 
-	## This requires setting a configuration in local.zeek that sets the
-	## Known::enable_certs_persistence boolean to T, and optionally setting different
-	## values in the Known::cert_store_backend_options record.
 
-	## Backend to use for storing known certs data using the storage framework.
+
+
+
+
+
 	global cert_store_backend: opaque of Storage::BackendHandle;
 
-	## The name to use for :zeek:see:`Known::cert_store_backend`. This will be used
-	## by the backends to differentiate tables/keys. This should be alphanumeric so
-	## that it can be used as the table name for the storage framework.
+
+
+
 	const cert_store_prefix = "zeekknowncerts" &redef;
 
-	## The type of storage backend to open.
+
 	const cert_store_backend_type : Storage::Backend = Storage::STORAGE_BACKEND_SQLITE &redef;
 
-	## The options for the cert store. This should be redef'd in local.zeek to set
-	## connection information for the backend. The options default to a central
-	## persistent sqlite database.
+
+
+
 	const cert_store_backend_options : Storage::BackendOptions = [ $sqlite = [
 		$database_path=fmt("%s/known/certs.sqlite", Cluster::default_store_dir),
 		$table_name=Known::cert_store_prefix ]] &redef;
 
-	## The expiry interval of new entries in :zeek:see:`Known::cert_broker_store` and
-	## :zeek:see:`Known::cert_store_backend`. This also changes the interval at which
-	## certs get logged.
+
+
+
 	option cert_store_expiry = 1day;
 
-	## The timeout interval to use for operations against
-	## :zeek:see:`Known::cert_broker_store` and :zeek:see:`Known::cert_store_backend`.
+
+
 	option cert_store_timeout = 15sec;
 
-	## The set of all known certificates to store for preventing duplicate
-	## logging. It can also be used from other scripts to
-	## inspect if a certificate has been seen in use. The string value
-	## in the set is for storing the DER formatted certificate' SHA1 hash.
-	##
-	## In cluster operation, this set is uniformly distributed across
-	## proxy nodes.
+
+
+
+
+
+
+
 	global certs: set[addr, string] &create_expire=1day &redef;
 
-	## Event that can be handled to access the loggable record as it is sent
-	## on to the logging framework.
+
+
 	global log_known_certs: event(rec: CertsInfo);
 }
 
@@ -160,7 +160,7 @@ event Known::cert_found(info: CertsInfo, hash: string)
 			}
 		timeout Known::cert_store_timeout
 			{
-			# Can't really tell if master store ended up inserting a key.
+
 			Log::write(Known::CERTS_LOG, info);
 			}
 		}
@@ -225,7 +225,7 @@ event Cluster::node_up(name: string, id: string)
 	if ( Cluster::local_node_type() != Cluster::WORKER )
 		return;
 
-	# Drop local suppression cache on workers to force HRW key repartitioning.
+
 	clear_table(Known::certs);
 	}
 
@@ -239,7 +239,7 @@ event Cluster::node_down(name: string, id: string)
 	if ( Cluster::local_node_type() != Cluster::WORKER )
 		return;
 
-	# Drop local suppression cache on workers to force HRW key repartitioning.
+
 	clear_table(Known::certs);
 	}
 

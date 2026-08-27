@@ -5,7 +5,7 @@
 module Intel;
 
 export {
-	## Enables the extraction of subject alternate names from the X509 SAN DNS field
+
 	option enable_x509_ext_subject_alternative_name = T;
 }
 
@@ -36,7 +36,7 @@ event x509_certificate(f: fa_file, cert_ref: opaque of x509, cert: X509::Certifi
 
 event x509_certificate(f: fa_file, cert_ref: opaque of x509, cert: X509::Certificate) &group="Intel::CERT_HASH"
 	{
-	if ( f$info?$sha1 ) # if the file_hash event was raised before the x509 event...
+	if ( f$info?$sha1 )
 		{
 		Intel::seen(Intel::Seen($indicator=f$info$sha1,
 		                        $indicator_type=Intel::CERT_HASH,

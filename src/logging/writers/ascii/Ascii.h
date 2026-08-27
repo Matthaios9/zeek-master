@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
-//
-// Log writer for delimiter-separated ASCII logs.
+
+
+
 
 #pragma once
 
@@ -43,7 +43,7 @@ private:
     bool WriteHeader(const std::string& path);
     bool WriteHeaderField(const std::string& key, const std::string& value);
     void CloseFile(double t);
-    std::string Timestamp(double t); // Uses current time if t is zero.
+    std::string Timestamp(double t);
     void InitConfigOptions();
     bool InitFilterOptions();
     bool InitFormatter();
@@ -56,7 +56,7 @@ private:
     ODesc desc;
     bool ascii_done;
 
-    // Options set from the script-level.
+
     bool output_to_stdout;
     bool include_meta;
     bool tsv;
@@ -67,7 +67,7 @@ private:
     std::string unset_field;
     std::string meta_prefix;
 
-    int gzip_level; // level > 0 enables gzip compression
+    int gzip_level;
     std::string gzip_file_extension;
     bool use_json;
     bool enable_utf_8;
@@ -80,4 +80,4 @@ private:
     bool init_options;
 };
 
-} // namespace zeek::logging::writer::detail
+}

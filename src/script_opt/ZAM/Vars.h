@@ -1,8 +1,8 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Methods for managing Zeek function variables.
-//
-// This file is included by Compile.h to insert into the ZAMCompiler class.
+
+
+
+
 
 bool IsUnused(const IDPtr& id, const Stmt* where) const;
 
@@ -28,7 +28,7 @@ int Frame1Slot(const IDPtr& id, ZOp op) { return Frame1Slot(id, op1_flavor[op]);
 int Frame1Slot(const NameExpr* n, ZAMOp1Flavor fl) { return Frame1Slot(n->IdPtr(), fl); }
 int Frame1Slot(const IDPtr& id, ZAMOp1Flavor fl);
 
-// The slot without doing any global-related checking.
+
 int RawSlot(const NameExpr* n) { return RawSlot(n->IdPtr()); }
 int RawSlot(const IDPtr& id);
 

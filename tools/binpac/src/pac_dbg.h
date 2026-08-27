@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_dbg_h
 #define pac_dbg_h
@@ -14,4 +14,4 @@ constexpr void ASSERT(int flag) { assert(flag); }
     if ( FLAGS_pac_debug )                                                                                             \
     fprintf(stderr, __VA_ARGS__)
 
-#endif /* pac_dbg_h */
+#endif

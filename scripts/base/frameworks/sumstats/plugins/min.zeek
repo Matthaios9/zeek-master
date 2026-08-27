@@ -1,4 +1,4 @@
-##! Find the minimum value.
+
 
 @load ../main
 
@@ -6,12 +6,12 @@ module SumStats;
 
 export {
 	redef enum Calculation += {
-		## Find the minimum value.
+
 		MIN
 	};
 
 	redef record ResultVal += {
-		## For numeric data, this tracks the minimum value.
+
 		min: double &optional;
 	};
 }

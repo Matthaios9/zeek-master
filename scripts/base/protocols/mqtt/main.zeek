@@ -1,5 +1,5 @@
-##! Implements base functionality for MQTT (v3.1.1) analysis.
-##! Generates the mqtt.log file.
+
+
 
 module MQTT;
 
@@ -12,7 +12,7 @@ export {
 		PUBLISH_LOG,
 	};
 
-	## Well-known ports for MQTT.
+
 	const ports = { 1883/tcp } &redef;
 
 	global log_policy_connect: Log::PolicyHook;
@@ -25,108 +25,108 @@ export {
 	} &redef;
 
 	type ConnectInfo: record {
-		## Timestamp for when the event happened
+
 		ts:             time    &log;
-		## Unique ID for the connection
+
 		uid:            string  &log;
-		## The connection's 4-tuple of endpoint addresses/ports
+
 		id:             conn_id &log;
 
-		## Indicates the protocol name
+
 		proto_name:     string  &log &optional;
-		## The version of the protocol in use
+
 		proto_version:  string  &log &optional;
-		## Unique identifier for the client
+
 		client_id:      string  &log &optional;
-		## Status message from the server in response to the connect request
+
 		connect_status: string  &log &optional;
 
-		## Topic to publish a "last will and testament" message to
+
 		will_topic:     string  &log &optional;
-		## Payload to publish as a "last will and testament"
+
 		will_payload:   string  &log &optional;
 	};
 
 	type SubscribeInfo: record {
-		## Timestamp for when the subscribe or unsubscribe request started
+
 		ts:                time     &log;
-		## UID for the connection
+
 		uid:               string   &log;
-		## ID fields for the connection
+
 		id:                conn_id  &log;
 
-		## Indicates if a subscribe or unsubscribe action is taking place
+
 		action:            SubUnsub &log;
-		## The topics (or topic patterns) being subscribed to
+
 		topics:             string_vec   &log;
-		## QoS levels requested for messages from subscribed topics
+
 		qos_levels:         index_vec    &log &optional;
-		## QoS level the server granted
+
 		granted_qos_level: count    &log &optional;
-		## Indicates if the request was acked by the server
+
 		ack:               bool     &log &default=F;
 	};
 
 	type PublishInfo: record {
-		## Timestamp for when the publish message started
+
 		ts:          time    &log;
-		## UID for the connection
+
 		uid:         string  &log;
-		## ID fields for the connection
+
 		id:          conn_id &log;
 
-		## Indicates if the message was published by the client of
-		## this connection or published to the client.
+
+
 		from_client: bool    &log;
-		## Indicates if the message was to be retained by the server
+
 		retain:      bool    &log;
-		## QoS level set for the message
+
 		qos:         string  &log;
-		## Status of the published message. This will be set to "incomplete_qos"
-		## if the full back and forth for the requested level of QoS was not seen.
-		## Otherwise if it's successful the field will be "ok".
+
+
+
 		status:      string  &log &default="incomplete_qos";
 
-		## Topic the message was published to
+
 		topic:       string  &log;
-		## Payload of the message
+
 		payload:     string  &log;
 
-		## The actual length of the payload in the case the *payload*
-		## field's contents were truncated according to
-		## :zeek:see:`MQTT::max_payload_size`.
+
+
+
 		payload_len: count   &log;
 
-		## Track if the message was acked
+
 		ack:         bool    &default=F;
-		## Indicates if the server sent the RECEIVED qos message
+
 		rec:         bool    &default=F;
-		## Indicates if the client sent the RELEASE qos message
+
 		rel:         bool    &default=F;
-		## Indicates if the server sent the COMPLETE qos message
+
 		comp:        bool    &default=F;
-		## Internally used for comparing numeric qos level
+
 		qos_level:   count   &default=0;
 	};
 
-	## Event that can be handled to access the MQTT record as it is sent on
-	## to the logging framework.
+
+
 	global MQTT::log_mqtt: event(rec: ConnectInfo);
 
-	## The expiration function for published messages that haven't been logged
-	## yet simply causes the message to be logged.
+
+
 	global publish_expire: function(tbl: table[count] of PublishInfo, idx: count): interval;
 
-	## The expiration function for subscription messages that haven't been logged
-	## yet simply causes the message to be logged.
+
+
 	global subscribe_expire: function(tbl: table[count] of SubscribeInfo, idx: count): interval;
 
-	## Data structure to track pub/sub messaging state of a given connection.
+
 	type State: record {
-		## Published messages that haven't been logged yet.
+
 		publish: table[count] of PublishInfo &optional &write_expire=5secs &expire_func=publish_expire;
-		## Subscription/unsubscription messages that haven't been ACK'd or
-		## logged yet.
+
+
 		subscribe: table[count] of SubscribeInfo &optional &write_expire=5secs &expire_func=subscribe_expire;
 	};
 }
@@ -359,17 +359,3 @@ event mqtt_unsuback(c: connection, msg_id: count) &priority=-5
 	Log::write(MQTT::SUBSCRIBE_LOG, x);
 	delete c$mqtt_state$subscribe[msg_id];
 	}
-
-#event mqtt_pingreq(c: connection) &priority=5
-#	{
-#	}
-#
-#event mqtt_pingresp(c: connection) &priority=5
-#	{
-#	}
-
-#event mqtt_disconnect(c: connection) &priority=-5
-#	{
-#	Log::write(MQTT::CONNECT_LOG, info);
-#	}
-

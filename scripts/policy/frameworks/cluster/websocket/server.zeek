@@ -1,22 +1,22 @@
-##! Script to load for running a single WebSocket server.
-##!
-##! This script is mostly meant for ad-hoc testing. In a Zeekctl environment,
-##! the ``UseWebSocket`` option should be used instead.
-##!
-##! Note that if :zeek:see:`Cluster::backend` is ``CLUSTER_BACKEND_NONE`` at the
-##! time this script is loaded, it loads the ZeroMQ cluster backend and starts a
-##! locally running XPUB/XSUB proxy thread. If you instead want to use Broker's hub
-##! functionality instead, load policy/frameworks/cluster/backend/broker before
-##! loading this script.
-##!
-##! Note also that this script will raise a fatal error if the cluster backend
-##! is :zeek:see:`Cluster::CLUSTER_BACKEND_NONE`, but :zeek:see:`Cluster::nodes`
-##! is populated with entries.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 @load base/utils/numbers
 @load base/frameworks/cluster
 
-# If this script is loaded but no Cluster::backend is yet selected,
-# force it to be ZeroMQ!
+
+
 @if ( Cluster::backend == Cluster::CLUSTER_BACKEND_NONE )
 
 @if ( |Cluster::nodes| > 0 )

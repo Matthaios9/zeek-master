@@ -1,4 +1,4 @@
-##! A very basic DNP3 analysis script that just logs requests and replies.
+
 
 @load ./consts
 @load base/protocols/conn/removal-hooks
@@ -8,31 +8,31 @@ module DNP3;
 export {
 	redef enum Log::ID += { LOG };
 
-	## Well-known ports for DNP3.
+
 	const ports = { 20000/tcp, 20000/udp } &redef;
 
 	global log_policy: Log::PolicyHook;
 
 	type Info: record {
-		## Time of the request.
+
 		ts:         time           &log;
-		## Unique identifier for the connection.
+
 		uid:        string         &log;
-		## Identifier for the connection.
+
 		id:         conn_id        &log;
-		## The name of the function message in the request.
+
 		fc_request: string         &log &optional;
-		## The name of the function message in the reply.
+
 		fc_reply:   string         &log &optional;
-		## The response's "internal indication number".
+
 		iin:        count          &log &optional;
 	};
 
-	## Event that can be handled to access the DNP3 record as it is sent on
-	## to the logging framework.
+
+
 	global log_dnp3: event(rec: Info);
 
-	## DNP3 finalization hook.  Remaining DNP3 info may get logged when it's called.
+
 	global finalize_dnp3: Conn::RemovalHook;
 }
 

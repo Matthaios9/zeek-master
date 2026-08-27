@@ -1,4 +1,4 @@
-##! Extracts and logs variable names from cookies sent by clients.
+
 
 @load base/protocols/http/main
 @load base/protocols/http/utils
@@ -6,7 +6,7 @@
 module HTTP;
 
 redef record Info += {
-	## Variable names extracted from all cookies.
+
 	cookie_vars: vector of string &optional &log;
 };
 

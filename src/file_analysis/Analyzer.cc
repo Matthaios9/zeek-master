@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/file_analysis/Analyzer.h"
 
@@ -7,8 +7,8 @@
 #include "zeek/file_analysis/File.h"
 #include "zeek/file_analysis/Manager.h"
 
-#include "const.bif.netvar_h" // for max_analyzer_violations
-#include "event.bif.netvar_h" // for analyzer_violation_info
+#include "const.bif.netvar_h"
+#include "event.bif.netvar_h"
 
 namespace zeek::file_analysis {
 
@@ -40,7 +40,7 @@ const char* Analyzer::GetAnalyzerName() const {
     return file_mgr->GetComponentName(tag).c_str();
 }
 
-// NOLINTNEXTLINE(performance-unnecessary-value-param)
+
 void Analyzer::AnalyzerConfirmation(zeek::Tag arg_tag) {
     if ( analyzer_confirmed )
         return;
@@ -60,7 +60,7 @@ void Analyzer::AnalyzerConfirmation(zeek::Tag arg_tag) {
     event_mgr.Enqueue(analyzer_confirmation_info, tval, info);
 }
 
-// NOLINTNEXTLINE(performance-unnecessary-value-param)
+
 void Analyzer::AnalyzerViolation(const char* reason, const char* data, int len, zeek::Tag arg_tag) {
     ++analyzer_violations;
 
@@ -93,4 +93,4 @@ void Analyzer::Weird(const char* name, const char* addl) {
     zeek::reporter->Weird(GetFile(), name, addl, GetAnalyzerName());
 }
 
-} // namespace zeek::file_analysis
+}

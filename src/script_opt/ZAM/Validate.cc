@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include <map>
 #include <regex>
@@ -20,9 +20,9 @@ std::vector<std::pair<string, string>> zam_macro_desc = {
 #include "ZAM-MacroDesc.h"
 };
 
-// While the following has commonalities that could be factored out,
-// for now we keep this form because it provides flexibility for
-// accommodating other forms of accessors.
+
+
+
 static std::map<char, string> type_pats = {
     {'A', "Addr"},   {'a', "Any"},    {'D', "Double"}, {'F', "Func"},    {'I', "Int"},
     {'L', "List"},   {'N', "SubNet"}, {'O', "Opaque"}, {'P', "Pattern"}, {'R', "Record"},
@@ -98,7 +98,7 @@ void analyze_ZAM_inst(const char* op_name, const ZAMInstDesc& zid) {
 }
 
 void validate_ZAM_insts() {
-    // The following primes a data structure we access.
+
     (void)AssignmentFlavor(OP_NOP, TYPE_VOID, false);
 
     for ( int i = 0; i < static_cast<int>(OP_NOP); ++i ) {
@@ -121,4 +121,4 @@ void validate_ZAM_insts() {
            num_valid_macros);
 }
 
-} // namespace zeek::detail
+}

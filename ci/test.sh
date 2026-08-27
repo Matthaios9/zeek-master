@@ -1,22 +1,22 @@
 #! /usr/bin/env bash
 
-# It's possible to use this script locally from the zeek repo's root dir.
-# The parallelism level when running tests locally is $1 if provided, else
-# the value of `nproc` if available, otherwise just a single core.
+
+
+
 
 result=0
 BTEST=$(pwd)/auxil/btest/btest
 
-# Due to issues with DNS lookups on macOS, one of the Cirrus support people recommended we
-# run our tests as root. See https://github.com/cirruslabs/cirrus-ci-docs/issues/1302 for
-# more details.
-# TODO: Is this necessary anymore?
+
+
+
+
 if [[ "${ZEEK_CI_RUNNER_OS}" == "macos" ]]; then
     BTEST="sudo ${BTEST}"
 fi
 
 if [[ -z "${ZEEK_CI}" ]]; then
-    # Set default values to use in place of env. variables set by CI.
+
     ZEEK_CI_CPUS=1
     [[ $(which nproc) ]] && ZEEK_CI_CPUS=$(nproc)
     [[ -n "${1}" ]] && ZEEK_CI_CPUS=${1}
@@ -72,8 +72,8 @@ function prep_artifacts {
     [[ -d .tmp ]] && rm -rf .tmp/script-coverage && tar -czf tmp.tar.gz .tmp
     junit2html btest-results.xml btest-results.html
 
-    # Copy these into a location where CI hosts can collect all of the results from at
-    # once.
+
+
     mkdir -p ${CIRCLE_WORKING_DIRECTORY}/btest-results/$1
     cp btest-results.xml ${CIRCLE_WORKING_DIRECTORY}/btest-results/$1/results.xml
 }
@@ -107,8 +107,8 @@ function run_external_btests {
 
     if [[ -d testing/external/zeek-testing-private ]]; then
         pushd testing/external/zeek-testing-private
-        # Note that we don't use btest's "-d" flag or generate/upload any
-        # artifacts to prevent leaking information about the private pcaps.
+
+
         ZEEK_PROFILER_FILE=$(pwd)/.tmp/script-coverage/XXXXXX \
             ${BTEST} -A -j ${ZEEK_CI_BTEST_JOBS} >btest.out 2>&1 &
         zeek_testing_private_pid=$!

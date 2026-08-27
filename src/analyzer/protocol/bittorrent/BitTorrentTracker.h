@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -12,9 +12,9 @@ class StringVal;
 
 namespace analyzer::bittorrent {
 
-// If the following is defined, then the analyzer will store all of
-// the headers seen in tracker messages.
-// #define BTTRACKER_STORE_HEADERS 1
+
+
+
 
 namespace detail {
 
@@ -29,7 +29,7 @@ enum BTT_States : uint8_t {
     BTT_RES_DONE
 };
 
-// "benc" = Bencode ("Bee-Encode"), per https://en.wikipedia.org/wiki/Bencode
+
 enum BTT_BencTypes : uint8_t {
     BENC_TYPE_INT = 0,
     BENC_TYPE_STR = 1,
@@ -47,7 +47,7 @@ enum BTT_BencStates : uint8_t {
     BENC_STATE_STR2,
 };
 
-} // namespace detail
+}
 
 class BitTorrentTracker_Analyzer final : public analyzer::tcp::TCP_ApplicationAnalyzer {
 public:
@@ -85,10 +85,10 @@ protected:
 
     void ParseHeader(char* name, char* value, bool is_request);
 
-    // HTTP state.
+
     bool keep_alive;
 
-    // Request.
+
     detail::BTT_States req_state;
     char req_buf[BTTRACKER_BUF];
     char* req_buf_pos;
@@ -96,7 +96,7 @@ protected:
     StringVal* req_val_uri;
     TableVal* req_val_headers;
 
-    // Response.
+
     detail::BTT_States res_state;
     bool res_allow_blank_line;
     char res_buf[BTTRACKER_BUF];
@@ -126,9 +126,9 @@ protected:
     char* benc_int;
     zeek_int_t benc_int_val;
 
-    // True on protocol violation.
+
     bool stop_orig, stop_resp;
 };
 
-} // namespace analyzer::bittorrent
-} // namespace zeek
+}
+}

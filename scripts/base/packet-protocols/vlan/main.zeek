@@ -2,8 +2,8 @@ module PacketAnalyzer::VLAN;
 
 export
 	{
-	# We use some magic numbers here to denote these. The values here are outside the range of the
-	# standard ethertypes, which should always be above 1536.
+
+
 	const SNAP_FORWARDING_KEY : count = 0x0001;
 	const NOVELL_FORWARDING_KEY : count = 0x0002;
 	const LLC_FORWARDING_KEY : count = 0x0003;

@@ -2,7 +2,7 @@
 module Modbus;
 
 export {
-	## Standard defined Modbus function codes.
+
 	const function_codes = {
 		[0x01] = "READ_COILS",
 		[0x02] = "READ_DISCRETE_INPUTS",
@@ -23,9 +23,9 @@ export {
 		[0x17] = "READ_WRITE_MULTIPLE_REGISTERS",
 		[0x18] = "READ_FIFO_QUEUE",
 		[0x2B] = "ENCAP_INTERFACE_TRANSPORT",
-		[0x5B] = "OBJECT_MESSAGING", # See https://modbus.org/docs/Object_Messaging_Protocol_ExtensionsVers1.1.doc
+		[0x5B] = "OBJECT_MESSAGING",
 
-		# Machine/vendor/network specific functions
+
 		[0x09] = "PROGRAM_484",
 		[0x0A] = "POLL_484",
 		[0x0D] = "PROGRAM_584_984",
@@ -33,8 +33,8 @@ export {
 		[0x12] = "PROGRAM_884_U84",
 		[0x13] = "RESET_COMM_LINK_884_U84",
 		[0x28] = "PROGRAM_CONCEPT",
-		[0x29] = "MULTIPLE_FUNCTION_CODES", # See https://patents.google.com/patent/US20040054829A1/en
-		[0x5A] = "PROGRAM_UNITY", # See https://lirasenlared.blogspot.com/2017/08/the-unity-umas-protocol-part-i.html
+		[0x29] = "MULTIPLE_FUNCTION_CODES",
+		[0x5A] = "PROGRAM_UNITY",
 		[0x7D] = "FIRMWARE_REPLACEMENT",
 		[0x7E] = "PROGRAM_584_984_2",
 		[0x7F] = "REPORT_LOCAL_ADDRESS",

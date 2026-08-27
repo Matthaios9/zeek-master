@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -26,11 +26,11 @@ public:
 protected:
     binpac::SMB::SMB_Conn* interp;
 
-    // Count the number of chunks received by the analyzer
-    // but only used to count the first few.
+
+
     uint8_t chunks;
 
     bool need_sync;
 };
 
-} // namespace zeek::analyzer::smb
+}

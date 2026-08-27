@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -43,9 +43,9 @@ public:
     void SetAccept(int accept_val) { accept = accept_val; }
     int Accept() const { return accept; }
 
-    // Returns a deep copy of this NFA state and everything it points
-    // to.  Upon return, each state's marker is set to point to its
-    // copy.
+
+
+
     NFA_State* DeepCopy();
 
     void SetMark(NFA_State* m) { mark = m; }
@@ -64,15 +64,15 @@ public:
     void Dump(FILE* f);
 
 protected:
-    int sym;  // if SYM_CCL, then use ccl
-    int id;   // number that uniquely identifies this state
-    CCL* ccl; // if nil, then use sym
+    int sym;
+    int id;
+    CCL* ccl;
     int accept;
 
     static int nfa_state_id;
 
-    // Whether the first transition points backwards.  Used
-    // to avoid reference-counting loops.
+
+
     bool first_trans_is_back_ref;
 
     NFA_state_list xtions;
@@ -104,7 +104,7 @@ public:
     void MakeOptional();
     void MakePositiveClosure();
 
-    // re{lower,upper}; upper can be NO_UPPER_BOUND = infinity.
+
     void MakeRepl(int lower, int upper);
 
     void MarkBOL() { bol = 1; }
@@ -129,15 +129,15 @@ protected:
 
 extern NFA_Machine* make_alternate(NFA_Machine* m1, NFA_Machine* m2);
 
-// The epsilon closure is the set of all states reachable by an arbitrary
-// number of epsilon transitions, which themselves do not have epsilon
-// transitions going out, unioned with the set of states which have non-null
-// accepting numbers.  "states" is deleted by the call.  The return value
-// is the epsilon closure (sorted by state IDs()).
+
+
+
+
+
 extern NFA_state_list* epsilon_closure(NFA_state_list* states);
 
-// For sorting NFA states based on their ID fields (decreasing)
+
 extern bool NFA_state_cmp_neg(const NFA_State* v1, const NFA_State* v2);
 
-} // namespace detail
-} // namespace zeek
+}
+}

@@ -1,25 +1,25 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
-// BaseList.h --
-//	Interface for class BaseList, current implementation is as an
-//	array of ent's.  This implementation was chosen to optimize
-//	getting to the ent's rather than inserting and deleting.
-//	Also pairs of append's and get's act like push's and pop's
-//	and are very efficient.  The only really expensive operations
-//	are inserting (but not appending), which requires pushing every
-//	element up, and resizing the list, which involves getting new space
-//	and moving the data.  Resizing occurs automatically when inserting
-//	more elements than the list can currently hold.  Automatic
-//	resizing is done by growing by GROWTH_FACTOR at a time and
-//	always increases the size of the list.  Resizing to zero
-//	(or to less than the current value of num_entries)
-//	will decrease the size of the list to the current number of
-//	elements.  Resize returns the new max_entries.
-//
-//	Entries must be either a pointer to the data or nonzero data with
-//	sizeof(data) <= sizeof(void*).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #include <cassert>
 #include <cstdarg>
@@ -50,7 +50,7 @@ public:
 
         max_entries = size;
 
-        // NOLINTNEXTLINE(bugprone-sizeof-expression)
+
         entries = reinterpret_cast<T*>(util::safe_malloc(max_entries * sizeof(T)));
     }
 
@@ -59,7 +59,7 @@ public:
         num_entries = b.num_entries;
 
         if ( max_entries )
-            // NOLINTNEXTLINE(bugprone-sizeof-expression)
+
             entries = reinterpret_cast<T*>(util::safe_malloc(max_entries * sizeof(T)));
         else
             entries = nullptr;
@@ -79,9 +79,9 @@ public:
 
     List(const T* arr, int n) {
         num_entries = max_entries = n;
-        // NOLINTNEXTLINE(bugprone-sizeof-expression)
+
         entries = reinterpret_cast<T*>(util::safe_malloc(max_entries * sizeof(T)));
-        // NOLINTNEXTLINE(bugprone-bitwise-pointer-cast,bugprone-multi-level-implicit-pointer-conversion,bugprone-sizeof-expression)
+
         memcpy(entries, arr, n * sizeof(T));
     }
 
@@ -97,7 +97,7 @@ public:
         num_entries = b.num_entries;
 
         if ( max_entries )
-            // NOLINTNEXTLINE(bugprone-sizeof-expression)
+
             entries = reinterpret_cast<T*>(util::safe_malloc(max_entries * sizeof(T)));
         else
             entries = nullptr;
@@ -122,10 +122,10 @@ public:
         return *this;
     }
 
-    // Return nth ent of list (do not remove).
+
     T& operator[](int i) const { return entries[i]; }
 
-    void clear() // remove all entries
+    void clear()
     {
         free(static_cast<void*>(entries));
         entries = nullptr;
@@ -137,13 +137,13 @@ public:
 
     int length() const { return num_entries; }
     int max() const { return max_entries; }
-    int resize(int new_size = 0) // 0 => size to fit current number of entries
+    int resize(int new_size = 0)
     {
         if ( new_size < num_entries )
-            new_size = num_entries; // do not lose any entries
+            new_size = num_entries;
 
         if ( new_size != max_entries ) {
-            // NOLINTNEXTLINE(bugprone-sizeof-expression)
+
             entries = reinterpret_cast<T*>(util::safe_realloc(reinterpret_cast<void*>(entries), sizeof(T) * new_size));
             if ( entries )
                 max_entries = new_size;
@@ -159,7 +159,7 @@ public:
             resize(max_entries ? max_entries * LIST_GROWTH_FACTOR : DEFAULT_LIST_SIZE);
 
         for ( int i = num_entries; i > 0; --i )
-            entries[i] = entries[i - 1]; // move all pointers up one
+            entries[i] = entries[i - 1];
 
         ++num_entries;
         entries[0] = a;
@@ -178,14 +178,14 @@ public:
     T& front() { return entries[0]; }
     T& back() { return entries[num_entries - 1]; }
 
-    // The append method is maintained for historical/compatibility reasons.
-    // (It's commonly used in the event generation API)
-    void append(const T& a) // add to end of list
+
+
+    void append(const T& a)
     {
         push_back(a);
     }
 
-    bool remove(const T& a) // delete entry from list
+    bool remove(const T& a)
     {
         int pos = member_pos(a);
         if ( pos != -1 ) {
@@ -196,15 +196,15 @@ public:
         return false;
     }
 
-    T remove_nth(int n) // delete nth entry from list
+    T remove_nth(int n)
     {
         assert(n >= 0 && n < num_entries);
 
         T old_ent = entries[n];
 
-        // For data where we don't care about ordering, we don't care about keeping
-        // the list in the same order when removing an element. Just swap the last
-        // element with the element being removed.
+
+
+
         if constexpr ( Order == ListOrder::ORDERED ) {
             --num_entries;
 
@@ -219,13 +219,13 @@ public:
         return old_ent;
     }
 
-    // Return 0 if ent is not in the list, ent otherwise.
+
     bool is_member(const T& a) const {
         int pos = member_pos(a);
         return pos != -1;
     }
 
-    // Returns -1 if ent is not in the list, otherwise its position.
+
     int member_pos(const T& e) const {
         int i;
         for ( i = 0; i < length() && e != entries[i]; ++i )
@@ -234,14 +234,14 @@ public:
         return (i == length()) ? -1 : i;
     }
 
-    T replace(int ent_index, const T& new_ent) // replace entry #i with a new value
+    T replace(int ent_index, const T& new_ent)
     {
         if ( ent_index < 0 )
             return T{};
 
         T old_ent{};
 
-        if ( ent_index > num_entries - 1 ) { // replacement beyond the end of the list
+        if ( ent_index > num_entries - 1 ) {
             resize(ent_index + 1);
 
             for ( int i = num_entries; i < max_entries; ++i )
@@ -256,12 +256,12 @@ public:
         return old_ent;
     }
 
-    // Type traits needed for some of the std algorithms to work
+
     using value_type = T;
     using pointer = T*;
     using const_pointer = const T*;
 
-    // Iterator support
+
     using iterator = pointer;
     using const_iterator = const_pointer;
     using reverse_iterator = std::reverse_iterator<iterator>;
@@ -282,46 +282,46 @@ public:
     const_reverse_iterator crend() const { return rend(); }
 
 protected:
-    // This could essentially be an std::vector if we wanted.  Some
-    // reasons to maybe not refactor to use std::vector ?
-    //
-    //  - Harder to use a custom growth factor.  Also, the growth
-    //    factor would be implementation-specific, taking some control over
-    //    performance out of our hands.
-    //
-    //  - It won't ever take advantage of realloc's occasional ability to
-    //    grow in-place.
-    //
-    //  - Combine above point this with lack of control of growth
-    //    factor means the common choice of 2x growth factor causes
-    //    a growth pattern that crawls forward in memory with no possible
-    //    re-use of previous chunks (the new capacity is always larger than
-    //    all previously allocated chunks combined).  This point and
-    //    whether 2x is empirically an issue still seems debated (at least
-    //    GCC seems to stand by 2x as empirically better).
-    //
-    //  - Sketchy shrinking behavior: standard says that requests to
-    //    shrink are non-binding (it's expected implementations heed, but
-    //    still not great to have no guarantee).  Also, it would not take
-    //    advantage of realloc's ability to contract in-place, it would
-    //    allocate-and-copy.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     T* entries;
     int max_entries;
     int num_entries;
 };
 
-// Specialization of the List class to store pointers of a type.
+
 template<typename T, ListOrder Order = ListOrder::ORDERED>
 using PList = List<T*, Order>;
 
-// Popular type of list: list of strings.
+
 using name_list = PList<char>;
 
-} // namespace zeek
+}
 
-// Macro to visit each list element in turn.
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+
+
 #define loop_over_list(list, iterator)                                                                                 \
     int iterator;                                                                                                      \
     for ( (iterator) = 0; (iterator) < (list).length(); ++(iterator) )

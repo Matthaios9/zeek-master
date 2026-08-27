@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/probabilistic/CounterVector.h"
 
@@ -49,7 +49,7 @@ bool CounterVector::Decrement(size_type cell, count_type value) {
     assert(cell < Size());
     assert(value != 0);
 
-    value = ~value + 1; // A - B := A + ~B + 1
+    value = ~value + 1;
     bool carry = false;
     size_t lsb = cell * width;
 
@@ -141,7 +141,7 @@ uint64_t CounterVector::Hash() const { return bits->Hash(); }
 std::optional<BrokerData> CounterVector::Serialize() const {
     auto b = bits->Serialize();
     if ( ! b )
-        return std::nullopt; // Cannot serialize
+        return std::nullopt;
 
     BrokerListBuilder builder;
     builder.Reserve(2);
@@ -170,4 +170,4 @@ std::unique_ptr<CounterVector> CounterVector::Unserialize(BrokerDataView data) {
     return cv;
 }
 
-} // namespace zeek::probabilistic::detail
+}

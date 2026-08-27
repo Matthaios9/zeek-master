@@ -1,11 +1,11 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/smb/SMB.h"
 
 namespace zeek::analyzer::smb {
 
-// This was 1<<17 originally but was changed due to larger messages
-// being seen.
+
+
 #define SMB_MAX_LEN (1 << 18)
 
 SMB_Analyzer::SMB_Analyzer(Connection* conn) : analyzer::tcp::TCP_ApplicationAnalyzer("SMB", conn) {
@@ -52,18 +52,18 @@ void SMB_Analyzer::NeedResync() {
 void SMB_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
     TCP_ApplicationAnalyzer::DeliverStream(len, data, orig);
 
-    // It we need to resync and we don't have an SMB header, bail!
+
     if ( need_sync && ! HasSMBHeader(len, data) )
         return;
     else
         need_sync = false;
 
     try {
-        // If we get here, it means we have an SMB header in the message.
+
         interp->NewData(orig, data, data + len);
 
-        // Let's assume that if there are no binpac exceptions after
-        // 3 data chunks that this is probably actually SMB.
+
+
         if ( ++chunks == 3 )
             AnalyzerConfirmation();
     } catch ( const binpac::Exception& e ) {
@@ -72,4 +72,4 @@ void SMB_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
     }
 }
 
-} // namespace zeek::analyzer::smb
+}

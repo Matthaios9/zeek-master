@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_inputbuf_h
 #define pac_inputbuf_h
@@ -22,4 +22,4 @@ private:
     Expr* expr_;
 };
 
-#endif // pac_inputbuf_h
+#endif

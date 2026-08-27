@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/protocol/udp/UDPSessionAdapter.h"
 
@@ -10,15 +10,15 @@ using namespace zeek::packet_analysis::UDP;
 using namespace zeek::packet_analysis::IP;
 
 enum UDP_EndpointState : uint8_t {
-    UDP_INACTIVE, // no packet seen
-    UDP_ACTIVE,   // packets seen
+    UDP_INACTIVE,
+    UDP_ACTIVE,
 };
 
 void UDPSessionAdapter::AddExtraAnalyzers(Connection* conn) {
     static zeek::Tag analyzer_connsize = analyzer_mgr->GetComponentTag("CONNSIZE");
 
     if ( analyzer_mgr->IsEnabled(analyzer_connsize) )
-        // Add ConnSize analyzer. Needs to see packets, not stream.
+
         AddChildAnalyzer(new analyzer::conn_size::ConnSize_Analyzer(conn));
 }
 
@@ -32,7 +32,7 @@ void UDPSessionAdapter::UpdateConnVal(RecordVal* conn_val) {
     UpdateEndpointVal(orig_endp_val, true);
     UpdateEndpointVal(resp_endp_val, false);
 
-    // Call children's UpdateConnVal
+
     SessionAdapter::UpdateConnVal(conn_val);
 }
 

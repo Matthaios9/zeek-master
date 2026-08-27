@@ -1,5 +1,5 @@
 
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/iosource/PktDumper.h"
 
@@ -44,4 +44,4 @@ void PktDumper::Error(const std::string& msg) {
     DBG_LOG(DBG_PKTIO, "Error with dumper %s: %s", IsOpen() ? props.path.c_str() : "<not open>", msg.c_str());
 }
 
-} // namespace zeek::iosource
+}

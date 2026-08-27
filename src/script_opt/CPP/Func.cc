@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/CPP/Func.h"
 
@@ -22,9 +22,9 @@ void CPPFunc::Describe(ODesc* d) const {
 }
 
 CPPStmt::CPPStmt(const char* _name, const char* filename, int line_num) : Stmt(STMT_CPP), name(_name) {
-    // We build a fake CallExpr node to be used for error-reporting.
-    // It doesn't matter that it matches the actual function/event/hook
-    // type-checking-wise, but it *does* need to type-check.
+
+
+
     auto no_args = make_intrusive<RecordType>(nullptr);
     auto no_yield = base_type(TYPE_VOID);
     auto ft = make_intrusive<FuncType>(no_args, no_yield, FUNC_FLAVOR_FUNCTION);
@@ -72,4 +72,4 @@ void CPPLambdaFunc::SetCaptures(Frame* f) { l_body->SetLambdaCaptures(f); }
 
 FuncPtr CPPLambdaFunc::DoClone() { return make_intrusive<CPPLambdaFunc>(name, type, l_body->Clone()); }
 
-} // namespace zeek::detail
+}

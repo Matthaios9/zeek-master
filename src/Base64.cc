@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Base64.h"
 
@@ -80,7 +80,7 @@ int* Base64Converter::InitBase64Table(const std::string& alphabet) {
     for ( i = 0; i < 10; ++i )
         base64_table[static_cast<int>(alphabet[52 + i])] = i + 52;
 
-    // Casts to avoid compiler warnings.
+
     base64_table[static_cast<int>(alphabet[62])] = 62;
     base64_table[static_cast<int>(alphabet[63])] = 63;
     base64_table[static_cast<int>('=')] = 0;
@@ -114,7 +114,7 @@ int Base64Converter::Decode(int len, const char* data, int* pblen, char** pbuf) 
     int blen;
     char* buf;
 
-    // Initialization of table on first_time call of Decode.
+
     if ( ! base64_table )
         base64_table = InitBase64Table(alphabet);
 
@@ -126,8 +126,8 @@ int Base64Converter::Decode(int len, const char* data, int* pblen, char** pbuf) 
         blen = *pblen;
     }
     else {
-        // Estimate the maximal number of 3-byte groups needed,
-        // plus 1 byte for the optional ending NUL.
+
+
         blen = static_cast<int>((len + base64_group_next + 3) / 4) * 3 + 1;
         *pbuf = buf = new char[blen];
     }
@@ -136,8 +136,8 @@ int Base64Converter::Decode(int len, const char* data, int* pblen, char** pbuf) 
 
     while ( true ) {
         if ( base64_group_next == 4 ) {
-            // For every group of 4 6-bit numbers,
-            // write the decoded 3 bytes to the buffer.
+
+
             if ( base64_after_padding ) {
                 if ( ++errored == 1 )
                     IllegalEncoding("extra base64 groups after '=' padding are ignored");
@@ -237,8 +237,8 @@ String* decode_base64(const String* s, const String* a, Connection* conn) {
 
     int rlen2 = buf_len - rlen;
     char* rbuf2 = rbuf + rlen;
-    // Done() returns -1 if there isn't enough padding, but we just ignore
-    // it.
+
+
     dec.Done(&rlen2, &rbuf2);
     rlen += rlen2;
 
@@ -275,4 +275,4 @@ bool is_valid_base64(const String* s, const String* a) {
     return ok;
 }
 
-} // namespace zeek::detail
+}

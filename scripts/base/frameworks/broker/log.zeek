@@ -3,44 +3,44 @@
 module Broker;
 
 export {
-	## The Broker logging stream identifier.
+
 	redef enum Log::ID += { LOG };
 
-	## A default logging policy hook for the stream.
+
 	global log_policy: Log::PolicyHook;
 
-	## The type of a Broker activity being logged.
+
 	type Type: enum {
-		## An informational status update.
+
 		STATUS,
-		## An error situation.
+
 		ERROR,
-		## Fatal event, normal operation has most likely broken down.
+
 		CRITICAL_EVENT,
-		## Unrecoverable event that imparts at least part of the system.
+
 		ERROR_EVENT,
-		## Unexpected or conspicuous event that may still be recoverable.
+
 		WARNING_EVENT,
-		## Noteworthy event during normal operation.
+
 		INFO_EVENT,
-		## Information that might be relevant for a user to understand system behavior.
+
 		VERBOSE_EVENT,
-		## An event that is relevant only for troubleshooting and debugging.
+
 		DEBUG_EVENT,
 	};
 
-	## A record type containing the column fields of the Broker log.
+
 	type Info: record {
-		## The network time at which a Broker event occurred.
+
 		ts:                  time   &log;
-		## The type of the Broker event.
+
 		ty:                  Type &log;
-		## The event being logged.
+
 		ev:                  string &log;
-		## The peer (if any) with which a Broker event is
-		## concerned.
+
+
 		peer:                NetworkInfo &log &optional;
-		## An optional message describing the Broker event in more detail
+
 		message:             string &log &optional;
 	};
 }

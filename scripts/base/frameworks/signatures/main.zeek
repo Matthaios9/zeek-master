@@ -1,134 +1,134 @@
-##! Script level signature support.  See the
-##! :doc:`signature documentation </frameworks/signatures>` for more
-##! information about Zeek's signature engine.
+
+
+
 
 @load base/frameworks/notice
 
 module Signatures;
 
 export {
-	## Add various signature-related notice types.
+
 	redef enum Notice::Type += {
-		## Generic notice type for notice-worthy signature matches.
+
 		Sensitive_Signature,
-		## Host has triggered many signatures on the same host.  The
-		## number of signatures is defined by the
-		## :zeek:id:`Signatures::vert_scan_thresholds` variable.
+
+
+
 		Multiple_Signatures,
-		## Host has triggered the same signature on multiple hosts as
-		## defined by the :zeek:id:`Signatures::horiz_scan_thresholds`
-		## variable.
+
+
+
 		Multiple_Sig_Responders,
-		## The same signature has triggered multiple times for a host.
-		## The number of times the signature has been triggered is
-		## defined by the :zeek:id:`Signatures::count_thresholds`
-		## variable. To generate this notice, the
-		## :zeek:enum:`Signatures::SIG_COUNT_PER_RESP` action must be
-		## set for the signature.
+
+
+
+
+
+
 		Count_Signature,
-		## Summarize the number of times a host triggered a signature.
-		## The interval between summaries is defined by the
-		## :zeek:id:`Signatures::summary_interval` variable.
+
+
+
 		Signature_Summary,
 	};
 
-	## The signature logging stream identifier.
+
 	redef enum Log::ID += { LOG };
 
-	## A default logging policy hook for the stream.
+
 	global log_policy: Log::PolicyHook;
 
-	## These are the default actions you can apply to signature matches.
-	## All of them write the signature record to the logging stream unless
-	## declared otherwise.
+
+
+
 	type Action: enum {
-		## Ignore this signature completely (even for scan detection).
-		## Don't write to the signatures logging stream.
+
+
 		SIG_IGNORE,
-		## Process through the various aggregate techniques, but don't
-		## report individually and don't write to the signatures logging
-		## stream.
+
+
+
 		SIG_QUIET,
-		## Generate a notice.
+
 		SIG_LOG,
-		## The same as :zeek:enum:`Signatures::SIG_LOG`, but ignore for
-		## aggregate/scan processing.
+
+
 		SIG_FILE_BUT_NO_SCAN,
-		## Generate a notice and set it to be alarmed upon.
+
 		SIG_ALARM,
-		## Alarm once per originator.
+
 		SIG_ALARM_PER_ORIG,
-		## Alarm once and then never again.
+
 		SIG_ALARM_ONCE,
-		## Count signatures per responder host and alarm with the
-		## :zeek:enum:`Signatures::Count_Signature` notice if a threshold
-		## defined by :zeek:id:`Signatures::count_thresholds` is reached.
+
+
+
 		SIG_COUNT_PER_RESP,
-		## Don't alarm, but generate per-orig summary.
+
 		SIG_SUMMARY,
 	};
 
-	## The record type which contains the column fields of the signature log.
+
 	type Info: record {
-		## The network time at which a signature matching type of event
-		## to be logged has occurred.
+
+
 		ts:         time         &log;
-		## A unique identifier of the connection which triggered the
-		## signature match event.
+
+
 		uid:        string       &log &optional;
-		## The host which triggered the signature match event.
+
 		src_addr:   addr         &log &optional;
-		## The host port on which the signature-matching activity
-		## occurred.
+
+
 		src_port:   port         &log &optional;
-		## The destination host which was sent the payload that
-		## triggered the signature match.
+
+
 		dst_addr:   addr         &log &optional;
-		## The destination host port which was sent the payload that
-		## triggered the signature match.
+
+
 		dst_port:   port         &log &optional;
-		## Notice associated with signature event.
+
 		note:       Notice::Type &log;
-		## The name of the signature that matched.
+
 		sig_id:     string       &log &optional;
-		## A more descriptive message of the signature-matching event.
+
 		event_msg:  string       &log &optional;
-		## Extracted payload data or extra message.
+
 		sub_msg:    string       &log &optional;
-		## Number of sigs, usually from summary count.
+
 		sig_count:  count        &log &optional;
-		## Number of hosts, from a summary count.
+
 		host_count: count        &log &optional;
 	};
 
-	## Actions for a signature.  Can be updated dynamically.
+
 	global actions: table[string] of Action =  {
-		["unspecified"] = SIG_IGNORE, # place-holder
+		["unspecified"] = SIG_IGNORE,
 	} &redef &default = SIG_ALARM;
 
-	## Signature IDs that should always be ignored.
+
 	option ignored_ids = /NO_DEFAULT_MATCHES/;
 
-	## Generate a notice if, for a pair [orig, signature], the number of
-	## different responders has reached one of the thresholds.
+
+
 	const horiz_scan_thresholds = { 5, 10, 50, 100, 500, 1000 } &redef;
 
-	## Generate a notice if, for a pair [orig, resp], the number of
-	## different signature matches has reached one of the thresholds.
+
+
 	const vert_scan_thresholds = { 5, 10, 50, 100, 500, 1000 } &redef;
 
-	## Generate a notice if a :zeek:enum:`Signatures::SIG_COUNT_PER_RESP`
-	## signature is triggered as often as given by one of these thresholds.
+
+
 	const count_thresholds = { 5, 10, 50, 100, 500, 1000, 10000, 1000000, } &redef;
 
-	## The interval between when :zeek:enum:`Signatures::Signature_Summary`
-	## notices are generated.
+
+
 	option summary_interval = 1 day;
 
-	## This event can be handled to access/alter data about to be logged
-	## to the signature logging stream.
-	##
-	## rec: The record of signature data about to be logged.
+
+
+
+
 	global log_signature: event(rec: Info);
 }
 
@@ -163,7 +163,7 @@ event signature_match(state: signature_state, msg: string, data: string)
 	if ( action == SIG_IGNORE || ignored_ids in sig_id )
 		return;
 
-	# Trim the matched data down to something reasonable
+
 	if ( |data| > 140 )
 		data = fmt("%s...", sub_bytes(data, 0, 140));
 
@@ -249,7 +249,7 @@ event signature_match(state: signature_state, msg: string, data: string)
 	if ( action == SIG_FILE_BUT_NO_SCAN || action == SIG_SUMMARY )
 		return;
 
-	# Keep track of scans.
+
 	local orig = state$conn$id$orig_h;
 	local resp = state$conn$id$resp_h;
 

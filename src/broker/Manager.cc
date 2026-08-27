@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/broker/Manager.h"
 
@@ -50,8 +50,8 @@ using namespace std;
 
 namespace {
 
-// On Windows, colons in Zeek namespace-qualified names (e.g., "Module::var")
-// are invalid in filenames. Replace them with underscores for path use.
+
+
 string sanitize_store_filename(string name) {
 #ifdef _WIN32
     for ( auto& c : name )
@@ -108,42 +108,42 @@ void print_escaped(std::string& buf, std::string_view str) {
     buf.push_back('"');
 }
 
-// Track metrics for a given peering's send buffer.
+
 class PeerBufferState {
 public:
     struct Stats {
-        // The rendered peer ID. Storing this here helps reuse.
-        // Note that we only ever touch this from Zeek's main thread, not
-        // any of Broker's.
+
+
+
         zeek::StringValPtr peer_id;
 
-        // Whether Broker has removed the peer, and this instance still
-        // needs to be removed.
+
+
         bool is_zombie = false;
 
-        // Number of messages queued locally in the send buffer.
+
         uint32_t queued = 0;
 
-        // Maximum number queued in the last Broker::buffer_stats_reset_interval.
-        // This improces visibility into message bursts since instantaneous
-        // queueing (captured above) can be short-lived.
+
+
+
         uint32_t max_queued_recently = 0;
 
-        // Number of times the buffer overflowed at send time.  For the
-        // "disconnect" overflow policy (via Broker::peer_overflow_policy), this
-        // count will at most be 1 since Broker will remove the peering upon
-        // overflow. The existing Zeek-level metric for tracking disconnects
-        // (see frameworks/broker/broker-backpressure.zeek) covers this one more
-        // permanently. For the "drop_newest" and "drop_oldest" policies it
-        // equals a count of the number of messages lost, since the peering
-        // continues.
+
+
+
+
+
+
+
+
         uint64_t overflows = 0;
 
-        // When we last started a stats-tracking interval for this peering.
+
         double last_interval = 0;
     };
 
-    // For per-peering tracking, map endpoint IDs to the above state.
+
     using EndpointMetricMap = std::unordered_map<broker::endpoint_id, Stats>;
 
     PeerBufferState(size_t a_buffer_size, double a_stats_reset_interval)
@@ -155,10 +155,10 @@ public:
 
     void SetEndpoint(const broker::endpoint* a_endpoint) { endpoint = a_endpoint; }
 
-    // Update the peering's stats. This runs in Broker's execution context.
-    // Broker does not expose send-buffer/queue state explicitly, so track
-    // arrivals (a push, is_push == true) and departures (a pull, is_push ==
-    // false) as they happen. Note that this must not touch Zeek-side Vals.
+
+
+
+
     void Observe(const broker::endpoint_id& peer, bool is_push) {
         std::scoped_lock<std::mutex> lock(mutex);
         auto it = stats_map.find(peer);
@@ -170,7 +170,7 @@ public:
 
         auto& stats = it->second;
 
-        // Stick to Broker's notion of time here.
+
         double now{0};
         if ( endpoint != nullptr )
             broker::convert(endpoint->now(), now);
@@ -181,8 +181,8 @@ public:
         }
 
         if ( stats.queued == 0 ) {
-            // Watch for underflows. We could report somehow. Note that this
-            // runs in the context of Broker's threads.
+
+
             assert(is_push);
         }
 
@@ -195,7 +195,7 @@ public:
         }
     }
 
-    // Updates the internal table[string] of BrokerPeeringStats and returns it.
+
     const zeek::TableValPtr& GetPeeringStatsTable() {
         std::scoped_lock<std::mutex> lock(mutex);
 
@@ -206,10 +206,10 @@ public:
             if ( stats.peer_id == nullptr )
                 stats.peer_id = PeerIdToStringVal(peer);
 
-            // Broker told us the peer is gone, in RemovePeer() below. Remove it
-            // now from both tables. We add/remove from stats_table only here,
-            // not in Observer() and/or RemovePeer(), to ensure we only touch
-            // the Zeek-side Table from Zeek's main thread.
+
+
+
+
             if ( stats.is_zombie ) {
                 stats_table->Remove(*stats.peer_id);
                 it = stats_map.erase(it);
@@ -223,9 +223,9 @@ public:
                 stats_table->Assign(stats.peer_id, stats_v);
             }
 
-            // We may get here more than stats_reset_interval after the last
-            // Observe(), in which case the max_queued_recently value is now
-            // stale. Update if so.
+
+
+
             double now{0};
             if ( endpoint != nullptr )
                 broker::convert(endpoint->now(), now);
@@ -259,11 +259,11 @@ private:
         return zeek::make_intrusive<zeek::StringVal>(peer_s);
     }
 
-    // The maximum number of messages queueable for transmission to a peer,
-    // see Broker::peer_buffer_size.
+
+
     size_t buffer_size;
 
-    // Seconds after which we reset stats tracked per time window.
+
     double stats_reset_interval;
 
     EndpointMetricMap stats_map;
@@ -343,7 +343,7 @@ private:
     PeerBufferStatePtr pbstate_;
 };
 
-} // namespace
+}
 
 namespace zeek::Broker {
 static inline Val* get_option(const char* option) {
@@ -412,7 +412,7 @@ struct opt_mapping {
     }
 };
 
-} // namespace
+}
 
 class BrokerState {
 public:
@@ -478,7 +478,7 @@ std::string RenderEvent(const std::string& topic, const std::string& name, const
     return util::fmt("%s(%s) -> %s", name.c_str(), RenderMessage(args).c_str(), topic.c_str());
 }
 
-} // namespace
+}
 #endif
 
 Manager::Manager(bool arg_use_real_time) : Backend("Broker", nullptr, nullptr, nullptr), iosource::IOSource(true) {
@@ -503,9 +503,9 @@ void Manager::DoInitPostScript() {
     zeek_table_manager = get_option("Broker::table_store_master")->AsBool();
     zeek_table_db_directory = get_option("Broker::table_store_db_directory")->AsString()->CheckString();
 
-    // If Zeek's forwarding of network time to wallclock time was disabled,
-    // assume that also Broker does not use realtime and instead receives
-    // time via explicit AdvanceTime() calls.
+
+
+
     if ( ! get_option("allow_network_time_forward")->AsBool() )
         use_real_time = false;
 
@@ -517,7 +517,7 @@ void Manager::DoInitPostScript() {
     detail::opaque_of_store_handle = make_intrusive<OpaqueType>("Broker::Store");
     vector_of_data_type = make_intrusive<VectorType>(id::find_type("Broker::Data"));
 
-    // Register as a "dont-count" source first, we may change that later.
+
     iosource_mgr->Register(this, true);
 
     broker::broker_options options;
@@ -578,7 +578,7 @@ void Manager::DoInitPostScript() {
     config.set("caf.work-stealing.moderate-steal-interval", get_option("Broker::moderate_interval")->AsCount());
     config.set("caf.work-stealing.relaxed-steal-interval", get_option("Broker::relaxed_interval")->AsCount());
 
-    // Hook up the logger.
+
     auto checkLogSeverity = [](int level) {
         if ( level < 0 || level > static_cast<int>(BrokerSeverityLevel::debug) ) {
             reporter->FatalError("Invalid Broker::log_severity_level: %d", level);
@@ -593,7 +593,7 @@ void Manager::DoInitPostScript() {
     auto pbstate = std::make_shared<PeerBufferState>(get_option("Broker::peer_buffer_size")->AsCount(),
                                                      get_option("Broker::buffer_stats_reset_interval")->AsDouble());
     auto observer = std::make_shared<Observer>(adapterVerbosity, queue, pbstate);
-    broker::logger(observer); // *must* be called before creating the BrokerState
+    broker::logger(observer);
 
     bstate = std::make_shared<BrokerState>(std::move(config), queue, pbstate);
     bstate->logSeverity = static_cast<BrokerSeverityLevel>(logSeverityVal);
@@ -653,11 +653,11 @@ void Manager::InitializeBrokerStoreForwarding() {
             id->GetVal()->AsTableVal()->SetBrokerStore(storename);
             AddForwardedStore(storename, cast_intrusive<TableVal>(id->GetVal()));
 
-            // We only create masters here. For clones, we do all the work of setting up
-            // the forwarding - but we do not try to initialize the clone. We can only initialize
-            // the clone, once a node has a connection to a master. This is currently done in
-            // scriptland in scripts/base/frameworks/cluster/broker-stores.zeek. Once the ALM
-            // transport is ready we can change over to doing this here.
+
+
+
+
+
             if ( ! zeek_table_manager )
                 continue;
 
@@ -690,8 +690,8 @@ void Manager::DoTerminate() {
         stores_to_close.push_back(x.first);
 
     for ( auto& x : stores_to_close )
-        // This doesn't loop directly over data_stores, because CloseStore
-        // modifies the map and invalidates iterators.
+
+
         CloseStore(x);
 
     ProcessLogEvents();
@@ -724,8 +724,8 @@ void Manager::AdvanceTime(double seconds_since_unix_epoch) {
 
 void Manager::FlushPendingQueries() {
     while ( ! pending_queries.empty() ) {
-        // possibly an infinite loop if a query can recursively
-        // generate more queries...
+
+
         for ( auto& s : data_stores ) {
             while ( ! s.second->proxy.mailbox().empty() ) {
                 auto response = s.second->proxy.receive();
@@ -751,7 +751,7 @@ uint16_t Manager::Listen(const string& addr, uint16_t port) {
     if ( bound_port == 0 )
         Error("Failed to listen on %s:%" PRIu16, addr.empty() ? "INADDR_ANY" : addr.c_str(), port);
 
-    // Register as a "does-count" source now.
+
     iosource_mgr->Register(this, false);
 
     DBG_LOG(DBG_BROKER, "Listening on %s:%" PRIu16, addr.empty() ? "INADDR_ANY" : addr.c_str(), port);
@@ -771,7 +771,7 @@ void Manager::Peer(const string& addr, uint16_t port, double retry) {
         retry = atoi(e);
 
     if ( retry > 0.0 && retry < 1.0 )
-        // Ensure that it doesn't get turned into zero.
+
         retry = 1.0;
 
     auto secs = broker::timeout::seconds(static_cast<uint64_t>(retry));
@@ -781,7 +781,7 @@ void Manager::Peer(const string& addr, uint16_t port, double retry) {
     auto counts_as_iosource = get_option("Broker::peer_counts_as_iosource")->AsBool();
 
     if ( counts_as_iosource )
-        // Register as a "does-count" source now.
+
         iosource_mgr->Register(this, false);
 }
 
@@ -796,7 +796,7 @@ void Manager::PeerNoRetry(const string& addr, uint16_t port) {
     auto counts_as_iosource = get_option("Broker::peer_counts_as_iosource")->AsBool();
 
     if ( counts_as_iosource )
-        // Register as a "does-count" source now.
+
         iosource_mgr->Register(this, false);
 }
 
@@ -890,9 +890,9 @@ bool Manager::PublishEvent(string topic, RecordVal* args) {
         xs.emplace_back(data_val->data);
     }
 
-    // At this point we come from script-land. This means that publishing of the event was
-    // explicitly triggered. Hence, the timestamp is set to the current event's time. This
-    // also means that timestamping cannot be manipulated from script-land for now.
+
+
+
     auto ts = event_mgr.CurrentEventTime();
     return PublishEvent(std::move(topic), event_name, xs, ts);
 }
@@ -912,8 +912,8 @@ bool Manager::PublishIdentifier(std::string topic, std::string id) {
     const auto& val = i->GetVal();
 
     if ( ! val )
-        // Probably could have a special case to also unset the value on the
-        // receiving side, but not sure what use that would be.
+
+
         return false;
 
     auto data = BrokerData{};
@@ -971,10 +971,10 @@ bool Manager::PublishLogCreate(EnumVal* stream, EnumVal* writer, const logging::
     DBG_LOG(DBG_BROKER, "Publishing log creation: %s", RenderMessage(topic, msg.as_data()).c_str());
 
     if ( peer.node != NoPeer.node )
-        // Direct message.
+
         bstate->endpoint.publish(peer, std::move(topic), msg.move_data());
     else
-        // Broadcast.
+
         bstate->endpoint.publish(std::move(topic), msg.move_data());
 
     return true;
@@ -1009,7 +1009,7 @@ bool Manager::PublishLogWrite(EnumVal* stream, EnumVal* writer, const string& pa
 
     fmt.StartWrite();
 
-    // Cast to int for binary compatibility.
+
     bool success = fmt.Write(static_cast<int>(rec.size()), "num_fields");
 
     if ( ! success ) {
@@ -1066,7 +1066,7 @@ size_t Manager::LogBuffer::Flush(broker::endpoint& endpoint, size_t log_batch_si
         return 0;
 
     if ( ! message_count )
-        // No logs buffered for this stream.
+
         return 0;
 
     for ( auto& [topic, pending_batch] : msgs ) {
@@ -1113,7 +1113,7 @@ zeek::RecordValPtr Manager::MakeEvent(ArgsSpan args, zeek::detail::Frame* frame)
     for ( size_t index = 0; index < args.size(); index++ ) {
         const auto& arg_val = args[index];
         if ( index == 0 ) {
-            // Event val must come first.
+
 
             if ( arg_val->GetType()->Tag() != TYPE_FUNC ) {
                 Error("attempt to convert non-event into an event type (%s)",
@@ -1142,7 +1142,7 @@ zeek::RecordValPtr Manager::MakeEvent(ArgsSpan args, zeek::detail::Frame* frame)
         auto got_type = arg_val->GetType();
         const auto& expected_type = func->GetType()->ParamList()->GetTypes()[index - 1];
 
-        // If called with an unspecified table or set, adopt the expected type.
+
         if ( got_type->Tag() == TYPE_TABLE && got_type->AsTableType()->IsUnspecifiedTable() )
             if ( expected_type->Tag() == TYPE_TABLE && got_type->IsSet() == expected_type->IsSet() )
                 got_type = expected_type;
@@ -1241,11 +1241,11 @@ void Manager::ProcessMessages() {
         }
 
         try {
-            // Once we call a broker::move_* function, we force Broker to
-            // unshare the content of the message, i.e., copy the content to a
-            // different memory region if other threads keep references to the
-            // message. Since `topic` still points into the original memory
-            // region, we may no longer access it after this point.
+
+
+
+
+
             auto topic_str = broker::get_topic_str(message);
             broker::zeek::visit_as_message([this, topic_str](auto& msg) { ProcessMessage(topic_str, msg); }, message);
         } catch ( std::runtime_error& e ) {
@@ -1257,7 +1257,7 @@ void Manager::ProcessMessages() {
 
 namespace {
 
-// Note: copied from Stmt.cc, might be worth to move to a common place.
+
 EnumValPtr lookup_enum_val(const char* module_name, const char* name) {
     const auto& id = zeek::detail::lookup_ID(name, module_name);
     assert(id);
@@ -1271,7 +1271,7 @@ EnumValPtr lookup_enum_val(const char* module_name, const char* name) {
     return et->GetEnumVal(index);
 }
 
-} // namespace
+}
 
 void Manager::ProcessLogEvents() {
     static auto ev_critical = lookup_enum_val("Broker", "LOG_CRITICAL");
@@ -1306,9 +1306,9 @@ void Manager::ProcessLogEvents() {
             event_mgr.Enqueue(::Broker::internal_log_event, std::move(args));
         }
         if ( bstate->stderrSeverity >= severity ) {
-            // Formatting the event->identifier string_view using "%.*s" - the explicit
-            // precision ".*" allows specifying the length of the following char* argument
-            // as string_views in general are not guaranteed to be null terminated.
+
+
+
             fprintf(stderr, "[BROKER/%s] %.*s: %s\n", severity_names_tbl[static_cast<int>(severity)],
                     static_cast<int>(event->identifier.size()), event->identifier.data(), event->description.c_str());
         }
@@ -1356,13 +1356,13 @@ void Manager::Process() {
 }
 
 double Manager::GetNextTimeout() {
-    // When subscriber messages are already queued, return 0 so the
-    // I/O loop processes them immediately instead of waiting for the
-    // next fd-based wakeup.  This is essential on Windows where the
-    // kqueue emulation (libkqueue) may not reliably signal the
-    // subscriber's socket-pair flare, but it also benefits other
-    // platforms by reducing latency when the flare notification
-    // races with the poll interval (io_poll_interval_default).
+
+
+
+
+
+
+
     if ( bstate && bstate->subscriber.available() > 0 )
         return 0;
 
@@ -1411,7 +1411,7 @@ void Manager::ProcessStoreEventInsertUpdate(const TableValPtr& table, const std:
         return;
     }
 
-    // it is a table
+
     auto data_copy = data;
     auto zeek_value = detail::data_to_val(data_copy, table->GetType()->Yield().get());
     if ( ! zeek_value ) {
@@ -1436,7 +1436,7 @@ void Manager::ProcessStoreEvent(const broker::data& msg) {
         if ( ! table )
             return;
 
-        // We sent this message. Ignore it.
+
         if ( insert.publisher() == storehandle->store_pid )
             return;
 
@@ -1451,7 +1451,7 @@ void Manager::ProcessStoreEvent(const broker::data& msg) {
         if ( ! table )
             return;
 
-        // We sent this message. Ignore it.
+
         if ( update.publisher() == storehandle->store_pid )
             return;
 
@@ -1467,7 +1467,7 @@ void Manager::ProcessStoreEvent(const broker::data& msg) {
         if ( ! table )
             return;
 
-        // We sent this message. Ignore it.
+
         if ( erase.publisher() == storehandle->store_pid )
             return;
 
@@ -1493,10 +1493,10 @@ void Manager::ProcessStoreEvent(const broker::data& msg) {
         table->Remove(*zeek_key, false);
     }
     else if ( auto expire = broker::store_event::expire::make(msg) ) {
-        // We just ignore expiries - expiring information on the Zeek side is handled by Zeek
-        // itself.
+
+
 #ifdef DEBUG
-        // let's only debug log for stores that we know.
+
         auto storehandle = broker_mgr->LookupStore(expire.store_id());
         if ( ! storehandle )
             return;
@@ -1507,7 +1507,7 @@ void Manager::ProcessStoreEvent(const broker::data& msg) {
 
         DBG_LOG(DBG_BROKER, "Store %s: Store expired key %s", expire.store_id().c_str(),
                 to_string(expire.key()).c_str());
-#endif /* DEBUG */
+#endif
     }
     else {
         reporter->Error("ProcessStoreEvent: Unhandled event type");
@@ -1546,7 +1546,7 @@ void Manager::ProcessMessage(std::string_view topic, broker::zeek::Event& ev) {
         if ( p.size() > topic.size() )
             continue;
 
-        if ( strncmp(p.data(), topic.data(), p.size()) != 0 ) // NOLINT(bugprone-suspicious-stringview-data-usage)
+        if ( strncmp(p.data(), topic.data(), p.size()) != 0 )
             continue;
 
         DBG_LOG(DBG_BROKER, "Skip processing of forwarded event: %s %s", std::string{name}.c_str(),
@@ -1580,9 +1580,9 @@ void Manager::ProcessMessage(std::string_view topic, broker::zeek::Event& ev) {
             std::string msg_addl = util::fmt("got %s, expected %s", got_type, expected_name);
 
             if ( strcmp(expected_name, "record") == 0 && strcmp("vector", got_type) == 0 ) {
-                // This means the vector elements didn't align with the record
-                // fields. Produce an error message that shows what we
-                // received.
+
+
+
                 std::string elements;
                 for ( auto&& e : broker_vector_from(args[i]) ) {
                     if ( ! elements.empty() )
@@ -1598,9 +1598,9 @@ void Manager::ProcessMessage(std::string_view topic, broker::zeek::Event& ev) {
             reporter->Warning("failed to convert remote event '%s' arg #%zu, %s", std::string{name}.c_str(), i + 1,
                               msg_addl.c_str());
 
-            // If we got a vector and expected a function this is
-            // possibly because of a mismatch between
-            // anonymous-function bodies.
+
+
+
             if ( strcmp(expected_name, "func") == 0 && strcmp("vector", got_type) == 0 )
                 reporter->Warning(
                     "when sending functions the receiver must have access to a"
@@ -1642,7 +1642,7 @@ bool Manager::ProcessMessage(std::string_view, broker::zeek::LogCreate& lc) {
         return false;
     }
 
-    // Get log fields.
+
     if ( ! lc.fields_data().is_list() ) {
         reporter->Warning("failed to unpack remote log fields");
         return false;
@@ -1684,7 +1684,7 @@ bool Manager::ProcessMessage(std::string_view, broker::zeek::LogWrite& lw) {
     num_logs_incoming_metric->Inc();
     auto&& stream_id_name = lw.stream_id().name;
 
-    // Get stream ID.
+
     auto wrapped_stream_id = broker::data{lw.stream_id()};
     auto stream_id = detail::data_to_val(wrapped_stream_id, log_id_type);
 
@@ -1693,7 +1693,7 @@ bool Manager::ProcessMessage(std::string_view, broker::zeek::LogWrite& lw) {
         return false;
     }
 
-    // Get writer ID.
+
     auto wrapped_writer_id = broker::data{lw.writer_id()};
     auto writer_id = detail::data_to_val(wrapped_writer_id, writer_id_type);
     if ( ! writer_id ) {
@@ -1812,8 +1812,8 @@ void Manager::ProcessStatus(broker::status& stat) {
             network_info->Assign(1, val_mgr->Port(ctx->network->port, TRANSPORT_TCP));
         }
         else {
-            // TODO: are there any status messages where the ctx->network
-            // is not set and actually could be?
+
+
             network_info->Assign(0, "<unknown>");
             network_info->Assign(1, val_mgr->Port(0, TRANSPORT_TCP));
         }
@@ -1846,8 +1846,8 @@ void Manager::ProcessError(broker::error& err) {
     }
 
     std::string msg;
-    // Note: we could also use to_string, but that would change the log output
-    // and we would have to update all baselines relying on this format.
+
+
     if ( auto ctx = err.context() ) {
         msg += '(';
         msg += broker::to_string(ctx->node);
@@ -1878,7 +1878,7 @@ void Manager::ProcessStoreResponse(detail::StoreHandleVal* s, broker::store::res
     }
 
     if ( request->second->Disabled() ) {
-        // Trigger timer must have timed the query out already.
+
         delete request->second;
         pending_queries.erase(request);
         return;
@@ -1888,15 +1888,15 @@ void Manager::ProcessStoreResponse(detail::StoreHandleVal* s, broker::store::res
         BrokerData tmp{std::move(*response.answer)};
         request->second->Result(detail::query_result(std::move(tmp).ToRecordVal()));
     }
-    else if ( response.answer.error() == broker::ec::request_timeout ) { // NOLINT(bugprone-branch-clone)
-        // Fine, trigger's timeout takes care of things.
+    else if ( response.answer.error() == broker::ec::request_timeout ) {
+
     }
     else if ( response.answer.error() == broker::ec::stale_data ) {
-        // It's sort of arbitrary whether to make this type of error successful
-        // query with a "fail" status versus going through the when stmt timeout
-        // code path.  I think the timeout path is maybe more expected in order
-        // for failures like "no such key" to actually be distinguishable from
-        // this type of error (which is less easily handled programmatically).
+
+
+
+
+
     }
     else if ( response.answer.error() == broker::ec::no_such_key )
         request->second->Result(detail::query_result());
@@ -1955,8 +1955,8 @@ detail::StoreHandleVal* Manager::MakeMaster(const string& name, broker::backend 
     PrepareForwarding(name);
 
     if ( ! bstate->endpoint.use_real_time() )
-        // Wait for master to become available/responsive.
-        // Possibly avoids timeouts in scripts during unit tests.
+
+
         handle->store.exists("");
 
     BrokerStoreToZeekTable(name, handle);
@@ -1977,7 +1977,7 @@ void Manager::BrokerStoreToZeekTable(const std::string& name, const detail::Stor
     const auto& its = table->GetType()->AsTableType()->GetIndexTypes();
     bool is_set = table->GetType()->IsSet();
 
-    // disable &on_change notifications while filling the table.
+
     table->DisableChangeNotifications();
 
     for ( const auto& key : *set ) {
@@ -1993,7 +1993,7 @@ void Manager::BrokerStoreToZeekTable(const std::string& name, const detail::Stor
                 "Failed to convert key \"%s\" while importing broker store to table "
                 "for store \"%s\". Aborting import.",
                 to_string(key).c_str(), name.c_str());
-            // just abort - this probably means the types are incompatible
+
             table->EnableChangeNotifications();
             return;
         }
@@ -2153,4 +2153,4 @@ broker::hub Manager::MakeHub() {
 
 void Manager::DestroyHub(broker::hub&& hub) { --hub_count; }
 
-} // namespace zeek::Broker
+}

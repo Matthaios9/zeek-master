@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_cstr.h"
 
@@ -23,7 +23,7 @@ private:
     string msg_;
 };
 
-// Copied from util.cc of Zeek
+
 int expand_escape(const char*& s) {
     switch ( *(s++) ) {
         case 'b': return '\b';
@@ -41,17 +41,17 @@ int expand_escape(const char*& s) {
         case '4':
         case '5':
         case '6':
-        case '7': { // \<octal>{1,3}
-            --s;    // put back the first octal digit
+        case '7': {
+            --s;
             const char* start = s;
 
-            // Don't increment inside loop control
-            // because if isdigit() is a macro it might
-            // expand into multiple increments ...
 
-            // Here we define a maximum length for escape sequence
-            // to allow easy handling of string like: "^H0" as
-            // "\0100".
+
+
+
+
+
+
 
             for ( int len = 0; len < 3 && isascii(*s) && isdigit(*s); ++s, ++len )
                 ;
@@ -60,14 +60,14 @@ int expand_escape(const char*& s) {
             if ( sscanf(start, "%3o", &result) != 1 )
                 throw EscapeException(strfmt("bad octal escape: \"%s", start));
 
-            // Capped at 777, safe to cast.
+
             return static_cast<int>(result);
         }
 
-        case 'x': { /* \x<hex> */
+        case 'x': {
             const char* start = s;
 
-            // Look at most 2 characters, so that "\x0ddir" -> "^Mdir".
+
             for ( int len = 0; len < 2 && isascii(*s) && isxdigit(*s); ++s, ++len )
                 ;
 
@@ -75,7 +75,7 @@ int expand_escape(const char*& s) {
             if ( sscanf(start, "%2x", &result) != 1 )
                 throw EscapeException(strfmt("bad hexadecimal escape: \"%s", start));
 
-            // Capped at 255, safe to cast.
+
             return static_cast<int>(result);
         }
 
@@ -83,10 +83,10 @@ int expand_escape(const char*& s) {
     }
 }
 
-} // namespace
+}
 
 ConstString::ConstString(string s) : str_(std::move(s)) {
-    // Copied from scan.l of Zeek
+
     try {
         const char* text = str_.c_str();
         int len = strlen(text) + 1;
@@ -94,12 +94,12 @@ ConstString::ConstString(string s) : str_(std::move(s)) {
 
         char* new_s = new char[len];
 
-        // Skip leading quote.
+
         for ( ++text; *text; ++text ) {
             if ( *text == '\\' ) {
-                ++text; // skip '\'
+                ++text;
                 new_s[i++] = expand_escape(text);
-                --text; // point to end of sequence
+                --text;
             }
             else {
                 new_s[i++] = *text;
@@ -107,14 +107,14 @@ ConstString::ConstString(string s) : str_(std::move(s)) {
         }
         ASSERT(i < len);
 
-        // Get rid of trailing quote.
+
         ASSERT(new_s[i - 1] == '"');
         new_s[i - 1] = '\0';
 
         unescaped_ = new_s;
         delete[] new_s;
     } catch ( EscapeException const& e ) {
-        // Throw again with the object
+
         throw Exception(this, e.what());
     }
 }

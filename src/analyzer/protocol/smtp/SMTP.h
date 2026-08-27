@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -20,25 +20,25 @@ enum SMTP_Cmd : uint8_t {
 #include "SMTP_cmd.def"
 };
 
-// State is updated on every SMTP reply.
+
 enum SMTP_State : uint8_t {
-    SMTP_CONNECTED,     // 0: before the opening message
-    SMTP_INITIATED,     // 1: after opening message 220, EHLO/HELO expected
-    SMTP_NOT_AVAILABLE, // 2: after opening message 554, etc.
-    SMTP_READY,         // 3: after EHLO/HELO and reply 250
-    SMTP_MAIL_OK,       // 4: after MAIL/SEND/SOML/SAML and 250, RCPT expected
-    SMTP_RCPT_OK,       // 5: after one successful RCPT, DATA or more RCPT expected
-    SMTP_IN_DATA,       // 6: after DATA
-    SMTP_AFTER_DATA,    // 7: after . and before reply
-    SMTP_IN_AUTH,       // 8: after AUTH and 334
-    SMTP_IN_TLS,        // 9: after STARTTLS/X-ANONYMOUSTLS and 220
-    SMTP_QUIT,          // 10: after QUIT
-    SMTP_AFTER_GAP,     // 11: after a gap is detected
-    SMTP_GAP_RECOVERY,  // 12: after the first reply after a gap
-    SMTP_IN_BDAT,       // 13: receiving BDAT chunk via plain delivery
+    SMTP_CONNECTED,
+    SMTP_INITIATED,
+    SMTP_NOT_AVAILABLE,
+    SMTP_READY,
+    SMTP_MAIL_OK,
+    SMTP_RCPT_OK,
+    SMTP_IN_DATA,
+    SMTP_AFTER_DATA,
+    SMTP_IN_AUTH,
+    SMTP_IN_TLS,
+    SMTP_QUIT,
+    SMTP_AFTER_GAP,
+    SMTP_GAP_RECOVERY,
+    SMTP_IN_BDAT,
 };
 
-} // namespace detail
+}
 
 class SMTP_Analyzer final : public analyzer::tcp::TCP_ApplicationAnalyzer {
 public:
@@ -50,7 +50,7 @@ public:
     void ConnectionFinished(bool half_finished) override;
     void Undelivered(uint64_t seq, int len, bool orig) override;
 
-    void SkipData() { skip_data = true; } // skip delivery of data lines
+    void SkipData() { skip_data = true; }
 
     static analyzer::Analyzer* Instantiate(Connection* conn) { return new SMTP_Analyzer(conn); }
 
@@ -79,25 +79,25 @@ protected:
 
     bool orig_is_sender;
     bool expect_sender, expect_recver;
-    bool pipelining; // whether pipelining is supported
+    bool pipelining;
     int state;
     int last_replied_cmd;
-    int first_cmd;                // first un-replied SMTP cmd, or -1
-    int pending_reply;            // code assoc. w/ multi-line reply, or 0
-    std::list<int> pending_cmd_q; // to support pipelining
-    bool skip_data;               // whether to skip message body
-    String* line_after_gap;       // last line before the first reply
-                                  // after a gap
+    int first_cmd;
+    int pending_reply;
+    std::list<int> pending_cmd_q;
+    bool skip_data;
+    String* line_after_gap;
 
-    std::unique_ptr<detail::SMTP_BDAT_Analyzer> bdat; // if set, BDAT chunk transfer active
+
+    std::unique_ptr<detail::SMTP_BDAT_Analyzer> bdat;
 
     analyzer::mime::MIME_Mail* mail;
-    std::string rfc822_msg_fuid;    // fuid for mail data file analysis
-    uint64_t rfc822_msg_offset = 0; // tracking offset needed for Gap()
+    std::string rfc822_msg_fuid;
+    uint64_t rfc822_msg_offset = 0;
 
 private:
     analyzer::tcp::ContentLine_Analyzer* cl_orig;
     analyzer::tcp::ContentLine_Analyzer* cl_resp;
 };
 
-} // namespace zeek::analyzer::smtp
+}

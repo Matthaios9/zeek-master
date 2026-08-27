@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/zip/ZIP.h"
 
@@ -19,8 +19,8 @@ ZIP_Analyzer::ZIP_Analyzer(Connection* conn, bool orig, Method arg_method)
     zip->next_in = nullptr;
     zip->avail_in = 0;
 
-    // "32" is a gross overload hack that means "check it
-    // for whether it's a gzip file".  Sheesh.
+
+
     if ( inflateInit2(zip, MAX_WBITS + 32) != Z_OK ) {
         Weird("inflate_init_failed");
         delete zip;
@@ -77,8 +77,8 @@ void ZIP_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
         }
 
         else if ( allow_restart && zip_status == Z_DATA_ERROR ) {
-            // Some servers seem to not generate zlib headers,
-            // so this is an attempt to fix and continue anyway.
+
+
             inflateEnd(zip);
 
             if ( inflateInit2(zip, -MAX_WBITS) != Z_OK ) {
@@ -99,4 +99,4 @@ void ZIP_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
     }
 }
 
-} // namespace zeek::analyzer::zip
+}

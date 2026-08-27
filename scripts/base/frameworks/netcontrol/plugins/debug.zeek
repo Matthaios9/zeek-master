@@ -1,5 +1,5 @@
-##! Debugging plugin for the NetControl framework, providing insight into
-##! executed operations.
+
+
 
 @load ../plugin
 @load ../main
@@ -7,25 +7,25 @@
 module NetControl;
 
 export {
-	## Instantiates a debug plugin for the NetControl framework. The debug
-	## plugin simply logs the operations it receives.
-	##
-	## do_something: If true, the plugin will claim it supports all operations; if
-	##               false, it will indicate it doesn't support any.
-	##
-	## name: Optional name that for the plugin.
+
+
+
+
+
+
+
 	global create_debug: function(do_something: bool, name: string &default="") : PluginState;
 
-	## Instantiates a debug plugin for the NetControl framework. This variation
-	## of the plugin will return "exists" to any rule operations.
-	##
-	## name: Name of this plugin.
+
+
+
+
 	global create_debug_exists: function(name: string) : PluginState;
 
-	## Instantiates a debug plugin for the NetControl framework. This variation
-	## of the plugin will return "error" to any rule operations.
-	##
-	## name: Name of this plugin.
+
+
+
+
 	global create_debug_error: function(name: string) : PluginState;
 }
 
@@ -119,7 +119,7 @@ function create_debug(do_something: bool, name: string) : PluginState
 	{
 	local p = PluginState($plugin=debug_plugin);
 
-	# FIXME: Why's the default not working?
+
 	p$config = table();
 	p$config["all"] = (do_something ? "1" : "0");
 	if ( name == "" )

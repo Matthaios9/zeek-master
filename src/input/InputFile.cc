@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/input/InputFile.h"
 
@@ -17,11 +17,11 @@ namespace zeek::input::reader::detail {
 
 namespace {
 
-// Sharing flags that match POSIX semantics: allow concurrent reads, writes,
-// and renames/deletes while the file is open.
+
+
 constexpr DWORD share_all = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
 
-// RAII wrapper for a Windows HANDLE.
+
 struct UniqueHandle {
     HANDLE h = INVALID_HANDLE_VALUE;
 
@@ -53,15 +53,15 @@ struct UniqueHandle {
     HANDLE release() { return std::exchange(h, INVALID_HANDLE_VALUE); }
 };
 
-// Opens a file with share_all flags for the given access mode.
+
 UniqueHandle open_shared(const char* path, DWORD access) {
     return UniqueHandle(CreateFileA(path, access, share_all, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr));
 }
 
-} // namespace
+}
 
-// A streambuf backed by a Windows HANDLE opened with FILE_SHARE_DELETE,
-// allowing external renames while the file is open (matching POSIX semantics).
+
+
 class WinShareDeleteBuf : public std::streambuf {
 public:
     bool open(const char* path) {
@@ -94,8 +94,8 @@ protected:
     }
 
     int sync() override {
-        // Seek back to account for unread buffered data so the next read
-        // starts from the correct file position.
+
+
         if ( handle_ && gptr() < egptr() ) {
             LONG dist = -static_cast<LONG>(egptr() - gptr());
             SetFilePointer(handle_.h, dist, nullptr, FILE_CURRENT);
@@ -112,7 +112,7 @@ private:
 
 InputFile::InputFile() : std::istream(nullptr), buf_(std::make_unique<WinShareDeleteBuf>()) { rdbuf(buf_.get()); }
 
-InputFile::InputFile(const std::string& path, std::ios_base::openmode /*mode*/)
+InputFile::InputFile(const std::string& path, std::ios_base::openmode )
     : std::istream(nullptr), buf_(std::make_unique<WinShareDeleteBuf>()) {
     rdbuf(buf_.get());
     open(path);
@@ -120,7 +120,7 @@ InputFile::InputFile(const std::string& path, std::ios_base::openmode /*mode*/)
 
 InputFile::~InputFile() = default;
 
-void InputFile::open(const std::string& path, std::ios_base::openmode /*mode*/) {
+void InputFile::open(const std::string& path, std::ios_base::openmode ) {
     if ( buf_->open(path.c_str()) )
         clear();
     else
@@ -143,7 +143,7 @@ FILE* fopen_with_share_delete(const char* path, const char* mode) {
     if ( fd == -1 )
         return nullptr;
 
-    // _open_osfhandle took ownership of the underlying Windows handle.
+
     handle.release();
 
     FILE* fp = _fdopen(fd, mode);
@@ -173,4 +173,4 @@ file_ino_t reliable_inode(const char* path, file_ino_t stat_ino) { return stat_i
 
 #endif
 
-} // namespace zeek::input::reader::detail
+}

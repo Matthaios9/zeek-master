@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/Manager.h"
 
@@ -13,8 +13,8 @@ namespace zeek::analyzer {
 
 Manager::ConnIndex::ConnIndex(const IPAddr& _orig, const IPAddr& _resp, uint16_t _resp_p, uint16_t _proto) {
     if ( _orig == IPAddr::v4_unspecified )
-        // don't use the IPv4 mapping, use the literal unspecified address
-        // to indicate a wildcard
+
+
         orig = IPAddr::v6_unspecified;
     else
         orig = _orig;
@@ -49,7 +49,7 @@ bool Manager::ConnIndex::operator<(const ConnIndex& other) const {
 Manager::Manager() : plugin::ComponentManager<analyzer::Component>("Analyzer", "Tag", "AllAnalyzers") {}
 
 Manager::~Manager() {
-    // Clean up expected-connection table.
+
     while ( ! conns_by_timeout.empty() ) {
         ScheduledAnalyzer* a = conns_by_timeout.top();
         conns_by_timeout.pop();
@@ -205,9 +205,9 @@ bool Manager::RegisterAnalyzerForPort(const zeek::Tag& tag, TransportProto proto
     if ( initialized )
         return RegisterAnalyzerForPort(std::make_tuple(tag, proto, port));
     else {
-        // Cannot register these before PostScriptInit() has run because we
-        // depend on packet analysis having been set up. That also means we don't have
-        // a reliable return value, for now we just assume it's working.
+
+
+
         pending_analyzers_for_ports.emplace(tag, proto, port);
         return true;
     }
@@ -216,8 +216,8 @@ bool Manager::RegisterAnalyzerForPort(const zeek::Tag& tag, TransportProto proto
 bool Manager::RegisterAnalyzerForPort(const std::tuple<zeek::Tag, TransportProto, uint32_t>& p) {
     const auto& [tag, proto, port] = p;
 
-    // TODO: this class is becoming more generic and removing a lot of the
-    // checks for protocols, but this part might need to stay like this.
+
+
     packet_analysis::AnalyzerPtr analyzer;
     if ( proto == TRANSPORT_TCP )
         analyzer = packet_mgr->GetAnalyzer("TCP");
@@ -237,8 +237,8 @@ bool Manager::UnregisterAnalyzerForPort(const zeek::Tag& tag, TransportProto pro
          i != pending_analyzers_for_ports.end() )
         pending_analyzers_for_ports.erase(i);
 
-    // TODO: this class is becoming more generic and removing a lot of the
-    // checks for protocols, but this part might need to stay like this.
+
+
     packet_analysis::AnalyzerPtr analyzer;
     if ( proto == TRANSPORT_TCP )
         analyzer = packet_mgr->GetAnalyzer("TCP");
@@ -330,7 +330,7 @@ void Manager::ScheduleAnalyzer(const IPAddr& orig, const IPAddr& resp, uint16_t 
 
     assert(timeout);
 
-    // Use the chance to see if the oldest entry is already expired.
+
     ExpireScheduledAnalyzers();
 
     ScheduledAnalyzer* a = new ScheduledAnalyzer;
@@ -365,7 +365,7 @@ Manager::tag_set Manager::GetScheduled(const Connection* conn) {
     for ( conns_map::iterator i = all.first; i != all.second; i++ )
         result.insert(i->second->analyzer);
 
-    // Try wildcard for originator.
+
     c.orig = IPAddr::v6_unspecified;
     all = conns.equal_range(c);
 
@@ -374,8 +374,8 @@ Manager::tag_set Manager::GetScheduled(const Connection* conn) {
             result.insert(i->second->analyzer);
     }
 
-    // We don't delete scheduled analyzers here. They will be expired
-    // eventually.
+
+
     return result;
 }
 
@@ -405,4 +405,4 @@ bool Manager::ApplyScheduledAnalyzers(Connection* conn, bool init, packet_analys
     return ! expected.empty();
 }
 
-} // namespace zeek::analyzer
+}

@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Implements different data formats for serialization.
+
+
 
 #pragma once
 
@@ -17,13 +17,13 @@ class IPPrefix;
 
 namespace detail {
 
-// Abstract base class.
+
 class SerializationFormat {
 public:
     SerializationFormat() = default;
     virtual ~SerializationFormat();
 
-    // Unserialization.
+
     virtual void StartRead(const char* data, uint32_t len);
     virtual void EndRead();
 
@@ -41,22 +41,22 @@ public:
     virtual bool Read(in_addr* addr, const char* tag) = 0;
     virtual bool Read(in6_addr* addr, const char* tag) = 0;
 
-    // Returns number of raw bytes read since last call to StartRead().
+
     int BytesRead() const { return bytes_read; }
 
-    // Passes ownership of string.
+
     virtual bool Read(char** str, int* len, const char* tag) = 0;
 
-    // Serialization.
+
     virtual void StartWrite();
 
-    /**
-     * Retrieves serialized data.
-     * @param data A pointer that will be assigned to point at the internal
-     *             buffer containing serialized data.  The memory should
-     *             be reclaimed using "free()".
-     * @return The number of bytes in the buffer object assigned to \a data.
-     */
+
+
+
+
+
+
+
     virtual size_t EndWrite(char** data);
 
     virtual bool Write(int v, const char* tag) = 0;
@@ -79,7 +79,7 @@ public:
     virtual bool WriteCloseTag(const char* tag) = 0;
     virtual bool WriteSeparator() = 0;
 
-    // Returns number of raw bytes written since last call to StartWrite().
+
     size_t BytesWritten() const { return bytes_written; }
 
 protected:
@@ -138,5 +138,5 @@ public:
     bool WriteSeparator() override;
 };
 
-} // namespace detail
-} // namespace zeek
+}
+}

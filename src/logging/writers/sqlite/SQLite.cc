@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/logging/writers/sqlite/SQLite.h"
 
@@ -17,7 +17,7 @@ using zeek::threading::Value;
 
 namespace zeek::logging::writer::detail {
 
-SQLite::SQLite(WriterFrontend* frontend) : WriterBackend(frontend, /*send_heartbeats=*/false) {
+SQLite::SQLite(WriterFrontend* frontend) : WriterBackend(frontend, false) {
     set_separator.assign(reinterpret_cast<const char*>(BifConst::LogSQLite::set_separator->Bytes()),
                          BifConst::LogSQLite::set_separator->Len());
 
@@ -54,14 +54,14 @@ string SQLite::GetTableType(int arg_type, int arg_subtype) {
 
         case TYPE_INT:
         case TYPE_COUNT:
-        case TYPE_PORT: // note that we do not save the protocol at the moment. Just like in the
-                        // case of the ascii-writer
+        case TYPE_PORT:
+
             type = "integer";
             break;
 
         case TYPE_SUBNET:
         case TYPE_ADDR:
-            type = "text"; // sqlite3 does not have a type for internet addresses
+            type = "text";
             break;
 
         case TYPE_TIME:
@@ -74,20 +74,20 @@ string SQLite::GetTableType(int arg_type, int arg_subtype) {
         case TYPE_FUNC:
         case TYPE_TABLE:
         case TYPE_VECTOR:
-            // For TYPE_TABLE and TYPE_VECTOR, this is sort of dirty, but sqlite does not
-            // directly support arrays. so we just roll it all into a comma-separated string.
+
+
             type = "text";
             break;
 
         default:
             Error(Fmt("unsupported field format %d ", arg_type));
-            return ""; // not the cleanest way to abort. But sqlite will complain on create table...
+            return "";
     }
 
     return type;
 }
 
-// returns true in case of error
+
 bool SQLite::checkError(int code) {
     if ( code != SQLITE_OK && code != SQLITE_DONE ) {
         Error(Fmt("SQLite call failed: %s", sqlite3_errmsg(db)));
@@ -98,8 +98,8 @@ bool SQLite::checkError(int code) {
 }
 
 bool SQLite::DoInit(const WriterInfo& info, int arg_num_fields, const Field* const* arg_fields) {
-    // Allow connections to same DB to use single data/schema cache. Also
-    // allows simultaneous writes to one file.
+
+
 #ifndef ZEEK_TSAN
     sqlite3_enable_shared_cache(1);
 #endif
@@ -180,7 +180,7 @@ bool SQLite::DoInit(const WriterInfo& info, int arg_num_fields, const Field* con
     }
 
     string create = "CREATE TABLE IF NOT EXISTS " + tablename + " (\n";
-    //"id SERIAL UNIQUE NOT NULL"; // SQLite has rowids, we do not need a counter here.
+
 
     for ( unsigned int i = 0; i < num_fields; ++i ) {
         const Field* field = fields[i];
@@ -188,7 +188,7 @@ bool SQLite::DoInit(const WriterInfo& info, int arg_num_fields, const Field* con
         if ( i != 0 )
             create += ",\n";
 
-        // sadly sqlite3 has no other method for escaping stuff. That I know of.
+
         char* fieldname = sqlite3_mprintf("%Q", fields[i]->name);
         if ( fieldname == nullptr ) {
             InternalError("Could not malloc memory");
@@ -207,9 +207,9 @@ bool SQLite::DoInit(const WriterInfo& info, int arg_num_fields, const Field* con
         sqlite3_free(fieldname);
         create += " " + type;
 
-        /* if ( !field->optional ) {
-         create += " NOT NULL";
-         } */
+
+
+
     }
 
     create += "\n);";
@@ -222,7 +222,7 @@ bool SQLite::DoInit(const WriterInfo& info, int arg_num_fields, const Field* con
         return false;
     }
 
-    // create the prepared statement that will be re-used forever...
+
     string insert = "VALUES (";
     string names = "INSERT INTO " + tablename + " ( ";
 
@@ -274,13 +274,13 @@ int SQLite::AddParams(Value* val, int pos) {
 
         case TYPE_SUBNET: {
             string out = io->Render(val->val.subnet_val);
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
+
             return sqlite3_bind_text(st, pos, out.data(), out.size(), SQLITE_TRANSIENT);
         }
 
         case TYPE_ADDR: {
             string out = io->Render(val->val.addr_val);
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
+
             return sqlite3_bind_text(st, pos, out.data(), out.size(), SQLITE_TRANSIENT);
         }
 
@@ -295,7 +295,7 @@ int SQLite::AddParams(Value* val, int pos) {
             if ( ! val->val.string_val.length || val->val.string_val.length == 0 )
                 return sqlite3_bind_null(st, pos);
 
-            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
+
             return sqlite3_bind_text(st, pos, val->val.string_val.data, val->val.string_val.length, SQLITE_TRANSIENT);
         }
 
@@ -317,7 +317,7 @@ int SQLite::AddParams(Value* val, int pos) {
 
             desc.RemoveEscapeSequence(set_separator);
             return sqlite3_bind_text(st, pos, reinterpret_cast<const char*>(desc.Bytes()), desc.Size(),
-                                     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
+
                                      SQLITE_TRANSIENT);
         }
 
@@ -339,7 +339,7 @@ int SQLite::AddParams(Value* val, int pos) {
 
             desc.RemoveEscapeSequence(set_separator);
             return sqlite3_bind_text(st, pos, reinterpret_cast<const char*>(desc.Bytes()), desc.Size(),
-                                     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
+
                                      SQLITE_TRANSIENT);
         }
 
@@ -348,17 +348,17 @@ int SQLite::AddParams(Value* val, int pos) {
 }
 
 bool SQLite::DoWrite(int num_fields, const Field* const* fields, Value** vals) {
-    // bind parameters
+
     for ( int i = 0; i < num_fields; i++ ) {
         if ( checkError(AddParams(vals[i], i + 1)) )
             return false;
     }
 
-    // execute query
+
     if ( checkError(sqlite3_step(st)) )
         return false;
 
-    // clean up and make ready for next query execution
+
     if ( checkError(sqlite3_clear_bindings(st)) )
         return false;
 
@@ -377,4 +377,4 @@ bool SQLite::DoRotate(const char* rotated_path, double open, double close, bool 
     return true;
 }
 
-} // namespace zeek::logging::writer::detail
+}

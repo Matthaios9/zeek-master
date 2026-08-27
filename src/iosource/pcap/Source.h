@@ -1,8 +1,8 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
-#include <sys/types.h> // for u_char
+#include <sys/types.h>
 #include <unistd.h>
 #include <vector>
 
@@ -22,7 +22,7 @@ public:
     static PktSrc* Instantiate(const std::string& path, bool is_live);
 
 protected:
-    // PktSrc interface.
+
     void Open() override;
     void Close() override;
     bool ExtractNextPacket(Packet* pkt) override;
@@ -43,8 +43,8 @@ private:
     pcap_t* pd;
     struct pcap_stat prev_pstat = {0};
 
-    // Buffer provided to setvbuf() when reading from a PCAP file.
+
     std::vector<char> iobuf;
 };
 
-} // namespace zeek::iosource::pcap
+}

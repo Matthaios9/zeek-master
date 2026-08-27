@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include <getopt.h>
 
@@ -31,7 +31,7 @@ static struct option long_driver_options[] = {{"abort-on-exceptions", required_a
                                               {"output-c++-files", no_argument, nullptr, 'x'},
                                               {"print-module-path", no_argument, nullptr, 'M'},
                                               {"print-plugin-path", no_argument, nullptr,
-                                               'P'}, // for backwards compatibility
+                                               'P'},
                                               {"print-prefix-path", no_argument, nullptr, 'p'},
                                               {"print-zeek-config", no_argument, nullptr, 'z'},
                                               {"report-times", required_argument, nullptr, 'R'},
@@ -122,8 +122,8 @@ static hilti::Result<Nothing> parseOptions(int argc, char** argv, hilti::driver:
             case 'p': std::cout << configuration::InstallPrefix.string() << '\n'; return Nothing();
 
             case 'P':
-                // For backwards compatibility with older plugins, print
-                // the path where the `cmake/` folder is located.
+
+
                 std::cout << configuration::DataPath().string() << '\n';
                 return Nothing();
 
@@ -188,7 +188,7 @@ static hilti::Result<Nothing> parseOptions(int argc, char** argv, hilti::driver:
 
             case 'R': driver_options->report_times = true; break;
 
-            case 'S': std::cout << "" << '\n'; return Nothing(); // No longer needed, but left for compatibility.
+            case 'S': std::cout << "" << '\n'; return Nothing();
 
             case 'T':
                 driver_options->keep_tmps = true;

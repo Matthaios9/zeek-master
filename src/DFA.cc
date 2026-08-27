@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/DFA.h"
 
@@ -34,9 +34,9 @@ DFA_State::~DFA_State() {
 void DFA_State::AddXtion(int sym, DFA_State* next_state) { xtions[sym] = next_state; }
 
 void DFA_State::SymPartition(const EquivClass* ec) {
-    // Partitioning is done by creating equivalence classes for those
-    // characters which have out-transitions from the given state.  Thus
-    // we are really creating equivalence classes of equivalence classes.
+
+
+
     meta_ec = new EquivClass(ec->NumClasses());
 
     assert(nfa_states);
@@ -47,7 +47,7 @@ void DFA_State::SymPartition(const EquivClass* ec) {
         if ( sym == SYM_EPSILON )
             continue;
 
-        if ( sym != SYM_CCL ) { // character transition
+        if ( sym != SYM_CCL ) {
             if ( ec->IsRep(sym) ) {
                 sym = ec->SymEquivClass(sym);
                 meta_ec->UniqueChar(sym);
@@ -57,7 +57,7 @@ void DFA_State::SymPartition(const EquivClass* ec) {
             continue;
         }
 
-        // Character class.
+
         meta_ec->CCL_Use(n->TransCCL());
         has_byte_xtion = true;
     }
@@ -84,7 +84,7 @@ DFA_State* DFA_State::ComputeXtion(int sym, DFA_Machine* machine) {
     }
     else {
         delete ns;
-        next_d = nullptr; // Jam
+        next_d = nullptr;
     }
 
     AddXtion(equiv_sym, next_d);
@@ -110,23 +110,23 @@ NFA_state_list* DFA_State::SymFollowSet(int ec_sym, const EquivClass* ec) {
     for ( int i = 0; i < nfa_states->length(); ++i ) {
         NFA_State* n = (*nfa_states)[i];
 
-        if ( n->TransSym() == SYM_CCL ) { // it's a character class
+        if ( n->TransSym() == SYM_CCL ) {
             CCL* ccl = n->TransCCL();
             int_list* syms = ccl->Syms();
 
             if ( ccl->IsNegated() ) {
                 size_t j;
                 for ( j = 0; j < syms->size(); ++j ) {
-                    // Loop through (sorted) negated
-                    // character class, which has
-                    // presumably already been converted
-                    // over to equivalence classes.
+
+
+
+
                     if ( (*syms)[j] >= ec_sym )
                         break;
                 }
 
                 if ( j >= syms->size() || (*syms)[j] > ec_sym )
-                    // Didn't find ec_sym in ccl.
+
                     n->AddXtionsTo(ns);
 
                 continue;
@@ -143,7 +143,7 @@ NFA_state_list* DFA_State::SymFollowSet(int ec_sym, const EquivClass* ec) {
             }
         }
 
-        else if ( n->TransSym() == SYM_EPSILON ) { // do nothing
+        else if ( n->TransSym() == SYM_EPSILON ) {
         }
 
         else if ( ec->IsRep(n->TransSym()) ) {
@@ -193,7 +193,7 @@ void DFA_State::Dump(FILE* f, DFA_Machine* m) {
         if ( ! s )
             continue;
 
-        // Look ahead for compression.
+
         int i;
         for ( i = sym + 1; i < num_sym; ++i )
             if ( xtions[i] != s )
@@ -264,8 +264,8 @@ DFA_State_Cache::~DFA_State_Cache() {
 }
 
 DFA_State* DFA_State_Cache::Lookup(const NFA_state_list& nfas, DigestStr* digest) {
-    // We assume that state ID's don't exceed 10 digits, plus
-    // we allow one more character for the delimiter.
+
+
     auto id_tag_buf = std::make_unique<char[]>(nfas.length() * 11 + 1);
     auto id_tag = id_tag_buf.get();
     char* p = id_tag;
@@ -284,8 +284,8 @@ DFA_State* DFA_State_Cache::Lookup(const NFA_state_list& nfas, DigestStr* digest
 
     *p++ = '\0';
 
-    // We use the short MD5 instead of the full string for the
-    // HashKey because the data is copied into the key.
+
+
     hash128_t hash;
     KeyedHash::Hash128(id_tag, p - id_tag, &hash);
     *digest = DigestStr(reinterpret_cast<const char*>(hash), 16);
@@ -343,7 +343,7 @@ DFA_Machine::DFA_Machine(NFA_Machine* n, EquivClass* arg_ec) {
         StateSetToDFA_State(state_set, start_state, ec);
     }
     else {
-        start_state = nullptr; // Jam
+        start_state = nullptr;
         delete ns;
     }
 }
@@ -395,4 +395,4 @@ int DFA_Machine::Rep(int sym) {
     return -1;
 }
 
-} // namespace zeek::detail
+}

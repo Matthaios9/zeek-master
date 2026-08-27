@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_embedded.h"
 
@@ -40,11 +40,11 @@ void EmbeddedCode::GenCode(Output* out, Env* env) {
         current_segment_ = "";
     }
 
-    // TODO: return to the generated file after embedded code
-    // out->print("#line %d \"%s\"\n", line_num, filename.c_str());
 
-    // Allow use of RValue for undefined ID, in which case the
-    // ID's name is used as its RValue
+
+
+
+
     env->set_allow_undefined_id(true);
 
     foreach (i, EmbeddedCodeSegmentList, segments_) {

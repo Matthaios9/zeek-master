@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_output_h
 #define pac_output_h
@@ -43,4 +43,4 @@ protected:
     int indent_;
 };
 
-#endif /* pac_output_h */
+#endif

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -19,4 +19,4 @@ private:
     bool HandleInnerPacket(size_t len, const uint8_t* data, Packet* packet) const;
 };
 
-} // namespace zeek::packet_analysis::IEEE802_11
+}

@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Driver (and other high-level) methods for ZAM compilation.
+
+
 
 #include "zeek/Frame.h"
 #include "zeek/Reporter.h"
@@ -69,7 +69,7 @@ void ZAMCompiler::InitArgs() {
         if ( uds && uds->HasID(a) )
             LoadParam(a);
         else {
-            // printf("param %s unused\n", obj_desc(arg_id.get()));
+
         }
     }
 
@@ -82,7 +82,7 @@ void ZAMCompiler::InitCaptures() {
 }
 
 void ZAMCompiler::InitLocals() {
-    // Assign slots for locals (which includes temporaries).
+
     for ( auto& l : pf->Locals() ) {
         if ( IsCapture(l) )
             continue;
@@ -90,11 +90,11 @@ void ZAMCompiler::InitLocals() {
         if ( pf->WhenLocals().contains(l) )
             continue;
 
-        // Don't add locals that were already added because they're
-        // parameters.
-        //
-        // Don't worry about unused variables, those will get
-        // removed during low-level ZAM optimization.
+
+
+
+
+
         if ( ! HasFrameSlot(l) )
             (void)AddToFrame(l);
     }
@@ -102,8 +102,8 @@ void ZAMCompiler::InitLocals() {
 
 void ZAMCompiler::TrackMemoryManagement() {
     for ( auto& slot : frame_layout1 ) {
-        // Look for locals with values of types for which
-        // we do explicit memory management on (re)assignment.
+
+
         auto t = slot.first->GetType();
         if ( ZVal::IsManagedType(t) )
             managed_slotsI.push_back(slot.second);
@@ -130,13 +130,13 @@ StmtPtr ZAMCompiler::CompileBody() {
     if ( ! catches.empty() )
         reporter->InternalError("untargeted inline return");
 
-    // Make sure we have a (pseudo-)instruction at the end so we
-    // can use it as a branch label.
+
+
     if ( ! pending_inst )
         pending_inst = new ZInstI();
 
-    // Concretize instruction numbers in inst1 so we can
-    // easily move through the code.
+
+
     for ( auto i = 0U; i < insts1.size(); ++i )
         insts1[i]->inst_num = i;
 
@@ -147,15 +147,15 @@ StmtPtr ZAMCompiler::CompileBody() {
 
     AdjustBranches();
 
-    // Construct the final program with the dead code eliminated
-    // and branches resolved.
 
-    // Make sure we don't include the empty pending-instruction, if any.
+
+
+
     if ( pending_inst )
         pending_inst->live = false;
 
-    // Maps inst1 instructions to where they are in inst2.
-    // Dead instructions map to -1.
+
+
     std::vector<int> inst1_to_inst2;
 
     for ( auto& i1 : insts1 ) {
@@ -167,14 +167,14 @@ StmtPtr ZAMCompiler::CompileBody() {
             inst1_to_inst2.push_back(-1);
     }
 
-    // Re-concretize instruction numbers, and concretize GoTo's.
+
     for ( auto i = 0U; i < insts2.size(); ++i )
         insts2[i]->inst_num = i;
 
     RetargetBranches();
 
-    // If we have remapped frame denizens, update them.  If not,
-    // create them.
+
+
     if ( ! shared_frame_denizens.empty() )
         RemapFrameDenizens(inst1_to_inst2);
 
@@ -194,8 +194,8 @@ StmtPtr ZAMCompiler::CompileBody() {
     zb->SetInsts(insts2);
     zb->SetLocationInfo(body->GetLocationInfo());
 
-    // Could erase insts1 here to recover memory, but it's handy
-    // for debugging.
+
+
 
     return zb;
 }
@@ -205,7 +205,7 @@ void ZAMCompiler::ResolveHookBreaks() {
         ASSERT(breaks.size() == 1);
 
         if ( func->Flavor() == FUNC_FLAVOR_HOOK ) {
-            // Rewrite the breaks.
+
             for ( auto& b : breaks[0] ) {
                 auto& i = insts1[b.stmt_num];
                 auto aux = i->aux;
@@ -220,7 +220,7 @@ void ZAMCompiler::ResolveHookBreaks() {
 }
 
 void ZAMCompiler::ComputeLoopLevels() {
-    // Compute which instructions are inside loops.
+
     for ( auto i = 0; i < static_cast<int>(insts1.size()); ++i ) {
         auto inst = insts1[i];
 
@@ -232,12 +232,12 @@ void ZAMCompiler::ComputeLoopLevels() {
             auto j = t->inst_num;
 
             if ( ! t->loop_start ) {
-                // Loop is newly discovered.
+
                 t->loop_start = true;
             }
             else {
-                // We're extending an existing loop.  Find
-                // its current end.
+
+
                 auto depth = t->loop_depth;
                 while ( j < i && insts1[j]->loop_depth >= depth )
                     ++j;
@@ -245,8 +245,8 @@ void ZAMCompiler::ComputeLoopLevels() {
                 ASSERT(insts1[j]->loop_depth == depth - 1);
             }
 
-            // Run from j's current position to i, bumping
-            // the loop depth.
+
+
             while ( j <= i ) {
                 ++insts1[j]->loop_depth;
                 ++j;
@@ -256,7 +256,7 @@ void ZAMCompiler::ComputeLoopLevels() {
 }
 
 void ZAMCompiler::AdjustBranches() {
-    // Move branches to dead code forward to their successor live code.
+
     for ( auto& inst : insts1 ) {
         if ( ! inst->live )
             continue;
@@ -265,7 +265,7 @@ void ZAMCompiler::AdjustBranches() {
             inst->target = FindLiveTarget(t);
     }
 
-    // Fix up the implicit branches in switches, too.
+
     AdjustSwitchTables(int_casesI);
     AdjustSwitchTables(uint_casesI);
     AdjustSwitchTables(double_casesI);
@@ -289,12 +289,12 @@ void ZAMCompiler::RetargetBranches() {
 void ZAMCompiler::RemapFrameDenizens(const std::vector<int>& inst1_to_inst2) {
     for ( auto& info : shared_frame_denizens ) {
         for ( auto& start : info.id_start ) {
-            // It can happen that the identifier's
-            // origination instruction was optimized
-            // away, if due to slot sharing it's of
-            // the form "slotX = slotX".  In that
-            // case, look forward for the next viable
-            // instruction.
+
+
+
+
+
+
             while ( start < insts1.size() && inst1_to_inst2[start] == -1 )
                 ++start;
 
@@ -313,9 +313,9 @@ void ZAMCompiler::CreateSharedFrameDenizens() {
         info.id_start.push_back(0);
         info.scope_end = insts2.size();
 
-        // The following doesn't matter since the value
-        // is only used during compiling, not during
-        // execution.
+
+
+
         info.is_managed = false;
 
         shared_frame_denizens_final.push_back(std::move(info));
@@ -323,7 +323,7 @@ void ZAMCompiler::CreateSharedFrameDenizens() {
 }
 
 void ZAMCompiler::ConcretizeSwitches() {
-    // Create concretized versions of any case tables.
+
     ConcretizeSwitchTables(int_casesI, int_cases);
     ConcretizeSwitchTables(uint_casesI, uint_cases);
     ConcretizeSwitchTables(double_casesI, double_cases);
@@ -415,7 +415,7 @@ void ZAMCompiler::Dump() {
     auto remappings = remapped_frame ? &shared_frame_denizens_final : nullptr;
     for ( auto i = 0U; i < insts2.size(); ++i ) {
         auto& inst = insts2[i];
-        // printf("%s:%d\n", inst->loc->filename, inst->loc->first_line);
+
         printf("%d: ", i);
         inst->Dump(stdout, &frame_denizens, remappings);
     }
@@ -449,8 +449,8 @@ void ZAMCompiler::DumpInsts1(const FrameReMap* remappings) {
         auto& inst = insts1[i];
 
         if ( inst->target )
-            // To get meaningful branch information in the dump,
-            // we need to concretize the branch slots
+
+
             ConcretizeBranch(inst, inst->target, inst->target_slot);
 
         std::string liveness;
@@ -470,4 +470,4 @@ void ZAMCompiler::DumpInsts1(const FrameReMap* remappings) {
     }
 }
 
-} // namespace zeek::detail
+}

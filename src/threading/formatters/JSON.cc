@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/threading/formatters/JSON.h"
 
@@ -8,7 +8,7 @@
 #define __STDC_LIMIT_MACROS
 #endif
 
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+
 #define RAPIDJSON_HAS_STDSTRING 1
 
 #include <rapidjson/internal/ieee754.h>
@@ -23,10 +23,10 @@
 
 namespace {
 
-// Windows gmtime_r (via gmtime_s) rejects negative time_t values.
-// Work around this by adding full 400-year Gregorian cycles to make
-// the value non-negative, converting, then adjusting the year back.
-// 400 Gregorian years = 146097 days (accounts for leap-year rules).
+
+
+
+
 bool safe_gmtime(time_t ts, struct tm* result) {
     if ( gmtime_r(&ts, result) )
         return true;
@@ -56,7 +56,7 @@ bool safe_gmtime(time_t ts, struct tm* result) {
 #endif
 }
 
-} // namespace
+}
 
 namespace zeek::threading::formatter {
 
@@ -65,7 +65,7 @@ JSON::JSON(MsgThread* t, TimeFormat tf, bool arg_include_unset_fields, StringEsc
       timestamps(tf),
       include_unset_fields(arg_include_unset_fields),
       string_escape_policy(string_escape_policy) {
-    // This is for the TSV escaping policy.
+
     desc.EnableUTF8();
     desc.EnableEscaping();
 }
@@ -148,8 +148,8 @@ void JSON::BuildJSON(zeek::json::detail::NullDoubleWriter& writer, Value* val, c
                 if ( ! safe_gmtime(the_time, &t) || ! strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%S", &t) ) {
                     GetThread()->Error(
                         GetThread()->Fmt("json formatter: failure getting time: (%lf)", val->val.double_val));
-                    // This was a failure, doesn't really matter what gets put here
-                    // but it should probably stand out...
+
+
                     writer.String("2000-01-01T00:00:00.000000");
                 }
                 else {
@@ -168,18 +168,18 @@ void JSON::BuildJSON(zeek::json::detail::NullDoubleWriter& writer, Value* val, c
                 writer.Double(val->val.double_val);
 
             else if ( timestamps == TS_MILLIS ) {
-                // ElasticSearch uses milliseconds for timestamps
+
                 writer.Int64(static_cast<int64_t>(val->val.double_val * 1000));
             }
             else if ( timestamps == TS_MILLIS_UNSIGNED ) {
-                // Without the cast through int64_t the resulting
-                // uint64_t value is zero for negative timestamps
-                // on arm64. This is UB territory, a negative value
-                // cannot be represented in uint64_t and so the
-                // compiler is free to do whatever. Prevent this by
-                // casting through an int64_t.
-                //
-                // https://stackoverflow.com/a/55057221
+
+
+
+
+
+
+
+
                 uint64_t v = static_cast<uint64_t>(static_cast<int64_t>(val->val.double_val * 1000));
                 writer.Uint64(v);
             }
@@ -245,4 +245,4 @@ void JSON::BuildJSON(zeek::json::detail::NullDoubleWriter& writer, Value* val, c
     }
 }
 
-} // namespace zeek::threading::formatter
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/telemetry/ProcessStats.h"
 
@@ -17,7 +17,7 @@ namespace zeek::telemetry::detail {
 process_stats get_process_stats() {
     process_stats result;
 
-    // Fetch memory usage.
+
     {
         mach_task_basic_info info;
         mach_msg_type_number_t count = MACH_TASK_BASIC_INFO_COUNT;
@@ -27,26 +27,26 @@ process_stats get_process_stats() {
             result.vms = static_cast<int64_t>(info.virtual_size);
         }
     }
-    // Fetch CPU time.
+
     {
         task_thread_times_info info;
         mach_msg_type_number_t count = TASK_THREAD_TIMES_INFO_COUNT;
         if ( task_info(mach_task_self(), TASK_THREAD_TIMES_INFO, reinterpret_cast<task_info_t>(&info), &count) ==
              KERN_SUCCESS ) {
-            // Round to milliseconds.
+
             result.cpu_user += info.user_time.seconds;
             result.cpu_user += ceil(info.user_time.microseconds / 1000.0) / 1000.0;
             result.cpu_system += info.system_time.seconds;
             result.cpu_system += ceil(info.system_time.microseconds / 1000.0) / 1000.0;
         }
     }
-    // Fetch open file handles.
+
     {
-        // proc_pidinfo is undocumented, but this is what lsof also uses.
+
         auto suggested_buf_size = proc_pidinfo(getpid(), PROC_PIDLISTFDS, 0, nullptr, 0);
         if ( suggested_buf_size > 0 ) {
             auto buf_size = suggested_buf_size;
-            auto buf = malloc(buf_size); // TODO: could be thread-local
+            auto buf = malloc(buf_size);
             auto res = proc_pidinfo(getpid(), PROC_PIDLISTFDS, 0, buf, buf_size);
             free(buf);
             if ( res > 0 )
@@ -57,7 +57,7 @@ process_stats get_process_stats() {
     return result;
 }
 
-} // namespace zeek::telemetry::detail
+}
 
 #elif defined(HAVE_LINUX)
 
@@ -86,11 +86,11 @@ int64_t count_entries_in_directory(const char* path) {
     return result;
 }
 
-/// Caches the result from a `sysconf` call in a cache variable to avoid
-/// frequent syscalls. Sets `cache_var` to -1 in case of an error. Initially,
-/// `cache_var` must be 0 and we assume a successful syscall would always return
-/// some value > 0. If `cache_var` is > 0 then this function simply returns the
-/// cached value directly.
+
+
+
+
+
 bool load_system_setting(std::atomic<long>& cache_var, long& var, int name, [[maybe_unused]] const char* pretty_name) {
     var = cache_var.load();
     switch ( var ) {
@@ -128,30 +128,30 @@ process_stats get_process_stats() {
         unsigned long rss_pages = 0;
 
         auto rd = fscanf(f,
-                         "%*d " //  1. PID
-                         "%*s " //  2. Executable
-                         "%*c " //  3. State
-                         "%*d " //  4. Parent PID
-                         "%*d " //  5. Process group ID
-                         "%*d " //  6. Session ID
-                         "%*d " //  7. Controlling terminal
-                         "%*d " //  8. Foreground process group ID
-                         "%*u " //  9. Flags
-                         "%*u " // 10. Number of minor faults
-                         "%*u " // 11. Number of minor faults of waited-for children
-                         "%*u " // 12. Number of major faults
-                         "%*u " // 13. Number of major faults of waited-for children
-                         "%lu " // 14. CPU user time in ticks
-                         "%lu " // 15. CPU kernel time in ticks
-                         "%*d " // 16. CPU user time of waited-for children
-                         "%*d " // 17. CPU kernel time of waited-for children
-                         "%*d " // 18. Priority
-                         "%*d " // 19. Nice value
-                         "%*d " // 20. Num threads
-                         "%*d " // 21. Obsolete since 2.6
-                         "%*u " // 22. Time the process started after system boot
-                         "%lu " // 23. Virtual memory size in bytes
-                         "%lu", // 24. Resident set size in pages
+                         "%*d "
+                         "%*s "
+                         "%*c "
+                         "%*d "
+                         "%*d "
+                         "%*d "
+                         "%*d "
+                         "%*d "
+                         "%*u "
+                         "%*u "
+                         "%*u "
+                         "%*u "
+                         "%*u "
+                         "%lu "
+                         "%lu "
+                         "%*d "
+                         "%*d "
+                         "%*d "
+                         "%*d "
+                         "%*d "
+                         "%*d "
+                         "%*u "
+                         "%lu "
+                         "%lu",
                          &utime_ticks, &stime_ticks, &vmsize_bytes, &rss_pages);
         fclose(f);
 
@@ -169,13 +169,13 @@ process_stats get_process_stats() {
     return result;
 }
 
-} // namespace zeek::telemetry::detail
+}
 
 #elif defined(__FreeBSD__)
 
-// Force these includes into a specific order so that the libraries can find
-// all of the required types.
-// clang-format off
+
+
+
 #include <sys/types.h>
 #include <sys/cdefs.h>
 #include <sys/queue.h>
@@ -184,7 +184,7 @@ process_stats get_process_stats() {
 #include <unistd.h>
 #include <libprocstat.h>
 #include <libutil.h>
-// clang-format on
+
 
 namespace zeek::telemetry::detail {
 
@@ -204,8 +204,8 @@ process_stats get_process_stats() {
         struct filestat_list* files = procstat_getfiles(procstat, kp, 0);
         struct filestat* file = nullptr;
 
-        // Use one of the looping methods from sys/queue.h instead of
-        // implementing this by hand.
+
+
         STAILQ_FOREACH(file, files, next)
         result.fds++;
 
@@ -217,16 +217,16 @@ process_stats get_process_stats() {
     return result;
 }
 
-} // namespace zeek::telemetry::detail
+}
 
 #elif defined(_WIN32)
 
-// Force these includes into a specific order since psapi.h depends on
-// types defined in windows.h.
-// clang-format off
+
+
+
 #include <windows.h>
 #include <psapi.h>
-// clang-format on
+
 
 namespace zeek::telemetry::detail {
 
@@ -235,7 +235,7 @@ process_stats get_process_stats() {
 
     auto proc = GetCurrentProcess();
 
-    // Fetch memory usage.
+
     {
         PROCESS_MEMORY_COUNTERS pmc;
         if ( GetProcessMemoryInfo(proc, &pmc, sizeof(pmc)) ) {
@@ -244,11 +244,11 @@ process_stats get_process_stats() {
         }
     }
 
-    // Fetch CPU time.
+
     {
         FILETIME creation, exit, kernel, user;
         if ( GetProcessTimes(proc, &creation, &exit, &kernel, &user) ) {
-            // FILETIME is in 100-nanosecond intervals.
+
             auto ft_to_seconds = [](const FILETIME& ft) -> double {
                 ULARGE_INTEGER li;
                 li.LowPart = ft.dwLowDateTime;
@@ -261,7 +261,7 @@ process_stats get_process_stats() {
         }
     }
 
-    // Fetch open handles (Windows equivalent of file descriptors).
+
     {
         DWORD handle_count = 0;
         if ( GetProcessHandleCount(proc, &handle_count) )
@@ -271,6 +271,6 @@ process_stats get_process_stats() {
     return result;
 }
 
-} // namespace zeek::telemetry::detail
+}
 
 #endif

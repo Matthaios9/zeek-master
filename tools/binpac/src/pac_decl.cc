@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_decl.h"
 
@@ -115,7 +115,7 @@ HelperDecl::~HelperDecl() {
 }
 
 void HelperDecl::Prepare() {
-    // Do nothing
+
 }
 
 void HelperDecl::GenExternDeclaration(Output* out_h) {
@@ -151,7 +151,7 @@ void HelperDecl::GenCode(Output* out_h, Output* out_cc) {
     else if ( helper_type_ == CODE )
         code_->GenCode(out_cc, env);
     else if ( helper_type_ == EXTERN )
-        ; // do nothing
+        ;
     else
         ASSERT(0);
 }

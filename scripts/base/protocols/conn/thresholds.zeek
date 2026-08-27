@@ -1,111 +1,111 @@
-##! Implements a generic API to throw events when a connection crosses a
-##! fixed threshold of bytes or packets.
+
+
 
 module ConnThreshold;
 
 export {
 
 	type Thresholds: record {
-		orig_byte: set[count] &default=count_set(); ##< current originator byte thresholds we watch for
-		resp_byte: set[count] &default=count_set(); ##< current responder byte thresholds we watch for
-		orig_packet: set[count] &default=count_set(); ##< current originator packet thresholds we watch for
-		resp_packet: set[count] &default=count_set(); ##< current responder packet thresholds we watch for
-		duration: set[interval] &default=interval_set(); ##< current duration thresholds we watch for
+		orig_byte: set[count] &default=count_set();
+		resp_byte: set[count] &default=count_set();
+		orig_packet: set[count] &default=count_set();
+		resp_packet: set[count] &default=count_set();
+		duration: set[interval] &default=interval_set();
 	};
 
-	## Sets a byte threshold for connection sizes, adding it to potentially already existing thresholds.
-	## conn_bytes_threshold_crossed will be raised for each set threshold.
-	##
-	## cid: The connection id.
-	##
-	## threshold: Threshold in bytes.
-	##
-	## is_orig: If true, threshold is set for bytes from originator, otherwise for bytes from responder.
-	##
-	## Returns: T on success, F on failure.
+
+
+
+
+
+
+
+
+
+
 	global set_bytes_threshold: function(c: connection, threshold: count, is_orig: bool): bool;
 
-	## Sets a packet threshold for connection sizes, adding it to potentially already existing thresholds.
-	## conn_packets_threshold_crossed will be raised for each set threshold.
-	##
-	## cid: The connection id.
-	##
-	## threshold: Threshold in packets.
-	##
-	## is_orig: If true, threshold is set for packets from originator, otherwise for packets from responder.
-	##
-	## Returns: T on success, F on failure.
+
+
+
+
+
+
+
+
+
+
 	global set_packets_threshold: function(c: connection, threshold: count, is_orig: bool): bool;
 
-	## Sets a duration threshold for a connection, adding it to potentially already existing thresholds.
-	## conn_duration_threshold_crossed will be raised for each set threshold.
-	##
-	## cid: The connection id.
-	##
-	## threshold: Threshold in seconds.
-	##
-	## Returns: T on success, F on failure.
+
+
+
+
+
+
+
+
 	global set_duration_threshold: function(c: connection, threshold: interval): bool;
 
-	## Deletes a byte threshold for connection sizes.
-	##
-	## cid: The connection id.
-	##
-	## threshold: Threshold in bytes to remove.
-	##
-	## is_orig: If true, threshold is removed for packets from originator, otherwise for packets from responder.
-	##
-	## Returns: T on success, F on failure.
+
+
+
+
+
+
+
+
+
 	global delete_bytes_threshold: function(c: connection, threshold: count, is_orig: bool): bool;
 
-	## Deletes a packet threshold for connection sizes.
-	##
-	## cid: The connection id.
-	##
-	## threshold: Threshold in packets.
-	##
-	## is_orig: If true, threshold is removed for packets from originator, otherwise for packets from responder.
-	##
-	## Returns: T on success, F on failure.
+
+
+
+
+
+
+
+
+
 	global delete_packets_threshold: function(c: connection, threshold: count, is_orig: bool): bool;
 
-	## Deletes a duration threshold for a connection.
-	##
-	## cid: The connection id.
-	##
-	## threshold: Threshold in packets.
-	##
-	## Returns: T on success, F on failure.
+
+
+
+
+
+
+
 	global delete_duration_threshold: function(c: connection, threshold: interval): bool;
 
-	## Generated for a connection that crossed a set byte threshold
-	##
-	## c: the connection
-	##
-	## threshold: the threshold that was set
-	##
-	## is_orig: True if the threshold was crossed by the originator of the connection
+
+
+
+
+
+
+
 	global bytes_threshold_crossed: event(c: connection, threshold: count, is_orig: bool);
 
-	## Generated for a connection that crossed a set byte threshold
-	##
-	## c: the connection
-	##
-	## threshold: the threshold that was set
-	##
-	## is_orig: True if the threshold was crossed by the originator of the connection
+
+
+
+
+
+
+
 	global packets_threshold_crossed: event(c: connection, threshold: count, is_orig: bool);
 
-	## Generated for a connection that crossed a set duration threshold. Note that this event is
-	## not raised at the exact moment that a duration threshold is crossed; instead it is raised
-	## when the next packet is seen after the threshold has been crossed. On a connection that is
-	## idle, this can be raised significantly later.
-	##
-	## c: the connection
-	##
-	## threshold: the threshold that was set
-	##
-	## is_orig: True if the threshold was crossed by the originator of the connection
+
+
+
+
+
+
+
+
+
+
 	global duration_threshold_crossed: event(c: connection, threshold: interval, is_orig: bool);
 }
 
@@ -217,7 +217,7 @@ function set_current_threshold(c: connection, ttype: threshold_type, is_orig: bo
 		return set_current_conn_packets_threshold(c$id, t, T);
 	else if ( ttype == PACKETS && ! is_orig )
 		return set_current_conn_packets_threshold(c$id, t, F);
-	else # ttype == DURATION
+	else
 		return set_current_conn_duration_threshold(c$id, td);
 	}
 

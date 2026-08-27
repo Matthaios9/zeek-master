@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Structures and methods for implementing watches in the Zeek debugger.
+
+
 
 #pragma once
 
@@ -8,7 +8,7 @@ namespace zeek::detail {
 
 class Expr;
 
-// Automatic displays: display these at each stoppage.
+
 class DbgDisplay {
 public:
     DbgDisplay(Expr* expr_to_display);
@@ -27,4 +27,4 @@ protected:
     Expr* expression;
 };
 
-} // namespace zeek::detail
+}

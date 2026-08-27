@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Obj.h"
 
@@ -48,7 +48,7 @@ bool Location::operator==(const Location& l) const {
         return false;
 }
 
-} // namespace detail
+}
 
 int Obj::suppress_errors = 0;
 
@@ -129,13 +129,13 @@ bool Obj::SetLocationInfo(const detail::Location* start, const detail::Location*
         return false;
 
     if ( location && (start == &detail::no_location || end == &detail::no_location) )
-        // We already have a better location, so don't use this one.
+
         return true;
 
     auto new_location = new detail::Location(start->FileName(), start->FirstLine(), end->LastLine());
 
-    // Don't delete this until we've constructed the new location, in case
-    // "start" or "end" are our own location.
+
+
     delete location;
     location = new_location;
 
@@ -190,4 +190,4 @@ void bad_ref(int type) {
 
 void obj_delete_func(void* v) { Unref(reinterpret_cast<Obj*>(v)); }
 
-} // namespace zeek
+}

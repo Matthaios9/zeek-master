@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/dce-rpc/DCE_RPC.h"
 
@@ -37,8 +37,8 @@ void DCE_RPC_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
     TCP_ApplicationAnalyzer::DeliverStream(len, data, orig);
 
     if ( had_gap )
-        // If only one side had a content gap, we could still try to
-        // deliver data to the other side if the script layer can handle this.
+
+
         return;
 
     try {
@@ -48,4 +48,4 @@ void DCE_RPC_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
     }
 }
 
-} // namespace zeek::analyzer::dce_rpc
+}

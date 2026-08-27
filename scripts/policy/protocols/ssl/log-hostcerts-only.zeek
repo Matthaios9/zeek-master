@@ -1,5 +1,5 @@
-##! When this script is loaded, only the host certificates (client and server)
-##! will be logged to x509.log. Logging of all other certificates will be suppressed.
+
+
 
 @load base/protocols/ssl
 @load base/files/x509

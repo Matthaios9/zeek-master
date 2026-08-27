@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include <sys/stat.h>
 #include <cerrno>
@@ -52,7 +52,7 @@ void CPPCompile::Compile(bool report_uncompilable) {
         if ( had_to_skip )
             reporter->FatalError("aborting standalone compilation to C++ due to having to skip some functions");
 
-        // Used to find modules only present in the analyzed code.
+
         unordered_set<string> analyzed_modules;
         unordered_set<string> non_analyzed_modules;
 
@@ -68,18 +68,18 @@ void CPPCompile::Compile(bool report_uncompilable) {
 
             if ( ! compiled_global ) {
                 if ( g->GetLocationInfo()->FirstLine() != 0 )
-                    // Make sure we're dealing with a global actually used
-                    // elsewhere (for example, weed out some spicy events
-                    // that don't have matching Zeek script).
+
+
+
                     non_analyzed_modules.insert(g->ModuleName());
                 continue;
             }
 
             analyzed_modules.insert(g->ModuleName());
 
-            // We will need to generate this global's definition, including
-            // its initialization. Make sure we're tracking it and its
-            // associated types, including those required for initializing.
+
+
+
             auto& t = g->GetType();
             (void)pfs->HashType(t);
             rep_types.insert(TypeRep(t));
@@ -98,10 +98,10 @@ void CPPCompile::Compile(bool report_uncompilable) {
                 for ( auto& ag : pf->AllGlobals() )
                     all_accessed_globals.insert(ag);
                 for ( auto& l : pf->Lambdas() )
-                    // We might not have profiled this previously if none
-                    // of the functions refer to the global. This can
-                    // happen for example for a global "const" table that's
-                    // made available for external lookup use.
+
+
+
+
                     pfs->ProfileLambda(l);
             }
         }
@@ -135,7 +135,7 @@ void CPPCompile::Compile(bool report_uncompilable) {
 
     GenProlog();
 
-    // Track all of the types we'll be using.
+
     for ( const auto& t : rep_types ) {
         TypePtr tp{NewRef{}, const_cast<Type*>(t)};
         types.AddKey(tp, pfs->HashType(t));
@@ -169,23 +169,23 @@ void CPPCompile::Compile(bool report_uncompilable) {
         (void)RegisterAttr(attr_p);
     }
 
-    // The scaffolding is now in place to go ahead and generate
-    // the functions & lambdas.  First declare them ...
+
+
     for ( const auto& func : funcs )
         if ( ! func.ShouldSkip() )
             DeclareFunc(func);
 
-    // We track lambdas by their internal names, and associate those
-    // with their AST bodies.  Two different LambdaExpr's can wind up
-    // referring to the same underlying lambda if the bodies happen to
-    // be identical.  In that case, we don't want to generate the lambda
-    // twice, but we do want to map the second one to the same body name.
+
+
+
+
+
     unordered_map<string, const Stmt*> lambda_ASTs;
     for ( const auto& l : accessed_lambdas ) {
         const auto& n = l->Name();
         const auto body = l->Ingredients()->Body().get();
         if ( lambda_ASTs.contains(n) )
-            // Reuse previous body.
+
             body_names[body] = body_names[lambda_ASTs[n]];
         else {
             DeclareLambda(l, pfs->ExprProf(l).get());
@@ -195,7 +195,7 @@ void CPPCompile::Compile(bool report_uncompilable) {
 
     NL();
 
-    // ... and now generate their bodies.
+
     for ( const auto& func : funcs )
         if ( ! func.ShouldSkip() )
             CompileFunc(func);
@@ -219,8 +219,8 @@ void CPPCompile::Compile(bool report_uncompilable) {
     Emit("};");
 
     if ( standalone )
-        // Now that we've identified all of the record fields we might have
-        // to generate, make sure we track their attributes.
+
+
         for ( const auto& fd : field_decls ) {
             auto td = fd.second;
             if ( obj_matches_opt_files(td->type) == AnalyzeDecision::SHOULD ) {
@@ -295,7 +295,7 @@ bool CPPCompile::AnalyzeFuncBody(FuncInfo& fi, unordered_set<string>& filenames_
     accessed_lambdas.insert(pf_lambdas.begin(), pf_lambdas.end());
 
     if ( is_lambda(f) || is_when_lambda(f) ) {
-        // We deal with these separately.
+
         fi.SetSkip(true);
         return true;
     }
@@ -303,7 +303,7 @@ bool CPPCompile::AnalyzeFuncBody(FuncInfo& fi, unordered_set<string>& filenames_
     const char* reason;
     if ( IsCompilable(fi, &reason) ) {
         if ( f->Flavor() == FUNC_FLAVOR_FUNCTION )
-            // Note this as a callable compiled function.
+
             compilable_funcs.insert(BodyName(fi));
     }
     else {
@@ -323,8 +323,8 @@ bool CPPCompile::AnalyzeFuncBody(FuncInfo& fi, unordered_set<string>& filenames_
 void CPPCompile::GenProlog() {
     Emit("#include \"zeek/script_opt/CPP/Runtime.h\"\n");
 
-    // Get the working directory for annotating the output to help
-    // with debugging.
+
+
     std::error_code ec;
     auto cwd = std::filesystem::current_path(ec);
     if ( ec )
@@ -334,13 +334,13 @@ void CPPCompile::GenProlog() {
     Emit("namespace zeek::detail { //\n");
     Emit("namespace CPP_%s { // %s\n", Fmt(total_hash), working_dir);
 
-    // The following might-or-might-not wind up being populated/used.
+
     Emit("std::vector<zeek_int_t> field_mapping;");
     Emit("std::vector<zeek_int_t> enum_mapping;");
 
-    // These are "extern" so we can define them *after* generating the
-    // initialization logic, since that logic might result in additions
-    // to the mappings. They aren't used outside of this compilation.
+
+
+
     Emit("extern std::vector<CPP_FieldMapping> CPP__field_mappings__;");
     Emit("extern std::vector<CPP_EnumMapping> CPP__enum_mappings__;");
 
@@ -407,7 +407,7 @@ shared_ptr<CPP_InitsInfo> CPPCompile::RegisterInitInfo(const char* tag, const ch
 }
 
 void CPPCompile::RegisterCompiledBody(const string& f) {
-    // Build up an initializer of the events relevant to the function.
+
     string events;
     auto be = body_events.find(f);
     if ( be != body_events.end() )
@@ -475,8 +475,8 @@ void CPPCompile::GenEpilog() {
     NL();
     GenFinishInit();
 
-    // We had to defer these because the initializations can wind up adding
-    // elements to them.
+
+
     NL();
     InitializeEnumMappings();
     NL();
@@ -631,8 +631,8 @@ bool CPPCompile::IsCompilable(const FuncInfo& func, const char** reason) {
         return false;
 
     if ( reason )
-        // Indicate that there's no fundamental reason it can't be
-        // compiled.
+
+
         *reason = nullptr;
 
     if ( func.ShouldSkip() )
@@ -641,4 +641,4 @@ bool CPPCompile::IsCompilable(const FuncInfo& func, const char** reason) {
     return true;
 }
 
-} // namespace zeek::detail
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/file_analysis/analyzer/x509/X509Common.h"
 
@@ -41,13 +41,13 @@ double X509Common::GetTimeFromAsn1(const ASN1_TIME* atime, file_analysis::File* 
         }
 
         if ( pString[remaining - 1] != 'Z' ) {
-            // not valid according to RFC 2459 4.1.2.5.1
+
             EmitWeird("x509_utc_format", f);
             return 0;
         }
 
-        // year is first two digits in YY format. Buffer expects YYYY format.
-        if ( pString[0] < '5' ) // RFC 2459 4.1.2.5.1
+
+        if ( pString[0] < '5' )
         {
             *(pBuffer++) = '2';
             *(pBuffer++) = '0';
@@ -63,9 +63,9 @@ double X509Common::GetTimeFromAsn1(const ASN1_TIME* atime, file_analysis::File* 
         remaining -= 10;
     }
     else if ( ASN1_STRING_type(atime) == V_ASN1_GENERALIZEDTIME ) {
-        // generalized time. We apparently ignore the YYYYMMDDHH case
-        // for now and assume we always have minutes and seconds.
-        // This should be ok because it is specified as a requirement in RFC 2459 4.1.2.5.2
+
+
+
 
         if ( remaining < 12 || remaining > 23 ) {
             EmitWeird("x509_gen_time_length", f);
@@ -93,7 +93,7 @@ double X509Common::GetTimeFromAsn1(const ASN1_TIME* atime, file_analysis::File* 
 
         remaining -= 2;
 
-        // Skip any fractional seconds...
+
         if ( (remaining > 0) && (*pString == '.') ) {
             pString++;
             remaining--;
@@ -149,13 +149,13 @@ double X509Common::GetTimeFromAsn1(const ASN1_TIME* atime, file_analysis::File* 
 
     lTime.tm_wday = 0;
     lTime.tm_yday = 0;
-    lTime.tm_isdst = 0; // No DST adjustment requested
+    lTime.tm_isdst = 0;
 
     lResult = timegm(&lTime);
 
     if ( lResult ) {
         if ( lTime.tm_isdst != 0 )
-            lResult -= 3600; // mktime may adjust for DST  (OS dependent)
+            lResult -= 3600;
 
         lResult += lSecondsFromUTC;
     }
@@ -167,14 +167,14 @@ double X509Common::GetTimeFromAsn1(const ASN1_TIME* atime, file_analysis::File* 
 }
 
 void X509Common::ParseSignedCertificateTimestamps(openssl_x509_ext_t* ext) {
-    // Ok, signed certificate timestamps are a bit of an odd case out; we don't
-    // want to use the (basically nonexistent) OpenSSL functionality to parse them.
-    // Instead we have our own, self-written binpac parser to parse just them,
-    // which we will initialize here and tear down immediately again.
+
+
+
+
 
     auto* ext_val = X509_EXTENSION_get_data(ext);
-    // the octet string of the extension contains the octet string which in turn
-    // contains the SCT. Obviously.
+
+
 
     int ext_val_len = ASN1_STRING_length(ext_val);
     unsigned char* ext_val_copy = reinterpret_cast<unsigned char*>(OPENSSL_malloc(ext_val_len));
@@ -196,7 +196,7 @@ void X509Common::ParseSignedCertificateTimestamps(openssl_x509_ext_t* ext) {
         const unsigned char* inner_data = ASN1_STRING_get0_data(inner);
         interp->NewData(inner_data, inner_data + ASN1_STRING_length(inner));
     } catch ( const binpac::Exception& e ) {
-        // throw a warning or sth
+
         reporter->Error("X509::ParseSignedCertificateTimestamps could not parse SCT");
     }
 
@@ -236,7 +236,7 @@ void X509Common::ParseExtension(openssl_x509_ext_t* ex, const EventHandlerPtr& h
     auto ext_val = GetExtensionFromBIO(bio, GetFile());
 
     if ( ! h ) {
-        // let individual analyzers parse more.
+
         ParseExtensionsSpecific(ex, global, ext_asn, oid);
         return;
     }
@@ -254,19 +254,19 @@ void X509Common::ParseExtension(openssl_x509_ext_t* ex, const EventHandlerPtr& h
     pX509Ext->Assign(3, critical);
     pX509Ext->Assign(4, ext_val);
 
-    // send off generic extension event
-    //
-    // and then look if we have a specialized event for the extension we just
-    // parsed. And if we have it, we send the specialized event on top of the
-    // generic event that we just had. I know, that is... kind of not nice,
-    // but I am not sure if there is a better way to do it...
+
+
+
+
+
+
 
     if ( h == ocsp_extension )
         event_mgr.Enqueue(h, GetFile()->ToVal(), std::move(pX509Ext), val_mgr->Bool(global));
     else
         event_mgr.Enqueue(h, GetFile()->ToVal(), std::move(pX509Ext));
 
-    // let individual analyzers parse more.
+
     ParseExtensionsSpecific(ex, global, ext_asn, oid);
 }
 
@@ -291,8 +291,8 @@ StringValPtr X509Common::GetExtensionFromBIO(BIO* bio, file_analysis::File* f) {
     char* buffer = reinterpret_cast<char*>(malloc(length));
 
     if ( ! buffer ) {
-        // Just emit an error here and try to continue instead of aborting
-        // because it's unclear the length value is very reliable.
+
+
         reporter->Error("X509::GetExtensionFromBIO malloc(%d) failed", length);
         BIO_free_all(bio);
         return nullptr;
@@ -307,4 +307,4 @@ StringValPtr X509Common::GetExtensionFromBIO(BIO* bio, file_analysis::File* f) {
     return ext_val;
 }
 
-} // namespace zeek::file_analysis::detail
+}

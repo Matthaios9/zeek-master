@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_array_h
 #define pac_array_h
@@ -6,7 +6,7 @@
 #include "pac_common.h"
 #include "pac_type.h"
 
-// Fixed-length array and variable length sequence with an ending pattern
+
 
 class ArrayType : public Type {
 public:
@@ -77,7 +77,7 @@ private:
     Field* elem_dataptr_var_field_;
     Field* elem_input_var_field_;
 
-    // This does not come from &until, but is internally generated
+
     Expr* elem_dataptr_until_expr_;
 
     Expr* attr_generic_until_expr_;
@@ -85,4 +85,4 @@ private:
     Expr* attr_until_input_expr_;
 };
 
-#endif // pac_array_h
+#endif

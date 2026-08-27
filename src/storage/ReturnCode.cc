@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/storage/ReturnCode.h"
 
@@ -89,4 +89,4 @@ void ReturnCode::Cleanup() {
     UNSERIALIZATION_FAILED.reset();
 }
 
-} // namespace zeek::storage
+}

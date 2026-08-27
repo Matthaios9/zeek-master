@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/Dispatcher.h"
 
@@ -14,24 +14,24 @@ namespace zeek::packet_analysis::detail {
 Dispatcher::~Dispatcher() { FreeValues(); }
 
 void Dispatcher::Register(uint64_t identifier, AnalyzerPtr analyzer) {
-    // If the table has size 1 and the entry is nullptr, there was nothing added yet. Just add it.
+
     if ( table.size() == 1 && table[0] == nullptr ) {
         table[0] = std::move(analyzer);
         lowest_identifier = identifier;
         return;
     }
 
-    // If highestIdentifier == identifier, overwrite would happen -> no check needed, will return
-    // false
+
+
     if ( GetHighestIdentifier() < identifier ) {
         table.resize(table.size() + (identifier - GetHighestIdentifier()), nullptr);
     }
     else if ( identifier < lowest_identifier ) {
-        // Lower than the lowest registered identifier. Shift up by lowerBound - identifier
+
         uint64_t distance = lowest_identifier - identifier;
         table.resize(table.size() + distance, nullptr);
 
-        // Shift values
+
         for ( ssize_t i = table.size() - 1; i >= 0; i-- ) {
             if ( table[i] != nullptr ) {
                 table.at(i + distance) = std::move(table.at(i));
@@ -81,4 +81,4 @@ void Dispatcher::DumpDebug() const {
 #endif
 }
 
-} // namespace zeek::packet_analysis::detail
+}

@@ -1,4 +1,4 @@
-##! Calculate the standard deviation.
+
 
 @load ./variance
 @load ../main
@@ -7,12 +7,12 @@ module SumStats;
 
 export {
 	redef enum Calculation += {
-		## Calculate the standard deviation of the values.
+
 		STD_DEV
 	};
 
 	redef record ResultVal += {
-		## For numeric data, this calculates the standard deviation.
+
 		std_dev: double &default=0.0;
 	};
 }

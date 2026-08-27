@@ -1,4 +1,4 @@
-##! Keep a random sample of values.
+
 
 @load base/frameworks/sumstats/main
 
@@ -6,29 +6,29 @@ module SumStats;
 
 export {
 	redef enum Calculation += {
-		## Get uniquely distributed random samples from the observation
-		## stream.
+
+
 		SAMPLE
 	};
 
 	redef record Reducer += {
-		## The number of sample Observations to collect.
+
 		num_samples: count &default=0;
 	};
 
 	redef record ResultVal += {
-		## This is the vector in which the samples are maintained.
+
 		samples: vector of Observation &default=vector();
 
-		## Number of total observed elements.
+
 		sample_elements: count &default=0;
 	};
 }
 
 redef record ResultVal += {
-	# Internal use only.  This is not meant to be publicly available
-	# and just a copy of num_samples from the Reducer. Needed for
-	# availability in the compose hook.
+
+
+
 	num_samples: count &default=0;
 };
 

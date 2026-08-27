@@ -1,8 +1,8 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-//
-// A systemd unit file generator for Zeek.
-//
+
+
+
+
 #include <unistd.h>
 #include <cctype>
 #include <cerrno>
@@ -26,17 +26,17 @@ using Unit = zeek::detail::systemd::Unit;
 using ZeekClusterConfig = zeek::detail::ZeekClusterConfig;
 using EnvVar = zeek::detail::EnvVar;
 
-/**
- * Returns policy scripts that come before zeek_args.
- */
+
+
+
 std::string systemd_generator_policy_scripts() {
-    // Is this worth it?
+
     return "policy/misc/systemd-generator";
 }
 
-/**
- * Construct zeek-{name}@{idx}.service.
- */
+
+
+
 std::string systemd_unit_name(const std::string& name, int idx = 0) {
     std::string result = "zeek-";
     result += name;
@@ -47,12 +47,12 @@ std::string systemd_unit_name(const std::string& name, int idx = 0) {
     return result + ".service";
 }
 
-/**
- * Put a new symlink at \a new_link to \a to.
- *
- * If \a to exists, this function attempts to unlink the file
- * and create another symlink.
- */
+
+
+
+
+
+
 void ensure_symlink(const path& to, const path& new_link) {
     std::error_code ec;
     std::filesystem::create_symlink(to, new_link, ec);
@@ -62,10 +62,10 @@ void ensure_symlink(const path& to, const path& new_link) {
     }
 }
 
-// Adds environment variables to the given unit with substitution variables vars.
+
 void systemd_add_environment(Unit& unit, const ZeekClusterConfig& config, std::span<const EnvVar> custom_env,
                              const std::map<std::string, std::string>& vars = {}) {
-    // Write out all Environment variables from the global env and worker_env options.
+
     for ( const auto& env : std::array{config.Env(), custom_env} | std::views::join ) {
         auto value = zeek::detail::substitute_vars(env.Value(), vars);
         if ( ! value ) {
@@ -88,28 +88,28 @@ Unit systemd_add_node_unit(const path& file, const std::string& description, con
     unit.AddEnvironment("PATH", config.Path());
     unit.AddEnvironment("ZEEKPATH", config.ZeekPath());
 
-    // Replaced for workers with SetExecStart() to add the interface.
+
     unit.AddExecStart(config.ZeekExe().string(),
                       {config.ClusterBackendArgs(), systemd_generator_policy_scripts(), extra_args, config.Args()});
 
     unit.SetRestart("always");
     unit.SetRestartSec(config.RestartIntervalSec());
 
-    // Disable any start limit.
+
     unit.SetStartLimitIntervalSec("0");
 
     return unit;
 }
 
-/**
- * Write all unit files for the give \a config into \a dir.
- *
- * @param dir The directory to place unit files into.
- * @param config The cluster configuration to use.
- */
+
+
+
+
+
+
 void systemd_write_units(const path& dir, const ZeekClusterConfig& config) {
-    // zeek_target_wants is where all generated units will be linked into
-    // so that systemctl start zeek.target works out.
+
+
     std::error_code ec;
 
     auto zeek_target_wants = dir / "zeek.target.wants";
@@ -122,7 +122,7 @@ void systemd_write_units(const path& dir, const ZeekClusterConfig& config) {
     std::string target_desc = "The Zeek Network Security Monitor";
     auto target_unit = Unit(dir / "zeek.target", std::move(target_desc), config.SourcePath());
 
-    // The setup unit creates all working directories and sets permissions
+
     auto setup_unit = Unit(dir / "zeek-setup.service", "Zeek Setup", config.SourcePath());
     setup_unit.SetPartOf("zeek.target");
     setup_unit.SetServiceType("oneshot");
@@ -137,20 +137,20 @@ void systemd_write_units(const path& dir, const ZeekClusterConfig& config) {
 
     ensure_symlink("../zeek-setup.service", zeek_target_wants / "zeek-setup.service");
 
-    // Manager Unit if enabled.
+
     if ( config.Manager() ) {
         auto manager_unit =
             systemd_add_node_unit(dir / "zeek-manager.service", "Zeek Manager", config, config.ManagerArgs());
-        // Do not use PrefixedClusterNode() for manager: There's only ever a single one.
+
         manager_unit.AddEnvironment("CLUSTER_NODE", "manager");
         manager_unit.SetSyslogIdentifier("zeek-manager");
         manager_unit.SetWorkingDirectory(config.WorkingDirectory("manager"));
-        // This makes <PREFIX>/var read-writeable for the manager
-        // process such that it can move logs from its working directory
-        // into <PREFIX>/var/logs/zeek. This currently means a manager
-        // has read-write access to individual node spool directories.
-        // We could also mark certain paths read-only if that's an issue.
-        // Same as for the logger when manager_is_logger=T.
+
+
+
+
+
+
         manager_unit.AddReadWritePath(config.ZeekBaseDir() / "var");
         manager_unit.AddAfter("zeek-logger@.service");
         manager_unit.SetSlice("zeek-manager.slice");
@@ -170,18 +170,18 @@ void systemd_write_units(const path& dir, const ZeekClusterConfig& config) {
 
 
     if ( config.Loggers() > 0 ) {
-        // Logger Template Unit
+
         auto logger_unit =
             systemd_add_node_unit(dir / "zeek-logger@.service", "Zeek Logger %i", config, config.LoggerArgs());
         logger_unit.AddEnvironment("CLUSTER_NODE", config.PrefixedClusterNode("logger-%i"));
         logger_unit.SetSyslogIdentifier("zeek-logger-%i");
         logger_unit.SetWorkingDirectory(config.WorkingDirectory("logger-%i"));
         logger_unit.AddReadWritePath(config.WorkingDirectory("logger-%i"));
-        // This makes <PREFIX>/var read-writeable for the logger
-        // process such that it can move logs from its working directory
-        // into <PREFIX>/var/logs/zeek. This currently means a logger
-        // has read-write access to individual node spool directories.
-        // We could also mark certain paths read-only if that's an issue.
+
+
+
+
+
         logger_unit.AddReadWritePath(config.ZeekBaseDir() / "var");
         logger_unit.SetSlice("zeek-loggers.slice");
         if ( auto memory_max = config.LoggerMemoryMax(); memory_max )
@@ -193,7 +193,7 @@ void systemd_write_units(const path& dir, const ZeekClusterConfig& config) {
         systemd_add_environment(logger_unit, config, config.LoggerEnv());
         logger_unit.Write();
 
-        // Logger instances.
+
         for ( int idx = 1; idx <= config.Loggers(); idx++ ) {
             auto wdir = "logger-" + std::to_string(idx);
             setup_unit.AddExecStart(config.MakeWorkingDirectoryCommand(wdir));
@@ -204,7 +204,7 @@ void systemd_write_units(const path& dir, const ZeekClusterConfig& config) {
     }
 
     if ( config.Proxies() > 0 ) {
-        // Proxy Template Unit
+
         auto proxy_unit =
             systemd_add_node_unit(dir / "zeek-proxy@.service", "Zeek Proxy %i", config, config.ProxyArgs());
         proxy_unit.AddEnvironment("CLUSTER_NODE", config.PrefixedClusterNode("proxy-%i"));
@@ -222,7 +222,7 @@ void systemd_write_units(const path& dir, const ZeekClusterConfig& config) {
         systemd_add_environment(proxy_unit, config, config.ProxyEnv());
         proxy_unit.Write();
 
-        // Proxy instances.
+
         for ( int idx = 1; idx <= config.Proxies(); idx++ ) {
             auto wdir = "proxy-" + std::to_string(idx);
             setup_unit.AddExecStart(config.MakeWorkingDirectoryCommand(wdir));
@@ -234,19 +234,19 @@ void systemd_write_units(const path& dir, const ZeekClusterConfig& config) {
     }
 
     if ( config.Workers() > 0 ) {
-        // Global worker index.
+
         int host_worker_index = 0;
         for ( const auto& iwc : config.InterfaceWorkerConfigs() ) {
-            // For every interface section, there's a separate zeek-worker-{interface_section_name}@.service
-            // template unit created so that we can have per interface worker args and drop-in files
-            // that affect all workers of a single interface. In a sectionless configuration, the
-            // interface_section_name is empty and the template unit name reduced to zeek-worker@.service.
+
+
+
+
             std::string worker_cluster_node = "worker";
             std::string worker_unit_prefix = "zeek-worker";
             std::string worker_unit_description = "Zeek Worker %i";
 
-            // Interface section name set? Include it in the cluster node
-            // and unit names and description.
+
+
             if ( ! iwc.Name().empty() ) {
                 worker_cluster_node = worker_cluster_node + "-" + iwc.Name();
                 worker_unit_prefix = worker_unit_prefix + "-" + iwc.Name();
@@ -255,7 +255,7 @@ void systemd_write_units(const path& dir, const ZeekClusterConfig& config) {
 
             std::string worker_template_unit = worker_unit_prefix + "@.service";
 
-            // Create a template unit for all workers of this interface.
+
             auto worker_interface_unit =
                 systemd_add_node_unit(dir / worker_template_unit, std::move(worker_unit_description), config, {});
 
@@ -281,14 +281,14 @@ void systemd_write_units(const path& dir, const ZeekClusterConfig& config) {
             if ( auto nice = iwc.Nice(); nice )
                 worker_interface_unit.SetNice(*nice);
 
-            // Overwrite the working directory
+
             worker_interface_unit.SetWorkingDirectory(iwc.MakeWorkingDirectory(config.SpoolDir(), "%i"));
             worker_interface_unit.AddReadWritePath(iwc.MakeWorkingDirectory(config.SpoolDir(), "%i"));
 
             worker_interface_unit.Write();
 
-            // The "local" index of a worker for templating. This resets for every interface,
-            // while worker_index counts over all workers.
+
+
             for ( int index = 1; index <= iwc.Workers(); index++ ) {
                 ++host_worker_index;
 
@@ -298,13 +298,13 @@ void systemd_write_units(const path& dir, const ZeekClusterConfig& config) {
                 auto name = worker_unit_prefix + "@" + std::to_string(index) + ".service";
                 ensure_symlink("../" + worker_template_unit, zeek_target_wants / name);
 
-                // Create drop-in .d directories for worker instance to define their
-                // INTERFACE and CPUAffinity settings.
+
+
                 auto d_dir = dir / (name + ".d");
                 std::filesystem::create_directories(d_dir);
                 auto unit = Unit(d_dir / "10-zeek-systemd-generator.conf", config.SourcePath());
 
-                // Setup templating variables for the interface.
+
                 std::map<std::string, std::string> vars = {
                     {"worker_index", std::to_string(index)},
                     {"worker_index0", std::to_string(index - 1)},
@@ -343,7 +343,7 @@ void systemd_write_units(const path& dir, const ZeekClusterConfig& config) {
     target_unit.Write();
     setup_unit.Write();
 
-    // Optional archiver service.
+
     if ( config.IsArchiverEnabled() ) {
         auto archiver_unit = Unit(dir / "zeek-archiver.service", "Zeek Archiver", config.SourcePath());
         archiver_unit.SetPartOf("zeek.target");
@@ -354,8 +354,8 @@ void systemd_write_units(const path& dir, const ZeekClusterConfig& config) {
         archiver_unit.SetUser(config.User());
         archiver_unit.SetGroup(config.Group());
         archiver_unit.AddAfter("zeek-setup.service");
-        // zeek-archiver copies files from the log queue dir to the
-        // archive dir, so restrict its access.
+
+
         archiver_unit.AddReadWritePath(config.LogQueueDir());
         archiver_unit.AddReadWritePath(config.LogArchiveDir());
 
@@ -380,23 +380,23 @@ void systemd_write_units(const path& dir, const ZeekClusterConfig& config) {
 }
 
 
-} // namespace
+}
 
 int main(int argc, const char* argv[]) {
-    const char* program = argv[0]; // We fiddle with argv later on, keep the program name around.
-    bool explicit_config = false;  // Did the user provide --config ?
+    const char* program = argv[0];
+    bool explicit_config = false;
 
-    // DEFAULT_ETC_DIR is Injected via -D during compilation, usually it's just
-    // <PREFIX>/etc/
+
+
     std::filesystem::path config_file = std::string(DEFAULT_ETC_DIR) + "/zeek/zeek.conf";
 
-    // If this system is part of a cluster, its own configuration file
-    // is determined using the hostname and looking into etc/zeek/cluster/<hostname>.zeek.conf
+
+
     std::filesystem::path cluster_config_file;
     if ( auto hostname = zeek::detail::gethostname(); hostname.has_value() )
         cluster_config_file = std::string(DEFAULT_ETC_DIR) + "/zeek/cluster/" + *hostname + ".zeek.conf";
 
-    // Allow overriding the configuration file lookup with --config for testing,
+
     if ( argc >= 3 && std::string_view(argv[1]) == "--config" ) {
         config_file = std::filesystem::weakly_canonical(argv[2]);
         explicit_config = true;
@@ -404,8 +404,8 @@ int main(int argc, const char* argv[]) {
         argc -= 2;
         argv = &argv[2];
     }
-    // ...and also support /etc/zeek/cluster/<hostname>.zeek.conf
-    // for multi-node cluster configuration.
+
+
     else if ( ! cluster_config_file.empty() && std::filesystem::is_regular_file(cluster_config_file) ) {
         config_file = cluster_config_file;
     }
@@ -434,8 +434,8 @@ int main(int argc, const char* argv[]) {
         int stderr_fd = fileno(stderr);
         std::unique_ptr<FILE, int (*)(std::FILE*)> kmsg{nullptr, nullptr};
 
-        // If --config wasn't used and stderr isn't attached to a terminal
-        // try open /dev/kmsg and write any errors there.
+
+
         if ( ! explicit_config && ! isatty(stderr_fd) ) {
             kmsg = {std::fopen("/dev/kmsg", "a"), &std::fclose};
             if ( kmsg )

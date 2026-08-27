@@ -1,11 +1,11 @@
-##! The controllee portion of the control framework.  Load this script if remote
-##! runtime control of the Zeek process is desired.
-##!
-##! A controllee only needs to load the controllee script in addition
-##! to the specific analysis scripts desired.  It may also need a node
-##! configured as a controller node in the communications nodes configuration::
-##!
-##!     zeek <scripts> frameworks/control/controllee
+
+
+
+
+
+
+
+
 
 @load base/frameworks/control
 @load base/frameworks/broker
@@ -34,7 +34,7 @@ event Control::peer_status_request()
 	{
 	local status = "";
 
-	# @todo: need to expose broker::endpoint::peers and broker::peer_status
+
 	local peers = Broker::peers();
 
 	for ( i in peers )
@@ -62,22 +62,22 @@ event Control::net_stats_request()
 
 event Control::configuration_update_request()
 	{
-	# Generate the alias event.
+
 	event Control::configuration_update();
 
-	# Don't need to do anything in particular here, it's just indicating that
-	# the configuration is going to be updated.  This event could be handled
-	# by other scripts if they need to do some ancillary processing if
-	# redef-able consts are modified at runtime.
+
+
+
+
 	local topic = Control::topic_prefix + "/configuration_update_response/" + Cluster::node;
 	Cluster::publish(topic, Control::configuration_update_response);
 	}
 
 event Control::shutdown_request()
 	{
-	# Send the acknowledgement event.
+
 	local topic = Control::topic_prefix + "/shutdown_response/" + Cluster::node;
 	Cluster::publish(topic, Control::shutdown_response);
-	# Schedule the shutdown to let the current event queue flush itself first.
+
 	schedule 1sec { terminate_event() };
 	}

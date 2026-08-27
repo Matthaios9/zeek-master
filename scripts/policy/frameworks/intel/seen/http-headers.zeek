@@ -10,7 +10,7 @@ event http_header(c: connection, is_orig: bool, name: string, value: string) &gr
 	switch ( name )
 		{
 		case "HOST":
-		# Remove the occasional port value that shows up here.
+
 		local host = gsub(value, /:[[:digit:]]+$/, "");
 		if ( is_valid_ip(host) )
 			Intel::seen(Intel::Seen($host=host as addr,
@@ -40,7 +40,7 @@ event http_header(c: connection, is_orig: bool, name: string, value: string) &gr
 	if ( ! is_orig || name != "HOST" )
 		return;
 
-	# Remove the occasional port value that shows up here.
+
 	local host = gsub(value, /:[[:digit:]]+$/, "");
 	if ( ! is_valid_ip(host) )
 		Intel::seen(Intel::Seen($indicator=host,

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "Gen-ZAM.h"
 
@@ -10,7 +10,7 @@
 
 using namespace std;
 
-// Helper functions to convert dashes to underscores or vice versa.
+
 static char dash_to_under_func(char c) { return c == '-' ? '_' : c; }
 static char under_to_dash_func(char c) { return c == '_' ? '-' : c; }
 
@@ -20,15 +20,15 @@ static void under_to_dash(string& s) { transform(s.begin(), s.end(), s.begin(), 
 static void to_lower(string& s) { transform(s.begin(), s.end(), s.begin(), ::tolower); }
 static void to_upper(string& s) { transform(s.begin(), s.end(), s.begin(), ::toupper); }
 
-// Structure for binding together Zeek script types, internal names Gen-ZAM
-// uses to track them, mnemonics for referring to them in instruction names,
-// the corresponding Val accessor, and whether the type requires memory
-// management.
+
+
+
+
 struct TypeInfo {
     string tag;
     ZAM_Type zt;
     string suffix;
-    string accessor; // doesn't include "As" prefix or "()" suffix
+    string accessor;
     bool is_managed;
 };
 
@@ -43,7 +43,7 @@ static vector<TypeInfo> ZAM_type_info = {
     {"TYPE_TYPE", ZAM_TYPE_TYPE, "t", "Type", true},       {"TYPE_VECTOR", ZAM_TYPE_VECTOR, "V", "Vector", true},
 };
 
-// Maps op-type mnemonics to the corresponding internal value used by Gen-ZAM.
+
 static unordered_map<char, ZAM_Type> type_names = {
     {'*', ZAM_TYPE_DEFAULT}, {'A', ZAM_TYPE_ADDR},   {'a', ZAM_TYPE_ANY},     {'D', ZAM_TYPE_DOUBLE},
     {'f', ZAM_TYPE_FILE},    {'F', ZAM_TYPE_FUNC},   {'I', ZAM_TYPE_INT},     {'L', ZAM_TYPE_LIST},
@@ -52,10 +52,10 @@ static unordered_map<char, ZAM_Type> type_names = {
     {'U', ZAM_TYPE_UINT},    {'V', ZAM_TYPE_VECTOR},
 };
 
-// Inverse of the above.
+
 static unordered_map<ZAM_Type, char> expr_name_types;
 
-// Given a ZAM_Type, returns the corresponding TypeInfo.
+
 const TypeInfo& find_type_info(ZAM_Type zt) {
     assert(zt != ZAM_TYPE_NONE);
 
@@ -66,8 +66,8 @@ const TypeInfo& find_type_info(ZAM_Type zt) {
     return *ti;
 }
 
-// Given a ZAM_Type, return its ZVal accessor.  Takes into account
-// some naming inconsistencies between ZVal's and Val's.
+
+
 string find_type_accessor(ZAM_Type zt, bool is_lhs) {
     if ( zt == ZAM_TYPE_NONE )
         return "";
@@ -79,9 +79,9 @@ string find_type_accessor(ZAM_Type zt, bool is_lhs) {
     return acc + "()";
 }
 
-// Maps ZAM operand types to pairs of (1) the C++ name used to declare
-// the operand in a method declaration, and (2) the variable name to
-// use for the operand.
+
+
+
 unordered_map<ZAM_OperandClass, pair<const char*, const char*>> ArgsManager::oc_to_args = {
     {ZAM_OC_AUX, {"OpaqueVals*", "v"}},
     {ZAM_OC_CONSTANT, {"const ConstExpr*", "c"}},
@@ -95,41 +95,41 @@ unordered_map<ZAM_OperandClass, pair<const char*, const char*>> ArgsManager::oc_
     {ZAM_OC_RECORD_FIELD, {"const NameExpr*", "n"}},
     {ZAM_OC_VAR, {"const NameExpr*", "n"}},
 
-    // The following gets special treatment.
+
     {ZAM_OC_ASSIGN_FIELD, {"const NameExpr*", "n"}},
 };
 
-// The different operand classes that are represented as "raw" integers
-// (meaning the slot value is used directly, rather than indexing the frame).
+
+
 static const set<ZAM_OperandClass> raw_int_oc({ZAM_OC_BRANCH, ZAM_OC_GLOBAL, ZAM_OC_INT, ZAM_OC_STEP_ITER,
                                                ZAM_OC_TBL_ITER});
 
 ArgsManager::ArgsManager(const OCVec& oc_orig, ZAM_InstClass zc) {
     auto oc = oc_orig;
     if ( zc == ZIC_COND )
-        // Remove the final entry corresponding to the branch, as
-        // we'll automatically generate it subsequently.
+
+
         oc.pop_back();
 
     int n = 0;
     bool add_field = false;
 
     for ( const auto& ot_i : oc ) {
-        if ( ot_i == ZAM_OC_NONE ) { // it had better be the only operand type
+        if ( ot_i == ZAM_OC_NONE ) {
             assert(oc.size() == 1);
             break;
         }
 
         ++n;
 
-        // Start off the argument info using the usual case
-        // of (1) same method parameter name as GenInst argument,
-        // and (2) not requiring a record field.
+
+
+
         auto& arg_i = oc_to_args[ot_i];
         Arg arg = {arg_i.second, arg_i.first, arg_i.second};
 
         if ( ot_i == ZAM_OC_ASSIGN_FIELD ) {
-            if ( n == 1 ) { // special-case the parameter
+            if ( n == 1 ) {
                 arg.decl_name = "flhs";
                 arg.decl_type = "const FieldLHSAssignExpr*";
             }
@@ -142,9 +142,9 @@ ArgsManager::ArgsManager(const OCVec& oc_orig, ZAM_InstClass zc) {
 }
 
 void ArgsManager::Differentiate() {
-    // First, figure out which parameter names are used how often.
-    map<string, int> name_count;  // how often the name appears
-    map<string, int> usage_count; // how often the name's been used so far
+
+    map<string, int> name_count;
+    map<string, int> usage_count;
     for ( auto& arg : args ) {
         auto& name = arg.param_name;
         if ( ! name_count.contains(name) ) {
@@ -155,18 +155,18 @@ void ArgsManager::Differentiate() {
             ++name_count[name];
     }
 
-    // Now for each name - whether appearing as an argument or in
-    // a declaration - if it's used more than once, then differentiate
-    // it.  Note, some names only appear multiple times as arguments
-    // when invoking methods, but not in the declarations of the methods
-    // themselves.
+
+
+
+
+
     for ( auto& arg : args ) {
         auto& decl = arg.decl_name;
         auto& name = arg.param_name;
         bool decl_and_arg_same = decl == name;
 
         if ( name_count[name] == 1 )
-            continue; // it's unique
+            continue;
 
         auto n = to_string(++usage_count[name]);
         name += n;
@@ -174,7 +174,7 @@ void ArgsManager::Differentiate() {
             decl += n;
     }
 
-    // Finally, build the full versions of the declaration and parameters.
+
 
     for ( auto& arg : args ) {
         if ( ! full_decl.empty() )
@@ -191,7 +191,7 @@ void ArgsManager::Differentiate() {
 }
 
 ZAM_OpTemplate::ZAM_OpTemplate(ZAMGen* _g, string _base_name) : g(_g), base_name(std::move(_base_name)) {
-    // Make the base name viable in a C++ name.
+
     dash_to_under(base_name);
 
     cname = base_name;
@@ -253,17 +253,17 @@ void ZAM_OpTemplate::InstantiatePredicate() {
     if ( IncludesVectorOp() )
         Gripe("\"predicate\" cannot include \"vector\"");
 
-    // Build 3 forms: an assignment to an int-value'd $$, a conditional
-    // if the evaluation is true, and one if it is not.
+
+
 
     auto orig_eval = eval;
-    // Remove trailing '\n' from eval.
+
     orig_eval.pop_back();
 
     auto orig_op_classes = op_classes;
     bool no_classes = orig_op_classes[0] == ZAM_OC_NONE;
 
-    // Assignment form.
+
     op_classes.clear();
     op_classes.push_back(ZAM_OC_VAR);
     if ( ! no_classes )
@@ -280,11 +280,11 @@ void ZAM_OpTemplate::InstantiatePredicate() {
 
     InstantiateOp(op_classes, false);
 
-    // Conditional form - branch if not true.
+
 
     if ( ! op_types.empty() ) {
-        // Remove 'V' at the beginning from the assignment form,
-        // and add a 'i' at the end for the branch.
+
+
         op_types.erase(op_types.begin());
         op_types.push_back(ZAM_TYPE_INT);
     }
@@ -303,33 +303,33 @@ void ZAM_OpTemplate::InstantiatePredicate() {
     eval = "if ( ! (" + orig_eval + ")" + suffix;
     InstantiateOp(op_classes, false);
 
-    // Now the form that branches if true.
+
     cname = "NOT_" + cname;
     eval = "if ( (" + orig_eval + ")" + suffix;
     InstantiateOp(op_classes, false);
 }
 
 void ZAM_OpTemplate::UnaryInstantiate() {
-    // First operand is always the frame slot to which this operation
-    // assigns the result of the applying unary operator.
+
+
     OCVec ocs = {ZAM_OC_VAR};
     ocs.resize(2);
 
-    // Now build versions for a constant operand (maybe not actually
-    // needed due to constant folding, but sometimes that gets deferred
-    // to run-time) ...
+
+
+
     if ( ! NoConst() ) {
         ocs[1] = ZAM_OC_CONSTANT;
         InstantiateOp(ocs, IncludesVectorOp());
     }
 
-    // ... and for a variable (frame-slot) operand.
+
     ocs[1] = ZAM_OC_VAR;
     InstantiateOp(ocs, IncludesVectorOp());
 }
 
 void ZAM_OpTemplate::Parse(const string& attr, const string& line, const Words& words) {
-    int num_args = -1; // -1 = don't enforce
+    int num_args = -1;
     int nwords = static_cast<int>(words.size());
 
     if ( attr == "class" ) {
@@ -404,7 +404,7 @@ void ZAM_OpTemplate::Parse(const string& attr, const string& line, const Words& 
         if ( nwords == 3 )
             SetAssignmentLess(words[1], words[2]);
         else
-            // otherwise shouldn't be any arguments
+
             num_args = 0;
 
         SetHasSideEffects();
@@ -467,7 +467,7 @@ OCVec ZAM_OpTemplate::ParseClass(const string& spec) const {
             case 'V': oc = ZAM_OC_VAR; break;
             case 'i': oc = ZAM_OC_INT; break;
             case 'b': oc = ZAM_OC_BRANCH; break;
-            case 'f': // 'f' = "for" loop
+            case 'f':
                 oc = ZAM_OC_TBL_ITER;
                 break;
             case 'g': oc = ZAM_OC_GLOBAL; break;
@@ -516,8 +516,8 @@ int ZAM_OpTemplate::ExtractTypeParam(const string& arg) {
     return param;
 }
 
-// Maps an operand type to a character mnemonic used to distinguish
-// it from others.
+
+
 unordered_map<ZAM_OperandClass, char> ZAM_OpTemplate::oc_to_char = {
     {ZAM_OC_AUX, 'O'},      {ZAM_OC_CONSTANT, 'C'}, {ZAM_OC_EVENT_HANDLER, 'H'}, {ZAM_OC_ASSIGN_FIELD, 'F'},
     {ZAM_OC_INT, 'i'},      {ZAM_OC_LIST, 'L'},     {ZAM_OC_NONE, 'X'},          {ZAM_OC_RECORD_FIELD, 'R'},
@@ -545,21 +545,21 @@ void ZAM_OpTemplate::InstantiateOp(const string& orig_method, const OCVec& oc_or
     string suffix = "";
 
     if ( zc == ZIC_FIELD ) {
-        // Make room for the offset.
+
         oc.push_back(ZAM_OC_INT);
         suffix = NoEval() ? "" : "_field";
     }
 
     else if ( zc == ZIC_COND ) {
-        // Remove the assignment and add in the branch.
+
         oc.erase(oc.begin());
         oc.push_back(ZAM_OC_BRANCH);
         suffix = "_cond";
     }
 
     else if ( zc == ZIC_VEC ) {
-        // Don't generate versions of these for constant operands
-        // as those don't exist.
+
+
         if ( int(oc.size()) != Arity() + 1 )
             Gripe("vector class/arity mismatch");
 
@@ -657,7 +657,7 @@ void ZAM_OpTemplate::InstantiateMethodCore(const OCVec& oc, const string& suffix
     const static vector<string> track_method = {"TrackRecordTypeForField", "TrackRecordTypesForFields"};
 
     int nparam = args.NumParams();
-    string track; // if it remains empty, that means "no tracking needed"
+    string track;
 
     if ( zc == ZIC_FIELD ) {
         assert(nparam >= static_cast<int>(oc.size()));
@@ -682,8 +682,8 @@ void ZAM_OpTemplate::InstantiateMethodCore(const OCVec& oc, const string& suffix
             track += args.NthParam(2) + " /* type 3 */";
         else {
             assert(nparam == 4 || nparam == 5);
-            // See the comment in ZAMCompiler::CompileFieldLHSAssignExpr()
-            // for why the parameters here are out-of-order.
+
+
             track += args.NthParam(nparam - 1) + ", ";
             track += cast + args.NthParam(1) + "->GetType()), ";
             track += args.NthParam(nparam - 2) + " /* type " + to_string(nparam) + " */";
@@ -951,8 +951,8 @@ void ZAM_OpTemplate::EndDesc() {
 }
 
 void ZAM_OpTemplate::InstantiateAssignOp(const OCVec& oc, const string& suffix) {
-    // First, create a generic version of the operand, which the
-    // ZAM compiler uses to find specific-flavored versions.
+
+
     auto oc_str = OpSuffix(oc);
     auto op_string = "_" + oc_str;
     auto generic_op = g->GenOpCode(this, op_string);
@@ -1012,12 +1012,12 @@ void ZAM_OpTemplate::GenAssignOpCore(const OCVec& oc, const string& eval, const 
     auto acc = ".As" + accessor + "()";
 
     if ( accessor == "Any" && constant_op && ! rhs_field ) {
-        // "any_val = constant" or "x$any_val = constant".
-        //
-        // These require special-casing, because to avoid going
-        // through a CoerceToAny operation, we allow expressing
-        // these directly.  They don't fit with the usual assignment
-        // paradigm since the RHS differs in type from the LHS.
+
+
+
+
+
+
         Emit("auto v = z.c.ToVal(Z_TYPE);");
 
         if ( lhs_field ) {
@@ -1032,11 +1032,11 @@ void ZAM_OpTemplate::GenAssignOpCore(const OCVec& oc, const string& eval, const 
     }
 
     else if ( rhs_field ) {
-        // The following is counter-intuitive, but comes from the
-        // fact that we build out the instruction parameters as
-        // an echo of the method parameters, and for this case that
-        // means that the RHS field offset comes *before*, not after,
-        // the LHS field offset.
+
+
+
+
+
         auto lhs_offset = constant_op ? 3 : 4;
         auto rhs_offset = lhs_offset - 1;
 
@@ -1097,7 +1097,7 @@ void ZAM_OpTemplate::GenAssignOpValCore(const OCVec& oc, const string& orig_eval
                                         bool is_managed) {
     const auto& v = GetAssignVal();
 
-    // Maps Zeek types to how to get the underlying value from a ValPtr.
+
     static unordered_map<string, string> val_accessors = {
         {"Addr", "->AsAddrVal()"},     {"Any", ".get()"},
         {"Count", "->AsCount()"},      {"Double", "->AsDouble()"},
@@ -1186,7 +1186,7 @@ void ZAM_DirectUnaryOpTemplate::Instantiate() {
 ZAM_ExprOpTemplate::ZAM_ExprOpTemplate(ZAMGen* _g, string _base_name) : ZAM_OpTemplate(_g, std::move(_base_name)) {
     static bool did_map_init = false;
 
-    if ( ! did_map_init ) { // Create the inverse mapping.
+    if ( ! did_map_init ) {
         for ( auto& tn : type_names )
             expr_name_types[tn.second] = tn.first;
 
@@ -1292,7 +1292,7 @@ void ZAM_ExprOpTemplate::Parse(const string& attr, const string& line, const Wor
     }
 
     else
-        // Not an attribute specific to expr-op's.
+
         ZAM_OpTemplate::Parse(attr, line, words);
 }
 
@@ -1447,9 +1447,9 @@ void ZAM_ExprOpTemplate::BuildInstructionCore(const string& params, const string
 
 void ZAM_ExprOpTemplate::GenMethodTest(ZAM_Type et1, ZAM_Type et2, const string& params, const string& suffix,
                                        bool do_else, ZAM_InstClass zc) {
-    // Maps ZAM_Type's to the information needed (variable name,
-    // constant to compare it against) to identify using an "if" test
-    // that a given AST Expr node employs the given type of operand.
+
+
+
     static map<ZAM_Type, pair<string, string>> if_tests = {
         {ZAM_TYPE_ADDR, {"i_t", "TYPE_INTERNAL_ADDR"}},
         {ZAM_TYPE_ANY, {"tag", "TYPE_ANY"}},
@@ -1540,16 +1540,16 @@ void ZAM_ExprOpTemplate::InstantiateEval(const OCVec& oc_orig, const string& suf
     auto oc = oc_orig;
 
     if ( expr_types.empty() ) {
-        // No operand types to expand over. This happens for
-        // some "non-uniform" operations.
+
+
         ZAM_OpTemplate::InstantiateEval(oc, suffix, zc);
         return;
     }
 
     auto oc_str = OpSuffix(oc);
 
-    // Some of these might not wind up being used, but no harm in
-    // initializing them in case they are.
+
+
     string lhs, op1, op2;
     string branch_target = "z.v";
 
@@ -1566,12 +1566,12 @@ void ZAM_ExprOpTemplate::InstantiateEval(const OCVec& oc_orig, const string& suf
     else {
         lhs = "frame[z.v1]";
 
-        // First compute the offsets into oc for the operands.
+
         auto op1_offset = zc == ZIC_COND ? 0 : 1;
         bool oc1_const = oc[op1_offset] == ZAM_OC_CONSTANT;
         bool oc2_const = Arity() > 1 && oc[op1_offset + 1] == ZAM_OC_CONSTANT;
 
-        // Now the frame slots.
+
         auto op1_slot = op1_offset + 1;
         auto op2_slot = op1_slot + 1;
 
@@ -1598,20 +1598,20 @@ void ZAM_ExprOpTemplate::InstantiateEval(const OCVec& oc_orig, const string& suf
             op2 = "frame[z.v" + to_string(op2_slot) + "]";
 
         if ( zc == ZIC_FIELD ) {
-            // Compute the slot holding the field offset.
+
 
             auto f =
-                // The first slots are taken up by the
-                // assignment slot and the operands ...
+
+
                 Arity() + 1 +
-                // ... and slots are numbered starting at 1.
+
                 +1;
 
             if ( oc1_const || oc2_const )
-                // One of the operand slots won't be needed
-                // due to the presence of a constant.
-                // (It's never the case that both operands
-                // are constants - those instead get folded.)
+
+
+
+
                 --f;
 
             lhs = "DirectField(" + lhs + ".AsRecord(), z.v" + to_string(f) + ")";
@@ -1621,8 +1621,8 @@ void ZAM_ExprOpTemplate::InstantiateEval(const OCVec& oc_orig, const string& suf
     vector<EvalInstance> eval_instances;
 
     for ( auto zt : expr_types ) {
-        // Support for "op-type X" meaning "allow empty evaluation",
-        // as well as "evaluation is generic".
+
+
         if ( zt == ZAM_TYPE_NONE && GetEval().empty() )
             continue;
 
@@ -1638,9 +1638,9 @@ void ZAM_ExprOpTemplate::InstantiateEval(const OCVec& oc_orig, const string& suf
             for ( const auto& em2 : em1.second ) {
                 auto et2 = em2.first;
 
-                // For the LHS, either its expression type is
-                // ignored, or if it's a conditional, so just
-                // note it for the latter.
+
+
+
                 auto lhs_et = ZAM_TYPE_INT;
                 eval_instances.emplace_back(lhs_et, et1, et2, em2.second, false);
             }
@@ -1674,8 +1674,8 @@ void ZAM_ExprOpTemplate::InstantiateEval(const OCVec& oc_orig, const string& suf
             op_types.push_back(ZAM_TYPE_INT);
 
         else if ( zc == ZIC_VEC ) {
-            // Above isn't applicable, since we use helper
-            // functions.
+
+
             op_types.clear();
             op_types.push_back(ZAM_TYPE_VECTOR);
             op_types.push_back(ZAM_TYPE_VECTOR);
@@ -1710,8 +1710,8 @@ void ZAM_ExprOpTemplate::InstantiateEval(const OCVec& oc_orig, const string& suf
             auto pre = "auto hold_lhs = " + lhs;
 
             if ( zc == ZIC_VEC )
-                // For vectors, we have to check for whether
-                // the previous value is present, or a hole.
+
+
                 pre += string(" ? ") + lhs + "->";
             else
                 pre += ".";
@@ -1745,7 +1745,7 @@ void ZAM_ExprOpTemplate::InstantiateEval(const OCVec& oc_orig, const string& suf
             eval = regex_replace(eval, regex("\\$\\$"), lhs_ei);
 
         else if ( zc == ZIC_COND ) {
-            // Aesthetics: get rid of trailing newlines.
+
             eval = regex_replace(eval, regex("\n"), "");
 
             eval = "if ( ! (" + eval + ") ) " + "Branch(" + branch_target + ")";
@@ -1754,7 +1754,7 @@ void ZAM_ExprOpTemplate::InstantiateEval(const OCVec& oc_orig, const string& suf
         else if ( ! is_none && (ei.IsDefault() || IsConditionalOp()) ) {
             eval = lhs_ei + " = " + eval;
 
-            // Ensure a single terminating semicolon.
+
             eval = regex_replace(eval, regex(";*\n"), ";\n");
         }
 
@@ -1831,8 +1831,8 @@ void ZAM_UnaryExprOpTemplate::BuildInstruction(const OCVec& oc, const string& pa
     BuildInstructionCore(params, suffix, zc);
 
     if ( IsAssignOp() && IsFieldOp() )
-        // These can't take the type from the LHS variable, since
-        // that's the enclosing record and not the field within it.
+
+
         Emit("z.SetType(t);");
 
     else if ( zc == ZIC_VEC ) {
@@ -1845,7 +1845,7 @@ void ZAM_UnaryExprOpTemplate::BuildInstruction(const OCVec& oc, const string& pa
 
 ZAM_AssignOpTemplate::ZAM_AssignOpTemplate(ZAMGen* _g, string _base_name)
     : ZAM_UnaryExprOpTemplate(_g, std::move(_base_name)) {
-    // Assignments apply to every valid form of ExprType.
+
     for ( auto& etn : type_names ) {
         auto zt = etn.second;
         if ( zt != ZAM_TYPE_NONE && zt != ZAM_TYPE_DEFAULT )
@@ -1874,7 +1874,7 @@ void ZAM_AssignOpTemplate::Instantiate() {
     OCVec ocs;
     ocs.push_back(op_classes[0]);
 
-    // Build constant/variable versions ...
+
     ocs.push_back(ZAM_OC_CONSTANT);
 
     if ( ocs[0] == ZAM_OC_RECORD_FIELD || ocs[0] == ZAM_OC_ASSIGN_FIELD )
@@ -1887,7 +1887,7 @@ void ZAM_AssignOpTemplate::Instantiate() {
     ocs[1] = ZAM_OC_VAR;
     InstantiateOp(ocs, false);
 
-    // ... and for assignments to fields, additional field versions.
+
     if ( ocs[0] == ZAM_OC_ASSIGN_FIELD ) {
         ocs.push_back(ZAM_OC_INT);
         InstantiateOp(ocs, false);
@@ -1901,15 +1901,15 @@ void ZAM_AssignOpTemplate::Instantiate() {
 }
 
 void ZAM_BinaryExprOpTemplate::Instantiate() {
-    // As usual, the first slot receives the operator's result.
+
     OCVec ocs = {ZAM_OC_VAR};
     ocs.resize(3);
 
-    // Build each combination for constant/variable operand,
-    // except skip constant/constant as that is always folded.
 
-    // We only include vector operations when both operands
-    // are non-constants.
+
+
+
+
 
     ocs[1] = ZAM_OC_CONSTANT;
     ocs[2] = ZAM_OC_VAR;
@@ -2027,8 +2027,8 @@ void ZAM_InternalOpTemplate::Parse(const string& attr, const string& line, const
         if ( words.size() != 1 )
             g->Gripe("indirect-call takes one argument", line);
 
-        // Note, currently only works with a *subsequent* num-call-args,
-        // whose setting needs to be 'n'.
+
+
         is_indirect_call = true;
 
         if ( attr == "indirect-local-call" )
@@ -2099,8 +2099,8 @@ void ZAM_InternalOpTemplate::ParseCall(const string& line, const Words& words) {
         eval += "auto " + av + " = " + func + "->Invoke(&args, f);\n";
         eval += "if ( ! " + av + " ) { ZAM_error = true; break; }\n";
 
-        // Postpone the profiling follow-up until after we process
-        // the assignment.
+
+
         post_eval = "ZAM_PROFILE_POST_CALL\n";
     }
     else {
@@ -2118,8 +2118,8 @@ bool TemplateInput::ScanLine(string& line) {
 
     char buf[8192];
 
-    // Read lines, discarding comments, which have to start at the
-    // beginning of a line.
+
+
     do {
         if ( ! fgets(buf, sizeof buf, f) )
             return false;
@@ -2152,7 +2152,7 @@ string TemplateInput::SkipWords(const string& line, int n) const {
     auto s = line.c_str();
 
     for ( int i = 0; i < n; ++i ) {
-        // Find end of current word.
+
         while ( *s && *s != '\n' ) {
             if ( isspace(*s) )
                 break;
@@ -2162,7 +2162,7 @@ string TemplateInput::SkipWords(const string& line, int n) const {
         if ( *s == '\n' )
             break;
 
-        // Find start of next word.
+
         while ( *s && isspace(*s) )
             ++s;
     }
@@ -2279,43 +2279,43 @@ string ZAMGen::GenOpCode(const ZAM_OpTemplate* op_templ, const string& suffix, Z
     auto op = "OP_" + op_templ->CanonicalName() + suffix;
 
     if ( generated_opcodes.contains(op) )
-        // We've already done this one, don't re-define its auxiliary
-        // information.
+
+
         return op;
 
     generated_opcodes.insert(op);
 
     IndentUp();
 
-    // Generate the enum defining the opcode ...
+
     Emit(OpDef, op + ",");
 
-    // ... the "flavor" of how it treats its first operand ...
+
     auto op_comment = ",\t// " + op;
     auto op1_always_read = (zc == ZIC_FIELD || zc == ZIC_COND);
     auto flavor = op1_always_read ? "OP1_READ" : op_templ->GetOp1Flavor();
     Emit(Op1Flavor, flavor + op_comment);
 
-    // ... whether it has side effects ...
+
     auto se = op_templ->HasSideEffects() ? "true" : "false";
     Emit(OpSideEffects, se + op_comment);
 
-    // ... and the switch case that maps the enum to a string
-    // representation.
+
+
     auto name = op_templ->CanonicalName();
     to_lower(name);
     name += suffix;
     under_to_dash(name);
     Emit(OpName, "case " + op + ":\treturn \"" + name + "\";");
 
-    // Track inverse mapping if specified and if we're doing a conditional.
+
     if ( zc == ZIC_COND && op_templ->HasInverseOp() ) {
         auto inverse_name = op_templ->InverseOp();
         dash_to_under(inverse_name);
 
         auto inv_t = name_to_template.find(inverse_name);
         if ( inv_t != name_to_template.end() ) {
-            // Generate the inverse opcode name with the same suffix.
+
             auto inverse_op = "OP_" + inv_t->second->CanonicalName() + suffix;
             inverse_mappings[op] = std::move(inverse_op);
         }
@@ -2362,7 +2362,7 @@ void ZAMGen::Emit(EmitTarget et, const string& s) {
 }
 
 void ZAMGen::InitEmitTargets() {
-    // Maps an EmitTarget enum to its corresponding filename.
+
     static const unordered_map<EmitTarget, const char*> gen_file_names = {
         {None, nullptr},
         {AssignFlavor, "ZAM-AssignFlavorsDefs.h"},
@@ -2404,7 +2404,7 @@ void ZAMGen::InitEmitTargets() {
         gen_files[gfn.first] = f;
     }
 
-    // Avoid bugprone-branch-clone warnings from clang-tidy in generated code.
+
     Emit(OpName, "// NOLINTBEGIN(bugprone-branch-clone)");
     Emit(Eval, "// NOLINTBEGIN(bugprone-branch-clone)");
     Emit(EvalMacros, "// NOLINTBEGIN(bugprone-macro-parentheses)");
@@ -2489,31 +2489,31 @@ void ZAMGen::ValidateInverseOps() {
 }
 
 void ZAMGen::GenInverseMappings() {
-    // Look for conditional branches that have inverses and add them to our
-    // mappings. These will be *NOT_* op codes (representing the conceptual
-    // inverse) and also have 'b' in the name (indicating that they branch).
+
+
+
     for ( const auto& op : generated_opcodes ) {
         if ( op.find('b') == string::npos )
             continue;
 
         auto not_offset = op.find("NOT_");
         if ( not_offset != string::npos ) {
-            // This is a *NOT_* opcode. Its inverse is the same name with
-            // "NOT_" removed.
+
+
             auto inverse_op = op.substr(0, not_offset) + op.substr(not_offset + 4);
             if ( generated_opcodes.contains(inverse_op) ) {
                 inverse_mappings[op] = inverse_op;
-                inverse_mappings[inverse_op] = op; // also add reverse mapping
+                inverse_mappings[inverse_op] = op;
             }
         }
     }
 
     ValidateInverseOps();
 
-    // Generate the switch cases for the inverse mapping function.
-    // We need to filter out inverse mappings where the target opcode
-    // doesn't actually exist (e.g., OP_LT_VVV_T -> OP_GE_VVV_T, but
-    // OP_GE_VVV_T doesn't exist because GE doesn't support type T).
+
+
+
+
     for ( const auto& [op, inv_op] : inverse_mappings )
         if ( generated_opcodes.contains(inv_op) )
             Emit(OpInverse, "case " + op + ": return " + inv_op + ";");
@@ -2526,7 +2526,7 @@ bool ZAMGen::ParseTemplate() {
         return false;
 
     if ( line.size() <= 1 )
-        // A blank line - no template to parse.
+
         return true;
 
     auto words = SplitIntoWords(line);
@@ -2543,10 +2543,10 @@ bool ZAMGen::ParseTemplate() {
 
     const auto& op_name = words[1];
 
-    // We track issues with the wrong number of template arguments
-    // up front, to avoid misinvoking constructors, but we don't
-    // report these until later because if the template names a
-    // bad operation, it's better to report that as the core problem.
+
+
+
+
     const char* args_mismatch = nullptr;
 
     if ( op == "direct-unary-op" ) {

@@ -1,8 +1,8 @@
-##! Script for tracking known Modbus masters and slaves.
-##!
-##! .. todo:: This script needs a lot of work.  What might be more interesting
-##!          is to track master/slave relationships based on commands sent and
-##!          successful (non-exception) responses.
+
+
+
+
+
 
 @load base/protocols/modbus
 
@@ -19,19 +19,19 @@ export {
 	};
 
 	type ModbusInfo: record {
-		## The time the device was discovered.
+
 		ts:          time             &log;
-		## The IP address of the host.
+
 		host:        addr             &log;
-		## The type of device being tracked.
+
 		device_type: ModbusDeviceType &log;
 	};
 
-	## The Modbus nodes being tracked.
+
 	global modbus_nodes: set[addr, ModbusDeviceType] &create_expire=1day &redef;
 
-	## Event that can be handled to access the loggable record as it is sent
-	## on to the logging framework.
+
+
 	global log_known_modbus: event(rec: ModbusInfo);
 }
 

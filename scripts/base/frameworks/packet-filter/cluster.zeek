@@ -10,8 +10,8 @@ event Cluster::hello(name: string, id: string) &priority=-3
 	     name in Cluster::nodes &&
 	     Cluster::nodes[name]$node_type == Cluster::MANAGER )
 		{
-		# This ensures that a packet filter is installed and logged
-		# after the manager connects to us.
+
+
 		install();
 		}
 	}

@@ -1,55 +1,55 @@
-##! Provide information about the currently running Zeek version.  The most
-##! convenient way to access this are the :zeek:see:`Version::number` and
-##! :zeek:see:`Version::info` constants.
+
+
+
 
 module Version;
 
 export {
-	## A type exactly describing a Zeek version
+
 	type VersionDescription: record {
-		## Number representing the version which can be used for easy comparison.
-		## The format of the number is ABBCC with A being the major version,
-		## bb being the minor version (2 digits) and CC being the patchlevel (2 digits).
-		## As an example, Zeek 2.4.1 results in the number 20401.
+
+
+
+
 		version_number: count;
-		## Major version number (e.g. 2 for 2.5)
+
 		major: count;
-		## Minor version number (e.g. 5 for 2.5)
+
 		minor: count;
-		## Patch version number (e.g. 0 for 2.5 or 1 for 2.4.1)
+
 		patch: count;
-		## Commit number for development versions, Versions prior to 3.0.0,
-		## like "2.4-12", use a post-release commit number (12 commits
-		## after the 2.4 release).  Versions after 3.0.0, like
-		## "3.1.0-dev.37", use a pre-release commit number (37 commits
-		## into the development cycle for 3.1.0).  For non-development version
-		## this number will be zero.
+
+
+
+
+
+
 		commit: count;
-		## If set to true, the version is a beta build of Zeek.  These versions
-		## may start like "2.6-beta" or "3.0.0-rc" (the "rc" form started
-		## being used for 3.0.0 and later).
+
+
+
 		beta: bool;
-		## If set to true, the version is a debug build
+
 		debug: bool;
-		## Local version portion of the version string
+
 		localversion: string;
-		## String representation of this version
+
 		version_string: string;
 	};
 
-	## Parse a given version string.
-	##
-	## version_string: Zeek version string.
-	##
-	## Returns: :zeek:see:`Version::VersionDescription` record.
+
+
+
+
+
 	global parse: function(version_string: string): VersionDescription;
 
-	## Test if the current running version of Zeek is greater or equal to
-	## the given version string.
-	##
-	## version_string: Version to check against the current running version.
-	##
-	## Returns: True if running version greater or equal to the given version.
+
+
+
+
+
+
 	global at_least: function(version_string: string): bool;
 }
 
@@ -81,7 +81,7 @@ function parse(version_string: string): VersionDescription
 
 	if ( |vs| > 0 )
 		{
-		# More than just X.Y
+
 		if ( vs[0] == "." )
 			{
 			vs = lstrip(vs, ".");
@@ -95,13 +95,13 @@ function parse(version_string: string): VersionDescription
 		localversion = find_last(vs, /-[a-zA-Z0-9_\.]+$/);
                 if ( localversion != "" )
 			{
-			# Remove leadig dash from localversion
+
 			localversion = lstrip(localversion, "-");
-			# Drop the local version piece from the version string
+
 			vs = gsub(vs, /-[a-zA-Z0-9_\.]+$/, "");
 			}
 
-		# A .X possibly remaining
+
 		vs = lstrip(vs, ".");
 
 		if ( |vs| > 0 )
@@ -118,15 +118,15 @@ function parse(version_string: string): VersionDescription
 	}
 
 export {
-	## :zeek:see:`Version::VersionDescription` record pertaining to the currently
-	## running version of Zeek.
+
+
 	const info = Version::parse(zeek_version());
 
-	## version number of the currently running version of Zeek as a numeric
-	## representation.  The format of the number is ABBCC with A being the
-	## major version, bb being the minor version (2 digits) and CC being the
-	## patchlevel (2 digits).  As an example, Zeek 2.4.1 results in the
-	## number 20401
+
+
+
+
+
 	const number = info$version_number;
 }
 

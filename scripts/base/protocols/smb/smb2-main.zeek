@@ -5,11 +5,11 @@
 module SMB2;
 
 redef record SMB::CmdInfo += {
-	## Dialects offered by the client.
+
 	smb2_offered_dialects: index_vec &optional;
 
-	## Keep the create_options in the command for
-	## referencing later.
+
+
 	smb2_create_options: count &default=0;
 };
 
@@ -71,9 +71,9 @@ event smb2_message(c: connection, hdr: SMB2::Header, is_orig: bool) &priority=-5
 	if ( is_orig )
 		return;
 
-	# If the command that is being looked at right now was
-	# marked as PENDING, then we'll skip all of this and wait
-	# for a reply that isn't marked pending.
+
+
+
 	if ( c$smb_state$current_cmd$status == "PENDING" )
 		return;
 
@@ -161,18 +161,18 @@ event smb2_create_response(c: connection, hdr: SMB2::Header, response: SMB2::Cre
 	if ( c$smb_state$current_tree?$path )
 		c$smb_state$current_file$path = c$smb_state$current_tree$path;
 
-	# I'm seeing negative data from IPC tree transfers
+
 	if ( response$times$modified as double > 0.0 )
 		c$smb_state$current_file$times = response$times;
 
-	# We can identify the file by its file id now so let's stick it
-	# in the file map.
+
+
 	c$smb_state$fid_map[response$file_id$persistent+response$file_id$volatile] = c$smb_state$current_file;
 
 	c$smb_state$current_file = c$smb_state$fid_map[response$file_id$persistent+response$file_id$volatile];
 
-	# If the create request for this file had FILE_DELETE_ON_CLOSE set and
-	# the response status was success, raise a smb2_file_delete event.
+
+
 	if ( hdr$status == 0 && (c$smb_state$current_cmd$smb2_create_options & 0x00001000) != 0 )
 		event smb2_file_delete(c, hdr, response$file_id, T);
 	}
@@ -285,8 +285,8 @@ event smb2_file_delete(c: connection, hdr: SMB2::Header, file_id: SMB2::GUID, de
 
 	if ( ! delete_pending )
 		{
-		# This is weird because it would mean that someone didn't
-		# set the delete bit in a delete request.
+
+
 		return;
 		}
 
@@ -332,7 +332,7 @@ event smb2_close_request(c: connection, hdr: SMB2::Header, file_id: SMB2::GUID) 
 	if ( file_id$persistent+file_id$volatile in c$smb_state$fid_map )
 		{
 		local fl = c$smb_state$fid_map[file_id$persistent+file_id$volatile];
-		# Need to check for existence of path in case tree connect message wasn't seen.
+
 		if ( c$smb_state$current_tree?$path )
 			fl$path = c$smb_state$current_tree$path;
 		delete c$smb_state$fid_map[file_id$persistent+file_id$volatile];
@@ -341,9 +341,9 @@ event smb2_close_request(c: connection, hdr: SMB2::Header, file_id: SMB2::GUID) 
 		}
 	else
 		{
-		# TODO - Determine correct action
-		# A reporter message is not right...
-		#Reporter::warning("attempting to close an unknown file!");
+
+
+
 		}
 	}
 
@@ -360,11 +360,11 @@ event smb2_discarded_messages_state(c: connection, state: string)
 	if ( ! SMB::enable_clear_script_state )
 		return;
 
-	# Wipe out script-level state for this connection.
+
 	c$smb_state$fid_map = table();
 	c$smb_state$pending_cmds = table();
-	# Not expected to grow overly large and the original
-	# zeek-smb-clear-state package didn't reset these either.
-	# c$smb_state$tid_map = table();
-	# c$smb_state$pipe_map = table();
+
+
+
+
 	}

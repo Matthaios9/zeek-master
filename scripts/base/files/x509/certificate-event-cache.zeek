@@ -1,47 +1,47 @@
-##! This script sets up the certificate event cache handling of Zeek.
-##!
-##! The Zeek core provided a method to skip certificate processing for known certificates.
-##! For more details about this functionality, see :zeek:see:`x509_set_certificate_cache`.
-##!
-##! This script uses this feature to lower the amount of processing that has to be performed
-##! by Zeek by caching all certificate events for common certificates. For these certificates,
-##! the parsing of certificate information in the core is disabled. Instead, the cached events
-##! and data structures from the previous certificates are used.
+
+
+
+
+
+
+
+
+
 
 @load ./main
 
 module X509;
 
 export {
-	## How often do you have to encounter a certificate before
-	## caching the events for it. Set to 0 to disable caching of certificates.
+
+
 	option caching_required_encounters : count = 10;
 
-	## The timespan over which caching_required_encounters has to be reached
+
 	option caching_required_encounters_interval : interval = 62 secs;
 
-	## After a certificate has not been encountered for this time, it
-	## may be evicted from the certificate event cache.
+
+
 	option certificate_cache_minimum_eviction_interval : interval = 62 secs;
 
-	## Maximum size of the certificate event cache
+
 	option certificate_cache_max_entries : count = 10000;
 
-	## This hook performs event-replays in case a certificate that already
-	## is in the cache is encountered.
-	##
-	## It is possible to change this behavior/skip sending the events by
-	## installing a higher priority hook instead.
+
+
+
+
+
 	global x509_certificate_cache_replay: hook(f: fa_file, e: X509::Info, sha256: string);
 }
 
-# Table tracking potential certificates to cache - indexed by the SHA256 of the
-# raw on-the-wire representation (DER).
+
+
 global certificates_encountered: table[string] of count &create_expire=caching_required_encounters_interval;
 
-# Table caching the output of the X509 analyzer for commonly seen certificates.
-# This is indexed by SHA256 and contains the Info record of the first certificate
-# encountered. We use this info record to re-play the events.
+
+
+
 global certificate_cache: table[string] of X509::Info &read_expire=certificate_cache_minimum_eviction_interval;
 
 event zeek_init() &priority=5
@@ -52,11 +52,11 @@ event zeek_init() &priority=5
 
 hook x509_certificate_cache_replay(f: fa_file, e: X509::Info, sha256: string)
 	{
-	# we encountered a cached cert. The X509 analyzer will skip it. Let's raise all the events that it typically
-	# raises by ourselves.
 
-	# first - let's checked if it already has an x509 record. That would mean that someone raised the file_hash event
-	# several times for the certificate - in which case we bail out.
+
+
+
+
 	if ( f$info?$x509 )
 		return;
 

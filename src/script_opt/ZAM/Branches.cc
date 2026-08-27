@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Methods for dealing with ZAM branches.
+
+
 
 #include "zeek/Reporter.h"
 #include "zeek/script_opt/ZAM/Compile.h"
@@ -77,12 +77,12 @@ ZInstI* ZAMCompiler::FindLiveTarget(ZInstI* goto_target) {
 }
 
 void ZAMCompiler::ConcretizeBranch(ZInstI* inst, ZInstI* target, int target_slot) {
-    int t; // instruction number of target
+    int t;
 
     if ( target == pending_inst ) {
         if ( insts2.empty() )
-            // We're doing this in the context of concretizing
-            // intermediary instructions for dumping them out.
+
+
             t = insts1.size();
         else
             t = insts2.size();
@@ -147,4 +147,4 @@ void ZAMCompiler::SetV4(ZAMStmt s, const InstLabel l) {
         inst->op_type = OP_VVVV_I4;
 }
 
-} // namespace zeek::detail
+}

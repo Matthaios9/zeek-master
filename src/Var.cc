@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Var.h"
 
@@ -148,7 +148,7 @@ static ExprPtr initialize_var(const IDPtr& id, InitClass c, ExprPtr init) {
     else if ( c == INIT_REMOVE )
         assignment = make_intrusive<RemoveFromExpr>(lhs, init);
     else
-        // This can happen due to error propagation.
+
         return nullptr;
 
     if ( assignment->IsError() )
@@ -160,8 +160,8 @@ static ExprPtr initialize_var(const IDPtr& id, InitClass c, ExprPtr init) {
 static void make_var(const IDPtr& id, TypePtr t, InitClass c, ExprPtr init, std::unique_ptr<std::vector<AttrPtr>> attr,
                      DeclType dt, bool do_init) {
     if ( c == INIT_NONE && init ) {
-        // This can happen because the grammar allows any "init_class",
-        // including none, to be followed by an expression.
+
+
         init->Error("Initialization not preceded by =/+=/-= is not allowed.");
     }
 
@@ -203,20 +203,20 @@ static void make_var(const IDPtr& id, TypePtr t, InitClass c, ExprPtr init, std:
     }
 
     if ( id->GetType() && id->GetType()->Tag() != TYPE_ERROR && ! id->IsBlank() ) {
-        // NOLINTNEXTLINE(bugprone-assignment-in-if-condition)
+
         if ( dt != VAR_REDEF && (! init || ! do_init || (! t && ! (t = init_type(init)))) ) {
             id->Error("already defined", init.get());
             return;
         }
 
-        // Allow redeclaration in order to initialize.
+
         if ( ! same_type(t, id->GetType()) ) {
             id->Error("redefinition changes type", init.get());
             return;
         }
     }
 
-    if ( ! t ) { // Take type from initialization.
+    if ( ! t ) {
         if ( ! init ) {
             id->Error("no type given");
             return;
@@ -258,13 +258,13 @@ static void make_var(const IDPtr& id, TypePtr t, InitClass c, ExprPtr init, std:
 
     if ( do_init ) {
         if ( c == INIT_NONE && dt == VAR_REDEF && t->IsTable() && init && init->Tag() == EXPR_ASSIGN )
-            // e.g. 'redef foo["x"] = 1' is missing an init class, but the
-            // intention clearly isn't to overwrite entire existing table val.
+
+
             c = INIT_EXTRA;
 
         if ( init &&
              ((c == INIT_EXTRA && id->GetAttr(ATTR_ADD_FUNC)) || (c == INIT_REMOVE && id->GetAttr(ATTR_DEL_FUNC))) ) {
-            // Just apply the function.
+
             id->SetVal(init, c);
             id->GetOptInfo()->AddInitExpr(init, c);
         }
@@ -301,9 +301,9 @@ static void make_var(const IDPtr& id, TypePtr t, InitClass c, ExprPtr init, std:
 
     if ( t && t->Tag() == TYPE_FUNC &&
          (t->AsFuncType()->Flavor() == FUNC_FLAVOR_EVENT || t->AsFuncType()->Flavor() == FUNC_FLAVOR_HOOK) ) {
-        // For events, add a function value (without any body) here so that
-        // we can later access the ID even if no implementations have been
-        // defined.
+
+
+
         auto f = make_intrusive<ScriptFunc>(id);
         id->SetVal(make_intrusive<FuncVal>(std::move(f)));
     }
@@ -322,7 +322,7 @@ StmtPtr add_local(IDPtr id, TypePtr t, InitClass c, ExprPtr init, std::unique_pt
         if ( c != INIT_FULL )
             id->Error("can't use += / -= for initializations of local variables");
 
-        // copy Location to the stack, because AssignExpr may free "init"
+
         const Location location = init->GetLocationInfo() ? *init->GetLocationInfo() : no_location;
 
         auto name_expr = make_intrusive<NameExpr>(id, dt == VAR_CONST);
@@ -350,9 +350,9 @@ extern ExprPtr add_and_assign_local(IDPtr id, ExprPtr init, ValPtr val) {
 
 void add_type(ID* id, TypePtr t, std::unique_ptr<std::vector<AttrPtr>> attr) {
     if ( const auto& old_t = id->GetType() ) {
-        // The identifier already has a type associated with it. This can
-        // be okay if (1) it's already been marked as a Type identifier,
-        // (2) the previous type is a stub, or an equivalent enum.
+
+
+
         if ( ! id->IsType() ) {
             reporter->Error("Identifier %s has already been declared and is not a type", id->Name());
             return;
@@ -360,9 +360,9 @@ void add_type(ID* id, TypePtr t, std::unique_ptr<std::vector<AttrPtr>> attr) {
 
         if ( old_t->Tag() == t->Tag() && ((old_t->Tag() == TYPE_RECORD && old_t->AsRecordType()->NumFields() == 0) ||
                                           (t->Tag() == TYPE_ENUM && same_type(t, old_t))) )
-            // It has a consistent tag and is either redeclaring a stub
-            // record (used in init-bare.zeek) or an equivalent enum
-            // (which can appear due to specifiers in BiFs, for example).
+
+
+
             ;
 
         else {
@@ -385,10 +385,10 @@ void add_type(ID* id, TypePtr t, std::unique_ptr<std::vector<AttrPtr>> attr) {
 
     if ( (t->Tag() == TYPE_RECORD || t->Tag() == TYPE_ENUM) &&
          (old_type_name.empty() || old_type_name == new_type_name) ) {
-        // An extensible type (record/enum) being declared for first time.
-        //
-        // Enum types are initialized with the same name as their identifier
-        // when declared for the first time, double check that here.
+
+
+
+
         if ( t->Tag() == TYPE_ENUM && new_type_name != old_type_name )
             reporter->InternalError("enum type has unexpected names: '%s' and '%s'", old_type_name.c_str(),
                                     new_type_name.c_str());
@@ -396,14 +396,14 @@ void add_type(ID* id, TypePtr t, std::unique_ptr<std::vector<AttrPtr>> attr) {
         tnew = std::move(t);
     }
     else {
-        // If the old type is an error or the old type doesn't exist, then return
-        // an error instead of trying to clone it.
+
+
         if ( t->Tag() == TYPE_ERROR && t->InternalType() == TYPE_INTERNAL_ERROR ) {
             reporter->Error("Error trying to create alias to nonexistent type");
             return;
         }
 
-        // Clone the type to preserve type name aliasing.
+
         tnew = t->ShallowClone();
     }
 
@@ -513,17 +513,17 @@ static auto get_prototype(IDPtr id, FuncTypePtr t) {
 
     if ( prototype ) {
         if ( decl->Flavor() == FUNC_FLAVOR_FUNCTION ) {
-            // If a previous declaration of the function had
-            // &default params, automatically transfer any that
-            // are missing (convenience so that implementations
-            // don't need to specify the &default expression again).
+
+
+
+
             transfer_arg_defaults(prototype->args.get(), t->Params().get());
         }
         else {
-            // Warn for trying to use &default parameters in
-            // hook/event handler body when it already has a
-            // declaration since only &default in the declaration
-            // has any effect.
+
+
+
+
             const auto& args = t->Params();
 
             for ( int i = 0; i < args->NumFields(); ++i ) {
@@ -550,8 +550,8 @@ static auto get_prototype(IDPtr id, FuncTypePtr t) {
     }
 
     else {
-        // Allow renaming arguments, but only for the canonical
-        // prototypes of hooks/events.
+
+
         if ( canonical_arg_types_match(decl, t.get()) )
             prototype = decl->Prototypes()[0];
         else
@@ -570,12 +570,12 @@ static bool check_params(int i, std::optional<FuncType::Prototype> prototype, co
         auto it = prototype->offsets.find(i);
 
         if ( it == prototype->offsets.end() ) {
-            // Alternate prototype hides this param
+
             hide = true;
             arg_i = canon_args->FieldDecl(i);
         }
         else {
-            // Alternate prototype maps this param to another index
+
             arg_i = args->FieldDecl(it->second);
         }
     }
@@ -594,8 +594,8 @@ static bool check_params(int i, std::optional<FuncType::Prototype> prototype, co
     const char* local_name = arg_i->id;
 
     if ( hide )
-        // Note the illegal '-' in hidden name implies we haven't
-        // clobbered any local variable names.
+
+
         local_name = util::fmt("%s-hidden", local_name);
 
     arg_id = install_ID(local_name, module_name, false, false);
@@ -640,7 +640,7 @@ void begin_func(IDPtr id, const char* module_name, FunctionFlavor flavor, bool i
             case FUNC_FLAVOR_EVENT:
             case FUNC_FLAVOR_HOOK:
                 if ( is_redef )
-                    // Clear out value so it will be replaced.
+
                     id->SetVal(nullptr);
                 break;
 
@@ -670,7 +670,7 @@ void begin_func(IDPtr id, const char* module_name, FunctionFlavor flavor, bool i
     if ( Attr* depr_attr = find_attr(current_scope()->Attrs().get(), ATTR_DEPRECATED) )
         current_scope()->GetID()->MakeDeprecated(depr_attr->GetExpr());
 
-    // Reset the AST node statistics to track afresh for this function.
+
     Stmt::ResetNumStmts();
     Expr::ResetNumExprs();
 }
@@ -704,8 +704,8 @@ TraversalCode OuterIDBindingFinder::PreExpr(const Expr* expr) {
 
     for ( const auto& scope : scopes )
         if ( scope->Find(id->Name()) )
-            // Shadowing is not allowed, so if it's found at inner scope, it's
-            // not something we have to worry about also being at outer scope.
+
+
             return TC_CONTINUE;
 
     outer_id_references.insert(id);
@@ -719,21 +719,21 @@ TraversalCode OuterIDBindingFinder::PostExpr(const Expr* expr) {
     return TC_CONTINUE;
 }
 
-// The following is only used for debugging AST duplication.  If activated,
-// each AST is replaced with its duplicate.  In the absence of a duplication
-// error, this shouldn't change any semantics, so running the test suite
-// with this variable set can find flaws in the duplication machinery.
+
+
+
+
 static bool duplicate_ASTs = getenv("ZEEK_DUPLICATE_ASTS");
 
 void end_func(StmtPtr body, const char* module_name, bool free_of_conditionals) {
     if ( duplicate_ASTs && reporter->Errors() == 0 )
-        // Only try duplication in the absence of errors.  If errors
-        // have occurred, they can be re-generated during the
-        // duplication process, leading to regression failures due
-        // to duplicated error messages.
-        //
-        // We duplicate twice to make sure that the AST produced
-        // by duplicating can itself be correctly duplicated.
+
+
+
+
+
+
+
         body = body->Duplicate()->Duplicate();
 
     auto oi = body->GetOptInfo();
@@ -763,10 +763,10 @@ void end_func(StmtPtr body, const char* module_name, bool free_of_conditionals) 
 
     analyze_func(std::move(func));
 
-    // Note: ideally, something would take ownership of this memory until the
-    // end of script execution, but that's essentially the same as the
-    // lifetime of the process at the moment, so ok to "leak" it.
-    // NOLINTNEXTLINE(bugprone-unused-return-value)
+
+
+
+
     ingredients.release();
 }
 
@@ -782,4 +782,4 @@ IDPList gather_outer_ids(ScopePtr scope, StmtPtr body) {
     return idl;
 }
 
-} // namespace zeek::detail
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/spicy/packet-analyzer.h"
 
@@ -9,13 +9,13 @@ using namespace zeek;
 using namespace zeek::spicy;
 using namespace zeek::spicy::rt;
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+
 #ifdef DEBUG
 #define STATE_DEBUG_MSG(...) DebugMsg(__VA_ARGS__)
 #else
 #define STATE_DEBUG_MSG(...)
 #endif
-// NOLINTEND(cppcoreguidelines-macro-usage)
+
 
 void PacketState::debug(const std::string& msg) { spicy::rt::debug(_cookie, hilti::rt::String(msg.c_str())); }
 
@@ -68,7 +68,7 @@ bool PacketAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* pack
     } catch ( const hilti::rt::Exception& e ) {
         STATE_DEBUG_MSG(e.what());
         spicy_mgr->analyzerError(_state.packet().analyzer, e.description(),
-                                 e.location()); // this sets Zeek to skip sending any further input
+                                 e.location());
         _state.reset();
         return false;
     }

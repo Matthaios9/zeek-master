@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Debugging support for Zeek policy files.
+
+
 
 #include "zeek/Debug.h"
 
@@ -43,25 +43,25 @@ zeek::detail::DebuggerState zeek::detail::g_debugger_state;
 zeek::detail::TraceState zeek::detail::g_trace_state;
 std::map<string, zeek::detail::Filemap*> zeek::detail::g_dbgfilemaps;
 
-// These variables are used only to decide whether or not to print the
-// current context; you don't want to do it after a step or next
-// command unless you've exited a function.
+
+
+
 static bool step_or_next_pending = false;
 static zeek::detail::Frame* last_frame;
 
-// The following values are needed by parse.y.
-// Evaluates the given expression in the context of the currently selected
-// frame.  Returns the resulting value, or nil if none (or there was an error).
+
+
+
 zeek::detail::Expr* g_curr_debug_expr = nullptr;
 const char* g_curr_debug_error = nullptr;
 bool in_debug = false;
 
-// ### fix this hardwired access to external variables etc.
+
 struct yy_buffer_state;
 using YY_BUFFER_STATE = struct yy_buffer_state*;
 YY_BUFFER_STATE zeek_scan_string(const char*);
 
-extern YYLTYPE yylloc; // holds start line and column of token
+extern YYLTYPE yylloc;
 extern int line_number;
 extern const char* filename;
 
@@ -74,8 +74,8 @@ DebuggerState::DebuggerState() {
     already_did_list = false;
     BreakFromSignal(false);
 
-    // ### Don't choose this arbitrary size! Extend Frame.
-    dbg_locals = new Frame(1024, /* func = */ nullptr, /* fn_args = */ nullptr);
+
+    dbg_locals = new Frame(1024,  nullptr,  nullptr);
 }
 
 DebuggerState::~DebuggerState() { Unref(dbg_locals); }
@@ -87,7 +87,7 @@ bool StmtLocMapping::StartsAfter(const StmtLocMapping* m2) {
     return loc.FirstLine() > m2->loc.FirstLine();
 }
 
-// Generic debug message output.
+
 int debug_msg(const char* fmt, ...) {
     va_list args;
     int retval;
@@ -99,7 +99,7 @@ int debug_msg(const char* fmt, ...) {
     return retval;
 }
 
-// Trace message output
+
 
 FILE* TraceState::SetTraceFile(const char* trace_filename) {
     FILE* newfile;
@@ -137,7 +137,7 @@ int TraceState::LogTrace(const char* fmt, ...) {
 
     va_start(args, fmt);
 
-    // Prefix includes timestamp and file/line info.
+
     fprintf(trace_file, "%.6f ", run_state::network_time);
 
     const Stmt* stmt;
@@ -160,7 +160,7 @@ int TraceState::LogTrace(const char* fmt, ...) {
 
     fprintf(trace_file, "%s:%d", loc.FileName(), loc.LastLine());
 
-    // Each stack frame is indented.
+
     for ( const auto& call : call_stack )
         fprintf(trace_file, "\t");
 
@@ -172,7 +172,7 @@ int TraceState::LogTrace(const char* fmt, ...) {
     return retval;
 }
 
-// Helper functions.
+
 void get_first_statement(Stmt* list, Stmt*& first, Location& loc) {
     if ( ! list ) {
         first = nullptr;
@@ -191,7 +191,7 @@ void get_first_statement(Stmt* list, Stmt*& first, Location& loc) {
 }
 
 static void parse_function_name(vector<ParseLocationRec>& result, ParseLocationRec& plr,
-                                const string& s) { // function name
+                                const string& s) {
     const auto& id = lookup_ID(s.c_str(), current_module.c_str());
 
     if ( ! id ) {
@@ -222,7 +222,7 @@ static void parse_function_name(vector<ParseLocationRec>& result, ParseLocationR
         return;
     }
 
-    Stmt* body = nullptr; // the particular body we care about; 0 = all
+    Stmt* body = nullptr;
 
     if ( bodies.size() == 1 )
         body = bodies[0].stmts.get();
@@ -271,7 +271,7 @@ static void parse_function_name(vector<ParseLocationRec>& result, ParseLocationR
 
     plr.type = PLR_FUNCTION;
 
-    // Find first atomic (non-STMT_LIST) statement
+
     Stmt* first;
     Location stmt_loc;
 
@@ -307,12 +307,12 @@ vector<ParseLocationRec> parse_location_string(const string& s) {
     result.emplace_back();
     ParseLocationRec& plr = result[0];
 
-    // If PLR_FILE_AND_LINE, set this to the filename you want; for
-    // memory management reasons, the real filename is set when looking
-    // up the line number to find the corresponding statement.
+
+
+
     std::string loc_filename;
 
-    if ( sscanf(s.c_str(), "%d", &plr.line) ) { // just a line number (implicitly referring to the current file)
+    if ( sscanf(s.c_str(), "%d", &plr.line) ) {
         loc_filename = g_debugger_state.last_loc.FileName();
         plr.type = PLR_FILE_AND_LINE;
     }
@@ -323,7 +323,7 @@ vector<ParseLocationRec> parse_location_string(const string& s) {
 
         if ( pos_colon == string::npos || pos_dblcolon != string::npos )
             parse_function_name(result, plr, s);
-        else { // file:line
+        else {
             string policy_filename = s.substr(0, pos_colon);
             string line_string = s.substr(pos_colon + 1, s.length() - pos_colon);
 
@@ -376,7 +376,7 @@ vector<ParseLocationRec> parse_location_string(const string& s) {
     return result;
 }
 
-// Interactive debugging console.
+
 
 static int dbg_dispatch_cmd(DebugCmd cmd_code, const vector<string>& args);
 
@@ -385,7 +385,7 @@ static int dbg_dispatch_cmd(DebugCmd cmd_code, const vector<string>& args);
 void using_history(void);
 
 static bool init_readline() {
-    // ### Set up custom completion.
+
 
     rl_outstream = stderr;
     using_history();
@@ -402,18 +402,18 @@ void break_signal(int) {
 
 int dbg_init_debugger(const char* cmdfile) {
     if ( ! g_policy_debug )
-        return 0; // probably shouldn't have been called
+        return 0;
 
     init_global_dbg_constants();
 
-    // Hit the debugger before running anything.
+
     g_debugger_state.BreakBeforeNextStmt(true);
 
     if ( cmdfile )
-        // ### Implement this
+
         debug_msg("Command files not supported. Using interactive mode.\n");
 
-    // ### if ( interactive ) (i.e., not reading cmds from a file)
+
 #ifdef HAVE_READLINE
     init_readline();
 #endif
@@ -425,17 +425,17 @@ int dbg_init_debugger(const char* cmdfile) {
 }
 
 int dbg_shutdown_debugger() {
-    // ### TODO: Remove signal handlers
+
     return 1;
 }
 
-// Umesh: I stole this code from libedit; I modified it here to use
-// <string>s to avoid memory management problems. The main command is returned
-// by the operation argument; the additional arguments are put in the
-// supplied vector.
-//
-// Parse the string into individual tokens, similarly to how shell
-// would do it.
+
+
+
+
+
+
+
 
 void tokenize(const char* cstr, string& operation, vector<string>& arguments) {
     int num_tokens = 0;
@@ -481,14 +481,14 @@ void tokenize(const char* cstr, string& operation, vector<string>& arguments) {
     }
 }
 
-// Given a command string, parse it and send the command to be dispatched.
+
 int dbg_execute_command(const char* cmd) {
     bool matched_history = false;
 
     if ( ! cmd )
         return 0;
 
-    if ( util::streq(cmd, "") ) // do the GDB command completion
+    if ( util::streq(cmd, "") )
     {
 #ifdef HAVE_READLINE
         int i;
@@ -519,7 +519,7 @@ int dbg_execute_command(const char* cmd) {
 
     delete[] localcmd;
 
-    // Make sure we know this op name.
+
     auto matching_cmds_buf = std::make_unique<const char*[]>(num_debug_cmds());
     auto matching_cmds = matching_cmds_buf.get();
     int num_matches = find_all_matching_cmds(opstring, matching_cmds);
@@ -539,7 +539,7 @@ int dbg_execute_command(const char* cmd) {
         return 0;
     }
 
-    // Matched exactly one command: find out which one.
+
     DebugCmd cmd_code = dcInvalid;
     for ( int i = 0; i < num_debug_cmds(); ++i )
         if ( matching_cmds[i] ) {
@@ -548,14 +548,14 @@ int dbg_execute_command(const char* cmd) {
         }
 
 #ifdef HAVE_READLINE
-    // Insert command into history.
+
     if ( ! matched_history && cmd && *cmd ) {
-        /* The prototype for add_history(), at least under MacOS,
-         * has it taking a char* rather than a const char*.
-         * But documentation at
-         * http://tiswww.case.edu/php/chet/readline/history.html
-         * suggests that it's safe to assume it's really const char*.
-         */
+
+
+
+
+
+
         add_history(cmd);
         HISTORY_STATE* state = history_get_history_state();
         state->entries[state->length - 1]->data = get_debug_cmd_info(cmd_code);
@@ -565,7 +565,7 @@ int dbg_execute_command(const char* cmd) {
     if ( static_cast<int>(cmd_code) >= num_debug_cmds() )
         reporter->InternalError("Assertion failed: int(cmd_code) < num_debug_cmds()");
 
-    // Dispatch to the op-specific handler (with args).
+
     int retcode = dbg_dispatch_cmd(cmd_code, arguments);
     if ( retcode < 0 )
         return retcode;
@@ -575,12 +575,12 @@ int dbg_execute_command(const char* cmd) {
         reporter->InternalError("Assertion failed: info");
 
     if ( ! info )
-        return -2; // ### yuck, why -2?
+        return -2;
 
     return info->ResumeExecution();
 }
 
-// Call the appropriate function for the command.
+
 static int dbg_dispatch_cmd(DebugCmd cmd_code, const vector<string>& args) {
     switch ( cmd_code ) {
         case dcHelp: dbg_cmd_help(cmd_code, args); break;
@@ -721,36 +721,36 @@ int dbg_handle_debug_input() {
     g_debugger_state.last_loc = loc;
 
     do {
-        // readline returns a pointer to a buffer it allocates; it's
-        // freed at the bottom.
+
+
 #ifdef HAVE_READLINE
         input_line = readline(get_prompt());
 #else
         printf("%s", get_prompt());
 
-        // readline uses malloc, and we want to be consistent
-        // with it.
+
+
         input_line = reinterpret_cast<char*>(util::safe_malloc(1024));
         input_line[1023] = 0;
-        // ### Maybe it's not always stdin.
+
         input_line = fgets(input_line, 1023, stdin);
 #endif
 
-        // ### Maybe not stdin; maybe do better cleanup.
+
         if ( feof(stdin) )
             exit(0);
 
         status = dbg_execute_command(input_line);
 
         if ( input_line ) {
-            free(input_line); // this was malloc'ed
+            free(input_line);
             input_line = nullptr;
         }
         else
             exit(0);
     } while ( status == 0 );
 
-    // Clear out some state. ### Is there a better place?
+
     g_debugger_state.curr_frame_idx = 0;
     g_debugger_state.already_did_list = false;
 
@@ -760,7 +760,7 @@ int dbg_handle_debug_input() {
     return 0;
 }
 
-// Return true to continue execution, false to abort.
+
 bool pre_execute_stmt(Stmt* stmt, Frame* f) {
     if ( ! g_policy_debug || stmt->Tag() == STMT_LIST || stmt->Tag() == STMT_NULL )
         return true;
@@ -803,7 +803,7 @@ bool pre_execute_stmt(Stmt* stmt, Frame* f) {
 
         for ( BPMapType::iterator i = p.first; i != p.second; ++i ) {
             int break_code = i->second->ShouldBreak(stmt);
-            if ( break_code == 2 ) // ### 2?
+            if ( break_code == 2 )
             {
                 i->second->SetEnable(false);
                 delete i->second;
@@ -820,13 +820,13 @@ bool pre_execute_stmt(Stmt* stmt, Frame* f) {
 }
 
 bool post_execute_stmt(Stmt* stmt, Frame* f, Val* result, StmtFlowType* flow) {
-    // Handle the case where someone issues a "next" debugger command,
-    // but we're at a return statement, so the next statement is in
-    // some other function.
+
+
+
     if ( *flow == FLOW_RETURN && f->BreakBeforeNextStmt() )
         g_debugger_state.BreakBeforeNextStmt(true);
 
-    // Handle "finish" commands.
+
     if ( *flow == FLOW_RETURN && f->BreakOnReturn() ) {
         if ( result ) {
             ODesc d;
@@ -844,9 +844,9 @@ bool post_execute_stmt(Stmt* stmt, Frame* f, Val* result, StmtFlowType* flow) {
 }
 
 ValPtr dbg_eval_expr(const char* expr) {
-    // Push the current frame's associated scope.
-    // Note: g_debugger_state.curr_frame_idx is the user-visible number,
-    //       while the array index goes in the opposite direction
+
+
+
     int frame_idx = (call_stack.size() - 1) - g_debugger_state.curr_frame_idx;
 
     if ( ! (frame_idx >= 0 && static_cast<size_t>(frame_idx) < call_stack.size()) )
@@ -860,19 +860,19 @@ ValPtr dbg_eval_expr(const char* expr) {
     if ( func )
         push_existing_scope(func->GetScope());
 
-    // ### Possibly push a debugger-local scope?
 
-    // Set up the lexer to read from the string.
+
+
     string parse_string = string("@DEBUG ") + expr;
     zeek_scan_string(parse_string.c_str());
 
-    // Fix filename and line number for the lexer/parser, which record it.
+
     filename = "<interactive>";
     line_number = 1;
     yylloc.SetFile(filename);
     yylloc.SetLine(1);
 
-    // Parse the thing into an expr.
+
     ValPtr result;
     if ( yyparse() ) {
         if ( g_curr_debug_error )
@@ -900,4 +900,4 @@ ValPtr dbg_eval_expr(const char* expr) {
     return result;
 }
 
-} // namespace zeek::detail
+}

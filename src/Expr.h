@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -96,10 +96,10 @@ enum ExprTag : int8_t {
     EXPR_IS,
     EXPR_INDEX_SLICE_ASSIGN,
 
-    // The following types of expressions are only created for ASTs
-    // transformed to reduced form; they aren't germane for ASTs produced
-    // by parsing .zeek script files. See script_opt/Expr.h for the
-    // corresponding definitions.
+
+
+
+
     EXPR_INLINE,
     EXPR_APPEND_TO,
     EXPR_INDEX_ASSIGN,
@@ -166,80 +166,80 @@ public:
     }
     ExprPtr ThisPtr() { return {NewRef{}, this}; }
 
-    // Evaluates the expression and returns a corresponding Val*,
-    // or nil if the expression's value isn't fixed.
+
+
     virtual ValPtr Eval(Frame* f) const = 0;
 
-    // Assign to the given value, if appropriate.
+
     virtual void Assign(Frame* f, ValPtr v);
 
-    // Returns the type corresponding to this expression interpreted
-    // as an initialization.  Returns nil if the initialization is illegal.
+
+
     virtual TypePtr InitType() const;
 
-    // Returns true if this expression, interpreted as an initialization,
-    // constitutes a record element, false otherwise.  If the TypeDecl*
-    // is non-nil and the expression is a record element, fills in the
-    // TypeDecl with a description of the element.
+
+
+
+
     virtual bool IsRecordElement(TypeDecl* td) const;
 
-    // True if the expression has no side effects, false otherwise.
+
     virtual bool IsPure() const { return true; }
 
-    // True if the expression is a constant, false otherwise.
+
     bool IsConst() const { return tag == EXPR_CONST; }
 
-    // True if the expression is in error (to alleviate error propagation).
+
     bool IsError() const;
 
-    // Mark expression as in error.
+
     void SetError();
     void SetError(const char* msg);
 
-    // Returns the expression's constant value, or complains
-    // if it's not a constant.
+
+
     inline Val* ExprVal() const;
 
-    // True if the expression is a constant zero, false otherwise.
+
     bool IsZero() const;
 
-    // True if the expression is a constant one, false otherwise.
+
     bool IsOne() const;
 
-    // True if the expression supports the "add" or "delete" operations,
-    // false otherwise.
+
+
     virtual bool CanAdd() const;
     virtual bool CanDel() const;
 
-    // The types associated with those operations.
+
     virtual TypePtr AddType() const;
     virtual TypePtr DelType() const;
 
-    virtual ValPtr Add(Frame* f);    // perform add operation
-    virtual ValPtr Delete(Frame* f); // perform delete operation
+    virtual ValPtr Add(Frame* f);
+    virtual ValPtr Delete(Frame* f);
 
-    // Return the expression converted to L-value form.  If expr
-    // cannot be used as an L-value, reports an error and returns
-    // the current value of expr (this is the default method).
+
+
+
     virtual ExprPtr MakeLvalue();
 
-    // Invert the sense of the operation.  Returns true if the expression
-    // was invertible (currently only true for relational/equality
-    // expressions), false otherwise.
+
+
+
     virtual bool InvertSense();
 
-    // Marks the expression as one requiring (or at least appearing
-    // with) parentheses.  Used for pretty-printing.
+
+
     void MarkParen() { paren = true; }
     bool IsParen() const { return paren; }
 
-    // These are used by script optimization for AST analysis.
-    // NOLINTBEGIN(bugprone-macro-parentheses)
+
+
 #define ZEEK_EXPR_ACCESSOR_DECLS(ctype)                                                                                \
     const ctype* As##ctype() const;                                                                                    \
     ctype* As##ctype();                                                                                                \
     IntrusivePtr<ctype> As##ctype##Ptr();
-    // NOLINTEND(bugprone-macro-parentheses)
+
 
     ZEEK_EXPR_ACCESSOR_DECLS(AddToExpr)
     ZEEK_EXPR_ACCESSOR_DECLS(AssignExpr)
@@ -262,129 +262,129 @@ public:
 
     virtual TraversalCode Traverse(TraversalCallback* cb) const = 0;
 
-    // Returns a duplicate of the expression.
+
     virtual ExprPtr Duplicate() = 0;
 
-    // Recursively traverses the AST to inline eligible function calls.
+
     virtual ExprPtr Inline(Inliner* inl) { return ThisPtr(); }
 
-    // True if the expression can serve as an operand to a reduced
-    // expression.
+
+
     bool IsSingleton(Reducer* r) const { return (tag == EXPR_NAME && IsReduced(r)) || tag == EXPR_CONST; }
 
-    // True if the expression has no side effects, false otherwise.
+
     virtual bool HasNoSideEffects() const { return IsPure(); }
 
-    // True if the expression is in fully reduced form: a singleton
-    // or an assignment to an operator with singleton operands.
+
+
     virtual bool IsReduced(Reducer* c) const;
 
-    // True if the expression's operands are singletons.
+
     virtual bool HasReducedOps(Reducer* c) const;
 
-    // True if (a) the expression has at least one operand, and (b) all
-    // of its operands are constant.
+
+
     virtual bool HasConstantOps() const {
         return GetOp1() && GetOp1()->IsConst() &&
                (! GetOp2() || (GetOp2()->IsConst() && (! GetOp3() || GetOp3()->IsConst())));
     }
 
-    // True if the expression is reduced to a form that can be
-    // used in a conditional.
+
+
     bool IsReducedConditional(Reducer* c) const;
 
-    // True if the expression is reduced to a form that can be
-    // used in a field assignment.
+
+
     bool IsReducedFieldAssignment(Reducer* c) const;
 
-    // True if this expression can be the RHS for a field assignment.
+
     bool IsFieldAssignable(const Expr* e) const;
 
-    // True if the expression will transform to one of another AST node
-    // (perhaps of the same type) upon reduction, for non-constant
-    // operands.  "Transform" means something beyond assignment to a
-    // temporary.  Necessary so that we know to fully reduce such
-    // expressions if they're the RHS of an assignment.
+
+
+
+
+
     virtual bool WillTransform(Reducer* c) const { return false; }
 
-    // The same, but for the expression when used in a conditional context.
+
     virtual bool WillTransformInConditional(Reducer* c) const { return false; }
 
-    // True if substituting the given value for the given expression is
-    // "safe", i.e. will not lead to compile-time errors if the value is
-    // then used to fold the expression. The expression will be one of the
-    // this expression's operands. Used for the AST optimizer's constant
-    // propagation.
+
+
+
+
+
     virtual bool IsSafeSubstitution(const ExprPtr& e, const ValPtr& v) const { return true; }
 
-    // Returns the current expression transformed into "new_me".
+
     ExprPtr TransformMe(ExprPtr new_me, Reducer* c, StmtPtr& red_stmt);
 
-    // Returns a set of predecessor statements in red_stmt (which might
-    // be nil if no reduction necessary), and the reduced version of
-    // the expression, suitable for replacing previous uses.  The
-    // second version always yields a singleton suitable for use
-    // as an operand.  The first version does this too except
-    // for assignment statements; thus, its form is not guarantee
-    // suitable for use as an operand.
+
+
+
+
+
+
+
     virtual ExprPtr Reduce(Reducer* c, StmtPtr& red_stmt);
     virtual ExprPtr ReduceToSingleton(Reducer* c, StmtPtr& red_stmt) { return Reduce(c, red_stmt); }
 
-    // Reduces the expression to one whose operands are singletons.
-    // Returns a predecessor statement (which might be a StmtList), if any.
+
+
     virtual StmtPtr ReduceToSingletons(Reducer* c);
 
-    // Reduces the expression to one that can appear as a conditional.
+
     ExprPtr ReduceToConditional(Reducer* c, StmtPtr& red_stmt);
 
-    // Transforms the expression into its form suitable for use in
-    // a conditional. Only meaningful for expressions that return true
-    // for WillTransformInConditional().
+
+
+
     virtual ExprPtr TransformToConditional(Reducer* c, StmtPtr& red_stmt);
 
-    // Reduces the expression to one that can appear as a field
-    // assignment.
+
+
     ExprPtr ReduceToFieldAssignment(Reducer* c, StmtPtr& red_stmt);
 
-    // Helper function for factoring out complexities related to
-    // index-based assignment.
+
+
     void AssignToIndex(ValPtr v1, ValPtr v2, ValPtr v3) const;
 
-    // Returns a new expression corresponding to a temporary
-    // that's been assigned to the given expression via red_stmt.
+
+
     ExprPtr AssignToTemporary(ExprPtr e, Reducer* c, StmtPtr& red_stmt);
-    // Same but for this expression.
+
     ExprPtr AssignToTemporary(Reducer* c, StmtPtr& red_stmt) { return AssignToTemporary(ThisPtr(), c, red_stmt); }
 
-    // If the expression always evaluates to the same value, returns
-    // that value.  Otherwise, returns nullptr.
+
+
     virtual ValPtr FoldVal() const { return nullptr; }
 
-    // Returns a Val or a constant Expr corresponding to zero.
+
     ValPtr MakeZero(TypeTag t) const;
     ConstExprPtr MakeZeroExpr(TypeTag t) const;
 
-    // Returns the expression's operands, or nil if it doesn't
-    // have the given operand.
+
+
     virtual ExprPtr GetOp1() const;
     virtual ExprPtr GetOp2() const;
     virtual ExprPtr GetOp3() const;
 
-    // Sets the operands to new values.
+
     virtual void SetOp1(ExprPtr new_op);
     virtual void SetOp2(ExprPtr new_op);
     virtual void SetOp3(ExprPtr new_op);
 
-    // Helper function to reduce boring code runs.
+
     StmtPtr MergeStmts(StmtPtr s1, StmtPtr s2, StmtPtr s3 = nullptr) const;
 
-    // A convenience function for taking a newly-created Expr,
-    // making it point to us as the successor, and returning it.
-    //
-    // Takes an Expr* rather than a ExprPtr to de-clutter the calling
-    // code, which is always passing in "new XyzExpr(...)".  This
-    // call, as a convenient side effect, transforms that bare pointer
-    // into an ExprPtr.
+
+
+
+
+
+
+
     virtual ExprPtr SetSucc(Expr* succ) {
         succ->SetLocationInfo(GetLocationInfo());
         if ( IsParen() )
@@ -392,14 +392,14 @@ public:
         return {AdoptRef{}, succ};
     }
 
-    // Access script optimization information associated with
-    // this statement.
+
+
     ExprOptInfo* GetOptInfo() const { return opt_info; }
 
-    // Returns the number of expressions created since the last reset.
+
     static int GetNumExprs() { return num_exprs; }
 
-    // Clears the number of expressions created.
+
     static void ResetNumExprs() { num_exprs = 0; }
 
     ~Expr() override;
@@ -411,17 +411,17 @@ protected:
     virtual void ExprDescribe(ODesc* d) const = 0;
     void AddTag(ODesc* d) const;
 
-    // Puts the expression in canonical form.
+
     virtual void Canonicalize();
 
     void SetType(TypePtr t);
 
-    // Reports the given error and sets the expression's type to
-    // TYPE_ERROR.
+
+
     void ExprError(const char msg[]);
 
-    // These two functions both call Reporter::RuntimeError or Reporter::ExprRuntimeError,
-    // both of which are marked as [[noreturn]].
+
+
     [[noreturn]] void RuntimeError(const std::string& msg) const;
     [[noreturn]] void RuntimeErrorWithCallStack(const std::string& msg) const;
 
@@ -429,11 +429,11 @@ protected:
     bool paren;
     TypePtr type;
 
-    // Information associated with the Expr for purposes of
-    // script optimization.
+
+
     ExprOptInfo* opt_info;
 
-    // Number of expressions created thus far.
+
     static int num_exprs;
 };
 
@@ -453,7 +453,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     bool HasNoSideEffects() const override { return true; }
     bool IsReduced(Reducer* c) const override;
@@ -465,8 +465,8 @@ public:
 protected:
     void ExprDescribe(ODesc* d) const override;
 
-    // Returns true if our identifier is a global with a constant value
-    // that can be propagated; used for optimization.
+
+
     bool FoldableGlobal() const;
 
     IDPtr id;
@@ -484,14 +484,14 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 
     ValPtr FoldVal() const override {
         if ( type->Tag() == TYPE_OPAQUE )
-            // Aggressive constant propagation can lead to the appearance of
-            // opaque "constants". Don't consider these as foldable because
-            // they're problematic to generate independently.
+
+
+
             return nullptr;
 
         return val;
@@ -506,16 +506,16 @@ class UnaryExpr : public Expr {
 public:
     Expr* Op() const { return op.get(); }
 
-    // UnaryExpr::Eval correctly handles vector types.  Any child
-    // class that overrides Eval() should be modified to handle
-    // vectors correctly as necessary.
+
+
+
     ValPtr Eval(Frame* f) const override;
 
     bool IsPure() const override;
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     ExprPtr Inline(Inliner* inl) override;
 
     bool HasNoSideEffects() const override;
@@ -531,7 +531,7 @@ protected:
 
     void ExprDescribe(ODesc* d) const override;
 
-    // Returns the expression folded using the given constant.
+
     virtual ValPtr Fold(Val* v) const;
 
     ExprPtr op;
@@ -544,14 +544,14 @@ public:
 
     bool IsPure() const override;
 
-    // BinaryExpr::Eval correctly handles vector types.  Any child
-    // class that overrides Eval() should be modified to handle
-    // vectors correctly as necessary.
+
+
+
     ValPtr Eval(Frame* f) const override;
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     ExprPtr Inline(Inliner* inl) override;
 
     bool HasNoSideEffects() const override;
@@ -561,7 +561,7 @@ public:
 
     bool IsSafeSubstitution(const ExprPtr& e, const ValPtr& v) const override;
 
-    // A version of IsSafeSubstitution() where we now know both operands.
+
     virtual bool IsSafeSubstitution(const ValPtr& v1, const ValPtr& v2) const { return true; }
 
     ExprPtr GetOp1() const final { return op1; }
@@ -579,48 +579,48 @@ protected:
             SetError();
     }
 
-    // Returns the expression folded using the given constants.
+
     virtual ValPtr Fold(Val* v1, Val* v2) const;
 
-    // Same for when the constants are strings.
+
     virtual ValPtr StringFold(Val* v1, Val* v2) const;
 
-    // Same for when the constants are patterns.
+
     virtual ValPtr PatternFold(Val* v1, Val* v2) const;
 
-    // Same for when the constants are sets.
+
     virtual ValPtr SetFold(Val* v1, Val* v2) const;
 
-    // Same for when the constants are tables.
+
     virtual ValPtr TableFold(Val* v1, Val* v2) const;
 
-    // Same for when the constants are addresses or subnets.
+
     virtual ValPtr AddrFold(Val* v1, Val* v2) const;
     virtual ValPtr SubNetFold(Val* v1, Val* v2) const;
 
     bool BothConst() const { return op1->IsConst() && op2->IsConst(); }
 
-    // Exchange op1 and op2.
+
     void SwapOps();
 
-    // Promote the operands to the given type tag, if necessary.
+
     void PromoteOps(TypeTag t);
 
-    // Promote the expression to the given type tag (i.e., promote
-    // operands and also set expression's type).
+
+
     void PromoteType(TypeTag t, bool is_vector);
 
-    // Promote one of the operands to be "double" (if not already),
-    // to make it suitable for combining with the other "interval"
-    // operand, yielding an "interval" type.
+
+
+
     void PromoteForInterval(ExprPtr& op);
 
     void ExprDescribe(ODesc* d) const override;
 
-    // For assignment operations (=, +=, -=) checks for a valid
-    // expression-list on the RHS (op2), potentially transforming
-    // op2 in the process.  Returns true if the list is present
-    // and type-checks correctly, false otherwise.
+
+
+
+
     bool CheckForRHSList();
 
     ExprPtr op1;
@@ -632,7 +632,7 @@ public:
     explicit CloneExpr(ExprPtr op);
     ValPtr Eval(Frame* f) const override;
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 
 protected:
@@ -647,7 +647,7 @@ public:
     ValPtr DoSingleEval(Frame* f, Val* v) const;
     bool IsPure() const override { return false; }
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     bool HasNoSideEffects() const override;
     bool WillTransform(Reducer* c) const override { return true; }
@@ -661,7 +661,7 @@ class ComplementExpr final : public UnaryExpr {
 public:
     explicit ComplementExpr(ExprPtr op);
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     bool WillTransform(Reducer* c) const override;
     ExprPtr Reduce(Reducer* c, StmtPtr& red_stmt) override;
@@ -674,7 +674,7 @@ class NotExpr final : public UnaryExpr {
 public:
     explicit NotExpr(ExprPtr op);
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     bool WillTransform(Reducer* c) const override;
     ExprPtr Reduce(Reducer* c, StmtPtr& red_stmt) override;
@@ -687,7 +687,7 @@ class PosExpr final : public UnaryExpr {
 public:
     explicit PosExpr(ExprPtr op);
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     bool WillTransform(Reducer* c) const override;
     ExprPtr Reduce(Reducer* c, StmtPtr& red_stmt) override;
@@ -700,7 +700,7 @@ class NegExpr final : public UnaryExpr {
 public:
     explicit NegExpr(ExprPtr op);
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     bool WillTransform(Reducer* c) const override;
     ExprPtr Reduce(Reducer* c, StmtPtr& red_stmt) override;
@@ -714,7 +714,7 @@ public:
     explicit SizeExpr(ExprPtr op);
     ValPtr Eval(Frame* f) const override;
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 
 protected:
@@ -726,7 +726,7 @@ public:
     AddExpr(ExprPtr op1, ExprPtr op2);
     void Canonicalize() override;
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     bool WillTransform(Reducer* c) const override;
     ExprPtr Reduce(Reducer* c, StmtPtr& red_stmt) override;
@@ -735,14 +735,14 @@ protected:
     ExprPtr BuildSub(const ExprPtr& op1, const ExprPtr& op2);
 };
 
-// A helper class that enables us to factor some common code.
+
 class AggrAddDelExpr : public UnaryExpr {
 public:
     explicit AggrAddDelExpr(ExprTag _tag, ExprPtr _e) : UnaryExpr(_tag, std::move(_e)) {}
 
     bool IsPure() const override { return false; }
 
-    // Optimization-related:
+
     bool IsReduced(Reducer* c) const override { return HasReducedOps(c); }
     bool HasReducedOps(Reducer* c) const override { return op->HasReducedOps(c); }
     ExprPtr Reduce(Reducer* c, StmtPtr& red_stmt) override;
@@ -752,7 +752,7 @@ class AggrAddExpr final : public AggrAddDelExpr {
 public:
     explicit AggrAddExpr(ExprPtr e);
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 
 protected:
@@ -763,7 +763,7 @@ class AggrDelExpr final : public AggrAddDelExpr {
 public:
     explicit AggrDelExpr(ExprPtr e);
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 
 protected:
@@ -777,7 +777,7 @@ public:
 
     bool IsVectorElemAppend() const { return is_vector_elem_append; }
 
-    // Optimization-related:
+
     bool IsPure() const override { return false; }
     ExprPtr Duplicate() override;
     bool HasReducedOps(Reducer* c) const override { return false; }
@@ -787,7 +787,7 @@ public:
     ExprPtr ReduceToSingleton(Reducer* c, StmtPtr& red_stmt) override;
 
 private:
-    // Whether this operation is appending a single element to a vector.
+
     bool is_vector_elem_append = false;
 };
 
@@ -797,7 +797,7 @@ public:
     RemoveFromExpr(ExprPtr op1, ExprPtr op2);
     ValPtr Eval(Frame* f) const override;
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     bool HasReducedOps(Reducer* c) const override { return false; }
     bool WillTransform(Reducer* c) const override { return true; }
@@ -810,7 +810,7 @@ class SubExpr final : public BinaryExpr {
 public:
     SubExpr(ExprPtr op1, ExprPtr op2);
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     bool WillTransform(Reducer* c) const override;
     ExprPtr Reduce(Reducer* c, StmtPtr& red_stmt) override;
@@ -821,7 +821,7 @@ public:
     TimesExpr(ExprPtr op1, ExprPtr op2);
     void Canonicalize() override;
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     bool WillTransform(Reducer* c) const override;
     ExprPtr Reduce(Reducer* c, StmtPtr& red_stmt) override;
@@ -831,7 +831,7 @@ class DivideExpr final : public BinaryExpr {
 public:
     DivideExpr(ExprPtr op1, ExprPtr op2);
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     bool WillTransform(Reducer* c) const override;
     bool IsSafeSubstitution(const ValPtr& v1, const ValPtr& v2) const override;
@@ -842,7 +842,7 @@ class MaskExpr final : public BinaryExpr {
 public:
     MaskExpr(ExprPtr op1, ExprPtr op2);
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     bool IsSafeSubstitution(const ValPtr& v1, const ValPtr& v2) const override;
 
@@ -855,7 +855,7 @@ class ModExpr final : public BinaryExpr {
 public:
     ModExpr(ExprPtr op1, ExprPtr op2);
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     bool IsSafeSubstitution(const ValPtr& v1, const ValPtr& v2) const override;
 };
@@ -867,7 +867,7 @@ public:
     ValPtr Eval(Frame* f) const override;
     ValPtr DoSingleEval(Frame* f, ValPtr v1, Expr* op2) const;
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     bool WillTransform(Reducer* c) const override;
     bool WillTransformInConditional(Reducer* c) const override;
@@ -883,14 +883,14 @@ class BitExpr final : public BinaryExpr {
 public:
     BitExpr(ExprTag tag, ExprPtr op1, ExprPtr op2);
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     bool WillTransform(Reducer* c) const override;
     bool IsSafeSubstitution(const ValPtr& v1, const ValPtr& v2) const override;
     ExprPtr Reduce(Reducer* c, StmtPtr& red_stmt) override;
 };
 
-// Intermediary class for comparison operators. Not directly instantiated.
+
 class CmpExpr : public BinaryExpr {
 protected:
     CmpExpr(ExprTag tag, ExprPtr op1, ExprPtr op2);
@@ -910,7 +910,7 @@ class EqExpr final : public CmpExpr {
 public:
     EqExpr(ExprTag tag, ExprPtr op1, ExprPtr op2);
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     ExprPtr Reduce(Reducer* c, StmtPtr& red_stmt) override;
     bool InvertSense() override;
@@ -923,7 +923,7 @@ class RelExpr final : public CmpExpr {
 public:
     RelExpr(ExprTag tag, ExprPtr op1, ExprPtr op2);
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     ExprPtr Reduce(Reducer* c, StmtPtr& red_stmt) override;
     bool InvertSense() override;
@@ -942,7 +942,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     ExprPtr Inline(Inliner* inl) override;
 
@@ -978,7 +978,7 @@ public:
     void Assign(Frame* f, ValPtr v) override;
     ExprPtr MakeLvalue() override;
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 
     bool WillTransform(Reducer* c) const override;
@@ -986,14 +986,14 @@ public:
     bool HasReducedOps(Reducer* c) const override;
     ExprPtr Reduce(Reducer* c, StmtPtr& red_stmt) override;
 
-    // Reduce to simplified LHS form, i.e., a reference to only a name.
+
     StmtPtr ReduceToLHS(Reducer* c);
 };
 
 class AssignExpr : public BinaryExpr {
 public:
-    // If val is given, evaluating this expression will always yield the val
-    // yet still perform the assignment.  Used for triggers.
+
+
     AssignExpr(ExprPtr op1, ExprPtr op2, bool is_init, ValPtr val = nullptr, const AttributesPtr& attrs = nullptr,
                bool type_check = true);
 
@@ -1002,7 +1002,7 @@ public:
     bool IsRecordElement(TypeDecl* td) const override;
     bool IsPure() const override { return false; }
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 
     bool HasNoSideEffects() const override;
@@ -1012,16 +1012,16 @@ public:
     ExprPtr Reduce(Reducer* c, StmtPtr& red_stmt) override;
     ExprPtr ReduceToSingleton(Reducer* c, StmtPtr& red_stmt) override;
 
-    // Whether this is an assignment to a temporary.
+
     bool IsTemp() const { return is_temp; }
     void SetIsTemp() { is_temp = true; }
 
-    // The following is a hack that's used in "when" expressions to support
-    // assignments to new locals, like "when ( (local l = foo()) && ...".
-    // These methods return the value to use when evaluating such
-    // assignments.  That would normally be the RHS of the assignment,
-    // but to get when's to work in a convenient fashion, for them it's
-    // instead boolean T.
+
+
+
+
+
+
     ValPtr AssignVal() { return val; }
     const ValPtr& AssignVal() const { return val; }
 
@@ -1030,9 +1030,9 @@ protected:
     bool TypeCheckArithmetics(TypeTag bt1, TypeTag bt2);
 
     bool is_init;
-    bool is_temp = false; // Optimization related
+    bool is_temp = false;
 
-    ValPtr val; // optional
+    ValPtr val;
 };
 
 class IndexSliceAssignExpr final : public AssignExpr {
@@ -1040,7 +1040,7 @@ public:
     IndexSliceAssignExpr(ExprPtr op1, ExprPtr op2, bool is_init);
     ValPtr Eval(Frame* f) const override;
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 };
 
@@ -1057,14 +1057,14 @@ public:
     void Assign(Frame* f, ValPtr v) override;
     ExprPtr MakeLvalue() override;
 
-    // Need to override Eval since it can take a vector arg but does
-    // not necessarily return a vector.
+
+
     ValPtr Eval(Frame* f) const override;
 
     bool IsSlice() const { return is_slice; }
     bool IsInsideWhen() const { return is_inside_when; }
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 
     bool HasReducedOps(Reducer* c) const override;
@@ -1080,36 +1080,36 @@ protected:
     bool is_pattern_table = false;
 };
 
-// The following execute the heart of IndexExpr functionality for
-// vector slices and strings.
 
-// Extracts a slice of a vector, where the span of the slice is specified
-// by a list of (exactly) two values.  This is how the interpreter develops
-// the components of a slice.
+
+
+
+
+
 extern VectorValPtr index_slice(VectorVal* vect, const ListVal* lv);
 
-// Lower-level access to the slice, where its span is expressed
-// directly as integers.
+
+
 extern VectorValPtr index_slice(VectorVal* vect, int first, int last);
 
-// Returns a subset of a string, with the span specified by a list of
-// (exactly) two values.
+
+
 extern StringValPtr index_string(const String* s, const ListVal* lv);
 
-// Returns a vector indexed by a boolean vector.
+
 extern VectorValPtr vector_bool_select(VectorTypePtr vt, const VectorVal* v1, const VectorVal* v2);
 
-// Returns a vector indexed by a numeric vector (which specifies the
-// indices to select).
+
+
 extern VectorValPtr vector_int_select(VectorTypePtr vt, const VectorVal* v1, const VectorVal* v2);
 
-// The following is used for index expressions that occur inside "when"
-// clauses.  It tracks all the results produced by evaluating indexing
-// aggregates, so that if any of them are Modifiable(), the associated
-// Trigger can register interest in changes to them.
-//
-// TODO: One Fine Day we should do the equivalent for accessing fields
-// in records, too.
+
+
+
+
+
+
+
 class IndexExprWhen final : public IndexExpr {
 public:
     static inline std::vector<ValPtr> results = {};
@@ -1137,7 +1137,7 @@ public:
         return v;
     }
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 };
 
@@ -1156,7 +1156,7 @@ public:
 
     ExprPtr MakeLvalue() override;
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 
 protected:
@@ -1170,8 +1170,8 @@ protected:
     int field = -1;
 };
 
-// "rec?$fieldname" is true if the value of $fieldname in rec is not nil.
-// "rec?$$attrname" is true if the attribute attrname is not nil.
+
+
 class HasFieldExpr final : public UnaryExpr {
 public:
     HasFieldExpr(ExprPtr op, const char* field_name);
@@ -1180,7 +1180,7 @@ public:
     const char* FieldName() const { return field_name; }
     int Field() const { return field; }
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 
     bool IsReduced(Reducer* c) const override;
@@ -1199,9 +1199,9 @@ class RecordConstructorExpr final : public Expr {
 public:
     explicit RecordConstructorExpr(ListExprPtr constructor_list);
 
-    // This form is used to construct records of a known (ultimate) type.
-    // The flag allows skipping of checking for mandatory fields, for
-    // script optimization that may elide them.
+
+
+
     explicit RecordConstructorExpr(RecordTypePtr known_rt, ListExprPtr constructor_list,
                                    bool check_mandatory_fields = true);
 
@@ -1214,7 +1214,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     ExprPtr Inline(Inliner* inl) override;
 
@@ -1241,7 +1241,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 
     bool HasReducedOps(Reducer* c) const override;
@@ -1266,7 +1266,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 
     bool HasReducedOps(Reducer* c) const override;
@@ -1285,7 +1285,7 @@ public:
 
     ValPtr Eval(Frame* f) const override;
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 
     bool HasReducedOps(Reducer* c) const override;
@@ -1300,17 +1300,17 @@ public:
 
     const char* FieldName() const { return field_name.c_str(); }
 
-    // When these are first constructed, we don't know the type.
-    // The following method coerces/promotes the assignment expression
-    // as needed, once we do know the type.
-    //
-    // Returns true on success, false if the types were incompatible
-    // (in which case an error is reported).
+
+
+
+
+
+
     bool PromoteTo(TypePtr t);
 
     bool IsRecordElement(TypeDecl* td) const override;
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     bool WillTransform(Reducer* c) const override { return true; }
     ExprPtr Reduce(Reducer* c, StmtPtr& red_stmt) override;
@@ -1325,7 +1325,7 @@ class ArithCoerceExpr final : public UnaryExpr {
 public:
     ArithCoerceExpr(ExprPtr op, TypeTag t);
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 
     bool WillTransform(Reducer* c) const override;
@@ -1341,7 +1341,7 @@ class RecordCoerceExpr final : public UnaryExpr {
 public:
     RecordCoerceExpr(ExprPtr op, RecordTypePtr r);
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 
     bool IsReduced(Reducer* c) const override;
@@ -1353,8 +1353,8 @@ public:
 protected:
     ValPtr Fold(Val* v) const override;
 
-    // For each super-record slot, gives subrecord slot with which to
-    // fill it.
+
+
     std::vector<int> map;
 };
 
@@ -1364,7 +1364,7 @@ class TableCoerceExpr final : public UnaryExpr {
 public:
     TableCoerceExpr(ExprPtr op, TableTypePtr r, bool type_check = true);
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 
 protected:
@@ -1375,7 +1375,7 @@ class VectorCoerceExpr final : public UnaryExpr {
 public:
     VectorCoerceExpr(ExprPtr op, VectorTypePtr v);
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 
     bool IsReduced(Reducer* c) const override;
@@ -1410,7 +1410,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     ExprPtr Inline(Inliner* inl) override;
 
@@ -1435,7 +1435,7 @@ class InExpr final : public BinaryExpr {
 public:
     InExpr(ExprPtr op1, ExprPtr op2);
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 
     bool IsReduced(Reducer* c) const override;
@@ -1462,7 +1462,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     ExprPtr Inline(Inliner* inl) override;
 
@@ -1486,11 +1486,11 @@ protected:
     bool in_when;
 };
 
-/**
- * Class that represents an anonymous function expression in Zeek.
- * On evaluation, captures the frame that it is evaluated in. This becomes
- * the closure for the instance of the function that it creates.
- */
+
+
+
+
+
 class LambdaExpr final : public Expr {
 public:
     LambdaExpr(FunctionIngredientsPtr ingredients, IDPList outer_ids, std::string name = "",
@@ -1500,8 +1500,8 @@ public:
 
     const IDPList& OuterIDs() const { return outer_ids; }
 
-    // Lambda's potentially have their own private copy of captures,
-    // to enable updates to the set during script optimization.
+
+
     using CaptureList = std::vector<FuncType::Capture>;
     const std::optional<CaptureList>& GetCaptures() const { return captures; }
 
@@ -1510,7 +1510,7 @@ public:
 
     ScopePtr GetScope() const;
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 
     const ScriptFuncPtr& PrimaryFunc() const { return primary_func; }
@@ -1525,7 +1525,7 @@ public:
     StmtPtr ReduceToSingletons(Reducer* c) override;
 
 protected:
-    // Constructor used for script optimization.
+
     LambdaExpr(LambdaExpr* orig);
 
     void ExprDescribe(ODesc* d) const override;
@@ -1533,11 +1533,11 @@ protected:
 private:
     friend class WhenInfo;
 
-    // "Private" captures are captures that correspond to "when"
-    // condition locals.  These aren't true captures in that they
-    // don't come from the outer frame when the lambda is constructed,
-    // but they otherwise behave like captures in that they persist
-    // across function invocations.
+
+
+
+
+
     void SetPrivateCaptures(const IDSet& pcaps) { private_captures = pcaps; }
 
     bool CheckCaptures(StmtPtr when_parent);
@@ -1555,8 +1555,8 @@ private:
     std::string my_name;
 };
 
-// This comes before EventExpr so that EventExpr::GetOp1 can return its
-// arguments as convertible to ExprPtr.
+
+
 class ListExpr : public Expr {
 public:
     ListExpr();
@@ -1568,10 +1568,10 @@ public:
     const ExprPList& Exprs() const { return exprs; }
     ExprPList& Exprs() { return exprs; }
 
-    // True if the entire list represents pure values.
+
     bool IsPure() const override;
 
-    // True if the entire list represents constant values.
+
     bool HasConstantOps() const override;
 
     ValPtr Eval(Frame* f) const override;
@@ -1582,7 +1582,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     ExprPtr Inline(Inliner* inl) override;
 
@@ -1609,7 +1609,7 @@ public:
 
     TraversalCode Traverse(TraversalCallback* cb) const override;
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     ExprPtr Inline(Inliner* inl) override;
 
@@ -1639,7 +1639,7 @@ public:
 
     const TypePtr& ConversionType() const { return conversion_type; }
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 
 protected:
@@ -1653,7 +1653,7 @@ class CastExpr final : public UnaryExpr {
 public:
     CastExpr(ExprPtr op, TypePtr t);
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
     bool IsSafeSubstitution(const ExprPtr& e, const ValPtr& v) const override;
 
@@ -1662,8 +1662,8 @@ protected:
     void ExprDescribe(ODesc* d) const override;
 };
 
-// Returns the value 'v' cast to type 't'.  On an error, returns nil
-// and populates "error" with an error message.
+
+
 extern ValPtr cast_value(ValPtr v, const TypePtr& t, std::string& error);
 
 class IsExpr final : public UnaryExpr {
@@ -1672,7 +1672,7 @@ public:
 
     const TypePtr& TestType() const { return t; }
 
-    // Optimization-related:
+
     ExprPtr Duplicate() override;
 
 protected:
@@ -1683,8 +1683,8 @@ private:
     TypePtr t;
 };
 
-// Expression to explicitly capture conversion to an "any" type, rather
-// than it occurring implicitly during script interpretation.
+
+
 class CoerceToAnyExpr : public UnaryExpr {
 public:
     CoerceToAnyExpr(ExprPtr op);
@@ -1698,7 +1698,7 @@ protected:
     ExprPtr Duplicate() override;
 };
 
-// Same, but for conversion from an "any" type.
+
 class CoerceFromAnyExpr : public UnaryExpr {
 public:
     CoerceFromAnyExpr(ExprPtr op, TypePtr to_type);
@@ -1709,8 +1709,8 @@ protected:
     ExprPtr Duplicate() override;
 };
 
-// Assigns v1[v2] = v3.  Returns an error message, or nullptr on success.
-// Factored out so that compiled code can call it as well as the interpreter.
+
+
 extern const char* assign_to_index(ValPtr v1, ValPtr v2, ValPtr v3, bool& iterators_invalidated);
 
 inline Val* Expr::ExprVal() const {
@@ -1719,55 +1719,55 @@ inline Val* Expr::ExprVal() const {
     return (static_cast<const ConstExpr*>(this))->Value();
 }
 
-// Decides whether to return an AssignExpr or a RecordAssignExpr.
+
 extern ExprPtr get_assign_expr(ExprPtr op1, ExprPtr op2, bool is_init);
 
-// Takes a RHS constructor list and returns a version with any embedded
-// indices within it (used to concisely represent multiple set/table entries)
-// expanded.
-//
-// Second argument gives the type that the list will expand to, if known.
+
+
+
+
+
 extern ListExprPtr expand_op(ListExprPtr op, const TypePtr& t);
 
-/**
- * Type-check the given expression(s) against the given type(s).  Complain
- * if the expression cannot match the given type, returning nullptr;
- * otherwise, returns an expression reflecting the promotion.
- *
- * The second, third, and fourth forms are for promoting a list of
- * expressions (which is updated in place) to either match a list of
- * types or a single type.
- *
- * Note, the type is not "const" because it can be ref'd.
- */
+
+
+
+
+
+
+
+
+
+
+
 extern ExprPtr check_and_promote_expr(ExprPtr e, TypePtr t);
 
 extern bool check_and_promote_exprs(ListExpr* elements, const TypeListPtr& types);
 extern bool check_and_promote_args(ListExpr* args, const RecordType* types);
 extern bool check_and_promote_exprs_to_type(ListExpr* elements, TypePtr type);
 
-// Returns a ListExpr simplified down to a list a values, or nil
-// if they couldn't all be reduced.
+
+
 extern std::optional<std::vector<ValPtr>> eval_list(Frame* f, const ListExpr* l);
 
-// Evaluates an expression in isolation (without a frame context).
-// Used for compile-time constant evaluation and attribute processing.
+
+
 extern ValPtr eval_in_isolation(const Expr* e);
 inline ValPtr eval_in_isolation(const ExprPtr& e) { return eval_in_isolation(e.get()); }
 
-// Returns true if e1 is "greater" than e2 - here "greater" is just
-// a heuristic, used with commutative operators to put them into
-// a canonical form.
+
+
+
 extern bool expr_greater(const Expr* e1, const Expr* e2);
 
-// True if the given Expr* has a vector type
+
 inline bool is_vector(Expr* e) { return e->GetType()->Tag() == TYPE_VECTOR; }
 inline bool is_vector(const ExprPtr& e) { return is_vector(e.get()); }
 
-// True if the given Expr* has a list type
+
 inline bool is_list(Expr* e) { return e->GetType()->Tag() == TYPE_LIST; }
 
 inline bool is_list(const ExprPtr& e) { return is_list(e.get()); }
 
-} // namespace detail
-} // namespace zeek
+}
+}

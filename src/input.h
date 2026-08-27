@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -7,7 +7,7 @@
 
 #include "zeek/ZeekList.h"
 
-// These are required by the lexer in scan.l and are intentionally not namespaced.
+
 extern int yyparse();
 extern int yydebug;
 extern int zeeklex();
@@ -17,8 +17,8 @@ extern void add_essential_input_file(const char* file);
 extern void add_input_file(const char* file);
 extern void add_input_file_at_front(const char* file);
 
-// Adds the substrings (using the given delimiter) in a string to the
-// given namelist.
+
+
 extern void add_to_name_list(char* s, char delim, zeek::name_list& nl);
 
 extern void begin_RE();
@@ -44,10 +44,10 @@ extern char** zeek_argv;
 extern const char* prog;
 extern bool parse_only;
 
-extern std::vector<std::string> zeek_script_prefixes; // -p flag
-extern const char* command_line_policy;               // -e flag
+extern std::vector<std::string> zeek_script_prefixes;
+extern const char* command_line_policy;
 extern std::vector<std::string> params;
 
-extern Stmt* stmts; // global statements
+extern Stmt* stmts;
 
-} // namespace zeek::detail
+}

@@ -1,8 +1,8 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Methods for driving the overall ZAM compilation process.
-//
-// This file is included by Compile.h to insert into the ZAMCompiler class.
+
+
+
+
 
 void Init();
 void InitGlobals();

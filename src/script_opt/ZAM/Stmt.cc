@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Methods for traversing Stmt AST nodes to generate ZAM code.
+
+
 
 #include "zeek/IPAddr.h"
 #include "zeek/Reporter.h"
@@ -71,7 +71,7 @@ ZAMStmt ZAMCompiler::CompileStmt(const Stmt* s) {
 ZAMStmt ZAMCompiler::CompilePrint(const PrintStmt* ps) {
     auto& l = ps->ExprListPtr();
 
-    if ( l->Exprs().length() == 1 ) { // special-case the common situation of printing just 1 item
+    if ( l->Exprs().length() == 1 ) {
         auto e0 = l->Exprs()[0];
         if ( e0->Tag() == EXPR_NAME )
             return Print1V(e0->AsNameExpr());
@@ -106,17 +106,17 @@ ZAMStmt ZAMCompiler::CompileIf(const IfStmt* is) {
         block2 = nullptr;
 
     if ( ! block1 && ! block2 )
-        // No need to evaluate conditional as it ought to be
-        // side-effect free in reduced form.
+
+
         return EmptyStmt();
 
     if ( ! block1 ) {
-        // See if we're able to invert the conditional.  If not,
-        // then IfElse() will need to deal with inverting the test.
-        // But we try here first, since some conditionals blow
-        // up into zillions of different operators depending
-        // on the type of their operands, so it's much simpler to
-        // deal with them now.
+
+
+
+
+
+
         if ( e->InvertSense() ) {
             block1 = block2;
             block2 = nullptr;
@@ -157,7 +157,7 @@ ZAMStmt ZAMCompiler::IfElse(const Expr* e, const Stmt* s1, const Stmt* s2) {
             SetGoTo(branch_after_s1, GoToTargetBeyond(s2_end));
 
             if ( else_start < insts1.size() )
-                // There was a non-empty else branch.
+
                 AddCFT(insts1[else_start], CFT_ELSE);
 
             AddCFT(insts1.back(), CFT_BLOCK_END);
@@ -171,20 +171,20 @@ ZAMStmt ZAMCompiler::IfElse(const Expr* e, const Stmt* s1, const Stmt* s2) {
         }
     }
 
-    // Only the else clause is non-empty.
+
     auto s2_end = CompileStmt(s2);
     AddCFT(insts1.back(), CFT_BLOCK_END);
 
-    // For complex conditionals, we need to invert their sense since
-    // we're switching to "if ( ! cond ) s2".
+
+
     auto z = insts1[cond_stmt.stmt_num];
 
     switch ( z->op ) {
         case OP_IF_ELSE_Vb:
         case OP_IF_Vb:
         case OP_IF_NOT_Vb:
-            // These are generated correctly above, no need
-            // to fix up.
+
+
             break;
 
         case OP_HAS_FIELD_COND_Vib: z->op = OP_NOT_HAS_FIELD_COND_Vib; break;
@@ -274,7 +274,7 @@ ZAMStmt ZAMCompiler::GenCond(const Expr* e, int& branch_v) {
     }
 
     if ( e->Tag() == EXPR_IN ) {
-        // First, deal with the easy cases: it's a single index.
+
         if ( op1->Tag() == EXPR_LIST ) {
             auto& ind = op1->AsListExpr()->Exprs();
             if ( ind.length() == 1 )
@@ -302,9 +302,9 @@ ZAMStmt ZAMCompiler::GenCond(const Expr* e, int& branch_v) {
             return AddInst(z);
         }
 
-        // Now the harder case: 2 indexes.  (Any number here other
-        // than two should have been disallowed due to how we reduce
-        // conditional expressions.)
+
+
+
 
         auto& ind = op1->AsListExpr()->Exprs();
         ASSERT(ind.length() == 2);
@@ -341,7 +341,7 @@ ZAMStmt ZAMCompiler::GenCond(const Expr* e, int& branch_v) {
             z.SetType2(n1->GetType());
         }
 
-        else { // Both are constants, assign first to temporary.
+        else {
             auto slot = TempForConst(c0);
 
             z = ZInstI(OP_VAL2_IS_IN_TABLE_COND_VVbC, slot, FrameSlot(op2), 0, c1);
@@ -397,11 +397,11 @@ ZAMStmt ZAMCompiler::GenCond(const Expr* e, int& branch_v) {
     else
         branch_v = 2;
 
-// clang 10 gets perturbed that the indentation of the "default" in the
-// following switch block doesn't match that of the cases that we include
-// from "ZAM-Conds.h".  It really shouldn't worry about indentation mismatches
-// across included files since those are not indicative of possible
-// logic errors, but Oh Well.
+
+
+
+
+
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmisleading-indentation"
@@ -415,7 +415,7 @@ ZAMStmt ZAMCompiler::GenCond(const Expr* e, int& branch_v) {
 #pragma GCC diagnostic pop
 #endif
 
-    // Not reached.
+
 }
 
 ZAMStmt ZAMCompiler::CompileSwitch(const SwitchStmt* sw) {
@@ -426,7 +426,7 @@ ZAMStmt ZAMCompiler::CompileSwitch(const SwitchStmt* sw) {
 
     auto t = e->GetType()->Tag();
 
-    // Need to track a new set of contexts for "break" statements.
+
     PushBreaks();
 
     if ( sw->TypeMap()->empty() )
@@ -439,13 +439,13 @@ ZAMStmt ZAMCompiler::ValueSwitch(const SwitchStmt* sw, const NameExpr* v, const 
     int slot = v ? FrameSlot(v) : -1;
 
     if ( c )
-        // Weird to have a constant switch expression, enough
-        // so that it doesn't seem worth optimizing.
+
+
         slot = TempForConst(c);
 
     ASSERT(slot >= 0);
 
-    // Figure out which jump table we're using.
+
     auto t = v ? v->GetType() : c->GetType();
 
     return GenSwitch(sw, slot, t->InternalType());
@@ -470,15 +470,15 @@ ZAMStmt ZAMCompiler::GenSwitch(const SwitchStmt* sw, int slot, InternalTypeTag i
         default: reporter->InternalError("bad switch type");
     }
 
-    // Add the "head", i.e., the execution of the jump table. At this point,
-    // we leave the table (v2) and default (v3) TBD.
+
+
     auto sw_head_op = ZInstI(op, slot, 0, 0);
     sw_head_op.op_type = OP_VVV_I2_I3;
 
     auto sw_head = AddInst(sw_head_op);
     auto body_end = sw_head;
 
-    // Generate each of the cases.
+
     auto cases = sw->Cases();
     std::vector<InstLabel> case_start;
     int case_index = 0;
@@ -505,9 +505,9 @@ ZAMStmt ZAMCompiler::GenSwitch(const SwitchStmt* sw, int slot, InternalTypeTag i
     else
         SetV3(sw_head, sw_end);
 
-    // Now fill out the corresponding jump table.
-    //
-    // We will only use one of these.
+
+
+
     CaseMapI<zeek_int_t> new_int_cases;
     CaseMapI<zeek_uint_t> new_uint_cases;
     CaseMapI<double> new_double_cases;
@@ -524,8 +524,8 @@ ZAMStmt ZAMCompiler::GenSwitch(const SwitchStmt* sw, int slot, InternalTypeTag i
             case TYPE_INTERNAL_DOUBLE: new_double_cases[cv->InternalDouble()] = case_body_start; break;
 
             case TYPE_INTERNAL_STRING: {
-                // This leaks, but only statically so not worth
-                // tracking the value for ultimate deletion.
+
+
                 auto sv = cv->AsString()->Render();
                 std::string s(sv);
                 new_str_cases[s] = case_body_start;
@@ -549,16 +549,16 @@ ZAMStmt ZAMCompiler::GenSwitch(const SwitchStmt* sw, int slot, InternalTypeTag i
         }
     }
 
-    // For type switches, we map them to consecutive numbers, and then use
-    // a integer-valued switch on those.
+
+
     int tm_ctr = 0;
     for ( const auto& [_, index] : *sw->TypeMap() ) {
         auto case_body_start = case_start[index];
         new_int_cases[tm_ctr++] = case_body_start;
     }
 
-    // Now add the jump table to the set we're keeping for the
-    // corresponding type.
+
+
 
     size_t tbl;
 
@@ -598,7 +598,7 @@ ZAMStmt ZAMCompiler::GenSwitch(const SwitchStmt* sw, int slot, InternalTypeTag i
 ZAMStmt ZAMCompiler::TypeSwitch(const SwitchStmt* sw, const NameExpr* v, const ConstExpr* c) {
     auto cases = sw->Cases();
     auto type_map = sw->TypeMap();
-    auto tmp = NewSlot(true); // true since we know "any" is managed
+    auto tmp = NewSlot(true);
 
     int slot = v ? FrameSlot(v) : 0;
 
@@ -722,10 +722,10 @@ ZAMStmt ZAMCompiler::LoopOverTable(const ForStmt* f, const NameExpr* val) {
     auto value_var = f->ValueVar();
     auto body = f->LoopBody();
 
-    // We used to have more involved logic here to check whether the loop
-    // variables are actually used in the body. Now that we have '_'
-    // loop placeholder variables, this is no longer worth trying to
-    // optimize for, though we still optimize for those placeholders.
+
+
+
+
     size_t num_unused = 0;
 
     auto aux = new ZInstAux(0);
@@ -772,10 +772,10 @@ ZAMStmt ZAMCompiler::LoopOverTable(const ForStmt* f, const NameExpr* val) {
         zn.op_type = OP_VV_I1_I2;
     }
 
-    // Need a separate instance of aux so the CFT info doesn't get shared with
-    // the loop init. We populate it with the loop_vars (only) because the
-    // optimizer needs access to those for (1) tracking their lifetime, and
-    // (2) remapping them (not strictly needed, see the comment in ReMapFrame()).
+
+
+
+
     zn.aux = new ZInstAux(0);
     zn.aux->loop_vars = aux->loop_vars;
     AddCFT(&zn, CFT_LOOP);
@@ -898,9 +898,9 @@ ZAMStmt ZAMCompiler::FinishLoop(ZAMStmt iter_head, ZInstI& iter_stmt, const Stmt
     auto loop_end = GoTo(GoToTarget(iter_head));
     AddCFT(insts1[loop_end.stmt_num], CFT_LOOP_END);
 
-    // We only need cleanup for looping over tables, but for now we
-    // need some sort of placeholder instruction (until the optimizer
-    // can elide it) to resolve loop exits.
+
+
+
     ZOp op = is_table ? OP_END_TABLE_LOOP_f : OP_NOP;
 
     auto z = ZInstI(op, iter_slot);
@@ -924,7 +924,7 @@ ZAMStmt ZAMCompiler::FinishLoop(ZAMStmt iter_head, ZInstI& iter_stmt, const Stmt
 ZAMStmt ZAMCompiler::CompileReturn(const ReturnStmt* r) {
     auto e = r->StmtExpr();
 
-    if ( retvars.empty() ) { // a "true" return
+    if ( retvars.empty() ) {
         if ( e ) {
             if ( pf->ProfiledFunc()->Flavor() == FUNC_FLAVOR_HOOK ) {
                 ASSERT(e->GetType()->Tag() == TYPE_BOOL);
@@ -980,9 +980,9 @@ ZAMStmt ZAMCompiler::CompileCatchReturn(const CatchReturnStmt* cr) {
     ResolveCatchReturns(GoToTargetBeyond(block_end));
 
     if ( ! is_event_inline ) {
-        // Strictly speaking, we could do this even if is_event_inline
-        // is true, because the values won't have changed. However, that
-        // just looks weird, so we condition this to match the above.
+
+
+
         ZAM::curr_func = hold_func;
         ZAM::curr_loc = hold_loc;
     }
@@ -1087,8 +1087,8 @@ ZAMStmt ZAMCompiler::CompileAssert(const AssertStmt* as) {
 
     ZInstI z;
 
-    // We don't have a convenient way of directly introducing a std::string
-    // constant, so we build one to hold it.
+
+
     auto cond_desc = make_intrusive<StringVal>(new String(as->CondDesc()));
     auto cond_desc_e = make_intrusive<ConstExpr>(cond_desc);
 
@@ -1135,4 +1135,4 @@ ZAMStmt ZAMCompiler::InitTable(IDPtr id, TableType* tt, Attributes* attrs) {
     return AddInst(z);
 }
 
-} // namespace zeek::detail
+}

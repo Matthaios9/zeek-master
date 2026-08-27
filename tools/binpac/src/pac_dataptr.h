@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_dataptr_h
 #define pac_dataptr_h
@@ -8,8 +8,8 @@
 #include "pac_common.h"
 #include "pac_dbg.h"
 
-// A data pointer is represented by an data pointer variable
-// plus a constant offset.
+
+
 
 class DataPtr {
 public:
@@ -46,4 +46,4 @@ protected:
     string ptr_expr_;
 };
 
-#endif // pac_dataptr_h
+#endif

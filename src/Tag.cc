@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Tag.h"
 
@@ -77,4 +77,4 @@ Tag& Tag::operator=(Tag&& other) noexcept {
 
 std::string Tag::AsString() const { return util::fmt("%" PRIu32 "/%" PRIu32, type, subtype); }
 
-} // namespace zeek
+}

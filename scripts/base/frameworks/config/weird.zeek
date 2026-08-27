@@ -1,4 +1,4 @@
-##! This script sets up the config framework change handlers for weirds.
+
 
 @load ./main
 

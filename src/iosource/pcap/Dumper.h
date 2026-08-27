@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -19,7 +19,7 @@ public:
     static PktDumper* Instantiate(const std::string& path, bool append);
 
 protected:
-    // PktDumper interface.
+
     void Open() override;
     void Close() override;
     bool Dump(const Packet* pkt) override;
@@ -32,4 +32,4 @@ private:
     pcap_t* pd;
 };
 
-} // namespace zeek::iosource::pcap
+}

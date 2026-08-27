@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -21,4 +21,4 @@ protected:
     binpac::SNMP::SNMP_Conn* interp;
 };
 
-} // namespace zeek::analyzer::snmp
+}

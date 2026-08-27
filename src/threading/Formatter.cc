@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/threading/Formatter.h"
 
@@ -49,11 +49,11 @@ TransportProto Formatter::ParseProto(const std::string& proto) const {
     return TRANSPORT_UNKNOWN;
 }
 
-// More or less verbose copy from IPAddr.cc -- which uses reporter.
+
 threading::Value::addr_t Formatter::ParseAddr(const std::string& s) const {
     threading::Value::addr_t val;
 
-    if ( s.find(':') == std::string::npos ) // IPv4.
+    if ( s.find(':') == std::string::npos )
     {
         val.family = IPv4;
 
@@ -108,4 +108,4 @@ std::string Formatter::Render(TransportProto proto) {
         return "unknown";
 }
 
-} // namespace zeek::threading
+}

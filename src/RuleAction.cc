@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/RuleAction.h"
 
@@ -25,7 +25,7 @@ RuleActionEvent::RuleActionEvent(const char* arg_msg)
     : msg(make_intrusive<StringVal>(arg_msg)), handler(signature_match), want_end_of_match(true) {}
 
 RuleActionEvent::RuleActionEvent(const char* arg_msg, const char* event_name) {
-    if ( arg_msg ) // Message can be null (not provided).
+    if ( arg_msg )
         msg = make_intrusive<StringVal>(arg_msg);
 
     handler = zeek::event_registry->Lookup(event_name);
@@ -35,26 +35,26 @@ RuleActionEvent::RuleActionEvent(const char* arg_msg, const char* event_name) {
         return;
     }
 
-    // Register non-script usage to make the UsageAnalyzer happy.
-    zeek::event_registry->Register(event_name, false /*is_from_script*/);
+
+    zeek::event_registry->Register(event_name, false );
 
     static const auto& signature_match_params = signature_match->GetFunc()->GetType()->ParamList()->GetTypes();
-    // Fabricated params for non-message event(state: signature_state, data: string)
+
     static const std::vector<zeek::TypePtr> signature_match_no_msg2_params = {signature_match_params[0],
                                                                               signature_match_params[2]};
-    // Fabricated params for non-message event(state: signature_state, data: string, end_of_match: count)
+
     static const std::vector<zeek::TypePtr> signature_match_no_msg3_params = {signature_match_params[0],
                                                                               signature_match_params[2],
                                                                               signature_match_params[3]};
 
     if ( msg ) {
-        // If msg was provided, the function signature needs to agree with
-        // one of the signature_match() events that take the message.
+
+
         const auto& handler_args_rt = handler->GetType()->Params();
         auto prototype = signature_match->GetFunc()->GetType()->FindPrototype(*handler_args_rt);
 
-        // No prototype matched, call CheckArgs() for those where at least
-        // the number of arguments matches for better error messaging (if any).
+
+
         if ( ! prototype ) {
             for ( const auto& p : signature_match->GetType()->Prototypes() ) {
                 if ( p.args->NumFields() != handler_args_rt->NumFields() )
@@ -71,11 +71,11 @@ RuleActionEvent::RuleActionEvent(const char* arg_msg, const char* event_name) {
             return;
         }
 
-        // signature_match(state, msg, data, [end_of_match])
+
         want_end_of_match = prototype->args->NumFields() > 3;
     }
     else {
-        // When no message is provided, use non-message parameters.
+
         const auto& handler_args_rt = handler->GetType()->Params();
         want_end_of_match = handler_args_rt->NumFields() > 2;
 
@@ -159,8 +159,8 @@ void RuleActionEnable::DoAction(const Rule* parent, RuleEndpointState* state, co
         if ( ! analyzer_mgr->IsEnabled(ChildAnalyzer()) )
             return;
 
-        // This is ugly and works only if there exists only one
-        // analyzer of each type.
+
+
         state->PIA()->AsAnalyzer()->Conn()->FindAnalyzer(Analyzer())->AddChildAnalyzer(ChildAnalyzer());
     }
 }
@@ -184,4 +184,4 @@ void RuleActionDisable::PrintDebug() {
     RuleActionAnalyzer::PrintDebug();
 }
 
-} // namespace zeek::detail
+}

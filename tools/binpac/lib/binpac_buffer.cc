@@ -1,7 +1,7 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include <cstdlib>
-#include <cstring> // for memcpy
+#include <cstring>
 
 #define binpac_regex_h
 
@@ -15,14 +15,14 @@ extern double network_time();
 namespace {
 const unsigned char CR = '\r';
 const unsigned char LF = '\n';
-} // namespace
+}
 
 binpac::FlowBuffer::Policy binpac::FlowBuffer::policy = {
-    // max_capacity
+
     10 * 1024 * 1024,
-    // min_capacity
+
     512,
-    // contract_threshold
+
     2 * 1024 * 1024,
 };
 
@@ -80,7 +80,7 @@ void FlowBuffer::ResetLineState() {
     switch ( linebreak_style_ ) {
         case CR_OR_LF: state_ = CR_OR_LF_0; break;
         case STRICT_CRLF: state_ = STRICT_CRLF_0; break;
-        case LINE_BREAKER: break; // Nothing to reset
+        case LINE_BREAKER: break;
         default: BINPAC_ASSERT(false); break;
     }
 }
@@ -100,7 +100,7 @@ void FlowBuffer::ExpandBuffer(int length) {
         throw ExceptionFlowBufferAlloc(reason.c_str());
     }
 
-    // Allocate a new buffer and copy the existing contents
+
     buffer_length_ = length;
     unsigned char* new_buf = reinterpret_cast<unsigned char*>(realloc(buffer_, buffer_length_));
 
@@ -182,7 +182,7 @@ void FlowBuffer::DiscardData() {
 }
 
 void FlowBuffer::set_eof() {
-    // fprintf(stderr, "EOF\n");
+
     eof_ = true;
     if ( chunked_ )
         frame_length_ = orig_data_end_ - orig_data_begin_;
@@ -217,7 +217,7 @@ void FlowBuffer::MarkOrCopy() {
 }
 
 void FlowBuffer::ClearPreviousData() {
-    // All previous data must have been processed or buffered already
+
     if ( orig_data_begin_ < orig_data_end_ ) {
         BINPAC_ASSERT(buffer_n_ == 0);
         if ( chunked_ ) {
@@ -251,20 +251,20 @@ void FlowBuffer::MarkOrCopyLine() {
     }
 }
 
-/*
-Finite state automaton for CR_OR_LF:
-(!--line is complete, *--add to buffer)
 
-CR_OR_LF_0:
-    CR:	CR_OR_LF_1 !
-    LF:	CR_OR_LF_0 !
-    .:	CR_OR_LF_0 *
 
-CR_OR_LF_1:
-    CR:	CR_OR_LF_1 !
-    LF:	CR_OR_LF_0
-    .:	CR_OR_LF_0 *
-*/
+
+
+
+
+
+
+
+
+
+
+
+
 
 void FlowBuffer::MarkOrCopyLine_CR_OR_LF() {
     if ( ! (orig_data_begin_ && orig_data_end_) )
@@ -281,11 +281,11 @@ void FlowBuffer::MarkOrCopyLine_CR_OR_LF() {
             case CR: state_ = CR_OR_LF_1; goto found_end_of_line;
 
             case LF:
-                // state_ = CR_OR_LF_0;
+
                 goto found_end_of_line;
 
             default:
-                // state_ = CR_OR_LF_0;
+
                 break;
         }
     }
@@ -299,7 +299,7 @@ found_end_of_line:
     }
     else {
         AppendToBuffer(orig_data_begin_, data + 1 - orig_data_begin_);
-        // But eliminate the last CR or LF
+
         --buffer_n_;
     }
     message_complete_ = true;
@@ -310,20 +310,20 @@ found_end_of_line:
 #endif
 }
 
-/*
-Finite state automaton and STRICT_CRLF:
-(!--line is complete, *--add to buffer)
 
-STRICT_CRLF_0:
-    CR:	STRICT_CRLF_1 *
-    LF:	STRICT_CRLF_0 *
-    .:	STRICT_CRLF_0 *
 
-STRICT_CRLF_1:
-    CR:	STRICT_CRLF_1 *
-    LF:	STRICT_CRLF_0 ! (--buffer_n_)
-    .:	STRICT_CRLF_0 *
-*/
+
+
+
+
+
+
+
+
+
+
+
+
 
 void FlowBuffer::MarkOrCopyLine_STRICT_CRLF() {
     const_byteptr data;
@@ -351,7 +351,7 @@ found_end_of_line:
     }
     else {
         AppendToBuffer(orig_data_begin_, data + 1 - orig_data_begin_);
-        // Pop the preceding CR and LF from the buffer
+
         buffer_n_ -= 2;
     }
 
@@ -382,7 +382,7 @@ found_end_of_line:
     }
     else {
         AppendToBuffer(orig_data_begin_, data + 1 - orig_data_begin_);
-        // But eliminate the last 'linebreaker' character
+
         --buffer_n_;
     }
     message_complete_ = true;
@@ -393,17 +393,17 @@ found_end_of_line:
 #endif
 }
 
-// Invariants:
-//
-// When buffer_n_ == 0:
-// Frame = [orig_data_begin_..(orig_data_begin_ + frame_length_)]
-//
-// When buffer_n_ > 0:
-// Frame = [0..buffer_n_][orig_data_begin_..]
+
+
+
+
+
+
+
 
 void FlowBuffer::MarkOrCopyFrame() {
     if ( mode_ == FRAME_MODE && state_ == CR_OR_LF_1 && orig_data_begin_ < orig_data_end_ ) {
-        // Skip the lingering LF
+
         if ( *orig_data_begin_ == LF ) {
             ++orig_data_begin_;
         }
@@ -411,9 +411,9 @@ void FlowBuffer::MarkOrCopyFrame() {
     }
 
     if ( buffer_n_ == 0 ) {
-        // If there is enough data
+
         if ( frame_length_ >= 0 && orig_data_end_ - orig_data_begin_ >= frame_length_ ) {
-            // Do nothing except setting the message complete flag
+
             message_complete_ = true;
         }
         else {
@@ -455,4 +455,4 @@ void FlowBuffer::AppendToBuffer(const_byteptr data, int len) {
     BINPAC_ASSERT(orig_data_begin_ <= orig_data_end_);
 }
 
-} // namespace binpac
+}

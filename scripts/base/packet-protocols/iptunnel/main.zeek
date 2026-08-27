@@ -6,8 +6,8 @@ export {
 
 event zeek_init() &priority=20
 	{
-	# ARUBA is dispatched to 802.11. This currently relies on GRE to set
-	# gre_link_type = DLT_IEEE_802_11 as otherwise DLT_RAW is used.
+
+
 	PacketAnalyzer::register_packet_analyzer(PacketAnalyzer::ANALYZER_IPTUNNEL, 0x8200, PacketAnalyzer::ANALYZER_IEEE802_11);
 	PacketAnalyzer::register_packet_analyzer(PacketAnalyzer::ANALYZER_IPTUNNEL, 0x8210, PacketAnalyzer::ANALYZER_IEEE802_11);
 	PacketAnalyzer::register_packet_analyzer(PacketAnalyzer::ANALYZER_IPTUNNEL, 0x8220, PacketAnalyzer::ANALYZER_IEEE802_11);
@@ -32,5 +32,5 @@ event zeek_init() &priority=20
 	PacketAnalyzer::register_packet_analyzer(PacketAnalyzer::ANALYZER_IPTUNNEL, 0x8350, PacketAnalyzer::ANALYZER_IEEE802_11);
 	PacketAnalyzer::register_packet_analyzer(PacketAnalyzer::ANALYZER_IPTUNNEL, 0x8360, PacketAnalyzer::ANALYZER_IEEE802_11);
 	PacketAnalyzer::register_packet_analyzer(PacketAnalyzer::ANALYZER_IPTUNNEL, 0x8370, PacketAnalyzer::ANALYZER_IEEE802_11);
-	# TODO: how to handle 0x9000 here, which should just be dropped?
+
 	}

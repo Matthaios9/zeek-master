@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/threading/Manager.h"
 
@@ -22,7 +22,7 @@ void HeartbeatTimer::Dispatch(double t, bool is_expire) {
     thread_mgr->StartHeartbeatTimer();
 }
 
-} // namespace detail
+}
 
 static std::vector<uint64_t> pending_bucket_brackets = {1, 10, 100, 1000, 10000, std::numeric_limits<uint64_t>::max()};
 
@@ -132,12 +132,12 @@ void Manager::Terminate() {
     DBG_LOG(DBG_THREADING, "Terminating thread manager ...");
     terminating = true;
 
-    // First process remaining thread output for the message threads.
+
     do
         Flush();
     while ( did_process );
 
-    // Signal all to stop.
+
 
     for ( auto* t : all_threads )
         t->SignalStop();
@@ -145,7 +145,7 @@ void Manager::Terminate() {
     for ( auto* t : all_threads )
         t->WaitForStop();
 
-    // Then join them all.
+
     for ( auto* t : all_threads ) {
         t->Join();
         delete t;
@@ -160,9 +160,9 @@ void Manager::Terminate() {
 void Manager::AddThread(BasicThread* thread) {
     DBG_LOG(DBG_THREADING, "Adding thread %s ...", thread->Name());
 
-    // This can happen when log writers or other threads are
-    // created during the shutdown phase and results in unclean
-    // shutdowns.
+
+
+
     if ( terminated )
         reporter->Warning("Thread %s added after threading manager terminated", thread->Name());
 
@@ -195,8 +195,8 @@ void Manager::SendHeartbeats() {
     for ( MsgThread* thread : msg_threads )
         thread->Heartbeat();
 
-    // Since this is a regular timer, this is also an ideal place to check whether we have
-    // and dead threads and to delete them.
+
+
     all_thread_list to_delete;
     for ( auto* t : all_threads ) {
         if ( t->Killed() )
@@ -228,9 +228,9 @@ void Manager::MessageIn() { total_messages_in_metric->Inc(); }
 
 void Manager::MessageOut() { total_messages_out_metric->Inc(); }
 
-// Raise everything in here as warnings so it is passed to scriptland without
-// looking "fatal". In addition to these warnings, ReaderBackend will queue
-// one reporter message.
+
+
+
 bool Manager::SendEvent(MsgThread* thread, const std::string& name, const int num_vals, Value** vals) const {
     EventHandler* handler = event_registry->Lookup(name);
     if ( handler == nullptr ) {
@@ -329,9 +329,9 @@ void Manager::Flush() {
         delete t;
     }
 
-    // fprintf(stderr, "P %.6f %.6f do_beat=%d did_process=%d next_next=%.6f\n",
-    // run_state::network_time,
-    //         detail::timer_mgr->Time(), do_beat, (int)did_process, next_beat);
+
+
+
 }
 
 const threading::Manager::msg_stats_list& threading::Manager::GetMsgThreadStats() {
@@ -347,4 +347,4 @@ const threading::Manager::msg_stats_list& threading::Manager::GetMsgThreadStats(
     return stats;
 }
 
-} // namespace zeek::threading
+}

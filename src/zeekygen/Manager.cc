@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/zeekygen/Manager.h"
 
@@ -21,9 +21,9 @@ namespace zeek::zeekygen::detail {
 
 void Manager::DbgAndWarn(const char* msg) const {
     if ( reporter->Errors() )
-        // We've likely already reported to real source of the problem
-        // as an error, avoid adding an additional warning which may
-        // be confusing.
+
+
+
         return;
 
     if ( enable_warnings )
@@ -45,8 +45,8 @@ static string RemoveLeadingSpace(const string& s) {
     if ( s.empty() || s[0] != ' ' )
         return s;
 
-    // Treat "##Text" and "## Text" the same, so that a single space doesn't
-    // cause reST formatting to think the later is indented a level.
+
+
     string rval = s;
     rval.erase(0, 1);
     return rval;
@@ -67,29 +67,29 @@ Manager::Manager(const string& arg_config, const string& command)
     if ( getenv("ZEEK_ENABLE_ZEEKYGEN_WARNINGS") )
         enable_warnings = true;
 
-    // If running Zeek without the "-X" option, then we don't need mtime.
+
     if ( disabled || arg_config.empty() )
         return;
 
-    // Find the absolute or relative path to Zeek by checking each PATH
-    // component and also the current directory (so that this works if
-    // command is a relative path).
+
+
+
     const char* env_path = getenv("PATH");
     string path = env_path ? string(env_path) + ":." : ".";
     string path_to_zeek = util::find_file(command, path);
     struct stat s;
 
-    // One way that find_file() could fail is when Zeek is located in
-    // a PATH component that starts with a tilde (such as "~/bin").  A simple
-    // workaround is to just run Zeek with a relative or absolute path.
+
+
+
     if ( path_to_zeek.empty() || stat(path_to_zeek.c_str(), &s) < 0 )
         reporter->InternalError(
             "Zeekygen can't get mtime of zeek binary %s (try again by "
             "specifying the absolute or relative path to Zeek): %s",
             path_to_zeek.c_str(), strerror(errno));
 
-    // Internal error will abort above in the case that stat isn't initialized
-    // NOLINTNEXTLINE(clang-analyzer-core.uninitialized.Assign)
+
+
     mtime = s.st_mtime;
 }
 
@@ -157,7 +157,7 @@ void Manager::ScriptDependency(const string& path, const string& dep) {
         return;
 
     if ( path == "<command line>" )
-        // This is a @load directive on the command line.
+
         return;
 
     if ( dep.empty() ) {
@@ -189,7 +189,7 @@ void Manager::ModuleUsage(const string& path, const string& module) {
         return;
 
     if ( path == "<command line>" )
-        // This is a module defined on the command line.
+
         return;
 
     string name = normalize_script_path(path);
@@ -278,7 +278,7 @@ void Manager::Identifier(zeek::detail::IDPtr id, bool from_redef) {
 
     if ( id_info ) {
         if ( IsFunc(id_info->GetID()->GetType()->Tag()) ) {
-            // Function may already been seen (declaration versus body).
+
             id_info->AddComments(comment_buffer);
             comment_buffer.clear();
             return;
@@ -289,8 +289,8 @@ void Manager::Identifier(zeek::detail::IDPtr id, bool from_redef) {
     }
 
     if ( *id->GetLocationInfo() == zeek::detail::no_location ) {
-        // Internally-created identifier (e.g. file/proto analyzer enum tags).
-        // Handled specially since they don't have a script location.
+
+
         DBG_LOG(DBG_ZEEKYGEN, "Made internal IdentifierInfo %s", id->Name());
         CreateIdentifierInfo(id, nullptr, from_redef);
         return;
@@ -334,7 +334,7 @@ void Manager::Redef(const zeek::detail::ID* id, const string& path, zeek::detail
         return;
 
     if ( path == "<params>" )
-        // This is a redef defined on the command line.
+
         return;
 
     IdentifierInfo* id_info = identifiers.GetInfo(id->Name());
@@ -402,7 +402,7 @@ void Manager::PostComment(const string& comment, const string& id_hint) {
     if ( last_identifier_seen && last_identifier_seen->Name() == id_hint )
         last_identifier_seen->AddComment(RemoveLeadingSpace(comment));
     else
-        // Assume identifier it's associated w/ is coming later.
+
         comment_buffer_map[id_hint].push_back(RemoveLeadingSpace(comment));
 }
 
@@ -411,4 +411,4 @@ string Manager::GetEnumTypeName(const string& id) const {
     return it == enum_mappings.end() ? "" : it->second;
 }
 
-} // namespace zeek::zeekygen::detail
+}

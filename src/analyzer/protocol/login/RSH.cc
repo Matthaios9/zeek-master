@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/login/RSH.h"
 
@@ -7,7 +7,7 @@
 
 namespace zeek::analyzer::login {
 
-// FIXME: this code should probably be merged with Rlogin.cc.
+
 
 Contents_Rsh_Analyzer::Contents_Rsh_Analyzer(Connection* conn, bool orig, Rsh_Analyzer* arg_analyzer)
     : analyzer::tcp::ContentLine_Analyzer("CONTENTS_RSH", conn, orig) {
@@ -28,8 +28,8 @@ void Contents_Rsh_Analyzer::DoDeliver(int len, const u_char* data) {
     if ( auto* tcp = static_cast<analyzer::tcp::TCP_ApplicationAnalyzer*>(Parent())->TCP() )
         endp_state = IsOrig() ? tcp->OrigState() : tcp->RespState();
     else
-        endp_state = tcp::TCP_ENDPOINT_ESTABLISHED; // no TCP parent, assume somebody's feeding us a
-                                                    // legitimate stream
+        endp_state = tcp::TCP_ENDPOINT_ESTABLISHED;
+
 
     for ( ; len > 0; --len, ++data ) {
         if ( offset >= buf_len ) {
@@ -47,16 +47,16 @@ void Contents_Rsh_Analyzer::DoDeliver(int len, const u_char* data) {
         switch ( state ) {
             case RSH_FIRST_NULL:
                 if ( endp_state == analyzer::tcp::TCP_ENDPOINT_PARTIAL ||
-                     // We can be in closed if the data's due to
-                     // a dataful FIN being the first thing we see.
+
+
                      endp_state == analyzer::tcp::TCP_ENDPOINT_CLOSED ) {
                     state = RSH_UNKNOWN;
-                    ++len, --data; // put back c and reprocess
+                    ++len, --data;
                     continue;
                 }
 
                 if ( c >= '0' && c <= '9' )
-                    ; // skip stderr port number
+                    ;
                 else if ( c == '\0' )
                     state = RSH_CLIENT_USER_NAME;
                 else
@@ -91,9 +91,9 @@ void Contents_Rsh_Analyzer::DoDeliver(int len, const u_char* data) {
                     state = RSH_UNKNOWN;
                 }
 
-                if ( c == '\n' || c == '\r' ) { // CR or LF (RFC 1282)
+                if ( c == '\n' || c == '\r' ) {
                     if ( c == '\n' && last_char == '\r' )
-                        // Compress CRLF to just 1 termination.
+
                         ;
                     else {
                         buf[offset] = '\0';
@@ -167,7 +167,7 @@ void Rsh_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
 
     if ( orig ) {
         if ( contents_orig->RshSaveState() == RSH_SERVER_USER_NAME )
-            // First input
+
             vl.emplace_back(val_mgr->True());
         else
             vl.emplace_back(val_mgr->False());
@@ -197,4 +197,4 @@ void Rsh_Analyzer::ServerUserName(const char* s) {
     username = new StringVal(s);
 }
 
-} // namespace zeek::analyzer::login
+}

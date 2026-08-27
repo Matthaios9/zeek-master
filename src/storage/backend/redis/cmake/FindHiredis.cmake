@@ -11,8 +11,8 @@ find_package_handle_standard_args(Hiredis FOUND_VAR HIREDIS_FOUND REQUIRED_VARS 
 
 if (HIREDIS_FOUND)
 
-    # The hiredis library must be at least v1.0.0 to have all of the API bits that
-    # we need.  We can scrape that out of the header.
+
+
     file(STRINGS "${HIREDIS_INCLUDE_DIR}/hiredis/hiredis.h" HIREDIS_MAJOR_VERSION_H
          REGEX "^#define HIREDIS_MAJOR [0-9]+$")
     file(STRINGS "${HIREDIS_INCLUDE_DIR}/hiredis/hiredis.h" HIREDIS_MINOR_VERSION_H

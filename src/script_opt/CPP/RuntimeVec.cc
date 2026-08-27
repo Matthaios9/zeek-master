@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/CPP/RuntimeVec.h"
 
@@ -10,7 +10,7 @@ namespace zeek::detail {
 
 using namespace std;
 
-// Helper function for ensuring that two vectors have matching sizes.
+
 static bool check_vec_sizes__CPP(const VectorValPtr& v1, const VectorValPtr& v2) {
     if ( v1->Size() == v2->Size() )
         return true;
@@ -19,14 +19,14 @@ static bool check_vec_sizes__CPP(const VectorValPtr& v1, const VectorValPtr& v2)
     return false;
 }
 
-// Helper function that returns a VectorTypePtr apt for use with the
-// the given yield type.  We don't just use the yield type directly
-// because here we're supporting low-level arithmetic operations
-// (for example, adding one vector of "interval" to another), which
-// we want to do using the low-level representations.  We'll later
-// convert the vector to the high-level representation if needed.
-//
-// One exception: for booleans ("is_bool" is true), we use those directly.
+
+
+
+
+
+
+
+
 static VectorTypePtr base_vector_type__CPP(const VectorTypePtr& vt, bool is_bool = false) {
     switch ( vt->Yield()->InternalType() ) {
         case TYPE_INTERNAL_INT: {
@@ -42,9 +42,9 @@ static VectorTypePtr base_vector_type__CPP(const VectorTypePtr& vt, bool is_bool
     }
 }
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage)
 
-// The kernel used for unary vector operations.
+
+
 #define VEC_OP1_KERNEL(accessor, type, op)                                                                             \
     for ( unsigned int i = 0; i < v->Size(); ++i ) {                                                                   \
         auto v_i = v->ValAt(i);                                                                                        \
@@ -52,13 +52,13 @@ static VectorTypePtr base_vector_type__CPP(const VectorTypePtr& vt, bool is_bool
             v_result->Assign(i, make_intrusive<type>(op v_i->accessor()));                                             \
     }
 
-// A macro (since it's beyond my templating skillz to deal with the
-// "op" operator) for unary vector operations, invoking the kernel
-// per the underlying representation used by the vector.  "double_kernel"
-// is an optional kernel to use for vectors whose underlying type
-// is "double".  It needs to be optional because C++ will (rightfully)
-// complain about applying certain C++ unary operations to doubles.
-// NOLINTBEGIN(bugprone-macro-parentheses)
+
+
+
+
+
+
+
 #define VEC_OP1(name, op, double_kernel)                                                                               \
     VectorValPtr vec_op_##name##__CPP(const VectorValPtr& v, const TypePtr& t) {                                       \
         auto vt = base_vector_type__CPP(cast_intrusive<VectorType>(t));                                                \
@@ -82,9 +82,9 @@ static VectorTypePtr base_vector_type__CPP(const VectorTypePtr& vt, bool is_bool
                                                                                                                        \
         return v_result;                                                                                               \
     }
-// NOLINTEND(bugprone-macro-parentheses)
 
-// Instantiates a double_kernel for a given operation.
+
+
 #define VEC_OP1_WITH_DOUBLE(name, op)                                                                                  \
     VEC_OP1(                                                                                                           \
         name, op, case TYPE_INTERNAL_DOUBLE : {                                                                        \
@@ -92,18 +92,18 @@ static VectorTypePtr base_vector_type__CPP(const VectorTypePtr& vt, bool is_bool
             break;                                                                                                     \
         })
 
-// NOLINTEND(cppcoreguidelines-macro-usage)
 
-// The unary operations supported for vectors.
+
+
 VEC_OP1_WITH_DOUBLE(pos, +)
 VEC_OP1_WITH_DOUBLE(neg, -)
 VEC_OP1(not, !, )
 VEC_OP1(comp, ~, )
 
-// A kernel for applying a binary operation element-by-element to two
-// vectors of a given low-level type.
-// NOLINTBEGIN(cppcoreguidelines-macro-usage)
-// NOLINTBEGIN(bugprone-macro-parentheses)
+
+
+
+
 #define VEC_OP2_KERNEL(accessor, type, op, zero_check)                                                                 \
     for ( unsigned int i = 0; i < v1->Size(); ++i ) {                                                                  \
         auto v1_i = v1->ValAt(i);                                                                                      \
@@ -115,12 +115,12 @@ VEC_OP1(comp, ~, )
                 v_result->Assign(i, make_intrusive<type>(v1_i->accessor() op v2_i->accessor()));                       \
         }                                                                                                              \
     }
-// NOLINTEND(bugprone-macro-parentheses)
 
-// Analogous to VEC_OP1, instantiates a function for a given binary operation,
-// with customizable kernels for "int" and "double" operations.
-// This version is for operations whose result type is the same as the
-// operand type.
+
+
+
+
+
 #define VEC_OP2(name, op, int_kernel, double_kernel, zero_check, is_bool)                                              \
     VectorValPtr vec_op_##name##__CPP(const VectorValPtr& v1, const VectorValPtr& v2) {                                \
         if ( ! check_vec_sizes__CPP(v1, v2) )                                                                          \
@@ -143,7 +143,7 @@ VEC_OP1(comp, ~, )
         return v_result;                                                                                               \
     }
 
-// Instantiates a regular int_kernel for a binary operation.
+
 #define VEC_OP2_WITH_INT(name, op, double_kernel, zero_check)                                                          \
     VEC_OP2(                                                                                       \
 		name, op, case TYPE_INTERNAL_INT                                                           \
@@ -153,7 +153,7 @@ VEC_OP1(comp, ~, )
 		},                                                                                         \
 		double_kernel, zero_check, false)
 
-// Instantiates an int_kernel for boolean operations.
+
 #define VEC_OP2_WITH_BOOL(name, op, zero_check)                                                                        \
     VEC_OP2(                                                                                       \
 		name, op, case TYPE_INTERNAL_INT                                                           \
@@ -163,7 +163,7 @@ VEC_OP1(comp, ~, )
 		},                                                                                         \
 		, zero_check, true)
 
-// Instantiates a double_kernel for a binary operation.
+
 #define VEC_OP2_WITH_DOUBLE(name, op, zero_check)                                                                      \
     VEC_OP2_WITH_INT(                                                                              \
 		name, op, case TYPE_INTERNAL_DOUBLE                                                        \
@@ -172,9 +172,9 @@ VEC_OP1(comp, ~, )
 			break;                                                                                 \
 		},                                                                                         \
 		zero_check)
-// NOLINTEND(cppcoreguidelines-macro-usage)
 
-// The binary operations supported for vectors.
+
+
 VEC_OP2_WITH_DOUBLE(add, +, 0)
 VEC_OP2_WITH_DOUBLE(sub, -, 0)
 VEC_OP2_WITH_DOUBLE(mul, *, 0)
@@ -188,9 +188,9 @@ VEC_OP2_WITH_BOOL(oror, ||, 0)
 VEC_OP2_WITH_INT(lshift, <<, , 0)
 VEC_OP2_WITH_INT(rshift, >>, , 0)
 
-// A version of VEC_OP2 that instead supports relational operations, so
-// the result type is always vector-of-bool.
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+
+
+
 #define VEC_REL_OP(name, op)                                                                                           \
     VectorValPtr vec_op_##name##__CPP(const VectorValPtr& v1, const VectorValPtr& v2) {                                \
         if ( ! check_vec_sizes__CPP(v1, v2) )                                                                          \
@@ -222,7 +222,7 @@ VEC_OP2_WITH_INT(rshift, >>, , 0)
         return v_result;                                                                                               \
     }
 
-// The relational operations supported for vectors.
+
 VEC_REL_OP(lt, <)
 VEC_REL_OP(gt, >)
 VEC_REL_OP(eq, ==)
@@ -252,10 +252,10 @@ VectorValPtr vec_op_add__CPP(VectorValPtr v, int incr) {
 
 VectorValPtr vec_op_sub__CPP(VectorValPtr v, int i) { return vec_op_add__CPP(std::move(v), -i); }
 
-// This function provides the core functionality.  The arguments
-// are applied as though they appeared left-to-right in a statement
-// "s1 + v2 + v3 + s4".  For any invocation, v2 will always be
-// non-nil, and one-and-only-one of s1, v3, or s4 will be non-nil.
+
+
+
+
 static VectorValPtr str_vec_op_str_vec_add__CPP(const StringValPtr& s1, const VectorValPtr& v2, const VectorValPtr& v3,
                                                 const StringValPtr& s4) {
     auto vt = v2->GetType<VectorType>();
@@ -306,9 +306,9 @@ VectorValPtr str_vec_op_add__CPP(const StringValPtr& s1, const VectorValPtr& v2)
     return str_vec_op_str_vec_add__CPP(s1, v2, nullptr, nullptr);
 }
 
-// Kernel for element-by-element string relationals.  "rel1" and "rel2"
-// codify which relational (</<=/==/!=/>=/>) we're aiming to support,
-// in terms of how a Bstr_cmp() comparison should be assessed.
+
+
+
 static VectorValPtr str_vec_op_kernel__CPP(const VectorValPtr& v1, const VectorValPtr& v2, int rel1, int rel2) {
     auto res_type = make_intrusive<VectorType>(base_type(TYPE_BOOL));
     auto v_result = make_intrusive<VectorVal>(res_type);
@@ -332,8 +332,8 @@ static VectorValPtr str_vec_op_kernel__CPP(const VectorValPtr& v1, const VectorV
     return v_result;
 }
 
-// Kernel for element-by-element pattern relationals.  "is_eq" governs
-// whether the operation is equality (true) or inequality (false).
+
+
 static VectorValPtr pat_vec_op_kernel__CPP(const VectorValPtr& v1, const VectorValPtr& v2, bool is_eq) {
     auto res_type = make_intrusive<VectorType>(base_type(TYPE_BOOL));
     auto v_result = make_intrusive<VectorVal>(res_type);
@@ -410,8 +410,8 @@ VectorValPtr vector_coerce_to__CPP(const VectorValPtr& v, const TypePtr& targ) {
         if ( ! v_i )
             continue;
 
-        // We compute these for each element to cover the case where
-        // the coerced vector is of type "any".
+
+
         auto& t_i = v_i->GetType();
         auto it = t_i->InternalType();
 
@@ -459,4 +459,4 @@ VectorValPtr vec_scalar_mixed_with_vector() {
     return nullptr;
 }
 
-} // namespace zeek::detail
+}

@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Debugging support for Zeek policy files.
+
+
 
 #pragma once
 
@@ -14,7 +14,7 @@
 #include "zeek/StmtEnums.h"
 
 #ifdef _MSC_VER
-#include <unistd.h> // Needed to ignore __attribute__((format(printf))) on MSVC
+#include <unistd.h>
 #endif
 
 namespace zeek {
@@ -34,7 +34,7 @@ class DbgBreakpoint;
 class DbgWatch;
 class DbgDisplay;
 
-// This needs to be defined before we do the includes that come after it.
+
 enum ParseLocationRecType : uint8_t { PLR_UNKNOWN, PLR_FILE_AND_LINE, PLR_FUNCTION };
 class ParseLocationRec {
 public:
@@ -45,7 +45,7 @@ public:
 };
 
 class StmtLocMapping;
-using Filemap = std::deque<StmtLocMapping*>; // mapping for a single file
+using Filemap = std::deque<StmtLocMapping*>;
 
 using BPIDMapType = std::map<int, DbgBreakpoint*>;
 using BPMapType = std::multimap<const Stmt*, DbgBreakpoint*>;
@@ -57,7 +57,7 @@ public:
         trace_file = stderr;
     }
 
-    // Returns previous filename.
+
     FILE* SetTraceFile(const char* trace_filename);
 
     bool DoTrace() const { return dbgtrace; }
@@ -67,7 +67,7 @@ public:
     int LogTrace(const char* fmt, ...) __attribute__((format(printf, 2, 3)));
 
 protected:
-    bool dbgtrace; // print an execution trace
+    bool dbgtrace;
     FILE* trace_file;
 };
 
@@ -88,34 +88,34 @@ public:
     bool BreakFromSignal() { return break_from_signal; }
     void BreakFromSignal(bool dobrk) { break_from_signal = dobrk; }
 
-    // Temporary state: vanishes when execution resumes.
 
-    // ### Umesh, why do these all need to be public? -- Vern
 
-    // Which frame we're looking at; 0 = the innermost frame.
+
+
+
     int curr_frame_idx;
 
-    bool already_did_list; // did we already do a 'list' command?
+    bool already_did_list;
 
-    Location last_loc; // used by 'list'; the last location listed
+    Location last_loc;
 
-    BPIDMapType breakpoints; // BPID -> Breakpoint
+    BPIDMapType breakpoints;
     std::vector<DbgWatch*> watches;
     std::vector<DbgDisplay*> displays;
-    BPMapType breakpoint_map; // maps Stmt -> Breakpoints on it
+    BPMapType breakpoint_map;
 
 protected:
-    bool break_before_next_stmt; // trap into debugger (used for "step")
-    bool break_from_signal;      // was break caused by a signal?
+    bool break_before_next_stmt;
+    bool break_from_signal;
 
     int next_bp_id, next_watch_id, next_display_id;
 
 private:
-    Frame* dbg_locals; // unused
+    Frame* dbg_locals;
 };
 
-// Source line -> statement mapping.
-// (obj -> source line mapping available in object itself)
+
+
 class StmtLocMapping {
 public:
     StmtLocMapping() = default;
@@ -133,60 +133,60 @@ protected:
     Stmt* stmt = nullptr;
 };
 
-extern bool g_policy_debug; // enable debugging facility
+extern bool g_policy_debug;
 extern DebuggerState g_debugger_state;
 
-//
-// Helper functions
-//
 
-// parse_location_string() takes a string specifying a location by
-// filename and/or line number or function name and returns the
-// corresponding nearest statement, the actual filename and line
-// number specified (not the one corresponding to the nearest
-// statement) if applicable. The implicit filename is the one
-// containing the currently-debugged policy statement.
-// Multiple results can be returned depending on the input, but always
-// at least 1.
+
+
+
+
+
+
+
+
+
+
+
 
 std::vector<ParseLocationRec> parse_location_string(const std::string& s);
 
-// ### TODO: Add a bunch of hook functions for various events
-//   e.g. variable changed, breakpoint hit, etc.
-//
-//   Also add some hooks for UI? -- See GDB
 
-// Debugging hooks.
 
-// Return true to continue execution, false to abort.
+
+
+
+
+
+
 bool pre_execute_stmt(Stmt* stmt, Frame* f);
 bool post_execute_stmt(Stmt* stmt, Frame* f, Val* result, StmtFlowType* flow);
 
-// Returns 1 if successful, 0 otherwise.
-// If cmdfile is non-nil, it contains the location of a file of commands
-// to be executed as debug commands.
+
+
+
 int dbg_init_debugger(const char* cmdfile = nullptr);
 int dbg_shutdown_debugger();
 
-// Returns 1 if successful, 0 otherwise.
-int dbg_handle_debug_input(); // read a line and then have it executed
 
-// Returns > 0 if execution should be resumed, 0 if another debug command
-// should be read, or < 0 if there was an error.
+int dbg_handle_debug_input();
+
+
+
 int dbg_execute_command(const char* cmd);
 
-// Interactive expression evaluation.
+
 ValPtr dbg_eval_expr(const char* expr);
 
-// Get line that looks like "In FnFoo(arg = val) at File:Line".
+
 std::string get_context_description(const Stmt* stmt, const Frame* frame);
 
-extern Frame* g_dbg_locals; // variables created within debugger context
+extern Frame* g_dbg_locals;
 
-extern std::map<std::string, Filemap*> g_dbgfilemaps; // filename => filemap
+extern std::map<std::string, Filemap*> g_dbgfilemaps;
 
-// Perhaps add a code/priority argument to do selective output.
+
 int debug_msg(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 
-} // namespace detail
-} // namespace zeek
+}
+}

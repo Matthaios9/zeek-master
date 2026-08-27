@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/tcp/TCP.h"
 
@@ -30,8 +30,8 @@ void TCP_ApplicationAnalyzer::Init() {
 void TCP_ApplicationAnalyzer::AnalyzerViolation(const char* reason, const char* data, int len, zeek::Tag tag) {
     if ( auto* tcp = TCP() ) {
         if ( tcp->IsPartial() || tcp->HadGap(false) || tcp->HadGap(true) )
-            // Filter out incomplete connections.  Parsing them is
-            // too unreliable.
+
+
             return;
     }
 
@@ -46,7 +46,7 @@ void TCP_ApplicationAnalyzer::DeliverPacket(int len, const u_char* data, bool is
             util::fmt_bytes(reinterpret_cast<const char*>(data), std::min(40, len)), len > 40 ? "..." : "");
 }
 
-void TCP_ApplicationAnalyzer::SetEnv(bool /* is_orig */, char* name, char* val) {
+void TCP_ApplicationAnalyzer::SetEnv(bool , char* name, char* val) {
     delete[] name;
     delete[] val;
 }
@@ -103,9 +103,9 @@ TCPStats_Endpoint::TCPStats_Endpoint(TCP_Endpoint* e) {
 
 int endian_flip(int n) { return ((n & 0xff) << 8) | ((n & 0xff00) >> 8); }
 
-bool TCPStats_Endpoint::DataSent(double /* t */, uint64_t seq, int len, int caplen, const u_char* /* data */,
-                                 const IP_Hdr* ip, const struct tcphdr* /* tp */) {
-    if ( ++num_pkts == 1 ) { // First packet.
+bool TCPStats_Endpoint::DataSent(double , uint64_t seq, int len, int caplen, const u_char* ,
+                                 const IP_Hdr* ip, const struct tcphdr* ) {
+    if ( ++num_pkts == 1 ) {
         last_id = ip->ID();
         return false;
     }
@@ -125,7 +125,7 @@ bool TCPStats_Endpoint::DataSent(double /* t */, uint64_t seq, int len, int capl
 
     int final_id_delta;
 
-    if ( abs_id_delta < abs_id_endian_delta ) { // Consistent with big-endian.
+    if ( abs_id_delta < abs_id_endian_delta ) {
         if ( endian_type == ENDIAN_UNKNOWN )
             endian_type = ENDIAN_BIG;
         else if ( endian_type == ENDIAN_BIG )
@@ -135,7 +135,7 @@ bool TCPStats_Endpoint::DataSent(double /* t */, uint64_t seq, int len, int capl
 
         final_id_delta = id_delta;
     }
-    else { // Consistent with little-endian.
+    else {
         if ( endian_type == ENDIAN_UNKNOWN )
             endian_type = ENDIAN_LITTLE;
         else if ( endian_type == ENDIAN_LITTLE )
@@ -229,4 +229,4 @@ void TCPStats_Analyzer::DeliverPacket(int len, const u_char* data, bool is_orig,
         resp_stats->DataSent(run_state::network_time, seq, len, caplen, data, ip, nullptr);
 }
 
-} // namespace zeek::analyzer::tcp
+}

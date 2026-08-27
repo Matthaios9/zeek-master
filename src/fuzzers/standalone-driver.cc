@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include <cerrno>
 #include <chrono>
@@ -26,9 +26,9 @@ int main(int argc, char** argv) {
     for ( auto i = 0; i < num_inputs; ++i ) {
         auto input_file_name = argv[i + 1];
         printf("  %s:", input_file_name);
-        // If ASan ends up aborting, the previous stdout output may not
-        // be flushed, so make sure to that and make it easier to see
-        // what input caused the crash.
+
+
+
         fflush(stdout);
 
         auto f = fopen(input_file_name, "r");

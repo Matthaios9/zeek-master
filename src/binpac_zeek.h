@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -27,4 +27,4 @@ inline zeek::StringValPtr to_stringval(const_bytestring const& str) {
 
 zeek::StringValPtr utf16_to_utf8_val(zeek::Connection* conn, const bytestring& utf16);
 
-} // namespace binpac
+}

@@ -1,9 +1,9 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
-// Reducer helper class for managing temporary variables created during
-// statement reduction for compilation.
+
+
 
 #include <string>
 
@@ -28,11 +28,11 @@ public:
     void Deactivate() { active = false; }
     bool IsActive() const { return active; }
 
-    // Associated constant expression, if any.
+
     const ConstExpr* Const() const { return id->GetOptInfo()->Const(); }
 
-    // The most use of "const" in any single line in the Zeek
-    // codebase :-P ... though only by one!
+
+
     void SetConst(const ConstExpr* _const) { id->GetOptInfo()->SetConst(_const); }
 
     IDPtr Alias() const { return alias; }
@@ -46,4 +46,4 @@ protected:
     IDPtr alias;
 };
 
-} // namespace zeek::detail
+}

@@ -2,9 +2,9 @@
 module DNP3;
 
 export {
-	## Standard defined Modbus function codes.
+
 	const function_codes = {
-		# Requests.
+
 		[0x00] = "CONFIRM",
 		[0x01] = "READ",
 		[0x02] = "WRITE",
@@ -40,10 +40,9 @@ export {
 		[0x20] = "AUTHENTICATE_REQ",
 		[0x21] = "AUTHENTICATE_REQ_NR",
 
-		# Responses.
+
 		[0x81] = "RESPONSE",
 		[0x82] = "UNSOLICITED_RESPONSE",
 		[0x83] = "AUTHENTICATE_RESP",
 	} &default=function(i: count):string { return fmt("unknown-%d", i); } &redef;
 }
-

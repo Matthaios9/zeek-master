@@ -1,4 +1,4 @@
-##! Implementation of the drop functionality for NetControl.
+
 
 @load ./main
 
@@ -9,51 +9,51 @@ export {
 
 	global log_policy_drop: Log::PolicyHook;
 
-	## Stops all packets involving an IP address from being forwarded.
-	##
-	## a: The address to be dropped.
-	##
-	## t: How long to drop it, with 0 being indefinitely.
-	##
-	## location: An optional string describing where the drop was triggered.
-	##
-	## Returns: The id of the inserted rule on success and zero on failure.
+
+
+
+
+
+
+
+
+
 	global drop_address: function(a: addr, t: interval, location: string &default="") : string;
 
-	## Stops all packets involving a connection address from being forwarded.
-	##
-	## c: The connection to be dropped.
-	##
-	## t: How long to drop it, with 0 being indefinitely.
-	##
-	## location: An optional string describing where the drop was triggered.
-	##
-	## Returns: The id of the inserted rule on success and zero on failure.
+
+
+
+
+
+
+
+
+
 	global drop_connection: function(c: conn_id, t: interval, location: string &default="") : string;
 
 	type DropInfo: record {
-		## Time at which the recorded activity occurred.
+
 		ts: time		&log;
-		## ID of the rule; unique during each Zeek run.
+
 		rule_id: string  &log;
-		orig_h: addr 	&log;	##< The originator's IP address.
-		orig_p: port 	&log &optional;	##< The originator's port number.
-		resp_h: addr	&log &optional;	##< The responder's IP address.
-		resp_p: port	&log &optional;	##< The responder's port number.
-		## Expiry time of the shunt.
+		orig_h: addr 	&log;
+		orig_p: port 	&log &optional;
+		resp_h: addr	&log &optional;
+		resp_p: port	&log &optional;
+
 		expire: interval &log;
-		## Location where the underlying action was triggered.
+
 		location: string	&log &optional;
 	};
 
-	## Hook that allows the modification of rules passed to drop_* before they
-	## are passed on. If one of the hooks uses break, the rule is ignored.
-	##
-	## r: The rule to be added.
+
+
+
+
 	global NetControl::drop_rule_policy: hook(r: Rule);
 
-	## Event that can be handled to access the :zeek:type:`NetControl::ShuntInfo`
-	## record as it is sent on to the logging framework.
+
+
 	global log_netcontrol_drop: event(rec: DropInfo);
 }
 
@@ -72,7 +72,7 @@ function drop_connection(c: conn_id, t: interval, location: string &default="") 
 
 	local id = add_rule(r);
 
-	# Error should already be logged
+
 	if ( id == "" )
 		return id;
 
@@ -96,7 +96,7 @@ function drop_address(a: addr, t: interval, location: string &default="") : stri
 
 	local id = add_rule(r);
 
-	# Error should already be logged
+
 	if ( id == "" )
 		return id;
 
@@ -109,4 +109,3 @@ function drop_address(a: addr, t: interval, location: string &default="") : stri
 
 	return id;
 	}
-

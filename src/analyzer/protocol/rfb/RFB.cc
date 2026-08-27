@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/rfb/RFB.h"
 
@@ -34,17 +34,17 @@ void RFB_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
         return;
 
     if ( had_gap )
-        // If only one side had a content gap, we could still try to
-        // deliver data to the other side if the script layer can handle this.
+
+
         return;
 
     if ( invalid )
         return;
 
     if ( interp->saw_handshake() && ! orig )
-        // Don't try parsing server data after the handshake
-        // (it's not completely implemented and contains mostly
-        // uninteresting pixel data).
+
+
+
         return;
 
     try {
@@ -61,4 +61,4 @@ void RFB_Analyzer::Undelivered(uint64_t seq, int len, bool orig) {
     interp->NewGap(orig, len);
 }
 
-} // namespace zeek::analyzer::rfb
+}

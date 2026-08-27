@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -30,4 +30,4 @@ protected:
     bool did_bad_reply;
 };
 
-} // namespace zeek::analyzer::ident
+}

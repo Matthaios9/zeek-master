@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_number_h
 #define pac_number_h
@@ -33,4 +33,4 @@ protected:
     };
 };
 
-#endif // pac_number_h
+#endif

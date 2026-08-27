@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/input/ReaderFrontend.h"
 
@@ -41,7 +41,7 @@ ReaderFrontend::ReaderFrontend(const ReaderBackend::ReaderInfo& arg_info, EnumVa
 void ReaderFrontend::Stop() {
     if ( backend ) {
         backend->SignalStop();
-        backend = nullptr; // Thread manager will clean it up once it finishes.
+        backend = nullptr;
     }
 }
 
@@ -78,4 +78,4 @@ void ReaderFrontend::Update() {
 
 const char* ReaderFrontend::Name() const { return name; }
 
-} // namespace zeek::input
+}

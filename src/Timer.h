@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -18,12 +18,12 @@ class Gauge;
 class Counter;
 using GaugePtr = std::shared_ptr<Gauge>;
 using CounterPtr = std::shared_ptr<Counter>;
-} // namespace telemetry
-} // namespace zeek
+}
+}
 
 namespace zeek::detail {
 
-// If you add a timer here, adjust TimerNames in Timer.cc.
+
 enum TimerType : uint8_t {
     TIMER_BACKDOOR,
     TIMER_BREAKPOINT,
@@ -73,9 +73,9 @@ public:
 
     TimerType Type() const { return type; }
 
-    // t gives the dispatch time.  is_expire is true if the
-    // timer is being dispatched because we're expiring all
-    // pending timers.
+
+
+
     virtual void Dispatch(double t, bool is_expire) = 0;
 
     void Describe(ODesc* d) const;
@@ -90,39 +90,39 @@ public:
 
     void Add(Timer* timer);
 
-    /**
-     * Advance the clock to time t, dispatching at most max_expire expired
-     * timers, or all expired timers if dispatch_all_expired is set.
-     *
-     * @param t the new time.
-     * @param max_expire the maximum number of timers to expire.
-     * @return the number of timers expired.
-     */
+
+
+
+
+
+
+
+
     int Advance(double t, int max_expire);
 
-    /**
-     * Returns the number of timers expired (so far) during the current
-     * or most recent advance.
-     */
+
+
+
+
     int NumExpiredDuringCurrentAdvance() { return num_expired; }
 
-    /**
-     * Expire all timers.
-     */
+
+
+
     void Expire();
 
-    /**
-     * Removes a timer. Cancel() is a method separate from Remove()
-     * because (1) Remove is protected, but, more importantly, (2)
-     * in some timer schemes we have wound up separating timer
-     * cancelation from removing it from the manager's data structures,
-     * because the manager lacked an efficient way to find it.
-     *
-     * @param timer the timer to cancel
-     */
+
+
+
+
+
+
+
+
+
     void Cancel(Timer* timer) { Remove(timer); }
 
-    double Time() const { return t ? t : 1; } // 1 > 0
+    double Time() const { return t ? t : 1; }
 
     size_t Size() const { return q->Size(); }
     size_t PeakSize() const { return q->PeakSize(); }
@@ -130,22 +130,22 @@ public:
 
     double LastTimestamp() const { return last_timestamp; }
 
-    /**
-     * Returns time of last advance in global network time
-     */
+
+
+
     double LastAdvance() const { return last_advance; }
 
     static unsigned int* CurrentTimers() { return current_timers; }
 
-    // IOSource API methods
+
     double GetNextTimeout() override;
     void Process() override;
     const char* Tag() override { return "TimerMgr"; }
 
-    /**
-     * Performs some extra initialization on a timer manager. This shouldn't
-     * need to be called for managers other than the global one.
-     */
+
+
+
+
     void InitPostScript();
 
 private:
@@ -160,8 +160,8 @@ private:
     double last_advance;
 
     int num_expired;
-    // Flag to indicate if Advance() should dispatch all expired timers
-    // for the max_timer_expires=0 case.
+
+
     bool dispatch_all_expired = false;
 
     static unsigned int current_timers[NUM_TIMER_TYPES];
@@ -175,4 +175,4 @@ private:
 
 ZEEK_EXTERN_DATA TimerMgr* timer_mgr;
 
-} // namespace zeek::detail
+}

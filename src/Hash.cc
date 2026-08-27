@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Hash.h"
 
@@ -10,7 +10,7 @@
 #include "zeek/DebugLogger.h"
 #include "zeek/Desc.h"
 #include "zeek/Reporter.h"
-#include "zeek/Val.h" // needed for const.bif
+#include "zeek/Val.h"
 #include "zeek/ZeekString.h"
 #include "zeek/digest.h"
 
@@ -24,8 +24,8 @@ alignas(32) uint64_t KeyedHash::shared_highwayhash_key[4];
 alignas(32) uint64_t KeyedHash::cluster_highwayhash_key[4];
 alignas(16) unsigned long long KeyedHash::shared_siphash_key[2];
 
-// we use the following lines to not pull in the highwayhash headers in Hash.h - but to check the
-// types did not change underneath us.
+
+
 static_assert(std::is_same_v<hash64_t, highwayhash::HHResult64>, "Highwayhash return values must match hash_x_t");
 static_assert(std::is_same_v<hash128_t, highwayhash::HHResult128>, "Highwayhash return values must match hash_x_t");
 static_assert(std::is_same_v<hash256_t, highwayhash::HHResult256>, "Highwayhash return values must match hash_x_t");
@@ -38,25 +38,25 @@ void KeyedHash::InitializeSeeds(const std::array<uint32_t, SEED_INIT_SIZE>& seed
     if ( seeds_initialized )
         return;
 
-    // Save off the seed data so it can be used to lazily calculate the hmac_md5 key if
-    // needed.
+
+
     memcpy(KeyedHash::seed_data, seed_data.data(), sizeof(seed_data));
 
-    // This assert is just to make sure the comment below gets updated if it changes.
+
     static_assert(sizeof(seed_data) == 80);
 
-    // From the 80-byte seed:
-    // - Bottom 64 bytes (bytes 0-63) are used for hmac_md5 and shared_highwayhash_key.
-    // - Middle 64 bytes (bytes 8-71) are used for hmac_sha256
-    // - Top 16 bytes (bytes 64-79) are used for shared_siphash_key
+
+
+
+
 
     static_assert(sizeof(shared_highwayhash_key) == ZEEK_SHA256_DIGEST_LENGTH);
     calculate_digest(Hash_SHA256, reinterpret_cast<const u_char*>(seed_data.data()), sizeof(seed_data) - 16,
                      reinterpret_cast<unsigned char*>(shared_highwayhash_key));
 
-    // Use the middle 64 bytes of the seed for hmac_sha256, which means skipping ahead 8
-    // bytes. This is just to use a different part of the key data than above, but it
-    // shouldn't really make any difference.
+
+
+
     calculate_digest(Hash_SHA256, reinterpret_cast<const u_char*>(seed_data.data()) + 8, sizeof(seed_data) - 8,
                      shared_hmac_sha256_key);
 
@@ -72,10 +72,10 @@ void KeyedHash::InitializeHmacMd5Seed() {
     if ( hmac_md5_seeds_initialized )
         return;
 
-    // This uses the same portion of the seed data as shared_highwayhash_key. This
-    // shouldn't really be a security problem of any kind: hmac-md5 is not really used
-    // anymore - and even if it was, the hashes should not reveal any information about
-    // their initialization vector.
+
+
+
+
     calculate_digest(Hash_MD5, reinterpret_cast<const u_char*>(seed_data), sizeof(seed_data) - 16, shared_hmac_md5_key);
 
     hmac_md5_seeds_initialized = true;
@@ -118,7 +118,7 @@ void KeyedHash::StaticHash256(const void* bytes, uint64_t size, hash256_t* resul
 }
 
 void init_hash_function() {
-    // Make sure we have already called init_random_seed().
+
     if ( ! KeyedHash::IsInitialized() )
         reporter->InternalError("Zeek's hash functions aren't fully initialized");
 }
@@ -143,7 +143,7 @@ HashKey::HashKey(double d) { Set(d); }
 HashKey::HashKey(const void* p) { Set(p); }
 
 HashKey::HashKey(const char* s) {
-    key_size = write_size = strlen(s); // note - skip final \0
+    key_size = write_size = strlen(s);
     key = const_cast<char*>(reinterpret_cast<const char*>(s));
 }
 
@@ -165,7 +165,7 @@ HashKey::HashKey(const void* arg_key, size_t arg_size, hash_t arg_hash) {
     is_our_dynamic = true;
 }
 
-HashKey::HashKey(const void* arg_key, size_t arg_size, hash_t arg_hash, bool /* dont_copy */) {
+HashKey::HashKey(const void* arg_key, size_t arg_size, hash_t arg_hash, bool ) {
     key_size = write_size = arg_size;
     hash = arg_hash;
     key = const_cast<char*>(reinterpret_cast<const char*>(arg_key));
@@ -226,12 +226,12 @@ void HashKey::Describe(ODesc* d) const {
         for ( size_t i = 0; i < key_size; i++ ) {
             if ( i > 0 ) {
                 d->SP();
-                // Extra spacing every 8 bytes, for readability.
+
                 if ( i % 8 == 0 )
                     d->SP();
             }
 
-            // Don't display unwritten content, only say how much there is.
+
             if ( i > write_size ) {
                 d->Add("<+");
                 d->Add(static_cast<uint64_t>(key_size - write_size - 1));
@@ -250,7 +250,7 @@ void HashKey::Describe(ODesc* d) const {
 }
 
 char* HashKey::CopyKey(const char* k, size_t s) const {
-    char* k_copy = new char[s]; // s == 0 is okay, returns non-nil
+    char* k_copy = new char[s];
     memcpy(k_copy, k, s);
     return k_copy;
 }
@@ -448,9 +448,9 @@ void HashKey::Read(const char* tag, void* out, size_t n, size_t alignment) const
     size_t s1 = read_size;
     EnsureReadSpace(n);
 
-    // In case out is nil, make sure nothing is to be read, and only memcpy
-    // when there is a non-zero amount. Memory checkers don't nullpointers
-    // in memcpy even if the size is 0.
+
+
+
     ASSERT(out != nullptr || (out == nullptr && n == 0));
 
     if ( n > 0 ) {
@@ -500,7 +500,7 @@ void HashKey::EnsureReadSpace(size_t n) const {
 }
 
 bool HashKey::operator==(const HashKey& other) const {
-    // Quick exit for the same object.
+
     if ( this == &other )
         return true;
 
@@ -508,7 +508,7 @@ bool HashKey::operator==(const HashKey& other) const {
 }
 
 bool HashKey::operator!=(const HashKey& other) const {
-    // Quick exit for different objects.
+
     if ( this != &other )
         return true;
 
@@ -516,12 +516,12 @@ bool HashKey::operator!=(const HashKey& other) const {
 }
 
 bool HashKey::Equal(const void* other_key, size_t other_size, hash_t other_hash) const {
-    // If the key memory is the same just return true.
+
     if ( key == other_key && key_size == other_size )
         return true;
 
-    // If either key is nullptr, return false. If they were both nullptr, it
-    // would have fallen into the above block already.
+
+
     if ( key == nullptr || other_key == nullptr )
         return false;
 
@@ -602,4 +602,4 @@ TEST_CASE("move assignment") {
 
 TEST_SUITE_END();
 
-} // namespace zeek::detail
+}

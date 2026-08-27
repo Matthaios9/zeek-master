@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/zeekygen/utils.h"
 
@@ -26,11 +26,11 @@ bool prettify_params(string& s) {
         char next = s[i];
 
         if ( ! in_identifier ) {
-            // Pass by leading whitespace.
+
             if ( isspace(next) )
                 continue;
 
-            // Only allow alphabetic and '_' as first char of identifier.
+
             if ( isalpha(next) || next == '_' ) {
                 identifier_start_pos = i;
                 identifier += next;
@@ -38,11 +38,11 @@ bool prettify_params(string& s) {
                 continue;
             }
 
-            // Don't need to change anything.
+
             return false;
         }
 
-        // All other characters of identifier are alphanumeric or '_'.
+
         if ( isalnum(next) || next == '_' ) {
             identifier += next;
             continue;
@@ -50,14 +50,14 @@ bool prettify_params(string& s) {
 
         if ( next == ':' ) {
             if ( i + 1 < s.size() && s[i + 1] == ':' ) {
-                // It's part of an identifier's namespace scoping.
+
                 identifier += next;
                 identifier += s[i + 1];
                 ++i;
                 continue;
             }
 
-            // Prettify function param/return value reST markup.
+
             string subst;
 
             if ( identifier == "Returns" )
@@ -69,7 +69,7 @@ bool prettify_params(string& s) {
             return true;
         }
 
-        // Don't need to change anything.
+
         return false;
     }
 
@@ -98,14 +98,14 @@ size_t end_of_first_sentence(const string& s) {
 
     while ( (rval = s.find_first_of('.', rval)) != string::npos ) {
         if ( rval == s.size() - 1 )
-            // Period is at end of string.
+
             return rval;
 
         if ( isspace(s[rval + 1]) )
-            // Period has a space after it.
+
             return rval;
 
-        // Period has some non-space character after it, keep looking.
+
         ++rval;
     }
 
@@ -126,9 +126,9 @@ std::string normalize_script_path(std::string_view path) {
         auto rval = util::detail::normalize_path(path);
         auto prefix = util::SafeBasename(p->PluginDirectory()).result;
 
-        // Collision avoidance when there's no _ in the plugin basename such
-        // as when using ./build within a plugin checkout for testing. Include
-        // the parent in the normalized path assuming it's unique.
+
+
+
         if ( prefix.find('_') == std::string::npos ) {
             auto parent = util::SafeBasename(util::SafeDirname(p->PluginDirectory()).result).result;
             prefix = parent + "/" + prefix;
@@ -146,11 +146,11 @@ std::optional<std::string> source_code_range(const zeek::detail::ID* id) {
     if ( ! type )
         return {};
 
-    // Some object locations won't end up capturing concrete syntax of closing
-    // braces on subsequent line -- of course that doesn't have to always be
-    // case, but it's true for current code style and the possibility of
-    // capturing an extra line of context is not harmful (human reader shouldn't
-    // be too confused by it).
+
+
+
+
+
     int extra_lines = 0;
     const zeek::detail::Location* loc = &zeek::detail::no_location;
 
@@ -159,8 +159,8 @@ std::optional<std::string> source_code_range(const zeek::detail::ID* id) {
             const auto& v = id->GetVal();
 
             if ( v && v->AsFunc()->GetBodies().size() == 1 ) {
-                // Either a function or an event/hook with single body can
-                // report that single, continuous range.
+
+
                 loc = v->AsFunc()->GetBodies()[0].stmts->GetLocationInfo();
                 ++extra_lines;
             }
@@ -168,15 +168,15 @@ std::optional<std::string> source_code_range(const zeek::detail::ID* id) {
                 loc = id->GetLocationInfo();
         } break;
         case TYPE_ENUM:
-            // Fallthrough
+
         case TYPE_RECORD:
             if ( id->IsType() ) {
                 loc = type->GetLocationInfo();
 
                 if ( std::string_view{loc->FileName()}.ends_with(".bif.zeek") )
-                    // Source code won't be available to reference, so fall back
-                    // to identifier location which may actually be in a regular
-                    // .zeek script.
+
+
+
                     loc = id->GetLocationInfo();
                 else
                     ++extra_lines;
@@ -195,4 +195,4 @@ std::optional<std::string> source_code_range(const zeek::detail::ID* id) {
                      loc->LastLine() + extra_lines);
 }
 
-} // namespace zeek::zeekygen::detail
+}

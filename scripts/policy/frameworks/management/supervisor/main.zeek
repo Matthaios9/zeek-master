@@ -1,5 +1,5 @@
-##! This module provides functionality the Management framework places directly
-##! in the Supervisor.
+
+
 
 @load base/utils/paths
 @load base/utils/queue
@@ -12,19 +12,19 @@
 
 module Management::Supervisor;
 
-# stdout/stderr state for a given node.
+
 type NodeOutputStreams: record {
-	# Line buffers for stdout and stderr. Their length is capped
-	# to the most recent Management::Supervisor::output_max_lines.
+
+
 	stdout: Queue::Queue;
 	stderr: Queue::Queue;
 
-	#
+
 	stdout_file: file &optional;
 	stderr_file: file &optional;
 };
 
-# This tracks output state for the current nodes.
+
 global g_outputs: table[string] of NodeOutputStreams;
 
 function make_node_output_streams(node: string): NodeOutputStreams
@@ -57,17 +57,17 @@ hook Supervisor::stdout_hook(node: string, msg: string)
 	if ( node !in g_outputs )
 		g_outputs[node] = make_node_output_streams(node);
 
-	# Write to the stdout file if we have one. The flush is clunky, but
-	# seems worth it: it's too confusing for errors to have happened and not
-	# yet shown up in the file. (The Supervisor's built-in file redirection
-	# does this too.)
+
+
+
+
 	if ( g_outputs[node]?$stdout_file )
 		{
 		print g_outputs[node]$stdout_file, msg;
 		flush_all();
 		}
 
-	# Update the sliding window of recent output lines.
+
 	Queue::put(g_outputs[node]$stdout, msg);
 
 	if ( ! print_stdout )
@@ -93,8 +93,8 @@ hook Supervisor::stderr_hook(node: string, msg: string)
 
 event Supervisor::node_status(node: string, pid: count)
 	{
-	# The node just started or restarted. If we have collected any output
-	# for its past life, send it via a notify_node_exit event.
+
+
 	if ( node in g_outputs )
 		{
 		local stdout_lines: vector of string;

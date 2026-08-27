@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/logging/WriterBackend.h"
 
@@ -10,7 +10,7 @@
 #include "zeek/threading/SerialTypes.h"
 #include "zeek/util.h"
 
-// Messages sent from backend to frontend (i.e., "OutputMessages").
+
 
 using zeek::threading::Field;
 using zeek::threading::Value;
@@ -57,7 +57,7 @@ public:
     }
 };
 
-// Backend methods.
+
 
 broker::data WriterBackend::WriterInfo::ToBroker() const {
     auto t = broker::table();
@@ -131,7 +131,7 @@ WriterBackend::~WriterBackend() {
 
 void WriterBackend::DeleteVals(int num_writes, Value*** vals) {
     for ( int j = 0; j < num_writes; ++j ) {
-        // Note this code is duplicated in Manager::DeleteVals().
+
         for ( int i = 0; i < num_fields; i++ )
             delete vals[j][i];
 
@@ -173,8 +173,8 @@ bool WriterBackend::Init(int arg_num_fields, const Field* const* arg_fields) {
 }
 
 bool WriterBackend::Write(int arg_num_fields, std::span<detail::LogRecord> records) {
-    // Double-check that the arguments match. If we get this from remote,
-    // something might be mixed up.
+
+
     if ( num_fields != arg_num_fields ) {
 #ifdef DEBUG
         const char* msg =
@@ -186,7 +186,7 @@ bool WriterBackend::Write(int arg_num_fields, std::span<detail::LogRecord> recor
         return false;
     }
 
-    // Double-check all the types match.
+
     for ( const auto& record : records ) {
         for ( int i = 0; i < num_fields; ++i ) {
             if ( record[i].type != fields[i]->type ) {
@@ -204,13 +204,13 @@ bool WriterBackend::Write(int arg_num_fields, std::span<detail::LogRecord> recor
     bool success = true;
 
     if ( ! Failed() ) {
-        // Populate a Value* array for backwards compat with plugin
-        // provided WriterBackend implementations that expect to
-        // receive a threading::Value**.
-        //
-        // We keep the raw pointer for this API, as threading::Value
-        // itself manages strings, sets and vectors using raw pointers,
-        // so this is more consistent than mixing.
+
+
+
+
+
+
+
         std::vector<Value*> valps;
         valps.reserve(num_fields);
 
@@ -235,7 +235,7 @@ bool WriterBackend::Write(int arg_num_fields, std::span<detail::LogRecord> recor
 
 bool WriterBackend::SetBuf(bool enabled) {
     if ( enabled == buffering )
-        // No change.
+
         return true;
 
     if ( Failed() )
@@ -262,7 +262,7 @@ bool WriterBackend::Rotate(const char* rotated_path, double open, double close, 
         return false;
     }
 
-    // Insurance against broken writers.
+
     if ( rotation_counter > 0 )
         InternalError(Fmt("writer %s did not call FinishedRotation() in DoRotation()", Name()));
 
@@ -305,4 +305,4 @@ bool WriterBackend::OnHeartbeat(double network_time, double current_time) {
     return DoHeartbeat(network_time, current_time);
 }
 
-} // namespace zeek::logging
+}

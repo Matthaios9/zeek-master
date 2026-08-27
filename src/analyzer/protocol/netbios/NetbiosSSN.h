@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -23,10 +23,10 @@ enum NetbiosSSN_Opcode : uint8_t {
     NETBIOS_SSN_KEEP_ALIVE = 0x85,
 };
 
-//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |      TYPE     |     FLAGS     |            LENGTH             |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+
+
+
 
 struct NetbiosSSN_RawMsgHdr {
     NetbiosSSN_RawMsgHdr(const u_char*& data, int& len);
@@ -36,16 +36,16 @@ struct NetbiosSSN_RawMsgHdr {
     uint16_t length;
 };
 
-//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |   MSG_TYPE    |     FLAGS     |           DGM_ID              |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |                           SOURCE_IP                           |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |          SOURCE_PORT          |          DGM_LENGTH           |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |         PACKET_OFFSET         |                               |
-// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                               |
+
+
+
+
+
+
+
+
+
+
 
 struct NetbiosDGM_RawMsgHdr {
     NetbiosDGM_RawMsgHdr(const u_char*& data, int& len);
@@ -60,11 +60,11 @@ struct NetbiosDGM_RawMsgHdr {
 };
 
 enum NetbiosSSN_State : uint8_t {
-    NETBIOS_SSN_TYPE,   // looking for type field
-    NETBIOS_SSN_FLAGS,  // looking for flag field
-    NETBIOS_SSN_LEN_HI, // looking for high-order byte of length
-    NETBIOS_SSN_LEN_LO, // looking for low-order byte of length
-    NETBIOS_SSN_BUF,    // building up the message in the buffer
+    NETBIOS_SSN_TYPE,
+    NETBIOS_SSN_FLAGS,
+    NETBIOS_SSN_LEN_HI,
+    NETBIOS_SSN_LEN_LO,
+    NETBIOS_SSN_BUF,
 };
 
 class NetbiosSSN_Interpreter {
@@ -73,7 +73,7 @@ public:
 
     void ParseMessage(unsigned int type, unsigned int flags, const u_char* data, int len, bool is_query);
 
-    // Version used when data points to type/flags/length.
+
     void ParseMessageTCP(const u_char* data, int len, bool is_query);
     void ParseMessageUDP(const u_char* data, int len, bool is_query);
 
@@ -87,7 +87,7 @@ protected:
     void ParseRetArgResp(const u_char* data, int len, bool is_query);
     void ParseKeepAlive(const u_char* data, int len, bool is_query);
 
-    // Datagram parsing
+
     void ParseBroadcast(const u_char* data, int len, bool is_query);
     void ParseDatagram(const u_char* data, int len, bool is_query);
 
@@ -95,25 +95,25 @@ protected:
 
     void Event(EventHandlerPtr event, const u_char* data, int len, int is_orig = -1);
 
-    // Pass in name/length, returns in xname/xlen the converted
-    // name/length.  Returns 0 on failure; xname may still be
-    // allocated and hold partial results at that point.
+
+
+
     int ConvertName(const u_char* name, int name_len, u_char*& xname, int& xlen);
 
 protected:
     analyzer::Analyzer* analyzer;
-    // SMB_Session* smb_session;
+
 };
 
-} // namespace detail
+}
 
-// ### This should be merged with TCP_Contents_RPC, TCP_Contents_DNS.
+
 class Contents_NetbiosSSN final : public analyzer::tcp::TCP_SupportAnalyzer {
 public:
     Contents_NetbiosSSN(Connection* conn, bool orig, detail::NetbiosSSN_Interpreter* interp);
     ~Contents_NetbiosSSN() override;
 
-    void Flush(); // process any partially-received data
+    void Flush();
 
     detail::NetbiosSSN_State State() const { return state; }
 
@@ -127,9 +127,9 @@ protected:
     unsigned int flags;
 
     u_char* msg_buf;
-    int buf_n;    // number of bytes in msg_buf
-    int buf_len;  // size of msg_buf
-    int msg_size; // expected size of message
+    int buf_n;
+    int buf_len;
+    int msg_size;
 
     detail::NetbiosSSN_State state;
 };
@@ -152,13 +152,13 @@ protected:
     void ExpireTimer(double t);
 
     detail::NetbiosSSN_Interpreter* interp;
-    // SMB_Session* smb_session;
+
     Contents_NetbiosSSN* orig_netbios;
     Contents_NetbiosSSN* resp_netbios;
     int did_session_done;
 };
 
-// FIXME: Doesn't really fit into new analyzer structure. What to do?
+
 int IsReuse(double t, const u_char* pkt);
 
-} // namespace zeek::analyzer::netbios_ssn
+}

@@ -1,4 +1,4 @@
-##! This script enables notice generation for intelligence matches.
+
 
 @load base/frameworks/intel
 @load base/frameworks/notice
@@ -7,20 +7,20 @@ module Intel;
 
 export {
 	redef enum Notice::Type += {
-		## This notice is generated when an intelligence
-		## indicator is denoted to be notice-worthy.
+
+
 		Intel::Notice
 	};
 
 	redef record Intel::MetaData += {
-		## A boolean value to allow the data itself to represent
-		## if the indicator that this metadata is attached to
-		## is notice worthy.
+
+
+
 		do_notice: bool &default=F;
 
-		## Restrictions on when notices are created to only create
-		## them if the *do_notice* field is T and the notice was
-		## seen in the indicated location.
+
+
+
 		if_in: Intel::Where &default=IN_ANYWHERE;
 	};
 }
@@ -41,8 +41,8 @@ event Intel::match(s: Seen, items: set[Item])
 				{
 				n$conn = s$conn;
 
-				# Add identifier composed of indicator, originator's and responder's IP,
-				# without considering the direction of the flow.
+
+
 				local intel_id = s$indicator;
 				if( s$conn?$id )
 					{
@@ -60,7 +60,7 @@ event Intel::match(s: Seen, items: set[Item])
 					}
 				}
 
-			# Add additional information to the generated mail
+
 			local mail_ext = vector(
 				fmt("Service: %s\n", service_str),
 				fmt("Intel source: %s\n", item$meta$source));

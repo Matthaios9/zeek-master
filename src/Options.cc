@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Options.h"
 
@@ -52,12 +52,12 @@ void Options::filter_supervised_node_options() {
     pcap_filter = og.pcap_filter;
     signature_files = og.signature_files;
 
-    // TODO: These are likely to be handled in a node-specific or
-    // use-case-specific way.  e.g. interfaces is already handled for the
-    // "cluster" use-case, but don't have supervised-pcap-reading
-    // functionality yet.
-    /* interface = og.interface; */
-    /* pcap_file = og.pcap_file; */
+
+
+
+
+
+
 
     pcap_output_file = og.pcap_output_file;
     random_seed_input_file = og.random_seed_input_file;
@@ -288,13 +288,13 @@ static void set_analysis_option(const char* opt, Options& opts) {
 Options parse_cmdline(int argc, char** argv) {
     Options rval;
 
-    // When running unit tests, the first argument on the command line must be
-    // --test, followed by doctest options. Optionally, users can use "--" as
-    // separator to pass Zeek options afterwards:
-    //
-    //     zeek --test [doctest-options] -- [zeek-options]
 
-    // Just locally filtering out the args for Zeek usage from doctest args.
+
+
+
+
+
+
     std::vector<std::string> zeek_args;
 
     if ( argc > 1 && strcmp(argv[1], "--test") == 0 ) {
@@ -332,9 +332,9 @@ Options parse_cmdline(int argc, char** argv) {
             }
 
             if ( i < argc ) {
-                // If a script is invoked with Zeek as the interpreter, the arguments provided
-                // directly in the interpreter line of the script won't be broken apart in the
-                // argv on Linux so we split it up here.
+
+
+
                 if ( util::ends_with(argv[i], "--") && zeek_args.size() == 1 ) {
                     std::istringstream iss(argv[i]);
                     for ( std::string s; iss >> s; ) {
@@ -344,14 +344,14 @@ Options parse_cmdline(int argc, char** argv) {
                     }
                 }
 
-                // There is an additional increment here to skip over the "--" if it was found.
+
                 if ( util::ends_with(argv[i], "--") )
                     ++i;
 
-                // The first argument after the double hyphens in implicitly a script name.
+
                 rval.scripts_to_load.emplace_back(argv[i++]);
 
-                // If there are more argument, grab them for script arguments
+
                 for ( ; i < argc; ++i )
                     rval.script_args.emplace_back(argv[i]);
             }
@@ -429,16 +429,16 @@ Options parse_cmdline(int argc, char** argv) {
     int long_optsind;
     opterr = 0;
 
-    // getopt may permute the array, so need yet another array
-    //
-    // Make sure this array is one greater than zeek_args and ends in nullptr, otherwise
-    // getopt may go beyond the end of the array
+
+
+
+
     auto zargs = std::make_unique<char*[]>(zeek_args.size() + 1);
 
     for ( size_t i = 0; i < zeek_args.size(); ++i )
         zargs[i] = zeek_args[i].data();
 
-    // Make sure getopt doesn't go past the end
+
     zargs[zeek_args.size()] = nullptr;
 
     while ( (op = getopt_long(zeek_args.size(), zargs.get(), opts, long_opts, &long_optsind)) != EOF )
@@ -468,9 +468,9 @@ Options parse_cmdline(int argc, char** argv) {
             case 'j':
                 rval.supervisor_mode = true;
                 if ( optarg ) {
-                    // TODO: for supervised offline pcap reading, the argument is
-                    // expected to be number of workers like "-j 4" or possibly a
-                    // list of worker/proxy/logger counts like "-j 4,2,1"
+
+
+
                 }
                 break;
             case 'p': rval.script_prefixes.emplace_back(optarg); break;
@@ -558,8 +558,8 @@ Options parse_cmdline(int argc, char** argv) {
                 break;
 
             case 0:
-                // This happens for long options that don't have
-                // a short-option equivalent.
+
+
                 if ( profile_scripts ) {
                     profile_filename = optarg ? optarg : "";
                     enable_script_profile = true;
@@ -603,9 +603,9 @@ Options parse_cmdline(int argc, char** argv) {
                                   enable_script_profile_call_stacks);
     }
 
-    // Process remaining arguments. X=Y arguments indicate script
-    // variable/parameter assignments. X::Y arguments indicate plugins to
-    // activate/query. The remainder are treated as scripts to load.
+
+
+
     while ( optind < static_cast<int>(zeek_args.size()) ) {
         if ( strchr(zargs[optind], '=') )
             rval.script_options_to_set.emplace_back(zargs[optind++]);
@@ -622,11 +622,11 @@ Options parse_cmdline(int argc, char** argv) {
         *path = util::detail::normalize_path(*path);
 
         if ( (*path)[0] == '/' || (*path)[0] == '~' )
-            // Absolute path
+
             return;
 
         if ( (*path)[0] != '.' ) {
-            // Look up file in ZEEKPATH
+
             auto res = util::find_script_file(*path, util::zeek_path());
 
             if ( res.empty() ) {
@@ -637,11 +637,11 @@ Options parse_cmdline(int argc, char** argv) {
             *path = std::move(res);
 
             if ( (*path)[0] == '/' || (*path)[0] == '~' )
-                // Now an absolute path
+
                 return;
         }
 
-        // Need to translate relative path to absolute.
+
         std::error_code ec;
         auto cwd = std::filesystem::current_path(ec);
         if ( ec ) {
@@ -653,9 +653,9 @@ Options parse_cmdline(int argc, char** argv) {
     };
 
     if ( rval.supervisor_mode ) {
-        // Translate any relative paths supplied to supervisor into absolute
-        // paths for use by supervised nodes since they have the option to
-        // operate out of a different working directory.
+
+
+
         for ( auto& s : rval.scripts_to_load )
             canonify_script_path(&s);
     }
@@ -663,4 +663,4 @@ Options parse_cmdline(int argc, char** argv) {
     return rval;
 }
 
-} // namespace zeek
+}

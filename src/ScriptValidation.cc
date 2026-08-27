@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/ScriptValidation.h"
 
@@ -7,7 +7,7 @@
 
 namespace zeek::detail {
 
-// Validate context of break and next statement usage.
+
 class BreakNextScriptValidation : public TraversalCallback {
 public:
     BreakNextScriptValidation(bool _report) : report(_report) {}
@@ -94,7 +94,7 @@ private:
     std::unordered_map<StmtTag, int> stmt_depths;
     std::unordered_set<const Type*> types_seen;
     int hook_depth = 0;
-    bool report; // whether to report problems via "reporter"
+    bool report;
     bool valid_script = true;
 };
 
@@ -114,4 +114,4 @@ bool script_is_valid(const Stmt* stmt, bool is_in_hook) {
     return bn_cb.IsValid();
 }
 
-} // namespace zeek::detail
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -17,7 +17,7 @@ public:
     void DeliverStream(int len, const u_char* data, bool orig) override;
     void Undelivered(uint64_t seq, int len, bool orig) override;
 
-    // Overridden from analyzer::tcp::TCP_ApplicationAnalyzer.
+
     void EndpointEOF(bool is_orig) override;
 
     StringValPtr GetAuthenticationInfo(const String* realm, const String* principal, const String* ciphertext,
@@ -32,4 +32,4 @@ protected:
     bool had_gap;
 };
 
-} // namespace zeek::analyzer::krb_tcp
+}

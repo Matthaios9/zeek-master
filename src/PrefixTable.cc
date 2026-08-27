@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/PrefixTable.h"
 
@@ -35,15 +35,15 @@ void* PrefixTable::Insert(const IPAddr& addr, int width, void* data) {
 
     void* old = node->data;
 
-    // If there is no data to be associated with addr, we take the
-    // node itself.
+
+
     node->data = data ? data : node;
 
     return old;
 }
 
 void* PrefixTable::Insert(const Val* value, void* data) {
-    // [elem] -> elem
+
     if ( value->GetType()->Tag() == TYPE_LIST && value->AsListVal()->Length() == 1 )
         value = value->AsListVal()->Idx(0).get();
 
@@ -70,10 +70,10 @@ std::list<std::tuple<IPPrefix, void*>> PrefixTable::FindAll(const IPAddr& addr, 
 
     Deref_Prefix(prefix);
 
-    // clang-tidy reports a bugprone-multi-level-implicit-pointer-conversion warning here
-    // because the double-pointer is implicitly converted to a void* for the call to
-    // free(). The double-pointer was calloc'd in patricia_search_all as an array of
-    // pointers, so it's safe to free. Explicitly cast it to void* to silence the warning.
+
+
+
+
     free(static_cast<void*>(list));
     return out;
 }
@@ -94,7 +94,7 @@ void* PrefixTable::Lookup(const IPAddr& addr, int width, bool exact) const {
 }
 
 void* PrefixTable::Lookup(const Val* value, bool exact) const {
-    // [elem] -> elem
+
     if ( value->GetType()->Tag() == TYPE_LIST && value->AsListVal()->Length() == 1 )
         value = value->AsListVal()->Idx(0).get();
 
@@ -124,7 +124,7 @@ void* PrefixTable::Remove(const IPAddr& addr, int width) {
 }
 
 void* PrefixTable::Remove(const Val* value) {
-    // [elem] -> elem
+
     if ( value->GetType()->Tag() == TYPE_LIST && value->AsListVal()->Length() == 1 )
         value = value->AsListVal()->Idx(0).get();
 
@@ -171,7 +171,7 @@ void* PrefixTable::GetNext(iterator* i) {
             return i->Xnode->data;
     }
 
-    // Not reached.
+
 }
 
-} // namespace zeek::detail
+}

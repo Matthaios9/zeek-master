@@ -1,10 +1,10 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
-//
-// Hand-rolled systemd unit file rendering.
-//
+
+
+
 #include <filesystem>
 #include <initializer_list>
 #include <optional>
@@ -14,28 +14,28 @@ namespace zeek::detail::systemd {
 
 class Unit {
 public:
-    /**
-     * Constructor.
-     */
+
+
+
     Unit(std::filesystem::path file, std::string description, std::filesystem::path source_path);
 
-    /**
-     * Constructor for drop in units.
-     */
+
+
+
     Unit(std::filesystem::path file, std::filesystem::path source_path)
         : Unit(std::move(file), "", std::move(source_path)) {}
 
-    /**
-     * The last part of the Unit.
-     *
-     * TODO: If this is a drop-in file, it should be the parent's directory
-     *       name with the .d stripped from the name.
-     */
+
+
+
+
+
+
     std::string Name() const { return file.filename().string(); }
 
-    /**
-     * Render the unit as a string that can be written to a unit file.
-     */
+
+
+
     std::string ToString() const;
 
     void SetPartOf(std::string p) { part_of = std::move(p); };
@@ -60,9 +60,9 @@ public:
             exec_start.emplace_back(cmd + " " + add);
     }
 
-    /**
-     * Replace the existing ExecStart lines with the given one.
-     */
+
+
+
     void SetExecStart(const std::string& cmd, std::initializer_list<std::string> args = {}) {
         exec_start.clear();
         AddExecStart(cmd, args);
@@ -97,22 +97,22 @@ public:
     void SetRestart(std::string r) { restart = std::move(r); }
     void SetRestartSec(int sec) { restart_sec = sec; }
 
-    /**
-     * Write this unit file to the file provided in the constructor.
-     */
+
+
+
     bool Write() const;
 
-    /**
-     * Writes just Environment and CPUAffinity fields.
-     *
-     * Subject to change at any time.
-     */
+
+
+
+
+
     bool WriteDropIn() const;
 
 private:
     std::filesystem::path file;
 
-    // [Unit]
+
     std::string description;
     std::vector<std::string> after;
     std::vector<std::string> requires_;
@@ -120,7 +120,7 @@ private:
     std::filesystem::path source_path;
     std::optional<std::string> part_of;
 
-    // [Service]
+
     std::optional<std::string> syslog_identifier;
     std::string service_type = "exec";
     std::string user;
@@ -150,7 +150,7 @@ private:
     std::optional<std::string> restart;
     std::optional<int> restart_sec = 1;
 
-    // [Install]
+
     std::vector<std::string> wanted_by;
 };
-}; // namespace zeek::detail::systemd
+};

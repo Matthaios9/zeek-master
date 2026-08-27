@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/file_analysis/analyzer/entropy/Entropy.h"
 
@@ -63,4 +63,4 @@ void Entropy::Finalize() {
     event_mgr.Enqueue(file_entropy, GetFile()->ToVal(), std::move(ent_result));
 }
 
-} // namespace zeek::file_analysis::detail
+}

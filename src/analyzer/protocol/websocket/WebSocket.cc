@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/websocket/WebSocket.h"
 
@@ -15,22 +15,22 @@ WebSocket_Analyzer::WebSocket_Analyzer(Connection* conn) : analyzer::tcp::TCP_Ap
 void WebSocket_Analyzer::Init() {
     tcp::TCP_ApplicationAnalyzer::Init();
 
-    // This event gives scriptland a chance to log and configure the analyzer.
-    // The WebSocket analyzer ships with a handler that calls back into
-    // Configure(), via  WebSocket::__configure_analyzer().
+
+
+
     zeek::BifEvent::enqueue_websocket_established(this, Conn(), GetID());
 }
 
 bool WebSocket_Analyzer::Configure(zeek::RecordValPtr config) {
-    // TODO: Check extensions and modify parsing if needed, e.g. WebSocket frame
-    // compression extension: https://www.rfc-editor.org/rfc/rfc7692.html
-    //
-    // interp->SetExtensions(...)
-    //
-    // TODO: The Sec-WebSocket-Protocol header might provide some information
-    // that we could leverage to instantiate a more specific analyzer.
-    //
-    // For now, we just attach a PIA analyzer as child analyzer.
+
+
+
+
+
+
+
+
+
 
     static const auto& config_type = id::find_type<zeek::RecordType>("WebSocket::AnalyzerConfig");
     static int analyzer_idx = config_type->FieldOffset("analyzer");
@@ -87,7 +87,7 @@ bool WebSocket_Analyzer::Configure(zeek::RecordValPtr config) {
         return false;
     }
 
-    // Neither analyzer nor dpd was enabled, success.
+
     return true;
 }
 
@@ -107,7 +107,7 @@ void WebSocket_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
         }
     }
     else {
-        // The Spicy analyzer was attached as a child directly.
+
         ForwardStream(len, data, orig);
     }
 }
@@ -118,4 +118,4 @@ void WebSocket_Analyzer::Undelivered(uint64_t seq, int len, bool orig) {
     had_gap = true;
 }
 
-} // namespace zeek::analyzer::websocket
+}

@@ -1,13 +1,13 @@
 module PacketAnalyzer::AYIYA;
 
-# Needed for port registration for BPF
+
 @load base/frameworks/analyzer/main
 
 const IPPROTO_IPV4 : count = 4;
 const IPPROTO_IPV6 : count = 41;
 
 export {
-	## The set of UDP ports used for AYIYA tunnels.
+
 	const ayiya_ports = { 5072/udp } &redef;
 }
 

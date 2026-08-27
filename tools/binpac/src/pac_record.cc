@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_record.h"
 
@@ -13,22 +13,22 @@
 #include "pac_utils.h"
 
 RecordType::RecordType(RecordFieldList* record_fields) : Type(RECORD) {
-    // Here we assume that the type is a standalone type.
+
     value_var_ = nullptr;
 
-    // Put all fields in fields_
+
     foreach (i, RecordFieldList, record_fields)
         AddField(*i);
 
-    // Put RecordField's in record_fields_
+
     record_fields_ = record_fields;
 
     parsing_dataptr_var_field_ = nullptr;
 }
 
 RecordType::~RecordType() {
-    // Do not delete_list(record_fields_)
-    // because the fields are also in fields_.
+
+
     delete record_fields_;
     delete parsing_dataptr_var_field_;
 }
@@ -162,9 +162,9 @@ void RecordType::SetBoundaryChecked() {
     Type::SetBoundaryChecked();
 
     if ( StaticSize(env()) < 0 || attr_length_expr_ )
-        // Don't assume sufficient bounds checking has been done on fields
-        // if the record is of variable size or if its size is set from &length
-        // (whose value is not necessarily trustworthy).
+
+
+
         return;
 
     foreach (i, RecordFieldList, record_fields_) {
@@ -218,7 +218,7 @@ const DataPtr& RecordField::getFieldBegin(Output* out_cc, Env* env) {
     if ( prev() )
         return prev()->getFieldEnd(out_cc, env);
     else {
-        // The first field
+
         if ( ! begin_of_field_dataptr ) {
             begin_of_field_dataptr = new DataPtr(env, begin_of_data, 0);
         }
@@ -246,15 +246,15 @@ const DataPtr& RecordField::getFieldEnd(Output* out_cc, Env* env) {
         if ( begin_ptr.id() == begin_of_data )
             field_offset = begin_ptr.offset();
         else
-            field_offset = -1; // unknown
+            field_offset = -1;
 
         int field_size = StaticSize(env, field_offset);
-        if ( field_size >= 0 ) // can be statically determinted
+        if ( field_size >= 0 )
         {
             end_of_field_dataptr = new DataPtr(env, begin_ptr.id(), begin_ptr.offset() + field_size);
         }
         else {
-            // If not, we add a variable for the offset after the field
+
             end_of_field_dataptr_var = new ID(strfmt("dataptr_after_%s", id()->Name()));
             env->AddID(end_of_field_dataptr_var, TEMP_VAR, extern_type_const_byteptr);
 
@@ -292,28 +292,28 @@ const char* RecordField::FieldOffset(Output* out_cc, Env* env) {
     return field_offset_expr;
 }
 
-// The reasoning behind AttemptBoundaryCheck is: "If my next field
-// can check its boundary, then I don't have to check mine, and it
-// will save me a boundary-check."
+
+
+
 bool RecordField::AttemptBoundaryCheck(Output* out_cc, Env* env) {
     if ( boundary_checked_ )
         return true;
 
-    // If I do not even know my size till I parse the data, my
-    // next field won't be able to check its boundary now.
+
+
 
     const DataPtr& begin = getFieldBegin(out_cc, env);
     if ( StaticSize(env, begin.AbsOffset(begin_of_data)) < 0 )
         return false;
 
-    // Now we ask the next field to check its boundary.
+
     if ( next() && next()->AttemptBoundaryCheck(out_cc, env) ) {
-        // If it works, we are all set
+
         SetBoundaryChecked();
         return true;
     }
     else
-        // If it fails, then I can still try to do it by myself
+
         return GenBoundaryCheck(out_cc, env);
 }
 
@@ -329,8 +329,8 @@ void RecordDataField::GenParseCode(Output* out_cc, Env* env) {
     if ( env->Evaluated(id()) )
         return;
 
-    // Always evaluate record fields in order if parsing
-    // is incremental.
+
+
     if ( record_type()->incremental_parsing() && prev() )
         prev()->GenParseCode(out_cc, env);
 
@@ -352,7 +352,7 @@ void RecordDataField::GenParseCode(Output* out_cc, Env* env) {
 #endif
     type_->GenPreParsing(out_cc, env);
     if ( type_->incremental_input() ) {
-        // The enclosing record type must be incrementally parsed
+
         out_cc->println("%s = %d;", env->LValue(parsing_state_id), parsing_state_seq());
         out_cc->println("/* fall through */");
         out_cc->dec_indent();
@@ -432,8 +432,8 @@ void RecordPaddingField::Prepare(Env* env) {
 }
 
 void RecordPaddingField::GenParseCode(Output* out_cc, Env* env) {
-    // Always evaluate record fields in order if parsing
-    // is incremental.
+
+
     if ( record_type()->incremental_parsing() && prev() )
         prev()->GenParseCode(out_cc, env);
 }
@@ -447,18 +447,18 @@ int RecordPaddingField::StaticSize(Env* env, int offset) const {
         case PAD_BY_LENGTH: return expr_->ConstFold(env, &length) ? length : -1;
 
         case PAD_TO_OFFSET:
-            // If the current offset cannot be statically
-            // determined, we need to Generate code to
-            // check the offset
+
+
+
             if ( offset == -1 )
                 return -1;
 
             if ( ! expr_->ConstFold(env, &target_offset) )
                 return -1;
 
-            // If both the current and target offsets
-            // can be statically computed, we can get its
-            // static size
+
+
+
             if ( offset > target_offset )
                 throw ExceptionPaddingError(this, strfmt("current offset = %d, "
                                                          "target offset = %d",

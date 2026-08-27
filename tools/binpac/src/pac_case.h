@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_case_h
 #define pac_case_h
@@ -93,8 +93,8 @@ protected:
     const ID* index_var_;
 };
 
-// Generate a list of "case X:" lines from index_list. Each index
-// expression must be constant foldable.
+
+
 void GenCaseStr(ExprList* index_list, Output* out_cc, Env* env, Type* switch_type);
 
-#endif // pac_case_h
+#endif

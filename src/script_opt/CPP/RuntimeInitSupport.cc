@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/CPP/RuntimeInitSupport.h"
 
@@ -12,7 +12,7 @@ using namespace std;
 
 vector<CPP_init_func> CPP_init_funcs;
 
-// Calls all of the initialization hooks, in the order they were added.
+
 void init_CPPs() {
     static bool need_init = true;
 
@@ -23,10 +23,10 @@ void init_CPPs() {
     need_init = false;
 }
 
-// This is a trick used to register the presence of compiled code.
-// The initialization of the static variable will make CPP_init_hook
-// non-null, which the main part of Zeek uses to tell that there's
-// CPP code available.
+
+
+
+
 static int flag_init_CPP() {
     CPP_init_hook = init_CPPs;
     return 0;
@@ -36,7 +36,7 @@ static int dummy = flag_init_CPP();
 
 void register_type__CPP(TypePtr t, const string& name) {
     if ( ! t->GetName().empty() )
-        // Already registered.
+
         return;
 
     t->SetName(name);
@@ -63,8 +63,8 @@ static unordered_map<std::string, std::vector<p_hash_type>> zeek_script_hashes;
 void register_standalone_body__CPP(const std::string& zeek_name, CPPStmtPtr body, int priority, p_hash_type hash,
                                    vector<string> events, const std::string& module_group,
                                    std::vector<std::string> attr_groups, void (*finish_init)()) {
-    // For standalone scripts we don't actually need finish_init, but
-    // we keep it for symmetry with compiled_scripts.
+
+
     compiled_standalone_scripts[hash] = {.zeek_name = zeek_name,
                                          .body = std::move(body),
                                          .priority = priority,
@@ -83,7 +83,7 @@ void register_standalone_body__CPP(const std::string& zeek_name, CPPStmtPtr body
         zsh->second.push_back(hash);
 }
 
-// Register and return the event groups present in "cs".
+
 static std::forward_list<EventGroupPtr> get_event_groups(const CompiledScript& cs) {
     std::forward_list<EventGroupPtr> e_g;
 
@@ -122,7 +122,7 @@ void add_standalone_bodies(Func* f) {
 void register_lambda__CPP(CPPStmtPtr body, p_hash_type hash, const char* name, TypePtr t, bool has_captures) {
     auto ft = cast_intrusive<FuncType>(t);
 
-    // Create the quasi-global.
+
     auto id = install_ID(name, GLOBAL_MODULE_NAME, true, false);
     auto func = make_intrusive<CPPLambdaFunc>(name, ft, body);
     func->SetName(name);
@@ -131,14 +131,14 @@ void register_lambda__CPP(CPPStmtPtr body, p_hash_type hash, const char* name, T
     id->SetVal(std::move(v));
     id->SetType(ft);
 
-    // Lambdas used in initializing global functions need to
-    // be registered, so that the initialization can find them.
-    // We do not, however, want to register *all* lambdas, because
-    // the ones that use captures cannot be used as regular
-    // function bodies.
+
+
+
+
+
     if ( ! has_captures )
-        // Note, no support for lambdas that themselves refer
-        // to events.
+
+
         register_body__CPP(name, body, 0, hash, {}, nullptr);
 }
 
@@ -158,31 +158,31 @@ void activate_bodies__CPP(const char* fn, const char* module, bool exported, Typ
     }
 
     if ( ! fg->GetType() )
-        // This can happen both because we just installed the ID, but also
-        // because events registered by Spicy don't have types associated
-        // with them initially.
+
+
+
         fg->SetType(ft);
 
     if ( ! fg->GetAttr(ATTR_IS_USED) )
         fg->AddAttr(make_intrusive<Attr>(ATTR_IS_USED));
 
     auto v = fg->GetVal();
-    if ( ! v ) { // Create it.
+    if ( ! v ) {
         auto sf = make_intrusive<ScriptFunc>(fn, ft, std::vector<Func::Body>{});
         v = make_intrusive<FuncVal>(std::move(sf));
         fg->SetVal(v);
     }
 
     auto f = cast_intrusive<ScriptFunc>(v->AsFuncVal()->AsFuncPtr());
-    const auto& full_name = f->GetName(); // differs from fn in that it includes module
+    const auto& full_name = f->GetName();
 
-    // Events we need to register.
+
     unordered_set<string> events;
 
     if ( ft->Flavor() == FUNC_FLAVOR_EVENT )
         events.insert(full_name);
 
-    vector<detail::IDPtr> no_inits; // empty initialization vector
+    vector<detail::IDPtr> no_inits;
     int num_params = ft->Params()->NumFields();
 
     for ( auto h : hashes ) {
@@ -191,7 +191,7 @@ void activate_bodies__CPP(const char* fn, const char* module, bool exported, Typ
         auto cs = csi->second;
 
         if ( ! added_bodies[full_name].contains(h) ) {
-            // Add in the new body.
+
 
             auto groups = get_event_groups(cs);
             f->AddBody({.stmts = cs.body, .groups = std::move(groups), .priority = cs.priority}, {}, num_params);
@@ -241,8 +241,8 @@ FuncValPtr lookup_func__CPP(string name, int num_bodies, const vector<p_hash_typ
     auto ft = cast_intrusive<FuncType>(t);
 
     if ( static_cast<int>(hashes.size()) < num_bodies ) {
-        // This happens for functions that have at least one
-        // uncompilable body.
+
+
         auto gl = lookup_ID(name.c_str(), GLOBAL_MODULE_NAME, false, false, false);
         if ( ! gl ) {
             reporter->CPPRuntimeError("non-compiled function %s missing", name.c_str());
@@ -272,9 +272,9 @@ FuncValPtr lookup_func__CPP(string name, int num_bodies, const vector<p_hash_typ
 
         const auto& f = cs->second;
 
-        // This might register the same event more than once,
-        // if it's used in multiple bodies, but that's okay as
-        // the semantics for Register explicitly allow it.
+
+
+
         for ( auto& e : f.events )
             event_registry->Register(e);
 
@@ -328,4 +328,4 @@ EnumValPtr make_enum__CPP(TypePtr t, zeek_int_t i) {
     return make_intrusive<EnumVal>(et, i);
 }
 
-} // namespace zeek::detail
+}

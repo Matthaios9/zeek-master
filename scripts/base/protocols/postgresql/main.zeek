@@ -1,4 +1,4 @@
-##! Implements base functionality for PostgreSQL analysis.
+
 
 @load ./consts
 @load ./spicy-events
@@ -8,10 +8,10 @@
 module PostgreSQL;
 
 export {
-	## Log stream identifier.
+
 	redef enum Log::ID += { LOG };
 
-	## Well-known ports for PostgreSQL.
+
 	const ports: set[port] = { 5432/tcp } &redef;
 
 	type Version: record {
@@ -19,35 +19,35 @@ export {
 		minor: count;
 	};
 
-	## Record type containing the column fields of the PostgreSQL log.
+
 	type Info: record {
-		## Timestamp for when the activity happened.
+
 		ts: time &log;
-		## Unique ID for the connection.
+
 		uid: string &log;
-		## The connection's 4-tuple of endpoint addresses/ports.
+
 		id: conn_id &log;
 
-		## The user as found in the StartupMessage.
+
 		user: string &optional &log;
-		## The database as found in the StartupMessage.
+
 		database: string &optional &log;
-		## The application name as found in the StartupMessage.
+
 		application_name: string &optional &log;
 
-		# The command or message from the frontend.
+
 		frontend: string &optional &log;
-		# Arguments for the command.
+
 		frontend_arg: string &optional &log;
-		# The reply from the backend.
+
 		backend: string &optional &log;
-		# Arguments for the reply from the backend.
+
 		backend_arg: string &optional &log;
 
-		# Whether the login/query was successful.
+
 		success: bool &optional &log;
 
-		# The number of rows returned or affectd.
+
 		rows: count &optional &log;
 	};
 
@@ -60,7 +60,7 @@ export {
 		errors: vector of string;
 	};
 
-	## Default hook into PostgreSQL logging.
+
 	global log_postgresql: event(rec: Info);
 
 	global finalize_postgresql: Conn::RemovalHook;
@@ -244,11 +244,11 @@ event PostgreSQL::data_row(c: connection, column_values: count)
 
 event PostgreSQL::ready_for_query(c: connection, transaction_status: string)
 	{
-	# Log a query (if there was one).
+
 	if ( ! c?$postgresql )
 		return;
 
-	# If no one said otherwise, the last action was successful.
+
 	if ( ! c$postgresql?$success )
 		c$postgresql$success = transaction_status == "I" || transaction_status == "T";
 

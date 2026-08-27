@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -32,7 +32,7 @@ public:
     explicit PriorityQueue(int initial_size = 16);
     ~PriorityQueue();
 
-    // Returns the top of queue, or nil if the queue is empty.
+
     PQ_Element* Top() const {
         if ( heap_size == 0 )
             return nullptr;
@@ -40,16 +40,16 @@ public:
         return heap[0];
     }
 
-    // Removes (and returns) top of queue.  Returns nil if the queue
-    // is empty.
+
+
     PQ_Element* Remove();
 
-    // Removes element e.  Returns e, or nullptr if e wasn't in the queue.
-    // Note that e will be modified via MinimizeTime().
+
+
     PQ_Element* Remove(PQ_Element* e);
 
-    // Add a new element to the queue.  Returns false on failure (not enough
-    // memory to add the element), true on success.
+
+
     bool Add(PQ_Element* e);
 
     int Size() const { return heap_size; }
@@ -86,4 +86,4 @@ protected:
     uint64_t cumulative_num = 0;
 };
 
-} // namespace zeek::detail
+}

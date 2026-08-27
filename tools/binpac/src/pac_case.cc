@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_case.h"
 
@@ -27,7 +27,7 @@ CaseType::~CaseType() {
 }
 
 void CaseType::AddCaseField(CaseField* f) {
-    // All fields must be added before Prepare()
+
     ASSERT(! env());
 
     AddField(f);
@@ -56,12 +56,12 @@ void CaseType::Prepare(Env* env, int flags) {
     ASSERT(flags & TO_BE_PARSED);
 
     index_var_ = new ID(strfmt("%s_case_index", value_var()->Name()));
-    // Unable to get the type for index_var_ at this moment, but we'll
-    // generate the right type based on index_expr_ later.
+
+
     env->AddID(index_var_, MEMBER_VAR, nullptr);
 
-    // Sort the cases_ to put the default case at the end of the list
-    CaseFieldList::iterator default_case_it = cases_->end(); // to avoid warning
+
+    CaseFieldList::iterator default_case_it = cases_->end();
     CaseField* default_case = nullptr;
 
     foreach (i, CaseFieldList, cases_) {
@@ -91,8 +91,8 @@ void CaseType::GenPrivDecls(Output* out_h, Env* env) {
     Type* t = index_expr_->DataType(env);
 
     if ( t->tot() != Type::BUILTIN )
-        // It's a Type::EXTERN with a C++ type of "int", "bool", or "enum",
-        // any of which will convert consistently using an int as storage type.
+
+
         t = extern_type_int;
 
     out_h->println("%s %s;", t->DataTypeStr().c_str(), env->LValue(index_var_));
@@ -236,8 +236,8 @@ void GenCaseStr(ExprList* index_list, Output* out_cc, Env* env, Type* switch_typ
             if ( ! index_expr->ConstFold(env, &index_const) )
                 throw ExceptionNonConstExpr(index_expr);
 
-            // External C++ types like "int", "bool", "enum"
-            // all use "int" type internally by default.
+
+
             int case_type_width = 4;
             int switch_type_width = 4;
 
@@ -283,9 +283,9 @@ void GenCaseStr(ExprList* index_list, Output* out_cc, Env* env, Type* switch_typ
                 }
             }
 
-            // We're always using "int" for storage, so ok to just
-            // cast into the type used by the switch statement since
-            // some unsafe stuff is already checked above.
+
+
+
             if ( ! switch_type->IsBooleanType() )
                 out_cc->println("case (static_cast<%s>(%d)):", switch_type->DataTypeStr().c_str(), index_const);
             else
@@ -306,7 +306,7 @@ void CaseField::GenPubDecls(Output* out_h, Env* env) {
     if ( ! ((flags_ & PUBLIC_READABLE) && (flags_ & CLASS_MEMBER)) )
         return;
 
-    // Skip type "empty"
+
     if ( type_->DataTypeStr().empty() )
         return;
 
@@ -343,14 +343,14 @@ void CaseField::GenPubDecls(Output* out_h, Env* env) {
 }
 
 void CaseField::GenInitCode(Output* out_cc, Env* env) {
-    // GenCaseStr(index_, out_cc, env);
-    // out_cc->inc_indent();
-    // out_cc->println("{");
-    // out_cc->println("// Initialize \"%s\"", id_->Name());
+
+
+
+
     type_->GenInitCode(out_cc, env);
-    // out_cc->println("}");
-    // out_cc->println("break;");
-    // out_cc->dec_indent();
+
+
+
 }
 
 void CaseField::GenCleanUpCode(Output* out_cc, Env* env) {

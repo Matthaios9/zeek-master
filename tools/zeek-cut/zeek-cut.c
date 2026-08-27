@@ -1,9 +1,9 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include <getopt.h>
 #include <limits.h>
 #include <string.h>
-// define required for FreeBSD
+
 #define _WITH_GETLINE
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,33 +11,33 @@
 #include <time.h>
 #include <unistd.h>
 
-/* The maximum length of converted timestamp that zeek-cut can handle. */
+
 #define MAX_TIMESTAMP_LEN 100
 
-/* User-specified options that stay constant during a run of zeek-cut. */
+
 struct useropts {
-    int showhdr;         /* show log headers? (0=no, 1=only first, 2=all) */
-    int minimalview;     /* show headers in minimal view? (0=no, 1=yes) */
-    int negate;          /* show all but the specified columns? (0=no, 1=yes) */
-    int timeconv;        /* do time conversion? (0=no, 1=local, 2=UTC) */
-    char** columns;      /* array of user-specified column names */
-    int num_columns;     /* number of user-specified column names */
-    const char* ofs;     /* user-specified output field separator character */
-    const char* timefmt; /* strftime format string for time conversion */
+    int showhdr;
+    int minimalview;
+    int negate;
+    int timeconv;
+    char** columns;
+    int num_columns;
+    const char* ofs;
+    const char* timefmt;
 };
 
-/* Parameters that might change with each log file being processed. */
+
 struct logparams {
-    int* out_indexes;    /* array of log file column indices to output */
-    int num_out_indexes; /* number of elements in "out_indexes" */
-    int idx_range;       /* max. value in "out_indexes" plus one */
-    int* time_cols;      /* array of columns (0=not timestamp, 1=timestamp) */
-    char** tmp_fields;   /* array of pointers to each field on a line */
-    int num_fields;      /* number of fields in log file */
-    char ifs[2];         /* input field separator character */
-    char ofs[2];         /* output field separator character */
-    char* unsetf;        /* unset field string */
-    long prev_ts;        /* previous timestamp */
+    int* out_indexes;
+    int num_out_indexes;
+    int idx_range;
+    int* time_cols;
+    char** tmp_fields;
+    int num_fields;
+    char ifs[2];
+    char ofs[2];
+    char* unsetf;
+    long prev_ts;
 };
 
 
@@ -65,7 +65,7 @@ int usage(void) {
 
 #ifdef _WIN32
 
-// strsep() is a function from glibc that doesn't have a corollary on Windows.
+
 char* strsep(char** sp, char* sep) {
     char *p, *s;
     if ( sp == NULL || *sp == NULL || **sp == '\0' )
@@ -79,9 +79,9 @@ char* strsep(char** sp, char* sep) {
 }
 #endif
 
-/* Return the index in "haystack" where "needle" is located (or -1 if not
- * found).
- */
+
+
+
 int string_index(char* haystack[], int haystack_size, const char* needle) {
     int i;
     for ( i = 0; i < haystack_size; ++i ) {
@@ -92,7 +92,7 @@ int string_index(char* haystack[], int haystack_size, const char* needle) {
     return -1;
 }
 
-/* Return the input field separator from the log's "#separator " header line. */
+
 char parsesep(const char* sepstr) {
     char ifs;
 
@@ -107,9 +107,9 @@ char parsesep(const char* sepstr) {
     return ifs;
 }
 
-/* Determine the columns (if any) where the field is "time".  Return 0 for
- * success, and non-zero otherwise.
- */
+
+
+
 int find_timecol(const char* line, struct logparams* lp) {
     int i;
     int* tmpptr;
@@ -139,7 +139,7 @@ int find_timecol(const char* line, struct logparams* lp) {
             break;
         }
 
-        /* Set value of 1 for each "time" column, or 0 otherwise */
+
         lp->time_cols[i] = strcmp("time", field) ? 0 : 1;
     }
 
@@ -147,12 +147,12 @@ int find_timecol(const char* line, struct logparams* lp) {
     return ret;
 }
 
-/* Allocate memory for "out_indexes" and store index numbers there
- * corresponding to the columns in "line" that we want to output later.
- * Set the number of elements in "out_indexes".  Also
- * store in "idx_range" the maximum value contained in "out_indexes" plus one.
- * Return 0 for success, and non-zero otherwise.
- */
+
+
+
+
+
+
 int find_output_indexes(char* line, struct logparams* lp, struct useropts* bopts) {
     int idx;
     int* out_indexes;
@@ -160,7 +160,7 @@ int find_output_indexes(char* line, struct logparams* lp, struct useropts* bopts
     char* copy_of_line = NULL;
     char* field;
 
-    /* Get the number of fields */
+
     lp->num_fields = 0;
     field = line;
     while ( (field = strchr(field, lp->ifs[0])) != NULL ) {
@@ -170,7 +170,7 @@ int find_output_indexes(char* line, struct logparams* lp, struct useropts* bopts
     lp->num_fields++;
 
     char** tmpptr;
-    /* note: size is num_fields+1 because header lines have an extra field */
+
     tmpptr = (char**)realloc(lp->tmp_fields, (lp->num_fields + 1) * sizeof(char*));
     if ( tmpptr == NULL ) {
         return 1;
@@ -178,7 +178,7 @@ int find_output_indexes(char* line, struct logparams* lp, struct useropts* bopts
     lp->tmp_fields = tmpptr;
 
     if ( bopts->num_columns == 0 ) {
-        /* No columns specified on cmd-line, so use all the columns */
+
         out_indexes = (int*)realloc(lp->out_indexes, lp->num_fields * sizeof(int));
         if ( out_indexes == NULL ) {
             return 1;
@@ -194,7 +194,7 @@ int find_output_indexes(char* line, struct logparams* lp, struct useropts* bopts
         return 0;
     }
 
-    /* Set tmp_fields to point to each field on the line */
+
     if ( (copy_of_line = strdup(line)) == NULL ) {
         return 1;
     }
@@ -209,7 +209,7 @@ int find_output_indexes(char* line, struct logparams* lp, struct useropts* bopts
     int maxval = 0;
 
     if ( ! bopts->negate ) {
-        /* One or more column names were specified on cmd-line */
+
         out_indexes = (int*)realloc(lp->out_indexes, bopts->num_columns * sizeof(int));
         if ( out_indexes == NULL ) {
             return 1;
@@ -224,7 +224,7 @@ int find_output_indexes(char* line, struct logparams* lp, struct useropts* bopts
         out_idx = bopts->num_columns;
     }
     else {
-        /* The "-n" option was specified on cmd-line */
+
         out_indexes = (int*)realloc(lp->out_indexes, lp->num_fields * sizeof(int));
         if ( out_indexes == NULL ) {
             return 1;
@@ -248,14 +248,14 @@ int find_output_indexes(char* line, struct logparams* lp, struct useropts* bopts
     return 0;
 }
 
-/*
- * Try to convert a time value to a human-readable timestamp, and then output
- * the result.  A valid time value is one or more digits followed by a decimal
- * point (everything after the decimal point is ignored).  If the time
- * conversion fails for any reason, then just output the field unmodified.
- */
+
+
+
+
+
+
 void output_time(const char* field, struct logparams* lp, struct useropts* bopts) {
-    /* Buffer is declared static in order to reuse the timestamp string */
+
     static char tbuf[MAX_TIMESTAMP_LEN];
 
     char* tmp;
@@ -266,12 +266,12 @@ void output_time(const char* field, struct logparams* lp, struct useropts* bopts
     }
     else if ( *tmp != '.' ) {
         if ( strcmp(field, lp->unsetf) ) {
-            /* field is not a valid value and is not the unset field string */
+
             fprintf(stderr, "zeek-cut: time field is not valid: %s\n", field);
         }
     }
     else if ( tl == lp->prev_ts ) {
-        /* timestamp is same as the previous one, so skip the conversion */
+
         fputs(tbuf, stdout);
         return;
     }
@@ -283,7 +283,7 @@ void output_time(const char* field, struct logparams* lp, struct useropts* bopts
 
         if ( tmptr ) {
             if ( strftime(tbuf, sizeof(tbuf), bopts->timefmt, tmptr) ) {
-                /* output the formatted timestamp */
+
                 fputs(tbuf, stdout);
                 lp->prev_ts = tl;
                 return;
@@ -293,29 +293,29 @@ void output_time(const char* field, struct logparams* lp, struct useropts* bopts
             }
         }
         else {
-            /* the time conversion will fail for large values */
+
             fprintf(stderr, "zeek-cut: time value out-of-range: %s\n", field);
         }
     }
 
-    /* failed to convert, so just output the field without modification */
+
     fputs(field, stdout);
 }
 
-/* Output the columns of "line" that the user specified.  The value of "hdr"
- * indicates whether "line" is a header line or not (0=not header, 1=header).
- */
+
+
+
 void output_indexes(int hdr, char* line, struct logparams* lp, struct useropts* bopts) {
     int i;
     char* field;
-    int dotimeconv = 0;                 /* do a time conversion on this line? (0=no, 1=yes) */
-    int dotimetypeconv = 0;             /* change time type on this line? (0=no, 1=yes) */
-    int idxrange = lp->idx_range + hdr; /* header lines have one extra field */
+    int dotimeconv = 0;
+    int dotimetypeconv = 0;
+    int idxrange = lp->idx_range + hdr;
     int firstdone = 0;
 
-    /* If user selected time conversion and this line is not a header line,
-     * then try to do a time conversion.
-     */
+
+
+
     if ( bopts->timeconv && ! hdr ) {
         dotimeconv = 1;
     }
@@ -328,15 +328,15 @@ void output_indexes(int hdr, char* line, struct logparams* lp, struct useropts* 
         lp->tmp_fields[i] = field;
     }
 
-    /* If user selected time conversion and this line is a "#types" header,
-     * then try to change the "time" type field.
-     */
+
+
+
     if ( bopts->timeconv && hdr && ! strcmp(lp->tmp_fields[0], "#types") ) {
         dotimetypeconv = 1;
     }
 
     if ( hdr && bopts->minimalview == 0 ) {
-        /* Output the initial "#" field on the header line */
+
         fputs(lp->tmp_fields[0], stdout);
         firstdone = 1;
     }
@@ -349,37 +349,37 @@ void output_indexes(int hdr, char* line, struct logparams* lp, struct useropts* 
 
         if ( idxval != -1 ) {
             if ( dotimeconv && lp->time_cols[idxval] ) {
-                /* output time field */
+
                 output_time(lp->tmp_fields[idxval], lp, bopts);
             }
             else if ( dotimetypeconv && ! strcmp("time", lp->tmp_fields[idxval + hdr]) ) {
-                /* change the "time" type field to "string" */
+
                 fputs("string", stdout);
             }
             else {
-                /* output the field without modification */
+
                 fputs(lp->tmp_fields[idxval + hdr], stdout);
             }
         }
 
-        /* Note: even when idxval == -1, we still need to set "firstdone" so
-         * that a separator is output.
-         */
+
+
+
         firstdone = 1;
     }
     putchar('\n');
 }
 
-/* Reads one or more log files from stdin and outputs them to stdout according
- * to the options specified in "bopts".  Returns 0 on success, and non-zero
- * otherwise.
- */
+
+
+
+
 int zeek_cut(struct useropts bopts) {
     int ret = 0;
-    struct logparams lp;      /* parameters specific to each log file */
-    int headers_seen = 0;     /* 0=no header blocks seen, 1=one seen, 2=2+ seen */
-    int prev_line_hdr = 0;    /* previous line was a header line? 0=no, 1=yes */
-    int prev_fields_line = 0; /* previous line was #fields line? 0=no, 1=yes */
+    struct logparams lp;
+    int headers_seen = 0;
+    int prev_line_hdr = 0;
+    int prev_fields_line = 0;
     ssize_t linelen;
     size_t linesize = 100000;
     char* line = (char*)malloc(linesize);
@@ -400,7 +400,7 @@ int zeek_cut(struct useropts bopts) {
     lp.ifs[0] = '\t';
     lp.ifs[1] = '\0';
     lp.unsetf = strdup("-");
-    lp.prev_ts = -1; /* initialize with an invalid time value */
+    lp.prev_ts = -1;
 
     if ( lp.unsetf == NULL ) {
         fputs("zeek-cut: out of memory\n", stderr);
@@ -409,7 +409,7 @@ int zeek_cut(struct useropts bopts) {
     }
 
     while ( (linelen = getline(&line, &linesize, stdin)) > 0 ) {
-        /* Remove trailing '\n' */
+
         line[linelen - 1] = '\0';
 
         if ( prev_fields_line && strncmp(line, "#types", 6) ) {
@@ -418,19 +418,19 @@ int zeek_cut(struct useropts bopts) {
             break;
         }
 
-        /* Check if this line is a header line or not */
+
         if ( line[0] != '#' ) {
             prev_line_hdr = 0;
             output_indexes(0, line, &lp, &bopts);
             continue;
         }
 
-        /* The rest of this loop is for header processing */
+
 
         if ( ! prev_line_hdr ) {
-            /* Here we are transitioning from non-header to header line */
+
             prev_line_hdr = 1;
-            /* Once we've seen two header blocks, we stop counting them */
+
             if ( headers_seen < 2 ) {
                 headers_seen++;
             }
@@ -446,9 +446,9 @@ int zeek_cut(struct useropts bopts) {
 
             lp.ifs[0] = ifs;
 
-            /* If user-specified ofs is set, then use it. Otherwise, just
-             * use the log file's input field separator.
-             */
+
+
+
             lp.ofs[0] = bopts.ofs[0] ? bopts.ofs[0] : lp.ifs[0];
         }
         else if ( ! strncmp(line, "#unset_field", 12) ) {
@@ -490,14 +490,14 @@ int zeek_cut(struct useropts bopts) {
             }
         }
 
-        /* Decide if we want to output this header */
+
         if ( bopts.showhdr >= headers_seen ) {
             if ( ! strncmp(line, "#fields", 7) || (! strncmp(line, "#types", 6) && (bopts.minimalview == 0)) ) {
-                /* Output a modified "#fields" or "#types" header line */
+
                 output_indexes(1, line, &lp, &bopts);
             }
             else if ( bopts.minimalview == 0 ) {
-                /* Output the header line with no changes */
+
                 puts(line);
             }
         }

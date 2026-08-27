@@ -1,44 +1,44 @@
-##! Implements the core IRC analysis support.  The logging model is to log
-##! IRC commands along with the associated response and some additional
-##! metadata about the connection if it's available.
+
+
+
 
 module IRC;
 
 export {
 	redef enum Log::ID += { LOG };
 
-	## Well-known ports for IRC.
+
 	const ports = { 6666/tcp, 6667/tcp, 6668/tcp, 6669/tcp } &redef;
 
 	global log_policy: Log::PolicyHook;
 
 	type Info: record {
-		## Timestamp when the command was seen.
+
 		ts:       time        &log;
-		## Unique ID for the connection.
+
 		uid:      string      &log;
-		## The connection's 4-tuple of endpoint addresses/ports.
+
 		id:       conn_id     &log;
-		## Nickname given for the connection.
+
 		nick:     string      &log &optional;
-		## Username given for the connection.
+
 		user:     string      &log &optional;
 
-		## Command given by the client.
+
 		command:  string      &log &optional;
-		## Value for the command given by the client.
+
 		value:    string      &log &optional;
-		## Any additional data for the command.
+
 		addl:     string      &log &optional;
 	};
 
-	## Event that can be handled to access the IRC record as it is sent on
-	## to the logging framework.
+
+
 	global irc_log: event(rec: Info);
 }
 
 redef record connection += {
-	## IRC session information.
+
 	irc:  Info &optional;
 };
 

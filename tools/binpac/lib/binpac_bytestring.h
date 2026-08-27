@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef binpac_bytestring_h
 #define binpac_bytestring_h
@@ -142,6 +142,6 @@ inline void get_pointers(bytestring const* s, uint8 const** pbegin, uint8 const*
     *pend = s->end();
 }
 
-} // namespace binpac
+}
 
-#endif // binpac_bytestring_h
+#endif

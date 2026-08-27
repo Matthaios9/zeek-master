@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_enum.h"
 
@@ -39,7 +39,7 @@ EnumDecl::~EnumDecl() {
 }
 
 void EnumDecl::Prepare() {
-    // Do nothing
+
 }
 
 void EnumDecl::GenForwardDeclaration(Output* out_h) {
@@ -55,6 +55,6 @@ void EnumDecl::GenForwardDeclaration(Output* out_h) {
     out_h->println("};");
 }
 
-void EnumDecl::GenCode(Output* out_h, Output* /* out_cc */) {
-    // Do nothing
+void EnumDecl::GenCode(Output* out_h, Output* ) {
+
 }

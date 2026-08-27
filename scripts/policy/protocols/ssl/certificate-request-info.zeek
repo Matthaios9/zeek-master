@@ -1,12 +1,12 @@
-##! When the server requests a client certificate, it optionally may specify a list of CAs that
-##! it accepts. If the server does this, this script adds this list to ssl.log.
+
+
 
 @load base/protocols/ssl
 
 module SSL;
 
 redef record SSL::Info += {
-	## List of client certificate CAs accepted by the server
+
 	requested_client_certificate_authorities: vector of string &optional &log;
 };
 

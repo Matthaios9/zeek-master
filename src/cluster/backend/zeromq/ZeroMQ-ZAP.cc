@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/cluster/backend/zeromq/ZeroMQ-ZAP.h"
 
@@ -6,17 +6,17 @@
 
 namespace zeek::cluster::zeromq {
 
-// Implements a ZAP handler for Zeek's XPUB/XSUB proxy.
-//
-// https://rfc.zeromq.org/spec/27/#formal-specification
-//
-// zap_args contains the allowed client public keys.
+
+
+
+
+
 void zap_thread_fun(ZapArgs* zap_args) {
     zeek::util::detail::set_thread_name("zmq-zap-thread");
 
     bool done = false;
 
-    // Process ZAP requests.
+
 
     while ( ! done ) {
         static const std::string version = "1.0";
@@ -57,7 +57,7 @@ void zap_thread_fun(ZapArgs* zap_args) {
             response_frames.emplace_back(status_code.data(), status_code.size());
             response_frames.emplace_back(status_text.data(), status_text.size());
             response_frames.emplace_back(user_id.data(), user_id.size());
-            response_frames.emplace_back("", 0); // metadata
+            response_frames.emplace_back("", 0);
 
             zmq::send_multipart(zap_args->zap_rep, response_frames);
 
@@ -75,4 +75,4 @@ void zap_thread_fun(ZapArgs* zap_args) {
         }
     }
 }
-} // namespace zeek::cluster::zeromq
+}

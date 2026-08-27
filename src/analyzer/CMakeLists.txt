@@ -10,7 +10,7 @@ zeek_add_subdir_library(
     Component.cc
     Manager.cc)
 
-# Treat BIFs as builtin (alternative mode).
+
 bif_target(analyzer.bif)
 
 add_subdirectory(protocol)

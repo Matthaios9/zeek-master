@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/ZAM/ZInst.h"
 
@@ -12,7 +12,7 @@ using std::string;
 namespace zeek::detail {
 
 void ZInst::Dump(FILE* f, zeek_uint_t inst_num, const FrameReMap* mappings, const string& prefix) const {
-    // fprintf(f, "v%d ", n);
+
 
     auto id1 = VName(1, inst_num, mappings);
     auto id2 = VName(2, inst_num, mappings);
@@ -25,7 +25,7 @@ void ZInst::Dump(FILE* f, zeek_uint_t inst_num, const FrameReMap* mappings, cons
 void ZInst::Dump(FILE* f, const string& prefix, const string& id1, const string& id2, const string& id3,
                  const string& id4) const {
     fprintf(f, "%s ", ZOP_name(op));
-    // fprintf(f, "(%s) ", op_type_name(op_type));
+
     if ( t && false )
         fprintf(f, "(%s) ", type_name(t->Tag()));
 
@@ -173,20 +173,20 @@ string ZInst::VName(int n, zeek_uint_t inst_num, const FrameReMap* mappings) con
     if ( slot < 0 )
         return "<special>";
 
-    // Find which identifier manifests at this instruction.
+
     ASSERT(slot >= 0 && static_cast<zeek_uint_t>(slot) < mappings->size());
 
     auto& map = (*mappings)[slot];
 
     unsigned int i;
     for ( i = 0; i < map.id_start.size(); ++i ) {
-        // If the slot is right at the boundary between two identifiers, then
-        // it matters whether this is an assigned slot (starts right here) vs.
-        // not assigned (ignore change right at the boundary and stick with
-        // older value).
+
+
+
+
         auto target_inst = AssignsToSlot(n) ? inst_num + 1 : inst_num;
         if ( map.id_start[i] >= target_inst )
-            // Went too far.
+
             break;
     }
 
@@ -256,10 +256,10 @@ bool ZInst::AssignsToSlot1() const {
         case OP_VV_I1_I2:
         case OP_VVVC_I1_I2_I3: return false;
 
-        // We use this ginormous set of cases rather than "default" so
-        // that when we add a new operand type, we have to consider
-        // its behavior here.  (Same for many of the other switch's
-        // used for ZInst/ZinstI.)
+
+
+
+
         case OP_V:
         case OP_VC:
         case OP_VV_FRAME:
@@ -339,7 +339,7 @@ TraversalCode ZInst::Traverse(TraversalCallback* cb) const {
 
 void ZInstI::Dump(FILE* f, const FrameMap* frame_ids, const FrameReMap* remappings) const {
     int n = NumFrameSlots();
-    // fprintf(f, "v%d ", n);
+
 
     auto id1 = VName(1, frame_ids, remappings);
     auto id2 = VName(2, frame_ids, remappings);
@@ -360,7 +360,7 @@ string ZInstI::VName(int n, const FrameMap* frame_ids, const FrameReMap* remappi
 
     IDPtr id;
 
-    if ( remappings && live ) { // Find which identifier manifests at this instruction.
+    if ( remappings && live ) {
         ASSERT(slot >= 0 && static_cast<zeek_uint_t>(slot) < remappings->size());
 
         auto& map = (*remappings)[slot];
@@ -368,16 +368,16 @@ string ZInstI::VName(int n, const FrameMap* frame_ids, const FrameReMap* remappi
         unsigned int i;
         auto inst_num_u = static_cast<zeek_uint_t>(inst_num);
         for ( i = 0; i < map.id_start.size(); ++i ) {
-            // See discussion for ZInst::VName, though this is
-            // a tad different since we have the general notion
-            // of AssignsToSlot().
+
+
+
             if ( AssignsToSlot(n) ) {
                 if ( map.id_start[i] > inst_num_u )
                     break;
             }
 
             else if ( map.id_start[i] >= inst_num_u )
-                // Went too far.
+
                 break;
         }
 
@@ -385,7 +385,7 @@ string ZInstI::VName(int n, const FrameMap* frame_ids, const FrameReMap* remappi
             ASSERT(i > 0);
         }
 
-        // For ZInstI's, map.ids is always populated.
+
         id = map.ids[i - 1];
     }
 
@@ -558,7 +558,7 @@ void ZInstI::UpdateSlots(std::vector<int>& slot_mapping) {
         case OP_V_I1:
         case OP_VC_I1:
         case OP_VV_I1_I2:
-        case OP_VVVC_I1_I2_I3: return; // so we don't do any v1 remapping.
+        case OP_VVVC_I1_I2_I3: return;
 
         case OP_V:
         case OP_VC:
@@ -589,21 +589,21 @@ void ZInstI::UpdateSlots(std::vector<int>& slot_mapping) {
             break;
     }
 
-    // Note, unlike for UsesSlots() we do *not* include OP1_READ_WRITE
-    // here, because such instructions will already have v1 remapped
-    // given it's an assignment target.
+
+
+
     if ( op1_flavor[op] == OP1_READ && v1 >= 0 )
         v1 = slot_mapping[v1];
 }
 
 bool ZInstI::IsGlobalLoad() const {
     if ( op == OP_LOAD_GLOBAL_TYPE_Vg )
-        // These don't have flavors.
+
         return true;
 
     static std::unordered_set<ZOp> global_ops;
 
-    if ( global_ops.empty() ) { // Initialize the set.
+    if ( global_ops.empty() ) {
         for ( int t = 0; t < NUM_TYPES; ++t ) {
             TypeTag tag = TypeTag(t);
             ZOp global_op_flavor = AssignmentFlavor(OP_LOAD_GLOBAL_Vg, tag, false);
@@ -627,4 +627,4 @@ void ZInstI::InitConst(const ConstExpr* ce) {
         reporter->InternalError("bad value compiling code");
 }
 
-} // namespace zeek::detail
+}

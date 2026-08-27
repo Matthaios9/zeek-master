@@ -1,24 +1,24 @@
-# Build the DebugCmdConstants.h and DebugCmdInfoConstants.cc files from the
-# DebugCmdInfoConstants.in file.
-#
-# We do this via a script rather than maintaining them directly because
-# the struct is a little complicated, so has to be initialized from code,
-# plus we want to make adding new constants somewhat less painful.
-#
-# The input filename should be supplied as an argument.
-#
-# DebugCmds are printed to DebugCmdConstants.h
-# DebugCmdInfos are printed to DebugCmdInfoConstants.cc
-#
-# The input format is:
-#
-#     cmd: [DebugCmd]
-#     names: [space delimited names of cmd]
-#     resume: ['true' or 'false': should execution resume after this command?]
-#     help: [some help text]
-#
-# Blank lines are skipped.
-# Comments should start with // and should be on a line by themselves.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import sys
 
@@ -66,7 +66,7 @@ def outputrecord():
 
     dbginfo["num_names"] = len(dbginfo["names"])
 
-    # substitute into template
+
     init_str += init_tmpl % dbginfo
 
     enum_str += "\t{},\n".format(dbginfo["cmd"])
@@ -89,7 +89,7 @@ dbginfo = initdbginfo()
 inputf = open(inputfile)
 for line in inputf:
     line = line.strip()
-    if not line or line.startswith("//"):  # skip empty lines and comments
+    if not line or line.startswith("//"):
         continue
 
     fields = line.split(":", 1)
@@ -100,22 +100,22 @@ for line in inputf:
     f2 = f2.strip()
 
     if f1 == "cmd":
-        if dbginfo[f1]:  # output the previous record
+        if dbginfo[f1]:
             outputrecord()
             dbginfo = initdbginfo()
 
         dbginfo[f1] = f2
     elif f1 == "names":
-        # put quotes around the strings
+
         dbginfo[f1] = [f'"{n}"' for n in f2.split()]
     elif f1 == "help":
-        dbginfo[f1] = f2.replace('"', '\\"')  # escape quotation marks
+        dbginfo[f1] = f2.replace('"', '\\"')
     elif f1 in ("resume", "repeatable"):
         dbginfo[f1] = f2
     else:
         raise RuntimeError(f"Unknown command: {line}")
 
-# output the last record
+
 outputrecord()
 
 init_str += "\t\n}\n\n} // namespace zeek::detail\n"

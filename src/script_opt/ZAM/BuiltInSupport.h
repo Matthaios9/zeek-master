@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -11,8 +11,8 @@
 
 namespace zeek::detail {
 
-// Base class for tracking information about a single cat() argument, with
-// optimizations for some common cases.
+
+
 class CatArg {
 public:
     CatArg(std::string _s) : s(std::move(_s)) { max_size = s->size(); }
@@ -33,10 +33,10 @@ protected:
 
     virtual size_t ComputeMaxSize(const ZVal& zv) { return 0; }
 
-    // Present if max size is known a priori.
+
     std::optional<size_t> max_size;
 
-    // Present if the argument is a constant.
+
     std::optional<std::string> s;
 };
 
@@ -104,4 +104,4 @@ protected:
     TypePtr t;
 };
 
-} // namespace zeek::detail
+}

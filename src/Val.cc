@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Val.h"
 
@@ -6,7 +6,7 @@
 
 #include <netdb.h>
 #include <netinet/in.h>
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+
 #define RAPIDJSON_HAS_STDSTRING 1
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
@@ -54,7 +54,7 @@ namespace zeek {
 
 Val::~Val() = default;
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+
 
 #define CONVERTER(tag, ctype, name)                                                                                    \
     ctype name() {                                                                                                     \
@@ -72,7 +72,7 @@ Val::~Val() = default;
     CONVERTER(tag, ctype, name)                                                                                        \
     CONST_CONVERTER(tag, ctype, name)
 
-// NOLINTEND(cppcoreguidelines-macro-usage)
+
 
 CONVERTERS(TYPE_FUNC, FuncVal*, Val::AsFuncVal)
 CONVERTERS(TYPE_FILE, FileVal*, Val::AsFileVal)
@@ -118,7 +118,7 @@ ValPtr Val::DoClone(CloneState* state) {
         case TYPE_INTERNAL_INT:
         case TYPE_INTERNAL_UNSIGNED:
         case TYPE_INTERNAL_DOUBLE:
-            // Immutable.
+
             return {NewRef{}, this};
 
         default: reporter->InternalError("cloning illegal base type");
@@ -152,7 +152,7 @@ zeek_int_t Val::InternalInt() const {
     if ( type->InternalType() == TYPE_INTERNAL_INT )
         return AsInt();
     else if ( type->InternalType() == TYPE_INTERNAL_UNSIGNED )
-        // ### should check here for overflow
+
         return static_cast<zeek_int_t>(AsCount());
     else
         InternalWarning("bad request for InternalInt");
@@ -326,7 +326,7 @@ TableValPtr Val::GetRecordFields() {
     return rt->GetRecordFieldsVal(rv);
 }
 
-// A predicate to identify those types we render as a string in JSON.
+
 static bool UsesJSONStringType(const TypePtr& t) {
     if ( t == nullptr )
         return false;
@@ -345,14 +345,14 @@ static bool UsesJSONStringType(const TypePtr& t) {
     }
 }
 
-// This is a static method in this file to avoid including rapidjson's headers
-// in Val.h, because they're huge.
+
+
 static void BuildJSON(json::detail::NullDoubleWriter& writer, Val* val, bool only_loggable = false,
                       RE_Matcher* re = nullptr, const string& key = "", bool interval_as_double = false) {
     if ( ! key.empty() )
         writer.Key(key);
 
-    // If the value wasn't set, write a null into the stream and return.
+
     if ( ! val ) {
         writer.Null();
         return;
@@ -414,9 +414,9 @@ static void BuildJSON(json::detail::NullDoubleWriter& writer, Val* val, bool onl
             val->Describe(&d);
             std::string desc(reinterpret_cast<const char*>(d.Bytes()), d.Size());
 
-            // None of our function types should have surrounding
-            // whitespace, but ODesc might produce it due to its
-            // many output modes and flags. Strip it.
+
+
+
             if ( tag == TYPE_FUNC )
                 desc = util::strstrip(desc);
 
@@ -448,9 +448,9 @@ static void BuildJSON(json::detail::NullDoubleWriter& writer, Val* val, bool onl
                     BuildJSON(key_writer, entry_key, only_loggable, re, "", interval_as_double);
                     string key_str = buffer.GetString();
 
-                    // Strip the quotes for any type we render as a string. This
-                    // makes the JSON object's keys look more natural, yielding
-                    // '{ "foo": ... }', not '{ "\"foo\"": ... }', for such types.
+
+
+
                     if ( UsesJSONStringType(entry_key->GetType()) )
                         key_str = key_str.substr(1, key_str.length() - 2);
 
@@ -605,8 +605,8 @@ void IntervalVal::ValDescribe(ODesc* d) const {
 ValPtr PortVal::SizeVal() const { return val_mgr->Count(uint_val); }
 
 uint32_t PortVal::Mask(uint32_t port_num, TransportProto port_type) {
-    // Note, for ICMP one-way connections:
-    // src_port = icmp_type, dst_port = icmp_code.
+
+
 
     if ( port_num >= 65536 ) {
         reporter->Warning("bad port number %d", port_num);
@@ -620,7 +620,7 @@ uint32_t PortVal::Mask(uint32_t port_num, TransportProto port_type) {
 
         case TRANSPORT_ICMP: port_num |= ICMP_PORT_MASK; break;
 
-        default: break; // "unknown/other"
+        default: break;
     }
 
     return port_num;
@@ -658,7 +658,7 @@ void PortVal::ValDescribe(ODesc* d) const {
 }
 
 ValPtr PortVal::DoClone(CloneState* state) {
-    // Immutable.
+
     return {NewRef{}, this};
 }
 
@@ -668,7 +668,7 @@ AddrVal::AddrVal(const std::string& text) : AddrVal(text.c_str()) {}
 
 AddrVal::AddrVal(uint32_t addr) : Val(base_type(TYPE_ADDR)) {
     addr_val = new IPAddr(IPv4, &addr, IPAddr::Network);
-    // ### perhaps do gethostbyaddr here?
+
 }
 
 AddrVal::AddrVal(const uint32_t addr[4]) : Val(base_type(TYPE_ADDR)) {
@@ -687,7 +687,7 @@ ValPtr AddrVal::SizeVal() const {
 }
 
 ValPtr AddrVal::DoClone(CloneState* state) {
-    // Immutable.
+
     return {NewRef{}, this};
 }
 
@@ -727,8 +727,8 @@ void SubNetVal::ValDescribe(ODesc* d) const { d->Add(string(*subnet_val).c_str()
 
 IPAddr SubNetVal::Mask() const {
     if ( subnet_val->Length() == 0 ) {
-        // We need to special-case a mask width of zero, since
-        // the compiler doesn't guarantee that 1 << 32 yields 0.
+
+
         uint32_t m[4];
         for ( uint32_t& digit : m )
             digit = 0;
@@ -755,13 +755,13 @@ IPAddr SubNetVal::Mask() const {
 bool SubNetVal::Contains(const IPAddr& addr) const { return subnet_val->Contains(addr); }
 
 ValPtr SubNetVal::DoClone(CloneState* state) {
-    // Immutable.
+
     return {NewRef{}, this};
 }
 
 StringVal::StringVal(String* s) : Val(base_type(TYPE_STRING)) { string_val = s; }
 
-// The following adds a NUL at the end.
+
 StringVal::StringVal(int length, const char* s)
     : StringVal(new String(reinterpret_cast<const u_char*>(s), length, true)) {}
 
@@ -789,7 +789,7 @@ StringVal* StringVal::ToUpper() {
 }
 
 void StringVal::ValDescribe(ODesc* d) const {
-    // Should reintroduce escapes ? ###
+
     if ( d->WantQuotes() )
         d->Add("\"");
     d->AddBytes(string_val);
@@ -802,27 +802,27 @@ StringValPtr StringVal::Replace(RE_Matcher* re, const String& repl, bool do_all)
     int offset = 0;
     int n = Len();
 
-    // cut_points is a set of pairs of indices in str that should
-    // be removed/replaced.  A pair <x,y> means "delete starting
-    // at offset x, up to but not including offset y".
+
+
+
     vector<std::pair<int, int>> cut_points;
 
-    int size = 0; // size of result
+    int size = 0;
     bool bol = true;
     const bool eol = true;
 
     while ( n > 0 ) {
-        // Find next match offset.
+
         int end_of_match;
         while ( n > 0 ) {
             end_of_match = re->MatchPrefix(&s[offset], n, bol, eol);
             if ( end_of_match > 0 )
                 break;
 
-            // This character is going to be copied to the result.
+
             ++size;
 
-            // Move on to next character.
+
             bol = false;
             ++offset;
             --n;
@@ -831,31 +831,31 @@ StringValPtr StringVal::Replace(RE_Matcher* re, const String& repl, bool do_all)
         if ( n <= 0 )
             break;
 
-        // s[offset .. offset+end_of_match-1] matches re.
+
         cut_points.emplace_back(offset, offset + end_of_match);
 
         offset += end_of_match;
         n -= end_of_match;
 
         if ( ! do_all ) {
-            // We've now done the first substitution - finished.
-            // Include the remainder of the string in the result.
+
+
             size += n;
             break;
         }
     }
 
-    // size now reflects amount of space copied.  Factor in amount
-    // of space for replacement text.
+
+
     size += cut_points.size() * repl.Len();
 
-    // And a final NUL for good health.
+
     ++size;
 
     byte_vec result = new u_char[size];
     byte_vec r = result;
 
-    // Copy it all over.
+
     int start_offset = 0;
     for ( const auto& point : cut_points ) {
         int num_to_copy = point.first - start_offset;
@@ -864,26 +864,26 @@ StringValPtr StringVal::Replace(RE_Matcher* re, const String& repl, bool do_all)
         r += num_to_copy;
         start_offset = point.second;
 
-        // Now add in replacement text.
+
         memcpy(r, repl.Bytes(), repl.Len());
         r += repl.Len();
     }
 
-    // Copy final trailing characters.
+
     int num_to_copy = Len() - start_offset;
     memcpy(r, s + start_offset, num_to_copy);
     r += num_to_copy;
 
-    // Final NUL.  No need to increment r, since the length
-    // computed from it in the next statement does not include
-    // the NUL.
+
+
+
     r[0] = '\0';
 
     return make_intrusive<StringVal>(new String(true, result, r - result));
 }
 
 unsigned int StringVal::ComputeFootprint(std::unordered_set<const Val*>* analyzed_vals) const {
-    return 1 /* this object */ + static_cast<unsigned int>(Len()) / sizeof(Val);
+    return 1  + static_cast<unsigned int>(Len()) / sizeof(Val);
 }
 
 static zeek::expected<ValPtr, std::string> BuildVal(const rapidjson::Value& j, const TypePtr& t,
@@ -951,8 +951,8 @@ static zeek::expected<ValPtr, std::string> BuildVal(const rapidjson::Value& j, c
             if ( j.IsString() ) {
                 auto parts = util::split(j.GetString(), " ");
 
-                // Strip out any empty items. This can happen if there are
-                // strings of spaces in the original string.
+
+
                 parts.erase(std::ranges::begin(std::ranges::remove_if(parts, [](auto x) { return x.empty(); })),
                             std::end(parts));
 
@@ -1040,12 +1040,12 @@ static zeek::expected<ValPtr, std::string> BuildVal(const rapidjson::Value& j, c
                 return mismatch_err();
 
             std::string candidate(j.GetString(), j.GetStringLength());
-            // Remove any surrounding '/'s, not needed when creating an RE_matcher.
+
             if ( candidate.size() > 2 && candidate.front() == candidate.back() && candidate.back() == '/' ) {
                 candidate.erase(0, 1);
                 candidate.erase(candidate.size() - 1);
             }
-            // Remove any surrounding "^?(" and ")$?", automatically added below.
+
             if ( candidate.size() > 6 && candidate.starts_with("^?(") && candidate.ends_with(")$?") ) {
                 candidate.erase(0, 3);
                 candidate.erase(candidate.size() - 3);
@@ -1088,7 +1088,7 @@ static zeek::expected<ValPtr, std::string> BuildVal(const rapidjson::Value& j, c
             if ( candidate.back() == ']' )
                 candidate.erase(candidate.size() - 1);
 
-            // Validate here so bad input becomes an error result, not a crash.
+
             if ( ! IPAddr::IsValid(candidate.c_str()) )
                 return zeek::unexpected<std::string>(
                     util::fmt("invalid value for %s: '%s'", type_name(t->Tag()), j.GetString()));
@@ -1096,7 +1096,7 @@ static zeek::expected<ValPtr, std::string> BuildVal(const rapidjson::Value& j, c
             if ( t->Tag() == TYPE_ADDR )
                 return make_intrusive<AddrVal>(candidate);
 
-            // Likewise validate the prefix width.
+
             if ( ! IPAddr(candidate).CheckPrefixLength(width) )
                 return zeek::unexpected<std::string>(util::fmt("invalid value for subnet: '%s'", j.GetString()));
 
@@ -1125,7 +1125,7 @@ static zeek::expected<ValPtr, std::string> BuildVal(const rapidjson::Value& j, c
         }
 
         case TYPE_TABLE: {
-            auto tt = t->AsTableType(); // The table vs set type does not matter below
+            auto tt = t->AsTableType();
             auto tv = make_intrusive<TableVal>(IntrusivePtr{NewRef{}, tt});
             auto tl = tt->GetIndices();
 
@@ -1164,11 +1164,11 @@ static zeek::expected<ValPtr, std::string> BuildVal(const rapidjson::Value& j, c
                     if ( tl->GetTypes().size() > 1 )
                         idx = BuildVal(idxstr, tl, key_func);
                     else if ( UsesJSONStringType(tl->GetPureType()) )
-                        // Parse this with the quotes the string came with. This
-                        // mirrors the quote-stripping in BuildJSON().
+
+
                         idx = BuildVal(it->name, tl->GetPureType(), key_func);
                     else
-                        // Parse the string's content, not the full JSON string.
+
                         idx = BuildVal(idxstr, tl->GetPureType(), key_func);
 
                     if ( ! idx )
@@ -1199,14 +1199,14 @@ static zeek::expected<ValPtr, std::string> BuildVal(const rapidjson::Value& j, c
 
             std::map<std::string, const rapidjson::Value*> normalized_keys;
 
-            // If key_func is given, map all JSON keys and store in above map.
+
             if ( key_func ) {
                 for ( auto it = j.MemberBegin(); it != j.MemberEnd(); it++ ) {
                     ValPtr result;
                     try {
                         result = key_func->Invoke(zeek::make_intrusive<StringVal>(it->name.GetString()));
                     } catch ( InterpreterException& ) {
-                        /* Already reported. */
+
                     }
 
                     if ( ! result )
@@ -1216,7 +1216,7 @@ static zeek::expected<ValPtr, std::string> BuildVal(const rapidjson::Value& j, c
                 }
             }
 
-            // Now lookup record fields using the normalized input.
+
             for ( int i = 0; i < rt->NumFields(); ++i ) {
                 const auto td_i = rt->FieldDecl(i);
                 const rapidjson::Value* jval = nullptr;
@@ -1232,8 +1232,8 @@ static zeek::expected<ValPtr, std::string> BuildVal(const rapidjson::Value& j, c
 
                 if ( ! jval || jval->IsNull() ) {
                     if ( ! td_i->GetAttr(detail::ATTR_OPTIONAL) && ! td_i->GetAttr(detail::ATTR_DEFAULT) )
-                        // jval being set means it is a null JSON value else
-                        // it wasn't even there.
+
+
                         return zeek::unexpected<std::string>(util::fmt("required field %s$%s is %s in JSON",
                                                                        t->GetName().c_str(), td_i->id,
                                                                        jval ? "null" : "missing"));
@@ -1310,9 +1310,9 @@ zeek::expected<ValPtr, std::string> detail::ValFromJSON(std::string_view json_st
 }
 
 ValPtr StringVal::DoClone(CloneState* state) {
-    // We could likely treat this type as immutable and return a reference
-    // instead of creating a new copy, but we first need to be careful and
-    // audit whether anything internal actually does mutate it.
+
+
+
     return state->NewClone(this, make_intrusive<StringVal>(new String(string_val->Bytes(), string_val->Len(), true)));
 }
 
@@ -1338,16 +1338,16 @@ ValPtr FileVal::SizeVal() const { return make_intrusive<DoubleVal>(file_val->Siz
 void FileVal::ValDescribe(ODesc* d) const { file_val->Describe(d); }
 
 ValPtr FileVal::DoClone(CloneState* state) {
-    // I think we can just ref the file here - it is unclear what else
-    // to do.  In the case of cached files, I think this is equivalent
-    // to what happened before - serialization + unserialization just
-    // gave you the same pointer that you already had.  In the case of
-    // non-cached files, the behavior now is different; in the past,
-    // serialize + unserialize gave you a new file object because the
-    // old one was not in the list anymore. This object was
-    // automatically opened. This does not happen anymore - instead you
-    // get the non-cached pointer back which is brought back into the
-    // cache when written to.
+
+
+
+
+
+
+
+
+
+
     return {NewRef{}, this};
 }
 
@@ -1355,7 +1355,7 @@ PatternVal::PatternVal(RE_Matcher* re) : Val(base_type(TYPE_PATTERN)) { re_val =
 
 PatternVal::~PatternVal() { delete re_val; }
 
-bool PatternVal::AddTo(Val* v, bool /* is_first_init */) const {
+bool PatternVal::AddTo(Val* v, bool ) const {
     if ( v->GetType()->Tag() != TYPE_PATTERN ) {
         v->Error("not a pattern");
         return false;
@@ -1388,18 +1388,18 @@ void PatternVal::ValDescribe(ODesc* d) const {
 }
 
 ValPtr PatternVal::DoClone(CloneState* state) {
-    // We could likely treat this type as immutable and return a reference
-    // instead of creating a new copy, but we first need to be careful and
-    // audit whether anything internal actually does mutate it.
+
+
+
     auto re = new RE_Matcher(re_val->PatternText(), re_val->AnywherePatternText());
     re->Compile();
     return state->NewClone(this, make_intrusive<PatternVal>(re));
 }
 
-// The TypeList constructor wants a nullptr arg for pure_type when dealing with
-// a heterogenous (non-pure) list, so check t's Tag for TYPE_ANY to fulfill
-// that API. Because t can be a nullptr, implying TYPE_ANY, we have the
-// ternary complications.
+
+
+
+
 ListVal::ListVal(TypePtr t) : Val(make_intrusive<TypeList>(t ? (t->Tag() == TYPE_ANY ? nullptr : t) : nullptr)) {
     tag = t ? t->Tag() : TYPE_ANY;
 }
@@ -1506,17 +1506,17 @@ TableValTimer::~TableValTimer() {
 
 void TableValTimer::Dispatch(double t, bool is_expire) {
     if ( ! is_expire ) {
-        // Take this reference in case the expiration does something silly like resetting the
-        // table object itself. Doing so would cause a crash since the method would try to
-        // delete the table while it was being actively used.
+
+
+
         TableValPtr temp = {NewRef{}, table};
 
         table->ClearTimer(this);
         table->DoExpire(t);
 
-        // If the table did get deleted earlier, then the only existing reference will be the
-        // one taken above. In that case, set table to nullptr here so ~TableValTimer doesn't
-        // also try to do something with it.
+
+
+
         if ( table->RefCnt() == 1 )
             table = nullptr;
     }
@@ -1527,8 +1527,8 @@ static void table_entry_val_delete_func(void* val) {
     delete tv;
 }
 
-// Third argument tracks records currently being analyzed, to avoid infinite
-// loops in the face of recursive records.
+
+
 static void find_nested_record_types(const TypePtr& t, std::set<RecordType*>* found,
                                      std::set<const RecordType*>* analyzed_records) {
     if ( ! t )
@@ -1569,8 +1569,8 @@ static void find_nested_record_types(const TypePtr& t, std::set<RecordType*>* fo
     }
 }
 
-// Support class for returning multiple values from a table[pattern]
-// when indexed with a string.
+
+
 class detail::TablePatternMatcher {
 public:
     TablePatternMatcher(const TableVal* _tbl, TypePtr _yield) : tbl(_tbl) {
@@ -1581,7 +1581,7 @@ public:
 
     VectorValPtr Lookup(std::string_view sv);
 
-    // Delegate to matcher->MatchAll().
+
     bool MatchAll(std::string_view sv);
 
     void GetStats(detail::DFA_State_Cache_Stats* stats) const {
@@ -1597,18 +1597,18 @@ private:
     const TableVal* tbl;
     VectorTypePtr vtype;
 
-    // If matcher is nil then we know we need to build it. This gives
-    // us an easy way to cache matchers in the common case that these
-    // sorts of tables don't change their elements very often (indeed,
-    // they'll frequently be constructed just once), and also keeps us
-    // from having to re-build the matcher on every insert/delete in
-    // the common case that a whole bunch of those are done in a single
-    // batch.
+
+
+
+
+
+
+
     std::unique_ptr<detail::Specific_RE_Matcher> matcher = nullptr;
 
-    // Maps matcher values to corresponding yields. When building the
-    // matcher we insert a nil at the head to accommodate how
-    // disjunctive matchers use numbering starting at 1 rather than 0.
+
+
+
     std::vector<ValPtr> matcher_yields;
 };
 
@@ -1652,8 +1652,8 @@ void detail::TablePatternMatcher::Build() {
     zeek::detail::string_list pattern_list;
     zeek::detail::int_list index_list;
 
-    // We need to hold on to recovered hash key values so they don't
-    // get lost once a loop iteration goes out of scope.
+
+
     std::vector<ListValPtr> hash_key_vals;
 
     for ( auto& iter : tbl_dict ) {
@@ -1686,8 +1686,8 @@ TableVal::TableVal(TableTypePtr t, detail::AttributesPtr a) : Val(t) {
     for ( const auto& it : table_type->GetIndexTypes() ) {
         std::set<RecordType*> found;
         std::set<const RecordType*> analyzed_records;
-        // TODO: this likely doesn't have to be repeated for each new TableVal,
-        //       can remember the resulting dependencies per TableType
+
+
         find_nested_record_types(it, &found, &analyzed_records);
 
         for ( auto rt : found )
@@ -1728,7 +1728,7 @@ TableVal::~TableVal() {
 }
 
 void TableVal::SetPublishOnChangeState(std::unique_ptr<detail::PublishOnChangeState> poc_state_arg) {
-    // Today this should only be done once during InitPostScript() and never otherwise.
+
     if ( poc_state )
         reporter->InternalError("poc_state of %s already initialized", obj_desc(this).c_str());
 
@@ -1738,7 +1738,7 @@ void TableVal::SetPublishOnChangeState(std::unique_ptr<detail::PublishOnChangeSt
 void TableVal::RemoveAll() {
     delete expire_iterator;
     expire_iterator = nullptr;
-    // Here we take the brute force approach.
+
     delete table_val;
     table_val = new PDict<TableEntryVal>;
     table_val->SetDeleteFunc(table_entry_val_delete_func);
@@ -1814,8 +1814,8 @@ void TableVal::CheckExpireAttr(detail::AttrTag at) {
         if ( timer )
             detail::timer_mgr->Cancel(timer);
 
-        // As network_time is not necessarily initialized yet,
-        // we set a timer which fires immediately.
+
+
         timer = new TableValTimer(this, 1);
         detail::timer_mgr->Add(timer);
     }
@@ -1843,9 +1843,9 @@ bool TableVal::Assign(ValPtr index, std::unique_ptr<detail::HashKey> k, ValPtr n
     detail::HashKey k_copy(k->Key(), k->Size(), k->Hash());
     TableEntryVal* old_entry_val = table_val->Insert(k.get(), new_entry_val, iterators_invalidated);
 
-    // If the dictionary index already existed, the insert may free up the
-    // memory allocated to the key bytes, so have to assume k is invalid
-    // from here on out.
+
+
+
     k = nullptr;
 
     if ( subnets ) {
@@ -1860,7 +1860,7 @@ bool TableVal::Assign(ValPtr index, std::unique_ptr<detail::HashKey> k, ValPtr n
     if ( pattern_matcher )
         pattern_matcher->Clear();
 
-    // Keep old expiration time if necessary.
+
     if ( old_entry_val && attrs && attrs->Find(detail::ATTR_EXPIRE_CREATE) )
         new_entry_val->SetExpireAccess(old_entry_val->ExpireAccessTime());
 
@@ -1869,8 +1869,8 @@ bool TableVal::Assign(ValPtr index, std::unique_ptr<detail::HashKey> k, ValPtr n
     if ( change_func || poc_state || (broker_forward && ! broker_store.empty()) ) {
         auto change_index = index ? std::move(index) : RecreateIndex(k_copy);
 
-        // CallChangeFunc could delete new_entry_val from the table, so
-        // hold an owning reference to the value before invoking user code.
+
+
         auto new_val_copy = new_entry_val->GetVal();
 
         if ( broker_forward && ! broker_store.empty() )
@@ -1916,7 +1916,7 @@ bool TableVal::AddTo(Val* val, bool is_first_init, bool propagate_ops) const {
 
         if ( is_first_init && t->AsTable()->Lookup(k.get()) ) {
             auto key = GetTableHash()->RecoverVals(*k);
-            // ### Shouldn't complain if their values are equal.
+
             key->Warn("multiple initializations for index");
             continue;
         }
@@ -1948,11 +1948,11 @@ bool TableVal::RemoveFrom(Val* val) const {
     }
 
     for ( const auto& tble : *table_val ) {
-        // Not sure that this is 100% sound, since the HashKey
-        // comes from one table but is being used in another.
-        // OTOH, they are both the same type, so as long as
-        // we don't have hash keys that are keyed per dictionary,
-        // it should work ...
+
+
+
+
+
         auto k = tble.GetHashKey();
         t->Remove(*k);
     }
@@ -1966,8 +1966,8 @@ TableValPtr TableVal::Intersection(const TableVal& tv) const {
     const PDict<TableEntryVal>* t0 = table_val;
     const PDict<TableEntryVal>* t1 = tv.AsTable();
 
-    // Figure out which is smaller; assign it to t1.
-    if ( t1->Length() > t0->Length() ) { // Swap.
+
+    if ( t1->Length() > t0->Length() ) {
         const PDict<TableEntryVal>* tmp = t1;
         t1 = t0;
         t0 = tmp;
@@ -1976,8 +1976,8 @@ TableValPtr TableVal::Intersection(const TableVal& tv) const {
     for ( const auto& tble : *t1 ) {
         auto k = tble.GetHashKey();
 
-        // Here we leverage the same assumption about consistent
-        // hashes as in TableVal::RemoveFrom above.
+
+
         if ( t0->Lookup(k.get()) )
             result->table_val->Insert(k.get(), new TableEntryVal(nullptr));
     }
@@ -1995,8 +1995,8 @@ bool TableVal::EqualTo(const TableVal& tv) const {
     for ( const auto& tble : *t0 ) {
         auto k = tble.GetHashKey();
 
-        // Here we leverage the same assumption about consistent
-        // hashes as in TableVal::RemoveFrom above.
+
+
         if ( ! t1->Lookup(k.get()) )
             return false;
     }
@@ -2014,8 +2014,8 @@ bool TableVal::IsSubsetOf(const TableVal& tv) const {
     for ( const auto& tble : *t0 ) {
         auto k = tble.GetHashKey();
 
-        // Here we leverage the same assumption about consistent
-        // hashes as in TableVal::RemoveFrom above.
+
+
         if ( ! t1->Lookup(k.get()) )
             return false;
     }
@@ -2058,7 +2058,7 @@ ValPtr TableVal::Default(const ValPtr& index) {
 
         try {
             result = def_val->Clone();
-        } catch ( InterpreterException& e ) { /* Already reported. */
+        } catch ( InterpreterException& e ) {
         }
 
         if ( ! result ) {
@@ -2084,7 +2084,7 @@ ValPtr TableVal::Default(const ValPtr& index) {
             result = f->Invoke(&vl);
         }
 
-        catch ( InterpreterException& e ) { /* Already reported. */
+        catch ( InterpreterException& e ) {
         }
 
         if ( ! result ) {
@@ -2095,10 +2095,10 @@ ValPtr TableVal::Default(const ValPtr& index) {
 
     auto rt = result->GetType();
     if ( rt->Tag() == TYPE_VECTOR )
-        // The double-Yield() here is because this is a "table of vector of X"
-        // and we want X. If this is instead a "table of any", that'll be
-        // okay because concretize_if_unspecified() correctly deals with
-        // nil target types.
+
+
+
+
         detail::concretize_if_unspecified(cast_intrusive<VectorVal>(result), GetType()->Yield()->Yield());
 
     return result;
@@ -2152,8 +2152,8 @@ ValPtr TableVal::FindOrDefault(const ValPtr& index) {
     if ( auto rval = Find(index) )
         return rval;
 
-    // If the default came from a &default_insert attribute,
-    // insert the value upon a missed lookup.
+
+
     auto def = Default(index);
     if ( def && GetAttr(detail::ATTR_DEFAULT_INSERT) )
         Assign(index, def);
@@ -2197,7 +2197,7 @@ TableValPtr TableVal::LookupSubnetValues(const SubNetVal* search) {
         if ( entry && entry->GetVal() )
             nt->Assign(std::move(s), entry->GetVal());
         else
-            nt->Assign(std::move(s), nullptr); // set
+            nt->Assign(std::move(s), nullptr);
 
         if ( entry ) {
             if ( attrs && attrs->Find(detail::ATTR_EXPIRE_READ) )
@@ -2276,7 +2276,7 @@ void TableVal::CallChangeFunc(const ValPtr& index, const ValPtr& old_value, OnCh
         const Func* f = thefunc->AsFunc();
         Args vl;
 
-        // we either get passed the raw index_val - or a ListVal with exactly one element.
+
         if ( index->GetType()->Tag() == TYPE_LIST )
             vl.reserve(2 + index->AsListVal()->Length() + table_type->IsTable());
         else
@@ -2326,9 +2326,9 @@ void TableVal::SendToStore(const Val* index, const TableEntryVal* new_entry_val,
         if ( ! handle )
             return;
 
-        // For simple indexes, we either get passed the raw index_val - or a ListVal with exactly
-        // one element. We unoll this in the second case. For complex indexes, we just pass the
-        // ListVal.
+
+
+
         const Val* index_val;
         if ( index->GetType()->Tag() == TYPE_LIST && index->AsListVal()->Length() == 1 )
             index_val = index->AsListVal()->Idx(0).get();
@@ -2348,16 +2348,16 @@ void TableVal::SendToStore(const Val* index, const TableEntryVal* new_entry_val,
                 std::optional<broker::timespan> expiry;
                 auto expire_time = GetExpireTime();
                 if ( expire_time == 0 )
-                    // Entry is set to immediately expire. Let's not forward it.
+
                     break;
 
                 if ( expire_time > 0 ) {
                     if ( attrs->Find(detail::ATTR_EXPIRE_CREATE) ) {
-                        // for create expiry, we have to subtract the already elapsed time from
-                        // the expiry.
+
+
                         auto e = expire_time - (run_state::network_time - new_entry_val->ExpireAccessTime());
                         if ( e <= 0 )
-                            // element already expired? Let's not insert it.
+
                             break;
 
                         expiry = Broker::detail::convert_expiry(e);
@@ -2388,8 +2388,8 @@ void TableVal::SendToStore(const Val* index, const TableEntryVal* new_entry_val,
             case ELEMENT_REMOVED: handle->Erase(std::move(broker_index)); break;
 
             case ELEMENT_EXPIRED:
-                // we do nothing here. The Broker store does its own expiration - so the element
-                // should expire at about the same time.
+
+
                 break;
         }
     } catch ( InterpreterException& e ) {
@@ -2410,9 +2410,9 @@ ValPtr TableVal::Remove(const Val& index, bool broker_forward, bool* iterators_i
         va = v->GetVal() ? v->GetVal() : IntrusivePtr{NewRef{}, this};
 
     if ( subnets && ! subnets->Remove(&index) )
-        // VP: not clear to me this should be an internal warning,
-        // since Zeek doesn't otherwise complain about removing
-        // non-existent table elements.
+
+
+
         reporter->InternalWarning("index not in prefix table");
 
     if ( pattern_matcher )
@@ -2426,19 +2426,19 @@ ValPtr TableVal::Remove(const Val& index, bool broker_forward, bool* iterators_i
         SendToStore(&index, nullptr, ELEMENT_REMOVED);
 
     if ( change_func )
-        // const_cast is safe: Clone() is logically const.
+
         CallChangeFunc(const_cast<Val&>(index).Clone(), va, ELEMENT_REMOVED);
 
     if ( poc_state ) {
-        // This is a bit strange. The code above sets va to {NewRef{}, this}
-        // when the TableEntryVal didn't have a value. This should only happen
-        // for sets and there we actually want to use a nullptr for the value
-        // instead of the full remaining set.
+
+
+
+
         auto va2 = va;
         if ( GetType()->IsSet() )
             va2 = nullptr;
 
-        poc_state->OnChange(BifEnum::TABLE_ELEMENT_REMOVED, index, va2, /*previous_value=*/nullptr);
+        poc_state->OnChange(BifEnum::TABLE_ELEMENT_REMOVED, index, va2, nullptr);
     }
 
     return va;
@@ -2470,18 +2470,18 @@ ValPtr TableVal::Remove(const detail::HashKey& k, bool* iterators_invalidated) {
         if ( change_func && va )
             CallChangeFunc(index, va, ELEMENT_REMOVED);
 
-        // Same as in the other Remove() implementation.
-        //
-        // This is a bit strange. The code above sets va to {NewRef{}, this}
-        // when the TableEntryVal didn't have a value. This should only happen
-        // for sets and there we actually want to use a nullptr for the value
-        // instead of the full remaining set.
+
+
+
+
+
+
         if ( poc_state ) {
             auto va2 = va;
             if ( GetType()->IsSet() )
                 va2 = nullptr;
 
-            poc_state->OnChange(BifEnum::TABLE_ELEMENT_REMOVED, *index, va2, /*previous_value=*/nullptr);
+            poc_state->OnChange(BifEnum::TABLE_ELEMENT_REMOVED, *index, va2, nullptr);
         }
     }
 
@@ -2500,7 +2500,7 @@ ListValPtr TableVal::ToListVal(TypePtr t) const {
         if ( ! t || t->Tag() == TYPE_ANY )
             l->Append(std::move(index));
         else {
-            // We're expecting a pure list, flatten the ListVal.
+
             if ( index->Length() != 1 )
                 InternalWarning("bad index in TableVal::ToListVal");
 
@@ -2591,12 +2591,12 @@ void TableVal::Describe(ODesc* d) const {
             d_ptr->SP();
         }
 
-        // The following shows the HashKey state as well:
-        // k->Describe(d_ptr);
-        // d_ptr->SP();
+
+
+
         vl->Describe(d_ptr);
 
-        if ( table_type->IsSet() ) { // We're a set, not a table.
+        if ( table_type->IsSet() ) {
             if ( d->IsReadable() )
                 if ( dim != 1 )
                     d_ptr->Add("]");
@@ -2648,7 +2648,7 @@ void TableVal::Describe(ODesc* d) const {
 }
 
 void TableVal::InitDefaultFunc(detail::Frame* f) {
-    // Value already initialized.
+
     if ( def_val )
         return;
 
@@ -2660,17 +2660,17 @@ void TableVal::InitDefaultFunc(detail::Frame* f) {
     const auto& ytype = GetType()->Yield();
 
     if ( ! ytype )
-        // This happens for empty table() constructors.  Don't
-        // instantiate a default value at this point, as we'll
-        // first need to type-check the attribute when the value
-        // is finally used.
+
+
+
+
         return;
 
     const auto& dtype = def_attr->GetExpr()->GetType();
 
     if ( dtype->Tag() == TYPE_RECORD && ytype->Tag() == TYPE_RECORD && ! same_type(dtype, ytype) &&
          record_promotion_compatible(dtype->AsRecordType(), ytype->AsRecordType()) )
-        return; // TableVal::Default will handle this.
+        return;
 
     def_val = def_attr->GetExpr()->Eval(f);
 }
@@ -2684,13 +2684,13 @@ void TableVal::InitTimer(double delay) {
 
 void TableVal::DoExpire(double t) {
     if ( ! type )
-        return; // FIX ME ###
+        return;
 
     double timeout = GetExpireTime();
 
     if ( timeout < 0 )
-        // Skip in case of unset/invalid expiration value. If it's an
-        // error, it has been reported already.
+
+
         return;
 
     if ( ! expire_iterator ) {
@@ -2705,11 +2705,11 @@ void TableVal::DoExpire(double t) {
         auto v = (*expire_iterator)->value;
 
         if ( v->ExpireAccessTime() == 0 ) {
-            // This happens when we insert val while network_time
-            // hasn't been initialized yet (e.g. in zeek_init()), and
-            // also when zeek_start_network_time hasn't been initialized
-            // (e.g. before first packet).  The expire_access_time is
-            // correct, so we just need to wait.
+
+
+
+
+
         }
 
         else if ( v->ExpireAccessTime() + timeout < t ) {
@@ -2720,22 +2720,22 @@ void TableVal::DoExpire(double t) {
                 idx = RecreateIndex(*k);
                 double secs = CallExpireFunc(idx);
 
-                // It's possible that the user-provided
-                // function modified or deleted the table
-                // value, so look it up again.
+
+
+
                 v = table_val->Lookup(k.get());
 
-                if ( ! v ) { // user-provided function deleted it
+                if ( ! v ) {
                     if ( ! expire_iterator )
-                        // Entire table got dropped (e.g. clear_table() / RemoveAll())
+
                         break;
 
                     continue;
                 }
 
                 if ( secs > 0 ) {
-                    // User doesn't want us to expire
-                    // this now.
+
+
                     v->SetExpireAccess(run_state::network_time - timeout + secs);
                     continue;
                 }
@@ -2759,7 +2759,7 @@ void TableVal::DoExpire(double t) {
 
                 if ( poc_state )
                     poc_state->OnChange(BifEnum::TABLE_ELEMENT_EXPIRED, *idx, v->GetVal(),
-                                        /*previous_value=*/nullptr);
+                                        nullptr);
             }
 
             delete v;
@@ -2813,7 +2813,7 @@ double TableVal::CallExpireFunc(ListValPtr idx) {
         auto vf = eval_in_isolation(expire_func);
 
         if ( ! vf )
-            // Will have been reported already.
+
             return 0;
 
         if ( vf->GetType()->Tag() != TYPE_FUNC ) {
@@ -2825,7 +2825,7 @@ double TableVal::CallExpireFunc(ListValPtr idx) {
         Args vl;
 
         const auto& func_args = f->GetType()->ParamList()->GetTypes();
-        // backwards compatibility with idx: any idiom
+
         bool any_idiom = func_args.size() == 2 && func_args.back()->Tag() == TYPE_ANY;
 
         if ( ! any_idiom ) {
@@ -2841,7 +2841,7 @@ double TableVal::CallExpireFunc(ListValPtr idx) {
             vl.emplace_back(NewRef{}, this);
 
             ListVal* idx_list = idx->AsListVal();
-            // Flatten if only one element
+
             if ( idx_list->Length() == 1 )
                 vl.emplace_back(idx_list->Idx(0));
             else
@@ -2861,11 +2861,11 @@ double TableVal::CallExpireFunc(ListValPtr idx) {
 }
 
 ValPtr TableVal::DoClone(CloneState* state) {
-    // Propagate the &ordered attribute when cloning.
-    //
-    // Some of the attributes are dealt with later, but this one needs to be
-    // passed explicitly to the TableVal constructor so the underlying PDict
-    // is initialized ordered.
+
+
+
+
+
     detail::AttributesPtr init_attrs = nullptr;
     if ( auto ordered_attr = GetAttr(detail::ATTR_ORDERED) ) {
         init_attrs = zeek::make_intrusive<detail::Attributes>(table_type, false, false);
@@ -2892,8 +2892,8 @@ ValPtr TableVal::DoClone(CloneState* state) {
     if ( expire_time ) {
         tv->expire_time = expire_time;
 
-        // As network_time is not necessarily initialized yet, we set
-        // a timer which fires immediately.
+
+
         tv->timer = new TableValTimer(tv.get(), 1);
         detail::timer_mgr->Add(tv->timer);
     }
@@ -2943,7 +2943,7 @@ void TableVal::SaveParseTimeTableState(RecordType* rt) {
 }
 
 void TableVal::RebuildParseTimeTables() {
-    std::set<TableType*> table_types; // regenerate hash just once per table type
+    std::set<TableType*> table_types;
 
     for ( auto& [tv, ptts] : parse_time_table_states ) {
         auto* tt = tv->table_type.get();
@@ -2993,7 +2993,7 @@ RecordVal::RecordVal(RecordTypePtr t, bool init_fields) : Val(std::move(t)) {
         parse_time_records[rt].emplace_back(NewRef{}, this);
 
     if ( init_fields ) {
-        // Properly initialize all fields.
+
         num_fields = n;
         Init(record_val.get());
 
@@ -3008,13 +3008,13 @@ RecordVal::RecordVal(RecordTypePtr t, bool init_fields) : Val(std::move(t)) {
         }
     }
     else {
-        // This needs to go through AppendField() which will do the right thing
-        // for the individual fields.
+
+
     }
 }
 
 RecordVal::RecordVal(RecordTypePtr t, std::vector<std::optional<ZVal>> init_vals) : Val(std::move(t)) {
-    // TODO: Change so that callers pass init_vals as ZValElement instead?
+
     const auto* rt = GetRecordType();
     num_fields = rt->NumFields();
     record_val = std::make_unique<ZValElement[]>(num_fields);
@@ -3076,7 +3076,7 @@ void RecordVal::ResizeParseTimeRecords(RecordType* revised_rt) {
             for ( size_t i = 0; i < current_length; i++ )
                 new_record_val[i] = rv->record_val[i];
 
-            // Replace record_val with the new array.
+
             rv->record_val = std::move(new_record_val);
 
             for ( auto i = current_length; i < required_length; ++i )
@@ -3133,7 +3133,7 @@ RecordValPtr RecordVal::DoCoerceTo(RecordTypePtr t, bool allow_orphaning) const 
         const auto& v = GetField(i);
 
         if ( ! v )
-            // Check for allowable optional fields is outside the loop, below.
+
             continue;
 
         const auto& ft = ar_t->GetFieldType(t_i);
@@ -3234,11 +3234,11 @@ void RecordVal::DescribeReST(ODesc* d) const {
 }
 
 ValPtr RecordVal::DoClone(CloneState* state) {
-    // We set origin to 0 here.  Origin only seems to be used for exactly one
-    // purpose - to find the connection record that is associated with a
-    // record. As we cannot guarantee that it will be zeroed out at the
-    // appropriate time (as it seems to be guaranteed for the original record)
-    // we don't touch it.
+
+
+
+
+
     auto rt = GetType<RecordType>();
     auto rv = make_intrusive<RecordVal>(rt, false);
     state->NewClone(this, rv);
@@ -3270,9 +3270,9 @@ unsigned int RecordVal::ComputeFootprint(std::unordered_set<const Val*>* analyze
 }
 
 ValPtr EnumVal::SizeVal() const {
-    // Negative enums are rejected at parse time, but not internally. Handle the
-    // negative case just like a signed integer, as that is an enum's underlying
-    // type.
+
+
+
     if ( AsInt() < 0 )
         return val_mgr->Count(-AsInt());
     else
@@ -3289,14 +3289,14 @@ void EnumVal::ValDescribe(ODesc* d) const {
 }
 
 ValPtr EnumVal::DoClone(CloneState* state) {
-    // Immutable.
+
     return {NewRef{}, this};
 }
 
 void TypeVal::ValDescribe(ODesc* d) const { type->AsTypeType()->GetType()->Describe(d); }
 
 ValPtr TypeVal::DoClone(CloneState* state) {
-    // Immutable.
+
     return {NewRef{}, this};
 }
 
@@ -3337,19 +3337,19 @@ ValPtr VectorVal::SizeVal() const { return val_mgr->Count(static_cast<uint32_t>(
 
 bool VectorVal::CheckElementType(const ValPtr& element) {
     if ( ! element )
-        // Insertion isn't actually going to happen.
+
         return true;
 
     if ( yield_types )
-        // We're already a heterogeneous vector-of-any.
+
         return true;
 
     if ( any_yield ) {
         int n = vector_val.size();
 
         if ( n == 0 ) {
-            // First addition to an empty vector-of-any, perhaps
-            // it will be homogeneous.
+
+
             yield_type = element->GetType();
             managed_yield = ZVal::IsManagedType(yield_type);
         }
@@ -3357,9 +3357,9 @@ bool VectorVal::CheckElementType(const ValPtr& element) {
         else {
             yield_types = new std::vector<TypePtr>();
 
-            // Since we're only now switching to the heterogeneous
-            // representation, capture the types of the existing
-            // elements.
+
+
+
 
             for ( auto i = 0; i < n; ++i )
                 yield_types->emplace_back(yield_type);
@@ -3430,7 +3430,7 @@ bool VectorVal::Insert(unsigned int index, ValPtr element) {
 
     auto n = vector_val.size();
 
-    if ( index < n ) { // Find location within existing vector elements.
+    if ( index < n ) {
         it = std::next(vector_val.begin(), index);
         if ( yield_types )
             types_it = std::next(yield_types->begin(), index);
@@ -3493,7 +3493,7 @@ bool VectorVal::Remove(unsigned int index) {
     return true;
 }
 
-bool VectorVal::AddTo(Val* val, bool /* is_first_init */) const {
+bool VectorVal::AddTo(Val* val, bool ) const {
     if ( val->GetType()->Tag() != TYPE_VECTOR ) {
         val->Error("not a vector");
         return false;
@@ -3532,10 +3532,10 @@ ValPtr VectorVal::At(unsigned int index) const {
 
 static Func* sort_function_comp = nullptr;
 
-// Used for indirect sorting to support order().
+
 static std::vector<const std::optional<ZVal>*> index_map;
 
-// The yield type of the vector being sorted.
+
 static TypePtr sort_type;
 
 static bool sort_function(const std::optional<ZVal>& a, const std::optional<ZVal>& b) {
@@ -3660,8 +3660,8 @@ VectorValPtr VectorVal::Order(Func* cmp_func) {
 
     int n = Size();
 
-    // Set up initial mapping of indices directly to corresponding
-    // elements.
+
+
     vector<size_t> ind_vv(n);
     int i;
     for ( i = 0; i < n; ++i ) {
@@ -3673,7 +3673,7 @@ VectorValPtr VectorVal::Order(Func* cmp_func) {
 
     index_map.clear();
 
-    // Now spin through ind_vv to read out the rearrangement.
+
     auto result_v = make_intrusive<VectorVal>(zeek::id::index_vec);
     for ( i = 0; i < n; ++i ) {
         int ind = ind_vv[i];
@@ -3685,19 +3685,19 @@ VectorValPtr VectorVal::Order(Func* cmp_func) {
 
 bool VectorVal::Concretize(const TypePtr& t) {
     if ( ! any_yield )
-        // Could do a same_type() call here, but really this case
-        // shouldn't happen in any case.
+
+
         return yield_type->Tag() == t->Tag();
 
     auto n = vector_val.size();
     for ( auto i = 0U; i < n; ++i ) {
         auto& v = vector_val[i];
         if ( ! v )
-            // Vector hole does not require concretization.
+
             continue;
 
         auto& vt_i = yield_types ? (*yield_types)[i] : yield_type;
-        if ( vt_i->Tag() == TYPE_ANY ) { // Do the concretization.
+        if ( vt_i->Tag() == TYPE_ANY ) {
             ValPtr any_v = {NewRef{}, v->AsAny()};
             auto& vt = any_v->GetType();
             if ( vt->Tag() != t->Tag() )
@@ -3710,7 +3710,7 @@ bool VectorVal::Concretize(const TypePtr& t) {
             return false;
     }
 
-    // Require that this vector be treated consistently in the future.
+
     type = make_intrusive<VectorType>(t);
     yield_type = t;
     managed_yield = ZVal::IsManagedType(yield_type);
@@ -3723,19 +3723,19 @@ bool VectorVal::Concretize(const TypePtr& t) {
 
 void detail::concretize_if_unspecified(VectorValPtr v, TypePtr t) {
     if ( v->Size() != 0 )
-        // Concretization only applies to empty vectors.
+
         return;
 
     if ( v->GetType()->Yield()->Tag() != TYPE_ANY )
-        // It's not an unspecified vector.
+
         return;
 
     if ( ! t )
-        // "t" can be nil if the vector is being assigned to an "any" value.
+
         return;
 
     if ( t->Tag() == TYPE_ANY )
-        // No need to concretize.
+
         return;
 
     v->Concretize(t);
@@ -3835,12 +3835,12 @@ ValPtr check_and_promote(ValPtr v, const TypePtr& new_type, bool is_init, const 
     TypeTag t_tag = t->Tag();
     TypeTag v_tag = vt->Tag();
 
-    // More thought definitely needs to go into this.
+
     if ( t_tag == TYPE_ANY || v_tag == TYPE_ANY )
         return v;
 
     if ( ! EitherArithmetic(t_tag, v_tag) ||
-         /* allow sets as initializers */
+
          (is_init && v_tag == TYPE_TABLE) ) {
         if ( same_type(t, vt, is_init) )
             return v;
@@ -3868,12 +3868,12 @@ ValPtr check_and_promote(ValPtr v, const TypePtr& new_type, bool is_init, const 
         }
     }
 
-    // Need to promote v to type t.
+
     InternalTypeTag it = t->InternalType();
     InternalTypeTag vit = vt->InternalType();
 
     if ( it == vit )
-        // Already has the right internal type.
+
         return v;
 
     ValPtr promoted_v;
@@ -3888,7 +3888,7 @@ ValPtr check_and_promote(ValPtr v, const TypePtr& new_type, bool is_init, const 
             }
             else if ( t_tag == TYPE_INT )
                 promoted_v = val_mgr->Int(v->CoerceToInt());
-            else // enum
+            else
             {
                 reporter->InternalError("bad internal type in check_and_promote()");
                 return nullptr;
@@ -3904,7 +3904,7 @@ ValPtr check_and_promote(ValPtr v, const TypePtr& new_type, bool is_init, const 
             }
             else if ( t_tag == TYPE_COUNT )
                 promoted_v = val_mgr->Count(v->CoerceToUnsigned());
-            else // port
+            else
             {
                 reporter->InternalError("bad internal type in check_and_promote()");
                 return nullptr;
@@ -3930,8 +3930,8 @@ ValPtr check_and_promote(ValPtr v, const TypePtr& new_type, bool is_init, const 
 bool is_atomic_val(const Val* v) { return is_atomic_type(v->GetType()); }
 
 bool same_atomic_val(const Val* v1, const Val* v2) {
-    // This is a very preliminary implementation of same_val(),
-    // true only for equal, simple atomic values of same type.
+
+
     if ( v1->GetType()->Tag() != v2->GetType()->Tag() )
         return false;
 
@@ -4008,12 +4008,12 @@ ValPtr attempt_to_cast_value_to_type(Val* v, Type* t, std::string& err) {
     if ( ! v )
         return nullptr;
 
-    // Always allow casting to same type. This also covers casting 'any'
-    // to the actual type.
+
+
     if ( same_type(v->GetType(), t) )
         return {NewRef{}, v};
 
-    // Allow casting between sets and vectors if the yield types are the same.
+
     if ( v->GetType()->IsSet() && IsVector(t->Tag()) ) {
         auto set_type = v->GetType<TableType>();
         auto indices = set_type->GetIndices();
@@ -4060,7 +4060,7 @@ ValPtr attempt_to_cast_value_to_type(Val* v, Type* t, std::string& err) {
     }
 
     if ( same_type(v->GetType(), Broker::detail::DataVal::ScriptDataType()) ) {
-        // Special hack for Broker communication.
+
         const auto& dv = v->AsRecordVal()->GetField(0);
 
         if ( ! dv )
@@ -4069,7 +4069,7 @@ ValPtr attempt_to_cast_value_to_type(Val* v, Type* t, std::string& err) {
         return static_cast<Broker::detail::DataVal*>(dv.get())->castTo(t);
     }
 
-    // Basic type conversions.
+
     auto s_tag = v->GetType()->Tag();
     auto t_tag = t->Tag();
     ValPtr result;
@@ -4276,7 +4276,7 @@ static bool can_cast_basic_types(const Type* s, const Type* t) {
         case TYPE_PORT: return t_tag == TYPE_COUNT;
 
         case TYPE_VECTOR:
-            // index_vec to addr
+
             return is_index_vec(s) && t_tag == TYPE_ADDR;
 
         default: return false;
@@ -4287,12 +4287,12 @@ bool can_cast_any_to_type(const Val* v, Type* t) {
     if ( ! v )
         return false;
 
-    // Always allow casting to same type. This also covers casting 'any'
-    // to the actual type.
+
+
     if ( same_type(v->GetType(), t) )
         return true;
 
-    // Allow Broker magic.
+
     if ( same_type(v->GetType(), Broker::detail::DataVal::ScriptDataType()) ) {
         const auto& dv = v->AsRecordVal()->GetField(0);
 
@@ -4306,18 +4306,18 @@ bool can_cast_any_to_type(const Val* v, Type* t) {
 }
 
 bool can_cast_type_to_type(const Type* s, Type* t) {
-    // Always allow casting to same type. This also covers casting 'any'
-    // to the actual type.
+
+
     if ( same_type(s, t) )
         return true;
 
-    // Allow casting between sets and vectors if the yield types are the same.
-    // This is different than what can_cast_any_to_type() allows.
+
+
     if ( can_cast_set_and_vector(s, t) )
         return true;
 
-    // Allow basic type conversions. This is different than what
-    // can_cast_any_to_type() allows.
+
+
     if ( can_cast_basic_types(s, t) )
         return true;
 
@@ -4325,9 +4325,9 @@ bool can_cast_type_to_type(const Type* s, Type* t) {
         return true;
 
     if ( same_type(s, Broker::detail::DataVal::ScriptDataType()) )
-        // As Broker is dynamically typed, we don't know if we will be able
-        // to convert the type as intended. We optimistically assume that we
-        // will.
+
+
+
         return true;
 
     return false;
@@ -4342,11 +4342,11 @@ ValPtr Val::MakeCount(zeek_uint_t u) { return make_intrusive<CountVal>(u); }
 unsigned int Val::Footprint(std::unordered_set<const Val*>* analyzed_vals) const {
     auto is_aggr = IsAggr(type);
 
-    // We only need to check containers for possible recursion, as there's
-    // no way to construct a cycle using only non-aggregates.
+
+
     if ( is_aggr ) {
         if ( analyzed_vals->contains(this) )
-            // Footprint is 1 for generating a cycle.
+
             return 1;
 
         analyzed_vals->insert(this);
@@ -4355,8 +4355,8 @@ unsigned int Val::Footprint(std::unordered_set<const Val*>* analyzed_vals) const
     auto fp = ComputeFootprint(analyzed_vals);
 
     if ( is_aggr )
-        // Allow the aggregate to be revisited providing it's not
-        // in the context of a cycle.
+
+
         analyzed_vals->erase(this);
 
     return fp;
@@ -4416,12 +4416,12 @@ const PortValPtr& ValManager::Port(uint32_t port_num) {
         return Port(port_num, TRANSPORT_UNKNOWN);
 }
 
-} // namespace zeek
+}
 
 TEST_SUITE_BEGIN("ZValElement");
 
 TEST_CASE("default constructor") {
-    // default constructor doesn't do anything.
+
     zeek::ZValElement element;
     CHECK(! element.IsSet());
     CHECK(! element.IsManaged());
@@ -4435,11 +4435,11 @@ TEST_CASE("holds CountVal") {
     CHECK(element.IsSet());
     CHECK(element.Tag() == zeek::TYPE_COUNT);
     CHECK(! element.IsManaged());
-    CHECK(v->RefCnt() == 1); // Not managed, so the element does not hold a ref to the original value.
+    CHECK(v->RefCnt() == 1);
     CHECK(element->AsCount() == 104242);
 
     auto nv = element->ToVal(t);
-    CHECK(nv->RefCnt() == 1); // Not managed, so the element does not hold a ref to the original value.
+    CHECK(nv->RefCnt() == 1);
     CHECK(nv != v);
 }
 
@@ -4452,7 +4452,7 @@ TEST_CASE("holds RecordVal") {
     CHECK(element.IsSet());
     CHECK(element.Tag() == zeek::TYPE_RECORD);
     CHECK(element.IsManaged());
-    CHECK(v->RefCnt() == 2); // Managed, element takes a ref.
+    CHECK(v->RefCnt() == 2);
 
     auto nv = element->ToVal(t);
     CHECK(nv->RefCnt() == 3);
@@ -4475,13 +4475,13 @@ TEST_CASE("assign count ZVal") {
 
     element = zeek::ZVal(v2, t);
 
-    // Unmanaged
+
     CHECK(v1->RefCnt() == 1);
     CHECK(v2->RefCnt() == 1);
 
     auto v3 = element->ToVal(t);
 
-    // New CountVal for 100000
+
     CHECK(v3 != v2);
     CHECK(v3->RefCnt() == 1);
 }
@@ -4492,19 +4492,19 @@ TEST_CASE("assign managed ZVal to ZValElement") {
     auto v2 = zeek::make_intrusive<zeek::RecordVal>(t);
 
     zeek::ZValElement element = zeek::ZValElement(v1, t);
-    CHECK(v1->RefCnt() == 2); // v1 and element
+    CHECK(v1->RefCnt() == 2);
 
     zeek::ZVal zval(v2, t);
-    CHECK(v2->RefCnt() == 2); // ZVal takes a reference.
+    CHECK(v2->RefCnt() == 2);
 
     element = zval;
-    CHECK(v2->RefCnt() == 2); // Assigning ZVal to ZValElement adopts the reference!
+    CHECK(v2->RefCnt() == 2);
 
-    CHECK(v1->RefCnt() == 1); // Reference to contained ZVal (v1) was released.
+    CHECK(v1->RefCnt() == 1);
 
     auto v3 = element->ToVal(t);
     CHECK(v3 == v2);
-    CHECK(v2->RefCnt() == 3); // v2, element and v3
+    CHECK(v2->RefCnt() == 3);
 }
 
 TEST_CASE("assignment") {
@@ -4515,14 +4515,14 @@ TEST_CASE("assignment") {
     zeek::ZValElement element1 = zeek::ZValElement(v1, t);
     zeek::ZValElement element2 = zeek::ZValElement(v2, t);
 
-    CHECK(v1->RefCnt() == 2); // v1 and element1
-    CHECK(v2->RefCnt() == 2); // v2 and element2
+    CHECK(v1->RefCnt() == 2);
+    CHECK(v2->RefCnt() == 2);
 
     element1 = element2;
-    CHECK(v1->RefCnt() == 1); // element1 released reference to v1.
-    CHECK(v2->RefCnt() == 3); // v2, element1 and element2 hold references
-    element2 = element1;      // NOLINT(performance-use-std-move)
-    CHECK(v1->RefCnt() == 1); // Nothing should've changed - they were the same.
+    CHECK(v1->RefCnt() == 1);
+    CHECK(v2->RefCnt() == 3);
+    element2 = element1;
+    CHECK(v1->RefCnt() == 1);
     CHECK(v2->RefCnt() == 3);
 }
 
@@ -4532,11 +4532,11 @@ TEST_CASE("move assignment") {
     auto v2 = zeek::make_intrusive<zeek::RecordVal>(t);
 
     zeek::ZValElement element1 = zeek::ZValElement(v1, t);
-    CHECK(v1->RefCnt() == 2);            // v1 and element1
-    element1 = zeek::ZValElement(v2, t); // Should use move assignment.
+    CHECK(v1->RefCnt() == 2);
+    element1 = zeek::ZValElement(v2, t);
 
-    CHECK(v1->RefCnt() == 1); // Only v1 holds the ref.
-    CHECK(v2->RefCnt() == 2); // v1 and element1 adopted ref from temporary.
+    CHECK(v1->RefCnt() == 1);
+    CHECK(v2->RefCnt() == 2);
 }
 
 TEST_CASE("copy constructor") {
@@ -4544,16 +4544,16 @@ TEST_CASE("copy constructor") {
     auto v = zeek::make_intrusive<zeek::RecordVal>(t);
 
     zeek::ZValElement element1 = zeek::ZValElement(v, t);
-    CHECK(v->RefCnt() == 2); // v, element1
+    CHECK(v->RefCnt() == 2);
     zeek::ZValElement element2 = element1;
-    CHECK(v->RefCnt() == 3); // v, element1, element2
+    CHECK(v->RefCnt() == 3);
     zeek::ZValElement element3 = element2;
-    // NOLINTBEGIN(performance-use-std-move)
-    CHECK(v->RefCnt() == 4); // v, element1, element2, element3
+
+    CHECK(v->RefCnt() == 4);
     element2 = element3;
-    CHECK(v->RefCnt() == 4); // v, element1, element2, element3
+    CHECK(v->RefCnt() == 4);
     element1 = element3;
-    // NOLINTEND(performance-use-std-move)
+
 }
 
 TEST_SUITE_END();
@@ -4569,10 +4569,10 @@ TEST_CASE("assign string") {
     v->Assign(1, path);
 
     auto sv = v->GetField(1);
-    CHECK(sv->RefCnt() == 2); // sv and v
+    CHECK(sv->RefCnt() == 2);
 
     v.reset();
-    CHECK(sv->RefCnt() == 1); // record was destroyed
+    CHECK(sv->RefCnt() == 1);
 }
 
 TEST_SUITE_END();

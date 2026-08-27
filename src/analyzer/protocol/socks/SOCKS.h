@@ -1,8 +1,8 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
-// SOCKS v4 analyzer.
+
 
 #include "zeek/analyzer/protocol/pia/PIA.h"
 #include "zeek/analyzer/protocol/tcp/TCP.h"
@@ -11,7 +11,7 @@ namespace binpac {
 namespace SOCKS {
 class SOCKS_Conn;
 }
-} // namespace binpac
+}
 
 namespace zeek::analyzer::socks {
 
@@ -37,4 +37,4 @@ protected:
     binpac::SOCKS::SOCKS_Conn* interp;
 };
 
-} // namespace zeek::analyzer::socks
+}

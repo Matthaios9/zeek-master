@@ -1,4 +1,4 @@
-##! Finds connections with protocols on non-standard ports with DPD.
+
 
 @load base/frameworks/notice
 @load base/utils/site
@@ -13,75 +13,75 @@ export {
 		Server_Found,
 	};
 
-	# Table of (protocol, resp_h, resp_p) tuples known to be uninteresting
-	# in the given direction.  For all other protocols detected on
-	# non-standard ports, we raise a Protocol_Found notice.  (More specific
-	# filtering can then be done via notice_filters.)
-	#
-	# Use 0.0.0.0 for to wildcard-match any resp_h.
+
+
+
+
+
+
 
 	type dir: enum { NONE, INCOMING, OUTGOING, BOTH };
 
 	option valids: table[AllAnalyzers::Tag, addr, port] of dir = {
-		# A couple of ports commonly used for benign HTTP servers.
 
-		# For now we want to see everything.
 
-		# [Analyzer::ANALYZER_HTTP, 0.0.0.0, 81/tcp] = OUTGOING,
-		# [Analyzer::ANALYZER_HTTP, 0.0.0.0, 82/tcp] = OUTGOING,
-		# [Analyzer::ANALYZER_HTTP, 0.0.0.0, 83/tcp] = OUTGOING,
-		# [Analyzer::ANALYZER_HTTP, 0.0.0.0, 88/tcp] = OUTGOING,
-		# [Analyzer::ANALYZER_HTTP, 0.0.0.0, 8001/tcp] = OUTGOING,
-		# [Analyzer::ANALYZER_HTTP, 0.0.0.0, 8090/tcp] = OUTGOING,
-		# [Analyzer::ANALYZER_HTTP, 0.0.0.0, 8081/tcp] = OUTGOING,
-		#
-		# [Analyzer::ANALYZER_HTTP, 0.0.0.0, 6346/tcp] = BOTH, # Gnutella
-		# [Analyzer::ANALYZER_HTTP, 0.0.0.0, 6347/tcp] = BOTH, # Gnutella
-		# [Analyzer::ANALYZER_HTTP, 0.0.0.0, 6348/tcp] = BOTH, # Gnutella
+
+
+
+
+
+
+
+
+
+
+
+
+
 	};
 
-	# Set of analyzers for which we suppress Server_Found notices
-	# (but not Protocol_Found).  Along with avoiding clutter in the
-	# log files, this also saves memory because for these we don't
-	# need to remember which servers we already have reported, which
-	# for some can be a lot.
+
+
+
+
+
 	option suppress_servers: set [AllAnalyzers::Tag] = {
-		# Analyzer::ANALYZER_HTTP
+
 	};
 
-	# We consider a connection to use a protocol X if the analyzer for X
-	# is still active (i) after an interval of minimum_duration, or (ii)
-	# after a payload volume of minimum_volume, or (iii) at the end of the
-	# connection.
-	option minimum_duration = 30 secs;
-	option minimum_volume = 4e3;	# bytes
 
-	# How often to check the size of the connection.
+
+
+
+	option minimum_duration = 30 secs;
+	option minimum_volume = 4e3;
+
+
 	const check_interval = 5 secs;
 
-	# Entry point for other analyzers to report that they recognized
-	# a certain (sub-)protocol.
+
+
 	global found_protocol: function(c: connection, analyzer: AllAnalyzers::Tag,
 					protocol: string);
 
-	# Table keeping reported (server, port, analyzer) tuples (and their
-	# reported sub-protocols).
+
+
 	global servers: table[addr, port, string] of set[string]
 				&read_expire = 14 days;
 
-	## Non-standard protocol port detection finalization hook.
+
 	global finalize_protocol_detection: Conn::RemovalHook;
 }
 
-# Table that tracks currently active dynamic analyzers per connection.
+
 global conns: table[conn_id] of set[AllAnalyzers::Tag];
 
-# Table of reports by other analyzers about the protocol used in a connection.
+
 global protocols: table[conn_id] of set[string];
 
 type protocol : record {
-	a: string;	# analyzer name
-	sub: string;	# "sub-protocols" reported by other sources
+	a: string;
+	sub: string;
 };
 
 function get_protocol(c: connection, a: AllAnalyzers::Tag) : protocol
@@ -119,8 +119,8 @@ function do_notice(c: connection, a: AllAnalyzers::Tag, d: dir)
 		$msg=fmt("%s %s on port %s", id_string(c$id), s, c$id$resp_p),
 		$sub=s, $conn=c));
 
-	# We report multiple Server_Found's per host if we find a new
-	# sub-protocol.
+
+
 	local known = [c$id$resp_h, c$id$resp_p, p$a] in servers;
 
 	local newsub = F;
@@ -144,7 +144,7 @@ function do_notice(c: connection, a: AllAnalyzers::Tag, d: dir)
 
 function report_protocols(c: connection)
 	{
-	# We only report the connection if both sides have transferred data.
+
 	if ( c$resp$size == 0 || c$orig$size == 0 )
 		{
 		delete conns[c$id];
@@ -194,7 +194,7 @@ hook finalize_protocol_detection(c: connection)
 		return;
 		}
 
-	# Reports all analyzers that have remained to the end.
+
 	report_protocols(c);
 	}
 
@@ -205,7 +205,7 @@ event analyzer_confirmation_info(atype: AllAnalyzers::Tag, info: AnalyzerConfirm
 
 	local c = info$c;
 
-	# Don't report anything running on a well-known port.
+
 	if ( c$id$resp_p in Analyzer::registered_ports(atype) )
 		return;
 
@@ -224,7 +224,7 @@ event analyzer_confirmation_info(atype: AllAnalyzers::Tag, info: AnalyzerConfirm
 		}
 	}
 
-# If an analyzer failed for a connection, remove it from the tracking table.
+
 event analyzer_failed(ts: time, atype: AllAnalyzers::Tag, info: AnalyzerViolationInfo)
 	{
 	if ( ! is_protocol_analyzer(atype) )
@@ -232,8 +232,8 @@ event analyzer_failed(ts: time, atype: AllAnalyzers::Tag, info: AnalyzerViolatio
 
 	local c = info$c;
 
-	# Only remove failed analyzers if they happen before the
-	# configured reporting thresholds.
+
+
 	local duration = network_time() - c$start_time;
 	local size = c$resp$size + c$orig$size;
 
@@ -246,7 +246,7 @@ event analyzer_failed(ts: time, atype: AllAnalyzers::Tag, info: AnalyzerViolatio
 
 function found_protocol(c: connection, atype: AllAnalyzers::Tag, protocol: string)
 	{
-	# Don't report anything running on a well-known port.
+
 	if ( c$id$resp_p in Analyzer::registered_ports(atype) )
 		return;
 

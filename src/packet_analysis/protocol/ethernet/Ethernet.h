@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -21,4 +21,4 @@ private:
     zeek_uint_t llc_forwarding_key = 0;
 };
 
-} // namespace zeek::packet_analysis::Ethernet
+}

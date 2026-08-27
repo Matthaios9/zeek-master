@@ -30,12 +30,12 @@ export {
 		["3919286a-b10c-11d0-9ba8-00c04fd92ef5"] = "dssetup",
 		["12345678-1234-abcd-ef00-0123456789ab"] = "spoolss",
 
-		# Exchange
+
 		["1544f5e0-613c-11d1-93df-00c04fd7bd09"] = "exchange_rfr",
 		["f5cc5a18-4264-101a-8c59-08002b2f8426"] = "nspi",
 		["a4f1db00-ca47-1067-b31f-00dd010662da"] = "exchange_mapi",
 
-		# IWbem
+
 		["9556dc99-828c-11cf-a37e-00aa003240c7"] = "IWbemServices",
 		["f309ad18-d86a-11d0-a075-00c04fb68820"] = "IWbemLevel1Login",
 		["d4781cd6-e5d3-44df-ad94-930efe48a887"] = "IWbemLoginClientID",
@@ -71,7 +71,7 @@ export {
 		["0d72a7d4-6148-11d1-b4aa-00c04fb66ea0"] = "ICertProtect",
 		["f50aac00-c7f3-428e-a022-a6b71bfb9d43"] = "ICatDBSvc",
 		["338cd001-2244-31f1-aaaa-900038001003"] = "winreg",
-		["3dde7c30-165d-11d1-ab8f-00805f14db40"] = "BackupKey", # https://msdn.microsoft.com/en-us/library/cc224123.aspx
+		["3dde7c30-165d-11d1-ab8f-00805f14db40"] = "BackupKey",
 		["3c4728c5-f0ab-448b-bda1-6ce01eb0a6d5"] = "RpcSrvDHCPC",
 		["3c4728c5-f0ab-448b-bda1-6ce01eb0a6d6"] = "dhcpcsvc6",
 		["2f59a331-bf7d-48cb-9ec5-7c090d76e8b8"] = "lcrpc",
@@ -89,7 +89,7 @@ export {
 		["83da7c00-e84f-11d2-9807-00c04f8ec850"] = "sfcapi",
 		["2f5f3220-c126-1076-b549-074d078619da"] = "nddeapi",
 
-		# Added from BZAR
+
 		["0b1c2170-5732-4e0e-8cd3-d9b16f3b84d7"] = "authzr",
 		["e3d0d746-d2af-40fd-8a7a-0d7078bb7092"] = "BitsPeerAuth",
 		["b97db8b2-4c63-11cf-bff6-08002be23f2f"] = "clusapi",
@@ -236,17 +236,17 @@ export {
 
 	} &redef &default=function(uuid: string): string { return fmt("unknown-%s", uuid); };
 
-	## This table is to map pipe names to the most common
-	## service used over that pipe.  It helps in cases
-	## where the pipe binding wasn't seen.
+
+
+
 	const pipe_name_to_common_uuid: table[string] of string = {
 		["winreg"] = "338cd001-2244-31f1-aaaa-900038001003",
 		["spoolss"] = "12345678-1234-abcd-ef00-0123456789ab",
 		["srvsvc"] = "4b324fc8-1670-01d3-1278-5a47bf6ee188",
 	} &redef;
 
-	## ``auth_type`` numeric codes as listed in
-	## MS-RPCE Security Providers <https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-rpce/d4097450-c62f-484b-872f-ddf59a7a0d36>.
+
+
 	const auth_types: table[count] of string = {
 		[0x00] = "RPC_C_AUTHN_NONE",
 		[0x09] = "RPC_C_AUTHN_GSS_NEGOTIATE",
@@ -257,8 +257,8 @@ export {
 		[0xFF] = "RPC_C_AUTHN_DEFAULT",
 	} &redef &default=function(i: count): string { return fmt("unknown-%d", i); };
 
-	## ``auth_level`` numeric codes as listed in
-	## MS-RPCE Authentication Levels <https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-rpce/425a7c53-c33a-4868-8e5b-2a850d40dc73>`.
+
+
 	const auth_levels: table[count] of string = {
 		[0x00] = "RPC_C_AUTHN_LEVEL_DEFAULT",
 		[0x01] = "RPC_C_AUTHN_LEVEL_NONE",
@@ -270,25 +270,25 @@ export {
 	} &redef &default=function(i: count): string { return fmt("unknown-%d", i); };
 
 	const operations: table[string,count] of string = {
-		# atsvc
+
 		["1ff70682-0a51-30e8-076d-740be8cee98b",0x00] = "NetrJobAdd",
 		["1ff70682-0a51-30e8-076d-740be8cee98b",0x01] = "NetrJobDel",
 		["1ff70682-0a51-30e8-076d-740be8cee98b",0x02] = "NetrJobEnum",
 		["1ff70682-0a51-30e8-076d-740be8cee98b",0x03] = "NetrJobGetInfo",
 
-		# sasec
+
 		["378e52b0-c0a9-11cf-822d-00aa0051e40f",0x00] = "SASetAccountInformation",
 		["378e52b0-c0a9-11cf-822d-00aa0051e40f",0x01] = "SASetNSAccountInformation",
 		["378e52b0-c0a9-11cf-822d-00aa0051e40f",0x02] = "SAGetNSAccountInformation",
 		["378e52b0-c0a9-11cf-822d-00aa0051e40f",0x03] = "SAGetAccountInformation",
 
-		# idletask
+
 		["0a74ef1c-41a4-4e06-83ae-dc74fb1cdd53",0x00] = "ItSrvRegisterIdleTask",
 		["0a74ef1c-41a4-4e06-83ae-dc74fb1cdd53",0x01] = "ItSrvUnregisterIdleTask",
 		["0a74ef1c-41a4-4e06-83ae-dc74fb1cdd53",0x02] = "ItSrvProcessIdleTasks",
 		["0a74ef1c-41a4-4e06-83ae-dc74fb1cdd53",0x03] = "ItSrvSetDetectionParameters",
 
-		# ITaskSchedulerService
+
 		["86d35949-83c9-4044-b424-db363231fd0c",0x00] = "SchRpcHighestVersion",
 		["86d35949-83c9-4044-b424-db363231fd0c",0x01] = "SchRpcRegisterTask",
 		["86d35949-83c9-4044-b424-db363231fd0c",0x02] = "SchRpcRetrieveTask",
@@ -310,7 +310,7 @@ export {
 		["86d35949-83c9-4044-b424-db363231fd0c",0x12] = "SchRpcGetNumberOfMissedRuns",
 		["86d35949-83c9-4044-b424-db363231fd0c",0x13] = "SchRpcEnableTask",
 
-		# IObjectExporter
+
 		["99fcfec4-5260-101b-bbcb-00aa0021347a",0x00] = "ResolveOxid",
 		["99fcfec4-5260-101b-bbcb-00aa0021347a",0x01] = "SimplePing",
 		["99fcfec4-5260-101b-bbcb-00aa0021347a",0x02] = "ComplexPing",
@@ -318,10 +318,10 @@ export {
 		["99fcfec4-5260-101b-bbcb-00aa0021347a",0x04] = "ResolveOxid2",
 		["99fcfec4-5260-101b-bbcb-00aa0021347a",0x05] = "ServerAlive2",
 
-		# IActivation
+
 		["4d9f4ab8-7d1c-11cf-861e-0020af6e7c57",0x00] = "RemoteActivation",
 
-		# nspi
+
 		["f5cc5a18-4264-101a-8c59-08002b2f8426",0x00] = "NspiBind",
 		["f5cc5a18-4264-101a-8c59-08002b2f8426",0x01] = "NspiUnbind",
 		["f5cc5a18-4264-101a-8c59-08002b2f8426",0x02] = "NspiUpdateStat",
@@ -343,7 +343,7 @@ export {
 		["f5cc5a18-4264-101a-8c59-08002b2f8426",0x13] = "NspiResolveNames",
 		["f5cc5a18-4264-101a-8c59-08002b2f8426",0x14] = "NspiResolveNamesW",
 
-		# IWbemServices
+
 		["9556dc99-828c-11cf-a37e-00aa003240c7",0x03] = "OpenNamespace",
 		["9556dc99-828c-11cf-a37e-00aa003240c7",0x04] = "CancelAsyncCall",
 		["9556dc99-828c-11cf-a37e-00aa003240c7",0x05] = "QueryObjectSink",
@@ -368,13 +368,13 @@ export {
 		["9556dc99-828c-11cf-a37e-00aa003240c7",0x18] = "ExecMethod",
 		["9556dc99-828c-11cf-a37e-00aa003240c7",0x19] = "ExecMethodAsync",
 
-		# IWbemLevel1Login
+
 		["f309ad18-d86a-11d0-a075-00c04fb68820",0x03] = "EstablishPosition",
 		["f309ad18-d86a-11d0-a075-00c04fb68820",0x04] = "RequestChallenge",
 		["f309ad18-d86a-11d0-a075-00c04fb68820",0x05] = "WBEMLogin",
 		["f309ad18-d86a-11d0-a075-00c04fb68820",0x06] = "NTLMLogin",
 
-		# FrsRpc
+
 		["f5cc59b4-4264-101a-8c59-08002b2f8426",0x00] = "FrsRpcSendCommPkt",
 		["f5cc59b4-4264-101a-8c59-08002b2f8426",0x01] = "FrsRpcVerifyPromotionParent",
 		["f5cc59b4-4264-101a-8c59-08002b2f8426",0x02] = "FrsRpcStartPromotionParent",
@@ -387,7 +387,7 @@ export {
 		["f5cc59b4-4264-101a-8c59-08002b2f8426",0x09] = "FrsBackupComplete",
 		["f5cc59b4-4264-101a-8c59-08002b2f8426",0x0a] = "FrsRpcVerifyPromotionParentEx",
 
-		# IRemUnknown2
+
 		["00000143-0000-0000-c000-000000000046",0x00] = "QueryInterface",
 		["00000143-0000-0000-c000-000000000046",0x01] = "AddRef",
 		["00000143-0000-0000-c000-000000000046",0x02] = "Release",
@@ -396,14 +396,14 @@ export {
 		["00000143-0000-0000-c000-000000000046",0x05] = "RemRelease",
 		["00000143-0000-0000-c000-000000000046",0x06] = "RemQueryInterface2",
 
-		# IRemoteSCMActivator
+
 		["000001a0-0000-0000-c000-000000000046",0x00] = "QueryInterfaceIRemoteSCMActivator",
 		["000001a0-0000-0000-c000-000000000046",0x01] = "AddRefIRemoteISCMActivator",
 		["000001a0-0000-0000-c000-000000000046",0x02] = "ReleaseIRemoteISCMActivator",
 		["000001a0-0000-0000-c000-000000000046",0x03] = "RemoteGetClassObject",
 		["000001a0-0000-0000-c000-000000000046",0x04] = "RemoteCreateInstance",
 
-		# netlogon
+
 		["12345678-1234-abcd-ef00-01234567cffb",0x00] = "NetrLogonUasLogon",
 		["12345678-1234-abcd-ef00-01234567cffb",0x01] = "NetrLogonUasLogoff",
 		["12345678-1234-abcd-ef00-01234567cffb",0x02] = "NetrLogonSamLogon",
@@ -455,7 +455,7 @@ export {
 		["12345678-1234-abcd-ef00-01234567cffb",0x30] = "DsrUpdateReadOnlyServerDnsRecords",
 		["12345678-1234-abcd-ef00-01234567cffb",0x31] = "NetrChainSetClientAttributes",
 
-		# IRemoteWinspool
+
 		["76f03f96-cdfd-44fc-a22c-64950a001209",0x00] = "RpcAsyncOpenPrinter",
 		["76f03f96-cdfd-44fc-a22c-64950a001209",0x01] = "RpcAsyncAddPrinter",
 		["76f03f96-cdfd-44fc-a22c-64950a001209",0x02] = "RpcAsyncSetJob",
@@ -532,16 +532,16 @@ export {
 		["76f03f96-cdfd-44fc-a22c-64950a001209",0x49] = "RpcAsyncEnumJobNamedProperties",
 		["76f03f96-cdfd-44fc-a22c-64950a001209",0x4a] = "RpcAsyncLogJobInfoForBranchOffice",
 
-		# InitShutdown
+
 		["894de0c0-0d55-11d3-a322-00c04fa321a1",0x00]  = "BaseInitiateShutdown",
 		["894de0c0-0d55-11d3-a322-00c04fa321a1",0x01]  = "BaseAbortShutdown",
 		["894de0c0-0d55-11d3-a322-00c04fa321a1",0x02]  = "BaseInitiateShutdownEx",
 
-		# WindowsShutdown
+
 		["d95afe70-a6d5-4259-822e-2c84da1ddb0d",0x00] = "WsdrInitiateShutdown",
 		["d95afe70-a6d5-4259-822e-2c84da1ddb0d",0x01] = "WsdrAbortShutdown",
 
-		# spoolss
+
 		["12345678-1234-abcd-ef00-0123456789ab",0x00] = "RpcEnumPrinters",
 		["12345678-1234-abcd-ef00-0123456789ab",0x01] = "RpcOpenPrinter",
 		["12345678-1234-abcd-ef00-0123456789ab",0x02] = "RpcSetJob",
@@ -821,7 +821,7 @@ export {
 		["338cd001-2244-31f1-aaaa-900038001003",0x22] = "BaseRegQueryMultipleValues2",
 		["338cd001-2244-31f1-aaaa-900038001003",0x23] = "BaseRegDeleteKeyEx",
 
-		# dssetup
+
 		["3919286a-b10c-11d0-9ba8-00c04fd92ef5",0x00] = "DsRolerGetPrimaryDomainInformation",
 		["3919286a-b10c-11d0-9ba8-00c04fd92ef5",0x01] = "DsRolerDnsNameToFlatName",
 		["3919286a-b10c-11d0-9ba8-00c04fd92ef5",0x02] = "DsRolerDcAsDc",
@@ -834,7 +834,7 @@ export {
 		["3919286a-b10c-11d0-9ba8-00c04fd92ef5",0x09] = "DsRolerUpgradeDownlevelServer",
 		["3919286a-b10c-11d0-9ba8-00c04fd92ef5",0x0a] = "DsRolerAbortDownlevelServerUpgrade",
 
-		# svcctl
+
 		["367abb81-9844-35f1-ad32-98f038001003",0x00] = "CloseServiceHandle",
 		["367abb81-9844-35f1-ad32-98f038001003",0x01] = "ControlService",
 		["367abb81-9844-35f1-ad32-98f038001003",0x02] = "DeleteService",
@@ -894,7 +894,7 @@ export {
 		["367abb81-9844-35f1-ad32-98f038001003",0x3c] = "CreateWowService",
 		["367abb81-9844-35f1-ad32-98f038001003",0x40] = "OpenSCManager2",
 
-		# browser
+
 		["6bffd098-a112-3610-9833-012892020162",0x00] = "BrowserrServerEnum",
 		["6bffd098-a112-3610-9833-012892020162",0x01] = "BrowserrDebugCall",
 		["6bffd098-a112-3610-9833-012892020162",0x02] = "BrowserrQueryOtherDomains",
@@ -908,7 +908,7 @@ export {
 		["6bffd098-a112-3610-9833-012892020162",0x0a] = "BrowserrQueryEmulatedDomains",
 		["6bffd098-a112-3610-9833-012892020162",0x0b] = "BrowserrServerEnumEx",
 
-		# AudioSrv
+
 		["3faf4738-3a21-4307-b46c-fdda9bb8c0d5",0x00] = "gfxCreateZoneFactoriesList",
 		["3faf4738-3a21-4307-b46c-fdda9bb8c0d5",0x01] = "gfxCreateGfxFactoriesList",
 		["3faf4738-3a21-4307-b46c-fdda9bb8c0d5",0x02] = "gfxCreateGfxList",
@@ -925,7 +925,7 @@ export {
 		["3faf4738-3a21-4307-b46c-fdda9bb8c0d5",0x0d] = "winmmAdvisePreferredDeviceChange",
 		["3faf4738-3a21-4307-b46c-fdda9bb8c0d5",0x0e] = "winmmGetPnpInfo",
 
-		# AudioRpc
+
 		["c386ca3e-9061-4a72-821e-498d83be188f",0x00] = "AudioServerConnect",
 		["c386ca3e-9061-4a72-821e-498d83be188f",0x01] = "AudioServerDisconnect",
 		["c386ca3e-9061-4a72-821e-498d83be188f",0x02] = "AudioServerInitialize",
@@ -994,13 +994,13 @@ export {
 		["c386ca3e-9061-4a72-821e-498d83be188f",0x41] = "AudioVolumeStepUp",
 		["c386ca3e-9061-4a72-821e-498d83be188f",0x42] = "AudioVolumeStepDown",
 
-		# dhcpcsvc6
+
 		["3c4728c5-f0ab-448b-bda1-6ce01eb0a6d6",0x00] = "RpcSrvRequestPrefix",
 		["3c4728c5-f0ab-448b-bda1-6ce01eb0a6d6",0x01] = "RpcSrvRenewPrefix",
 		["3c4728c5-f0ab-448b-bda1-6ce01eb0a6d6",0x02] = "RpcSrvReleasePrefix",
 		["3c4728c5-f0ab-448b-bda1-6ce01eb0a6d6",0x03] = "RpcSrvRequestParams",
 
-		# RpcSrvDHCPC
+
 		["3c4728c5-f0ab-448b-bda1-6ce01eb0a6d5",0x00] = "RpcSrvEnableDhcp",
 		["3c4728c5-f0ab-448b-bda1-6ce01eb0a6d5",0x01] = "RpcSrvRenewLease",
 		["3c4728c5-f0ab-448b-bda1-6ce01eb0a6d5",0x02] = "RpcSrvRenewLeaseByBroadcast",
@@ -1029,7 +1029,7 @@ export {
 		["3c4728c5-f0ab-448b-bda1-6ce01eb0a6d5",0x19] = "RpcSrvGetNotificationStatus",
 		["3c4728c5-f0ab-448b-bda1-6ce01eb0a6d5",0x1a] = "RpcSrvGetDhcpServicedConnections",
 
-		# lcrpc
+
 		["2f59a331-bf7d-48cb-9ec5-7c090d76e8b8",0x00] = "RpcLicensingOpenServer",
 		["2f59a331-bf7d-48cb-9ec5-7c090d76e8b8",0x01] = "RpcLicensingCloseServer",
 		["2f59a331-bf7d-48cb-9ec5-7c090d76e8b8",0x02] = "RpcLicensingLoadPolicy",
@@ -1040,7 +1040,7 @@ export {
 		["2f59a331-bf7d-48cb-9ec5-7c090d76e8b8",0x07] = "RpcLicensingGetPolicyInformation",
 		["2f59a331-bf7d-48cb-9ec5-7c090d76e8b8",0x08] = "RpcLicensingDeactivateCurrentPolicy",
 
-		# winstation_rpc
+
 		["5ca4a760-ebb1-11cf-8611-00a0245420ed",0x00] = "RpcWinStationOpenServer",
 		["5ca4a760-ebb1-11cf-8611-00a0245420ed",0x01] = "RpcWinStationCloseServer",
 		["5ca4a760-ebb1-11cf-8611-00a0245420ed",0x02] = "RpcIcaServerPing",
@@ -1118,17 +1118,17 @@ export {
 		["5ca4a760-ebb1-11cf-8611-00a0245420ed",0x4a] = "RpcWinStationCheckAccess",
 		["5ca4a760-ebb1-11cf-8611-00a0245420ed",0x4b] = "RpcWinStationOpenSessionDirectory",
 
-		# NsiS
+
 		["d6d70ef0-0e3b-11cb-acc3-08002b1d29c3",0x00] = "nsi_binding_export",
 		["d6d70ef0-0e3b-11cb-acc3-08002b1d29c3",0x01] = "nsi_binding_unexport",
 
-		# NsiC
+
 		["d3fbb514-0e3b-11cb-8fad-08002b1d29c3",0x00] = "nsi_binding_lookup_begin",
 		["d3fbb514-0e3b-11cb-8fad-08002b1d29c3",0x01] = "nsi_binding_lookup_done",
 		["d3fbb514-0e3b-11cb-8fad-08002b1d29c3",0x02] = "nsi_binding_lookup_next",
 		["d3fbb514-0e3b-11cb-8fad-08002b1d29c3",0x03] = "nsi_mgmt_handle_set_exp_age",
 
-		# NsiM
+
 		["d6d70ef0-0e3b-11cb-acc3-08002b1d29c4",0x00] = "nsi_group_delete",
 		["d6d70ef0-0e3b-11cb-acc3-08002b1d29c4",0x01] = "nsi_group_mbr_add",
 		["d6d70ef0-0e3b-11cb-acc3-08002b1d29c4",0x02] = "nsi_group_mbr_remove",
@@ -1152,7 +1152,7 @@ export {
 		["d6d70ef0-0e3b-11cb-acc3-08002b1d29c4",0x14] = "nsi_mgmt_inq_exp_age",
 		["d6d70ef0-0e3b-11cb-acc3-08002b1d29c4",0x15] = "nsi_mgmt_inq_set_age",
 
-		# eventlog
+
 		["82273fdc-e32a-18c3-3f78-827929dc23ea",0x00] = "ElfrClearELFW",
 		["82273fdc-e32a-18c3-3f78-827929dc23ea",0x01] = "ElfrBackupELFW",
 		["82273fdc-e32a-18c3-3f78-827929dc23ea",0x02] = "ElfrCloseEL",
@@ -1181,11 +1181,11 @@ export {
 		["82273fdc-e32a-18c3-3f78-827929dc23ea",0x19] = "ElfrReportEventExW",
 		["82273fdc-e32a-18c3-3f78-827929dc23ea",0x1a] = "ElfrReportEventExA",
 
-		# ISeclogon
+
 		["12b81e99-f207-4a4c-85d3-77b42f76fd14",0x00] = "SeclCreateProcessWithLogonW",
 		["12b81e99-f207-4a4c-85d3-77b42f76fd14",0x01] = "SeclCreateProcessWithLogonExW",
 
-		# IKeySvc
+
 		["8d0ffe72-d252-11d0-bf8f-00c04fd9126b",0x00] = "KeyrOpenKeyService",
 		["8d0ffe72-d252-11d0-bf8f-00c04fd9126b",0x01] = "KeyrEnumerateProviders",
 		["8d0ffe72-d252-11d0-bf8f-00c04fd9126b",0x02] = "KeyrEnumerateProviderTypes",
@@ -1201,15 +1201,15 @@ export {
 		["8d0ffe72-d252-11d0-bf8f-00c04fd9126b",0x0c] = "KeyrEnroll_V2",
 		["8d0ffe72-d252-11d0-bf8f-00c04fd9126b",0x0d] = "KeyrQueryRequestStatus",
 
-		# IKeySvc2
+
 		["68b58241-c259-4f03-a2e5-a2651dcbc930",0x00] = "KSrSubmitRequest",
 		["68b58241-c259-4f03-a2e5-a2651dcbc930",0x01] = "KSrGetTemplates",
 		["68b58241-c259-4f03-a2e5-a2651dcbc930",0x02] = "KSrGetCAs",
 
-		# ICertProtect
+
 		["0d72a7d4-6148-11d1-b4aa-00c04fb66ea0",0x00] = "SSCertProtectFunction",
 
-		# ICatDBSvc
+
 		["f50aac00-c7f3-428e-a022-a6b71bfb9d43",0x00] = "SSCatDBAddCatalog",
 		["f50aac00-c7f3-428e-a022-a6b71bfb9d43",0x01] = "SSCatDBDeleteCatalog",
 		["f50aac00-c7f3-428e-a022-a6b71bfb9d43",0x02] = "SSCatDBEnumCatalogs",
@@ -1217,7 +1217,7 @@ export {
 		["f50aac00-c7f3-428e-a022-a6b71bfb9d43",0x04] = "KeyrCloseKeyService",
 		["f50aac00-c7f3-428e-a022-a6b71bfb9d43",0x05] = "SSCatDBRebuildDatabase",
 
-		# lsarpc
+
 		["12345778-1234-abcd-ef00-0123456789ab",0x00] = "LsarClose",
 		["12345778-1234-abcd-ef00-0123456789ab",0x01] = "LsarDelete",
 		["12345778-1234-abcd-ef00-0123456789ab",0x02] = "LsarEnumeratePrivileges",
@@ -1316,16 +1316,16 @@ export {
 		["12345778-1234-abcd-ef00-0123456789ab",0x81] = "LsarCreateTrustedDomainEx3",
 		["12345778-1234-abcd-ef00-0123456789ab",0x82] = "LsarOpenPolicy3",
 		["12345778-1234-abcd-ef00-0123456789ab",0x85] = "LsarSetForestTrustInformation2",
-		# msgsvc
+
 		["17fdd703-1827-4e34-79d4-24a55c53bb37",0x00] = "NetrMessageNameAdd",
 		["17fdd703-1827-4e34-79d4-24a55c53bb37",0x01] = "NetrMessageNameEnum",
 		["17fdd703-1827-4e34-79d4-24a55c53bb37",0x02] = "NetrMessageNameGetInfo",
 		["17fdd703-1827-4e34-79d4-24a55c53bb37",0x03] = "NetrMessageNameDel",
 
-		# msgsvcsend
+
 		["5a7b91f8-ff00-11d0-a9b2-00c04fb6e6fc",0x00] = "NetrSendMessage",
 
-		# pnp
+
 		["8d9f4e40-a03d-11ce-8f69-08003e30051b",0x00] = "PNP_Disconnect",
 		["8d9f4e40-a03d-11ce-8f69-08003e30051b",0x01] = "PNP_Connect",
 		["8d9f4e40-a03d-11ce-8f69-08003e30051b",0x02] = "PNP_GetVersion",
@@ -1402,7 +1402,7 @@ export {
 		["8d9f4e40-a03d-11ce-8f69-08003e30051b",0x49] = "PNP_SetActiveService",
 		["8d9f4e40-a03d-11ce-8f69-08003e30051b",0x4a] = "PNP_DeleteServiceDevices",
 
-		# DnsServer
+
 		["50abc2a4-574d-40b3-9d66-ee4fd5fba076",0x00] = "DnssrvOperation",
 		["50abc2a4-574d-40b3-9d66-ee4fd5fba076",0x01] = "DnssrvQuery",
 		["50abc2a4-574d-40b3-9d66-ee4fd5fba076",0x02] = "DnssrvComplexOperation",
@@ -1423,11 +1423,11 @@ export {
 		["50abc2a4-574d-40b3-9d66-ee4fd5fba076",0x11] = "DnssrvUpdateRecord4",
 		["50abc2a4-574d-40b3-9d66-ee4fd5fba076",0x12] = "DnssrvEnumRecords4",
 
-		# lls_license
+
 		["57674cd0-5200-11ce-a897-08002b2e9c6d",0x00] = "LlsrLicenseRequestW",
 		["57674cd0-5200-11ce-a897-08002b2e9c6d",0x01] = "LlsrLicenseFree",
 
-		# llsrpc
+
 		["342cfd40-3c6c-11ce-a893-08002b2e9c6d",0x00] = "LlsrConnect",
 		["342cfd40-3c6c-11ce-a893-08002b2e9c6d",0x01] = "LlsrClose",
 		["342cfd40-3c6c-11ce-a893-08002b2e9c6d",0x02] = "LlsrLicenseEnumW",
@@ -1519,10 +1519,10 @@ export {
 		["342cfd40-3c6c-11ce-a893-08002b2e9c6d",0x58] = "LlsrLocalServiceInfoGetA",
 		["342cfd40-3c6c-11ce-a893-08002b2e9c6d",0x59] = "LlsrCloseEx",
 
-		# ICertPassage
+
 		["91ae6020-9e3c-11cf-8d7c-00aa00c091be",0x00] = "CertServerRequest",
 
-		# netdfs
+
 		["4fc742e0-4a10-11cf-8273-00aa004ae673",0x00] = "NetrDfsManagerGetVersion",
 		["4fc742e0-4a10-11cf-8273-00aa004ae673",0x01] = "NetrDfsAdd",
 		["4fc742e0-4a10-11cf-8273-00aa004ae673",0x02] = "NetrDfsRemove",
@@ -1550,7 +1550,7 @@ export {
 		["4fc742e0-4a10-11cf-8273-00aa004ae673",0x18] = "NetrDfsRemoveRootTarget",
 		["4fc742e0-4a10-11cf-8273-00aa004ae673",0x19] = "NetrDfsGetSupportedNamespaceVersion",
 
-		# sfcapi
+
 		["83da7c00-e84f-11d2-9807-00c04f8ec850",0x00] = "SfcSrv_GetNextProtectedFile",
 		["83da7c00-e84f-11d2-9807-00c04f8ec850",0x01] = "SfcSrv_IsFileProtected",
 		["83da7c00-e84f-11d2-9807-00c04f8ec850",0x02] = "SfcSrv_FileException",
@@ -1560,7 +1560,7 @@ export {
 		["83da7c00-e84f-11d2-9807-00c04f8ec850",0x06] = "SfcSrv_SetDisable",
 		["83da7c00-e84f-11d2-9807-00c04f8ec850",0x07] = "SfcSrv_InstallProtectedFiles",
 
-		# nddeapi
+
 		["2f5f3220-c126-1076-b549-074d078619da",0x00] = "NDdeShareAddW",
 		["2f5f3220-c126-1076-b549-074d078619da",0x01] = "NDdeShareDelA",
 		["2f5f3220-c126-1076-b549-074d078619da",0x02] = "NDdeShareDelW",
@@ -1580,10 +1580,10 @@ export {
 		["2f5f3220-c126-1076-b549-074d078619da",0x10] = "NDdeTrustedShareEnumW",
 		["2f5f3220-c126-1076-b549-074d078619da",0x12] = "NDdeSpecialCommand",
 
-		# BackupKey
+
 		["3dde7c30-165d-11d1-ab8f-00805f14db40",0x00] = "bkrp_BackupKey",
 
-		# wkssvc
+
 		["6bffd098-a112-3610-9833-46c3f87e345a",0x00] = "NetrWkstaGetInfo",
 		["6bffd098-a112-3610-9833-46c3f87e345a",0x01] = "NetrWkstaSetInfo",
 		["6bffd098-a112-3610-9833-46c3f87e345a",0x02] = "NetrWkstaUserEnum",
@@ -1617,7 +1617,7 @@ export {
 		["6bffd098-a112-3610-9833-46c3f87e345a",0x1e] = "NetrEnumerateComputerNames",
 		["6bffd098-a112-3610-9833-46c3f87e345a",0x1f] = "NetrWorkstationResetDfsCache",
 
-		# epmp
+
 		["e1af8308-5d1f-11c9-91a4-08002b14a0fa",0x00] = "ept_insert",
 		["e1af8308-5d1f-11c9-91a4-08002b14a0fa",0x01] = "ept_delete",
 		["e1af8308-5d1f-11c9-91a4-08002b14a0fa",0x02] = "ept_lookup",
@@ -1628,7 +1628,7 @@ export {
 		["e1af8308-5d1f-11c9-91a4-08002b14a0fa",0x07] = "ept_map_auth",
 		["e1af8308-5d1f-11c9-91a4-08002b14a0fa",0x08] = "ept_map_auth_async",
 
-		# exchange_mapi
+
 		["a4f1db00-ca47-1067-b31f-00dd010662da",0x00] = "EcDoConnect",
 		["a4f1db00-ca47-1067-b31f-00dd010662da",0x01] = "EcDoDisconnect",
 		["a4f1db00-ca47-1067-b31f-00dd010662da",0x02] = "EcDoRpc",
@@ -1645,7 +1645,7 @@ export {
 		["a4f1db00-ca47-1067-b31f-00dd010662da",0x0d] = "EcUnknown0xD",
 		["a4f1db00-ca47-1067-b31f-00dd010662da",0x0e] = "EcDoAsyncConnectEx",
 
-		# drsuapi
+
 		["e3514235-4b06-11d1-ab04-00c04fc2dcd2",0x00] = "DRSBind",
 		["e3514235-4b06-11d1-ab04-00c04fc2dcd2",0x01] = "DRSUnbind",
 		["e3514235-4b06-11d1-ab04-00c04fc2dcd2",0x02] = "DRSReplicaSync",
@@ -1678,7 +1678,7 @@ export {
 		["e3514235-4b06-11d1-ab04-00c04fc2dcd2",0x1d] = "IDL_DRSWriteNgcKey",
 		["e3514235-4b06-11d1-ab04-00c04fc2dcd2",0x1e] = "IDL_DRSReadNgcKey",
 
-		# winspipe
+
 		["45f52c28-7f9f-101a-b52b-08002b2efabe",0x00] = "R_WinsRecordAction",
 		["45f52c28-7f9f-101a-b52b-08002b2efabe",0x01] = "R_WinsStatus",
 		["45f52c28-7f9f-101a-b52b-08002b2efabe",0x02] = "R_WinsTrigger",
@@ -1703,14 +1703,14 @@ export {
 		["45f52c28-7f9f-101a-b52b-08002b2efabe",0x15] = "R_WinsDoScavengingNew",
 
 
-		# mgmt
+
 		["afa8bd80-7d8a-11c9-bef4-08002b102989",0x00] = "inq_if_ids",
 		["afa8bd80-7d8a-11c9-bef4-08002b102989",0x01] = "inq_stats",
 		["afa8bd80-7d8a-11c9-bef4-08002b102989",0x02] = "is_server_listening",
 		["afa8bd80-7d8a-11c9-bef4-08002b102989",0x03] = "stop_server_listening",
 		["afa8bd80-7d8a-11c9-bef4-08002b102989",0x04] = "inq_princ_name",
 
-		# authzr - MSDN Ref: Remote Authorization API Protocol [ms-raa]
+
 		["0b1c2170-5732-4e0e-8cd3-d9b16f3b84d7",0x00] = "AuthzrFreeContext",
 		["0b1c2170-5732-4e0e-8cd3-d9b16f3b84d7",0x01] = "AuthzrInitializeContextFromSid",
 		["0b1c2170-5732-4e0e-8cd3-d9b16f3b84d7",0x02] = "AuthrzInitializeCompoundContext",
@@ -1719,10 +1719,10 @@ export {
 		["0b1c2170-5732-4e0e-8cd3-d9b16f3b84d7",0x05] = "AuthrzModifyClaims",
 		["0b1c2170-5732-4e0e-8cd3-d9b16f3b84d7",0x06] = "AuthrzModifySids",
 
-		# BitsPeerAuth - MSDN Ref: BITS Peer-Caching: Peer Authentication Protocol [ms-bpau]
+
 		["e3d0d746-d2af-40fd-8a7a-0d7078bb7092",0x00] = "ExchangePublicKeys",
 
-		# clusapi (v2) - MSDN Ref: Failover Cluster Mgmt API Protocol [ms-cmrp]
+
 		["b97db8b2-4c63-11cf-bff6-08002be23f2f",0x00] = "ApiOpenCluster",
 		["b97db8b2-4c63-11cf-bff6-08002be23f2f",0x01] = "ApiCloseCluster",
 		["b97db8b2-4c63-11cf-bff6-08002be23f2f",0x02] = "ApiSetClusterName",
@@ -1891,7 +1891,7 @@ export {
 		["b97db8b2-4c63-11cf-bff6-08002be23f2f",0xB7] = "ApiAddGroupToGroupSetEx",
 		["b97db8b2-4c63-11cf-bff6-08002be23f2f",0xB8] = "ApiChangeResourceGroupEx",
 
-		# dhcpsrv - MSDN Ref: DHCP Server Mgmt Protocol [ms-dhcpm]
+
 		["6bffd098-a112-3610-9833-46c3f874532d",0x00] = "R_DhcpCreateSubnet",
 		["6bffd098-a112-3610-9833-46c3f874532d",0x01] = "R_DhcpSetSubnetInfo",
 		["6bffd098-a112-3610-9833-46c3f874532d",0x02] = "R_DhcpGetSubnetInfo",
@@ -1944,7 +1944,7 @@ export {
 		["6bffd098-a112-3610-9833-46c3f874532d",0x31] = "R_DhcpGetSubnetInfoVQ",
 		["6bffd098-a112-3610-9833-46c3f874532d",0x32] = "R_DhcpSetSubnetInfoVQ",
 
-		# dhcpsrv2 - MSDN Ref: DHCP Server Mgmt Protocol [ms-dhcpm]
+
 		["5b821720-f63b-11d0-aad2-00c04fc324db",0x00] = "R_DhcpEnumSubnetClientsV5",
 		["5b821720-f63b-11d0-aad2-00c04fc324db",0x01] = "R_DhcpSetMScopeInfo",
 		["5b821720-f63b-11d0-aad2-00c04fc324db",0x02] = "R_DhcpGetMScopeInfo",
@@ -2078,11 +2078,11 @@ export {
 		["5b821720-f63b-11d0-aad2-00c04fc324db",0x83] = "R_DhcpV4CreateClientInfoEx",
 		["5b821720-f63b-11d0-aad2-00c04fc324db",0x84] = "R_DhcpV4GetClientInfoEx",
 
-		# dsaop - MSDN Ref: Directory Replication Service (DRS) Remote Protocol [ms-drsr]
+
 		["7c44d7d4-31d5-424c-bd5e-2b3e1f323d22",0x00] = "IDL_DSAPrepareScript",
 		["7c44d7d4-31d5-424c-bd5e-2b3e1f323d22",0x01] = "IDL_DSAExecuteScript",
 
-		# dscomm - MSDN Ref: Msg Queuing - Directory Service Protocol [ms-mqds]
+
 		["77df7a80-f298-11d0-8358-00a024c480a8",0x00] = "S_DSCreateObject",
 		["77df7a80-f298-11d0-8358-00a024c480a8",0x01] = "S_DSDeleteObject",
 		["77df7a80-f298-11d0-8358-00a024c480a8",0x02] = "S_DSGetProps",
@@ -2112,7 +2112,7 @@ export {
 		["77df7a80-f298-11d0-8358-00a024c480a8",0x1A] = "Opnum26NotUsedOnWire",
 		["77df7a80-f298-11d0-8358-00a024c480a8",0x1B] = "S_DSGetServerPort",
 
-		# dscomm2 - MSDN Ref: Msg Queuing - Directory Service Protocol [ms-mqds]
+
 		["708cca10-9569-11d1-b2a5-0060977d8118",0x00] = "S_DSGetComputerSites",
 		["708cca10-9569-11d1-b2a5-0060977d8118",0x01] = "S_DSGetPropsEx",
 		["708cca10-9569-11d1-b2a5-0060977d8118",0x02] = "S_DSGetPropsGuidEx",
@@ -2123,7 +2123,7 @@ export {
 		["708cca10-9569-11d1-b2a5-0060977d8118",0x07] = "Opnum7NotUsedOnWire",
 		["708cca10-9569-11d1-b2a5-0060977d8118",0x08] = "S_DSGetGCListInDomain",
 
-		# efsrpc - MSDN Ref: Encrypting File System Remote Protocol [ms-efsr]
+
 		["df1941c5-fe89-4e79-bf10-463657acf44d",0x00] = "EfsRpcOpenFileRaw",
 		["df1941c5-fe89-4e79-bf10-463657acf44d",0x01] = "EfsRpcReadFileRaw",
 		["df1941c5-fe89-4e79-bf10-463657acf44d",0x02] = "EfsRpcWriteFileRaw",
@@ -2170,7 +2170,7 @@ export {
 		["df1941c5-fe89-4e79-bf10-463657acf44d",0x2B] = "Opnum43NotUsedOnWire",
 		["df1941c5-fe89-4e79-bf10-463657acf44d",0x2C] = "Opnum44NotUsedOnWire",
 
-		# efsrpc2 - MSDN Ref: Encrypting File System Remote Protocol [ms-efsr]
+
 		["c681d488-d850-11d0-8c52-00c04fd90f7e",0x00] = "EfsRpcOpenFileRaw",
 		["c681d488-d850-11d0-8c52-00c04fd90f7e",0x01] = "EfsRpcReadFileRaw",
 		["c681d488-d850-11d0-8c52-00c04fd90f7e",0x02] = "EfsRpcWriteFileRaw",
@@ -2217,7 +2217,7 @@ export {
 		["c681d488-d850-11d0-8c52-00c04fd90f7e",0x2B] = "Opnum43NotUsedOnWire",
 		["c681d488-d850-11d0-8c52-00c04fd90f7e",0x2C] = "Opnum44NotUsedOnWire",
 
-		# FileServerVssAgent - MSDN Ref: File Server Remote VSS Protocol [ms-fsrvp]
+
 		["a8e0653c-2744-4389-a61d-7373df8b2292",0x00] = "GetSupportedVersion",
 		["a8e0653c-2744-4389-a61d-7373df8b2292",0x01] = "SetContext",
 		["a8e0653c-2744-4389-a61d-7373df8b2292",0x02] = "StartShadowCopySet",
@@ -2232,7 +2232,7 @@ export {
 		["a8e0653c-2744-4389-a61d-7373df8b2292",0x0B] = "DeleteShareMapping",
 		["a8e0653c-2744-4389-a61d-7373df8b2292",0x0C] = "PrepareShadowCopy",
 
-		# FrsTransport - MSDN Ref: DFS Replication Protocol [ms-frs2]
+
 		["897e2e5f-93f3-4376-9c9c-fd2277495c27",0x00] = "CheckConnectivity",
 		["897e2e5f-93f3-4376-9c9c-fd2277495c27",0x01] = "EstablishConnection",
 		["897e2e5f-93f3-4376-9c9c-fd2277495c27",0x02] = "EstablishSession",
@@ -2252,17 +2252,17 @@ export {
 		["897e2e5f-93f3-4376-9c9c-fd2277495c27",0x10] = "RdcGetFileDataAsync",
 		["897e2e5f-93f3-4376-9c9c-fd2277495c27",0x11] = "RdcFileDataTransferKeepAlive",
 
-		# IADProxy - MSDN Ref: DFS Replication Helper Protocol [ms-dfsrh]
+
 		["4bb8ab1d-9ef9-4100-8eb6-dd4b4e418b72",0x03] = "CreateObject",
 		["4bb8ab1d-9ef9-4100-8eb6-dd4b4e418b72",0x04] = "DeleteObject",
 		["4bb8ab1d-9ef9-4100-8eb6-dd4b4e418b72",0x05] = "ModifyObject",
 
-		# IADProxy2 - MSDN Ref: DFS Replication Helper Protocol [ms-dfsrh]
+
 		["c4b0c7d9-abe0-4733-a1e1-9fdedf260c7a",0x06] = "CreateObject",
 		["c4b0c7d9-abe0-4733-a1e1-9fdedf260c7a",0x07] = "DeleteObject",
 		["c4b0c7d9-abe0-4733-a1e1-9fdedf260c7a",0x08] = "ModifyObject",
 
-		# ICertAdminD - MSDN Ref: Certificate Services Remote Administration Protocol [ms-csra]
+
 		["d99e6e71-fc88-11d0-b498-00a0c90312f3",0x03] = "SetExtension",
 		["d99e6e71-fc88-11d0-b498-00a0c90312f3",0x04] = "SetAttributes",
 		["d99e6e71-fc88-11d0-b498-00a0c90312f3",0x05] = "ResubmitRequest",
@@ -2292,7 +2292,7 @@ export {
 		["d99e6e71-fc88-11d0-b498-00a0c90312f3",0x1D] = "BackupGetDynamicFiles",
 		["d99e6e71-fc88-11d0-b498-00a0c90312f3",0x1E] = "RestoreGetDatabaseLocations",
 
-		# ICertAdminD2 - MSDN Ref: Certificate Services Remote Administration Protocol [ms-csra]
+
 		["7fe0d935-dda6-443f-85d0-1cfb58fe41dd",0x1F] = "PublishCRLs",
 		["7fe0d935-dda6-443f-85d0-1cfb58fe41dd",0x20] = "GetCAProperty",
 		["7fe0d935-dda6-443f-85d0-1cfb58fe41dd",0x21] = "SetCAProperty",
@@ -2312,12 +2312,12 @@ export {
 		["7fe0d935-dda6-443f-85d0-1cfb58fe41dd",0x2F] = "GetMyRoles",
 		["7fe0d935-dda6-443f-85d0-1cfb58fe41dd",0x30] = "DeleteRow",
 
-		# ICertRequestD - MSDN Ref: Windows Client Certificate Enrollment Protocol [ms-wcce]
+
 		["d99e6e70-fc88-11d0-b498-00a0c90312f3",0x03] = "Request",
 		["d99e6e70-fc88-11d0-b498-00a0c90312f3",0x04] = "GetCACert",
 		["d99e6e70-fc88-11d0-b498-00a0c90312f3",0x05] = "Ping",
 
-		# ICertRequestD2 - MSDN Ref: Windows Client Certificate Enrollment Protocol [ms-wcce]
+
 		["5422fd3a-d4b8-4cef-a12e-e87d4ca22e90",0x03] = "Request",
 		["5422fd3a-d4b8-4cef-a12e-e87d4ca22e90",0x04] = "GetCACert",
 		["5422fd3a-d4b8-4cef-a12e-e87d4ca22e90",0x05] = "Ping",
@@ -2326,13 +2326,13 @@ export {
 		["5422fd3a-d4b8-4cef-a12e-e87d4ca22e90",0x08] = "GetCAPropertyInfo",
 		["5422fd3a-d4b8-4cef-a12e-e87d4ca22e90",0x09] = "Ping2",
 
-		# IDispatch - MSDN Ref: OLE Automation Protocol [ms-oaut]
+
 		["00020400-0000-0000-c000-000000000046",0x03] = "GetTypeInfoCount",
 		["00020400-0000-0000-c000-000000000046",0x04] = "GetTypeInfo",
 		["00020400-0000-0000-c000-000000000046",0x05] = "GetIDsOfNames",
 		["00020400-0000-0000-c000-000000000046",0x06] = "Invoke",
 
-		# ITypeInfo - MSDN Ref: OLE Automation Protocol [ms-oaut]
+
 		["00020401-0000-0000-c000-000000000046",0x03] = "GetTypeAttr",
 		["00020401-0000-0000-c000-000000000046",0x04] = "GetTypeComp",
 		["00020401-0000-0000-c000-000000000046",0x05] = "GetFuncDesc",
@@ -2347,20 +2347,20 @@ export {
 		["00020401-0000-0000-c000-000000000046",0x11] = "GetMops",
 		["00020401-0000-0000-c000-000000000046",0x12] = "GetContainingTypeLib",
 
-		# IDMNotify - MSDN Ref: Disk Mgmt Remote Protocol [ms-dmrp]
+
 		["d2d79df7-3400-11d0-b40b-00aa005ff586",0x03] = "ObjectsChanged",
 
-		# IDMRemoteServer - MSDN Ref: Disk Mgmt Remote Protocol [ms-dmrp]
+
 		["3a410f21-553f-11d1-8e5e-00a0c92c9d5d",0x03] = "CreateRemoteObject",
 
-		# IEnumWbemClassObject - MSDN Ref: WMI Remote Protocol [ms-wmi]
+
 		["027947e1-d731-11ce-a357-000000000001",0x03] = "Reset",
 		["027947e1-d731-11ce-a357-000000000001",0x04] = "Next",
 		["027947e1-d731-11ce-a357-000000000001",0x05] = "NextAsync",
 		["027947e1-d731-11ce-a357-000000000001",0x06] = "Clone",
 		["027947e1-d731-11ce-a357-000000000001",0x07] = "Skip",
 
-		# IEventService I Eventlog - MSDN Ref: Eventlog Remoting Protocol v6.0 [ms-even6]
+
 		["f6beaff7-1e19-4fbb-9f8f-b89e2018337c",0x00] = "EvtRpcRegisterRemoteSubscription",
 		["f6beaff7-1e19-4fbb-9f8f-b89e2018337c",0x01] = "EvtRpcRemoteSubscriptionNextAsync",
 		["f6beaff7-1e19-4fbb-9f8f-b89e2018337c",0x02] = "EvtRpcRemoteSubscriptionNext",
@@ -2391,7 +2391,7 @@ export {
 		["f6beaff7-1e19-4fbb-9f8f-b89e2018337c",0x1B] = "EvtRpcGetNextEventMetadata",
 		["f6beaff7-1e19-4fbb-9f8f-b89e2018337c",0x1C] = "EvtRpcGetClassicLogDisplayName",
 
-		# IIISApplicationAdmin - MSDN Ref: IIS IMSAdminBaseW Remote Protocol [ms-imsa]
+
 		["7c4e1804-e342-483d-a43e-a850cfcc8d18",0x03] = "CreateApplication",
 		["7c4e1804-e342-483d-a43e-a850cfcc8d18",0x04] = "DeleteApplication",
 		["7c4e1804-e342-483d-a43e-a850cfcc8d18",0x05] = "CreateApplicationPool",
@@ -2400,7 +2400,7 @@ export {
 		["7c4e1804-e342-483d-a43e-a850cfcc8d18",0x08] = "RecycleApplicationPool",
 		["7c4e1804-e342-483d-a43e-a850cfcc8d18",0x09] = "GetProcessMode",
 
-		# IIISCertObj - MSDN Ref: IIS IMSAdminBaseW Remote Protocol [ms-imsa]
+
 		["bd0c73bc-805b-4043-9c30-9a28d64dd7d2",0x07] = "Opnum7NotUsedOnWire",
 		["bd0c73bc-805b-4043-9c30-9a28d64dd7d2",0x08] = "Opnum8NotUsedOnWire",
 		["bd0c73bc-805b-4043-9c30-9a28d64dd7d2",0x09] = "Opnum9NotUsedOnWire",
@@ -2421,23 +2421,23 @@ export {
 		["bd0c73bc-805b-4043-9c30-9a28d64dd7d2",0x18] = "Opnum24NotUsedOnWire",
 		["bd0c73bc-805b-4043-9c30-9a28d64dd7d2",0x19] = "ExportToBlob",
 
-		# IIisServiceControl - MSDN Ref: IIS Service Control Protocol [ms-iiss]
+
 		["e8fb8620-588f-11d2-9d61-00c04f79c5fe",0x07] = "Stop",
 		["e8fb8620-588f-11d2-9d61-00c04f79c5fe",0x08] = "Start",
 		["e8fb8620-588f-11d2-9d61-00c04f79c5fe",0x09] = "Reboot",
 		["e8fb8620-588f-11d2-9d61-00c04f79c5fe",0x0A] = "Status",
 		["e8fb8620-588f-11d2-9d61-00c04f79c5fe",0x0B] = "Kill",
 
-		# IManagedObject - MSDN Ref: IManagedObject Interface Protocol [ms-ioi]
+
 		["c3fcc19e-a970-11d2-8b5a-00a0c9b7c9c4",0x03] = "GetSerializedBuffer",
 		["c3fcc19e-a970-11d2-8b5a-00a0c9b7c9c4",0x04] = "GetObjectIdentify",
 
-		# IManageTelnetSessions - MSDN Ref: Telnet Server Remote Administration Protocol [ms-tsrap]
+
 		["034634fd-ba3f-11d1-856a-00a0c944138c",0x07] = "GetTelnetSessions",
 		["034634fd-ba3f-11d1-856a-00a0c944138c",0x08] = "TerminateSession",
 		["034634fd-ba3f-11d1-856a-00a0c944138c",0x09] = "SendMsgToASession",
 
-		# IMSAdminBase2W - MSDN Ref: IIS IMSAdminBaseW Remote Protocol [ms-imsa]
+
 		["8298d101-f992-43b7-8eca-5052d885b995",0x22] = "BackupWithPasswrd",
 		["8298d101-f992-43b7-8eca-5052d885b995",0x23] = "RestoreWithPasswrd",
 		["8298d101-f992-43b7-8eca-5052d885b995",0x24] = "Export",
@@ -2445,10 +2445,10 @@ export {
 		["8298d101-f992-43b7-8eca-5052d885b995",0x26] = "RestoreHistory",
 		["8298d101-f992-43b7-8eca-5052d885b995",0x27] = "EnumHistory",
 
-		# IMSAdminBase3W - MSDN Ref: IIS IMSAdminBaseW Remote Protocol [ms-imsa]
+
 		["f612954d-3b0b-4c56-9563-227b7be624b4",0x28] = "GetChildPaths",
 
-		# IMSAdminBaseW - MSDN Ref: IIS IMSAdminBaseW Remote Protocol [ms-imsa]
+
 		["70b51430-b6ca-11d0-b9b9-00a0c922e750",0x03] = "AddKey",
 		["70b51430-b6ca-11d0-b9b9-00a0c922e750",0x04] = "DeleteKey",
 		["70b51430-b6ca-11d0-b9b9-00a0c922e750",0x05] = "DeleteChildKEys",
@@ -2481,7 +2481,7 @@ export {
 		["70b51430-b6ca-11d0-b9b9-00a0c922e750",0x20] = "UnmarshalInterface",
 		["70b51430-b6ca-11d0-b9b9-00a0c922e750",0x21] = "R_GetServerGuid",
 
-		# inetinfo - MSDN Ref: IIS Inetinfo Remote Protocol [ms-irp]
+
 		["82ad4280-036b-11cf-972c-00aa006887b0",0x00] = "R_InetInfoGetVersion",
 		["82ad4280-036b-11cf-972c-00aa006887b0",0x01] = "R_InetInfoGetAdminInformation",
 		["82ad4280-036b-11cf-972c-00aa006887b0",0x02] = "R_InsetInfoGetSites",
@@ -2501,16 +2501,16 @@ export {
 		["82ad4280-036b-11cf-972c-00aa006887b0",0x10] = "Opnum16NotUsedOnWire",
 		["82ad4280-036b-11cf-972c-00aa006887b0",0x11] = "Opnum17NotUsedOnWire",
 
-		# IRemoteDispatch - MSDN Ref: IManagedObject Interface Protocol [ms-ioi]
+
 		["6619a740-8154-43be-a186-0319578e02db",0x07] = "RemoteDispatchAutoDone",
 		["6619a740-8154-43be-a186-0319578e02db",0x08] = "RemoteDispatchNotAutoDone",
 
-		# IRemUnknown - MSDN Ref: DCOM Remote Protocol [ms-dcom]
+
 		["00000131-0000-0000-c000-000000000046",0x03] = "RemQueryInterface",
 		["00000131-0000-0000-c000-000000000046",0x04] = "RemAddRef",
 		["00000131-0000-0000-c000-000000000046",0x05] = "RemRelease",
 
-		# IResourceManager - MSDN Ref: Windows System Resource Manager Protocol [ms-wsrm]
+
 		["c5cebee2-9df5-4cdd-a08c-c2471bc144b4",0x07] = "RetrieveEventList",
 		["c5cebee2-9df5-4cdd-a08c-c2471bc144b4",0x08] = "GetSystemAffinity",
 		["c5cebee2-9df5-4cdd-a08c-c2471bc144b4",0x09] = "ImportXMLFiles",
@@ -2522,16 +2522,16 @@ export {
 		["c5cebee2-9df5-4cdd-a08c-c2471bc144b4",0x0F] = "GetServerName",
 		["c5cebee2-9df5-4cdd-a08c-c2471bc144b4",0x10] = "GetCurrentMemory",
 
-		# IResourceManager2 - MSDN Ref: Windows System Resource Manager Protocol [ms-wsrm]
+
 		["2a3eb639-d134-422d-90d8-aaa1b5216202",0x07] = "ExportObjects",
 		["2a3eb639-d134-422d-90d8-aaa1b5216202",0x08] = "GetImportConflicts",
 		["2a3eb639-d134-422d-90d8-aaa1b5216202",0x09] = "ImportXml",
 		["2a3eb639-d134-422d-90d8-aaa1b5216202",0x0A] = "ExportXml",
 
-		# ISDKey - MSDN Ref: Group Key Distribution Protocol [ms-gkdi]
+
 		["b9785960-524f-11df-8b6d-83dcded72085",0x00] = "GetKey",
 
-		# IServerHealthReport - MSDN Ref: DFS Replication Helper Protocol [ms-dfsrh]
+
 		["e65e8028-83e8-491b-9af7-aaf6bd51a0ce",0x03] = "GetReport",
 		["e65e8028-83e8-491b-9af7-aaf6bd51a0ce",0x04] = "GetCompressedReport",
 		["e65e8028-83e8-491b-9af7-aaf6bd51a0ce",0x05] = "GetRawReportEx",
@@ -2539,33 +2539,33 @@ export {
 		["e65e8028-83e8-491b-9af7-aaf6bd51a0ce",0x07] = "Opnum7NotUsedOnWire",
 		["e65e8028-83e8-491b-9af7-aaf6bd51a0ce",0x08] = "GetReferenceBacklogCounts",
 
-		# IServerHealthReport2 - MSDN Ref: DFS Replication Helper Protocol [ms-dfsrh]
+
 		["20d15747-6c48-4254-a358-65039fd8c63c",0x09] = "GetReport",
 		["20d15747-6c48-4254-a358-65039fd8c63c",0x10] = "GetCompressedReport",
 
-		# IServicedComponentInfo - MSDN Ref: IManagedObject Interface Protocol [ms-ioi]
+
 		["8165b19e-8d3a-4d0b-80c8-97de310db583",0x03] = "GetComponentInfo",
 
-		# ITpmVirtualSmartCardManager - MSDN Ref: TPM Virtual Smart Card Mgmt Protocol [ms-tpmvsc]
+
 		["112b1dff-d9dc-41f7-869f-d67fee7cb591",0x03] = "CreateVirtualSmartCard",
 		["112b1dff-d9dc-41f7-869f-d67fee7cb591",0x04] = "DestroyVirtualSmartCard",
 
-		# ITpmVirtualSmartCardManager2 - MSDN Ref: TPM Virtual Smart Card Mgmt Protocol [ms-tpmvsc]
+
 		["fdf8a2b9-02de-47f4-bc26-aa85ab5e5267",0x05] = "CreateVirtualSmartCardWithPinPolicy",
 
-		# ITpmVirtualSmartCardManager3 - MSDN Ref: TPM Virtual Smart Card Mgmt Protocol [ms-tpmvsc]
+
 		["3c745a97-f375-4150-be17-5950f694c699",0x06] = "CreateVirtualSmartCardWithAttestation",
 
-		# ITpmVirtualSmartCardManagerStatusCallback - MSDN Ref: TPM Virtual Smart Card Mgmt Protocol [ms-tpmvsc]
+
 		["1a1bb35f-abb8-451c-a1ae-33d98f1bef4a",0x03] = "ReportProgress",
 		["1a1bb35f-abb8-451c-a1ae-33d98f1bef4a",0x04] = "ReportError",
 
-		# IUnknown - MSDN Ref: DCOM Remote Protocol [ms-dcom]
+
 		["00000000-0000-0000-c000-000000000046",0x00] = "Opnum0NotUsedOnWire",
 		["00000000-0000-0000-c000-000000000046",0x01] = "Opnum1NotUsedOnWire",
 		["00000000-0000-0000-c000-000000000046",0x02] = "Opnum2NotUsedOnWire",
 
-		# IVolumeClient - MSDN Ref: Disk Mgmt Remote Protocol [ms-dmrp]
+
 		["d2d79df5-3400-11d0-b40b-00aa005ff586",0x03] = "EnumDisksEx",
 		["d2d79df5-3400-11d0-b40b-00aa005ff586",0x04] = "EnumDiskRegionsEx",
 		["d2d79df5-3400-11d0-b40b-00aa005ff586",0x05] = "CreatePartition",
@@ -2646,10 +2646,10 @@ export {
 		["d2d79df5-3400-11d0-b40b-00aa005ff586",0x50] = "AddAccessPath",
 		["d2d79df5-3400-11d0-b40b-00aa005ff586",0x51] = "DeleteAccessPath",
 
-		# IVolumeClient2 - MSDN Ref: Disk Mgmt Remote Protocol [ms-dmrp]
+
 		["4bdafc52-fe6a-11d2-93f8-00105a11164a",0x03] = "GetMaxAdjustedFreeSpace",
 
-		# IVolumeClient3 - MSDN Ref: Disk Mgmt Remote Protocol [ms-dmrp]
+
 		["135698d2-3a37-4d26-99df-e2bb6ae3ac61",0x03] = "EnumDisksEx",
 		["135698d2-3a37-4d26-99df-e2bb6ae3ac61",0x04] = "EnumDiskRegionsEx",
 		["135698d2-3a37-4d26-99df-e2bb6ae3ac61",0x05] = "CreatePartition",
@@ -2727,11 +2727,11 @@ export {
 		["135698d2-3a37-4d26-99df-e2bb6ae3ac61",0x4D] = "AddAccessPath",
 		["135698d2-3a37-4d26-99df-e2bb6ae3ac61",0x4E] = "DeleteAccessPath",
 
-		# IVolumeClient4 - MSDN Ref: Disk Mgmt Remote Protocol [ms-dmrp]
+
 		["deb01010-3a37-4d26-99df-e2bb6ae3ac61",0x03] = "RefreshEx",
 		["deb01010-3a37-4d26-99df-e2bb6ae3ac61",0x04] = "GetVolumeDeviceName",
 
-		# IVssDifferentialSoftwareSnapshotMgmt - MSDN Ref: Shadow Copy Mgmt Protocol [ms-scmp]
+
 		["214a0f28-b737-4026-b847-4f9e37d79529",0x03] = "AddDiffArea",
 		["214a0f28-b737-4026-b847-4f9e37d79529",0x04] = "ChangeDiffAreaMaximizeSize",
 		["214a0f28-b737-4026-b847-4f9e37d79529",0x05] = "QueryVolumesSupportedForDiffAreas",
@@ -2739,24 +2739,24 @@ export {
 		["214a0f28-b737-4026-b847-4f9e37d79529",0x07] = "QueryDiffAreaOnVolume",
 		["214a0f28-b737-4026-b847-4f9e37d79529",0x08] = "Opnum08NotUsedOnWire",
 
-		# IVssEnumMgmtObject - MSDN Ref: Shadow Copy Mgmt Protocol [ms-scmp]
+
 		["01954e6b-9254-4e6e-808c-c9e05d007696",0x03] = "Next",
 		["01954e6b-9254-4e6e-808c-c9e05d007696",0x04] = "Skip",
 		["01954e6b-9254-4e6e-808c-c9e05d007696",0x05] = "Reset",
 		["01954e6b-9254-4e6e-808c-c9e05d007696",0x06] = "Clone",
 
-		# IVssEnumObject - MSDN Ref: Shadow Copy Mgmt Protocol [ms-scmp]
+
 		["ae1c7110-2f60-11d3-8a39-00c04f72d8e3",0x03] = "Next",
 		["ae1c7110-2f60-11d3-8a39-00c04f72d8e3",0x04] = "Skip",
 		["ae1c7110-2f60-11d3-8a39-00c04f72d8e3",0x05] = "Reset",
 		["ae1c7110-2f60-11d3-8a39-00c04f72d8e3",0x06] = "Clone",
 
-		# IVssSnapshotMgmt - MSDN Ref: Shadow Copy Mgmt Protocol [ms-scmp]
+
 		["fa7df749-66e7-4986-a27f-e2f04ae53772",0x03] = "GetProviderMgmtInterface",
 		["fa7df749-66e7-4986-a27f-e2f04ae53772",0x04] = "QueryVolumesSupportedForSnapshots",
 		["fa7df749-66e7-4986-a27f-e2f04ae53772",0x05] = "QuerySnapshotsByVolume",
 
-		# IWamAdmin - MSDN Ref: IIS IMSAdminBaseW Remote Protocol [ms-imsa]
+
 		["29822ab7-f302-11d0-9953-00c04fd919c1",0x03] = "AppCreate",
 		["29822ab7-f302-11d0-9953-00c04fd919c1",0x04] = "AppDelete",
 		["29822ab7-f302-11d0-9953-00c04fd919c1",0x05] = "AppUnLoad",
@@ -2764,10 +2764,10 @@ export {
 		["29822ab7-f302-11d0-9953-00c04fd919c1",0x07] = "AppDeleteRecoverable",
 		["29822ab7-f302-11d0-9953-00c04fd919c1",0x08] = "AppRecover",
 
-		# IWamAdmin2 - MSDN Ref: IIS IMSAdminBaseW Remote Protocol [ms-imsa]
+
 		["29822ab8-f302-11d0-9953-00c04fd919c1",0x09] = "AppCreate2",
 
-		# IWRMAccounting - MSDN Ref: Windows System Resource Manager Protocol [ms-wsrm]
+
 		["4f7ca01c-a9e5-45b6-b142-2332a1339c1d",0x07] = "CreateAccountingDb",
 		["4f7ca01c-a9e5-45b6-b142-2332a1339c1d",0x08] = "GetAccountingMetadata",
 		["4f7ca01c-a9e5-45b6-b142-2332a1339c1d",0x09] = "ExecuteAccountingQuery",
@@ -2783,7 +2783,7 @@ export {
 		["4f7ca01c-a9e5-45b6-b142-2332a1339c1d",0x13] = "CheckAccountingConnection",
 		["4f7ca01c-a9e5-45b6-b142-2332a1339c1d",0x14] = "SetClientPermissions",
 
-		# IWRMCalendar - MSDN Ref: Windows System Resource Manager Protocol [ms-wsrm]
+
 		["481e06cf-ab04-4498-8ffe-124a0a34296d",0x07] = "GetCalendarInfo",
 		["481e06cf-ab04-4498-8ffe-124a0a34296d",0x08] = "CreateCalendar",
 		["481e06cf-ab04-4498-8ffe-124a0a34296d",0x09] = "ModifyCalendar",
@@ -2799,7 +2799,7 @@ export {
 		["481e06cf-ab04-4498-8ffe-124a0a34296d",0x13] = "MoveAfterCalendar",
 		["481e06cf-ab04-4498-8ffe-124a0a34296d",0x14] = "GetServerTimeZone",
 
-		# IWRMConfig - MSDN Ref: Windows System Resource Manager Protocol [ms-wsrm]
+
 		["21546ae8-4da5-445e-987f-627fea39c5e8",0x07] = "GetConfig",
 		["21546ae8-4da5-445e-987f-627fea39c5e8",0x08] = "SetConfig",
 		["21546ae8-4da5-445e-987f-627fea39c5e8",0x09] = "IsEnabled",
@@ -2810,7 +2810,7 @@ export {
 		["21546ae8-4da5-445e-987f-627fea39c5e8",0x0E] = "IsWSRMActivated",
 		["21546ae8-4da5-445e-987f-627fea39c5e8",0x0F] = "RestoreExclusionList",
 
-		# IWRMMachineGroup - MSDN Ref: Windows System Resource Manager Protocol [ms-wsrm]
+
 		["943991a5-b3fe-41fa-9696-7f7b656ee34b",0x07] = "CreateMachineGroup",
 		["943991a5-b3fe-41fa-9696-7f7b656ee34b",0x08] = "GetMachineGroupInfo",
 		["943991a5-b3fe-41fa-9696-7f7b656ee34b",0x09] = "ModifyMachineGroup",
@@ -2821,7 +2821,7 @@ export {
 		["943991a5-b3fe-41fa-9696-7f7b656ee34b",0x0E] = "ModifyMachineInfo",
 		["943991a5-b3fe-41fa-9696-7f7b656ee34b",0x0F] = "DeleteMachine",
 
-		# IWRMPolicy - MSDN Ref: Windows System Resource Manager Protocol [ms-wsrm]
+
 		["59602eb6-57b0-4fd8-aa4b-ebf06971fe15",0x07] = "GetPolicyInfo",
 		["59602eb6-57b0-4fd8-aa4b-ebf06971fe15",0x08] = "CreatePolicy",
 		["59602eb6-57b0-4fd8-aa4b-ebf06971fe15",0x09] = "ModifyPolicy",
@@ -2838,22 +2838,22 @@ export {
 		["59602eb6-57b0-4fd8-aa4b-ebf06971fe15",0x14] = "GetConditionalPolicy",
 		["59602eb6-57b0-4fd8-aa4b-ebf06971fe15",0x15] = "SetConditionalPolicy",
 
-		# IWRMProtocol - MSDN Ref: Windows System Resource Manager Protocol [ms-wsrm]
+
 		["f31931a9-832d-481c-9503-887a0e6a79f0",0x07] = "GetSupportedClient",
 
-		# IWRMRemoteSessionMgmt - MSDN Ref: Windows System Resource Manager Protocol [ms-wsrm]
+
 		["fc910418-55ca-45ef-b264-83d4ce7d30e0",0x07] = "GetRemoteUserCategories",
 		["fc910418-55ca-45ef-b264-83d4ce7d30e0",0x08] = "SetRemoteUserCategories",
 		["fc910418-55ca-45ef-b264-83d4ce7d30e0",0x09] = "RefreshRemoteSessionWeights",
 
-		# IWRMResourceGroup - MSDN Ref: Windows System Resource Manager Protocol [ms-wsrm]
+
 		["bc681469-9dd9-4bf4-9b3d-709f69efe431",0x07] = "GetResourceGroupInfo",
 		["bc681469-9dd9-4bf4-9b3d-709f69efe431",0x08] = "ModifyResourceGroup",
 		["bc681469-9dd9-4bf4-9b3d-709f69efe431",0x09] = "CreateResourceGroup",
 		["bc681469-9dd9-4bf4-9b3d-709f69efe431",0x0A] = "DeleteResourceGroup",
 		["bc681469-9dd9-4bf4-9b3d-709f69efe431",0x0B] = "RenameResourceGroup",
 
-		# locator - MSDN Ref: RPC Location Services Extensions [ms-rpcl]
+
 		["e33c0cc4-0482-101a-bc0c-02608c6ba218",0x00] = "I_nsi_lookup_begin",
 		["e33c0cc4-0482-101a-bc0c-02608c6ba218",0x01] = "I_nsi_lookup_done",
 		["e33c0cc4-0482-101a-bc0c-02608c6ba218",0x02] = "I_nsi_lookup_next",
@@ -2862,15 +2862,15 @@ export {
 		["e33c0cc4-0482-101a-bc0c-02608c6ba218",0x05] = "I_nsi_entry_object_inq_done",
 		["e33c0cc4-0482-101a-bc0c-02608c6ba218",0x06] = "I_nsi_entry_object_inq_begin",
 
-		# lsacap - MSDN Ref: Central Access Policy Identifier Retrieval Protocol [ms-capr]
+
 		["afc07e2e-311c-4435-808c-c483ffeec7c9",0x00] = "LsarGetAvailableCAPIDs",
 
-		# NetEventForwarder - MSDN Ref: Live Remote Event Capture Protocol [ms-lrec]
+
 		["22e5386d-8b12-4bf0-b0ec-6a1ea419e366",0x00] = "RpcNetEventOpenSession",
 		["22e5386d-8b12-4bf0-b0ec-6a1ea419e366",0x01] = "RpcNetEventReceiveData",
 		["22e5386d-8b12-4bf0-b0ec-6a1ea419e366",0x02] = "RpcNetEventCloseSession",
 
-		# NtFrsApi - MSDN Ref: File Replication Service Protocol [ms-frs1]
+
 		["d049b186-814f-11d1-9a3c-00c04fc9b232",0x00] = "Opnum0NotUsedOnWire",
 		["d049b186-814f-11d1-9a3c-00c04fc9b232",0x01] = "Opnum1NotUsedOnWire",
 		["d049b186-814f-11d1-9a3c-00c04fc9b232",0x02] = "Opnum2NotUsedOnWire",
@@ -2883,14 +2883,14 @@ export {
 		["d049b186-814f-11d1-9a3c-00c04fc9b232",0x09] = "NtFrsApi_Rpc_WriterCommand",
 		["d049b186-814f-11d1-9a3c-00c04fc9b232",0x0A] = "NtFrsApi_Rpc_ForceReplication",
 
-		# RCMListener - MSDN Ref: Terminal Services Runtime Interface Protocol [ms-tsts]
+
 		["497d95a6-2d27-4bf5-9bbd-a6046957133c",0x00] = "RpcOpenListener",
 		["497d95a6-2d27-4bf5-9bbd-a6046957133c",0x01] = "RpcCloseListener",
 		["497d95a6-2d27-4bf5-9bbd-a6046957133c",0x02] = "RpcStopListener",
 		["497d95a6-2d27-4bf5-9bbd-a6046957133c",0x03] = "RpcStartListener",
 		["497d95a6-2d27-4bf5-9bbd-a6046957133c",0x04] = "RpcIsListening",
 
-		# RCMPublic - MSDN Ref: Terminal Services Runtime Interface Protocol [ms-tsts]
+
 		["bde95fdf-eee0-45de-9e12-e5a61cd0d4fe",0x00] = "RpcGetClientData",
 		["bde95fdf-eee0-45de-9e12-e5a61cd0d4fe",0x01] = "RpcGetConfigData",
 		["bde95fdf-eee0-45de-9e12-e5a61cd0d4fe",0x02] = "RpcGetProtocolStatus",
@@ -2904,7 +2904,7 @@ export {
 		["bde95fdf-eee0-45de-9e12-e5a61cd0d4fe",0x0A] = "RpcGetUserCertificates",
 		["bde95fdf-eee0-45de-9e12-e5a61cd0d4fe",0x0B] = "RpcQuerySessionData",
 
-		# RemoteFW - MSDN Ref: Firewall and Advanced Security Protocol [ms-fasp]
+
 		["6b5bdd1e-528c-422c-af8c-a4079be4fe48",0x00] = "RRPC_FWOpenPolicyStore",
 		["6b5bdd1e-528c-422c-af8c-a4079be4fe48",0x01] = "RRPC_FWClosePolicyStore",
 		["6b5bdd1e-528c-422c-af8c-a4079be4fe48",0x02] = "RRPC_FWRestoreDefaults",
@@ -2987,15 +2987,15 @@ export {
 		["6b5bdd1e-528c-422c-af8c-a4079be4fe48",0x50] = "RRPC_FWEnumFirewallRules2_26",
 		["6b5bdd1e-528c-422c-af8c-a4079be4fe48",0x51] = "RRPC_FWQueryFirewallRules2_26",
 
-		# remotesp - MSDN Ref: Telephony Remote Protocol [ms-trp]
+
 		["2f5f6521-ca47-1068-b319-00dd010662db",0x00] = "RemoteSPAttach",
 		["2f5f6521-ca47-1068-b319-00dd010662db",0x01] = "RemoteSPEventProc",
 		["2f5f6521-ca47-1068-b319-00dd010662db",0x02] = "RemoteSPDetach",
 
-		# SessEnvPublicRpc - MSDN Ref: Terminal Services Runtime Interface Protocol [ms-tsts]
+
 		["1257b580-ce2f-4109-82d6-a9459d0bf6bc",0x00] = "RpcShadow2",
 
-		# ssdpsrv - Marchand Ref: Simple Service Discovery Protocol (SSDP) [ssdp]
+
 		["4b112204-0e19-11d3-b42b-0000f81feb9f",0x00] = "RegisterServiceRpc",
 		["4b112204-0e19-11d3-b42b-0000f81feb9f",0x01] = "DeregisterServiceRpcByUSN",
 		["4b112204-0e19-11d3-b42b-0000f81feb9f",0x02] = "DeregisterServiceRpc",
@@ -3013,12 +3013,12 @@ export {
 		["4b112204-0e19-11d3-b42b-0000f81feb9f",0x0E] = "SetICSInterfaces",
 		["4b112204-0e19-11d3-b42b-0000f81feb9f",0x0F] = "SetICSOff",
 
-		# tapsrv - MSDN Ref: Telephony Remote Protocol [ms-trp]
+
 		["2f5f6520-ca46-1067-b319-00dd010662da",0x00] = "ClientAttach",
 		["2f5f6520-ca46-1067-b319-00dd010662da",0x01] = "ClientRequest",
 		["2f5f6520-ca46-1067-b319-00dd010662da",0x02] = "ClientDetach",
 
-		# TermServEnumeration - MSDN Ref: Terminal Services Runtime Interface Protocol [ms-tsts]
+
 		["88143fd0-c28d-4b2b-8fef-8d882f6a9390",0x00] = "RpcOpenEnum",
 		["88143fd0-c28d-4b2b-8fef-8d882f6a9390",0x01] = "RpcCloseEnum",
 		["88143fd0-c28d-4b2b-8fef-8d882f6a9390",0x02] = "RpcFilterByState",
@@ -3032,23 +3032,23 @@ export {
 		["88143fd0-c28d-4b2b-8fef-8d882f6a9390",0x0A] = "RpcGetAllSessions",
 		["88143fd0-c28d-4b2b-8fef-8d882f6a9390",0x0B] = "RpcGetAllSessionsEx",
 
-		# TermServNotification - MSDN Ref: Terminal Services Runtime Interface Protocol [ms-tsts]
+
 		["11899a43-2b68-4a76-92e3-a3d6ad8c26ce",0x00] = "RpcWaitForSessionState",
 		["11899a43-2b68-4a76-92e3-a3d6ad8c26ce",0x01] = "RpcRegisterAsyncNotification",
 		["11899a43-2b68-4a76-92e3-a3d6ad8c26ce",0x02] = "RpcWaitAsyncNotification",
 		["11899a43-2b68-4a76-92e3-a3d6ad8c26ce",0x03] = "RpcUnRegisterAsyncNotification",
 
-		# TermSrvSession - MSDN Ref: Terminal Services Runtime Interface Protocol [ms-tsts]
+
 		["484809d6-4239-471b-b5bc-61df8c23ac48",0x00] = "RpcWaitForSessionState",
 		["484809d6-4239-471b-b5bc-61df8c23ac48",0x01] = "RpcRegisterAsyncNotification",
 		["484809d6-4239-471b-b5bc-61df8c23ac48",0x02] = "RpcWaitAsyncNotification",
 		["484809d6-4239-471b-b5bc-61df8c23ac48",0x03] = "RpcUnRegisterAsyncNotification",
 
-		# trksvr - MSDN Ref: Distributed Link Tracking: Central Manager Protocol [ms-dltm]
+
 		["4da1c422-943d-11d1-acae-00c04fc2aa3f",0x00] = "LnkSvrMessage",
 		["4da1c422-943d-11d1-acae-00c04fc2aa3f",0x01] = "LnkSvrMessageCallback",
 
-		# trkwks - MSDN Ref: Distributed Link Tracking: Workstation Protocol [ms-dltw]
+
 		["300f3532-38cc-11d0-a3f0-0020af6b0add",0x00] = "Opnum0NotUsedOnWire",
 		["300f3532-38cc-11d0-a3f0-0020af6b0add",0x01] = "Opnum1NotUsedOnWire",
 		["300f3532-38cc-11d0-a3f0-0020af6b0add",0x02] = "Opnum2NotUsedOnWire",
@@ -3063,7 +3063,7 @@ export {
 		["300f3532-38cc-11d0-a3f0-0020af6b0add",0x0B] = "Opnum11NotUsedOnWire",
 		["300f3532-38cc-11d0-a3f0-0020af6b0add",0x0C] = "LnkSearchMachine",
 
-		# TsProxyRpcInterface - MSDN Ref: Terminal Services Gateway Server Protocol [ms-tsgu]
+
 		["44e265dd-7daf-42cd-8560-3cdb6e7a2729",0x00] = "Opnum0NotUsedOnWire",
 		["44e265dd-7daf-42cd-8560-3cdb6e7a2729",0x01] = "TsProxyCreateTunnel",
 		["44e265dd-7daf-42cd-8560-3cdb6e7a2729",0x02] = "TsProxyAuthorizeTunnel",
@@ -3075,10 +3075,10 @@ export {
 		["44e265dd-7daf-42cd-8560-3cdb6e7a2729",0x08] = "TsProxySetupReceivePipe",
 		["44e265dd-7daf-42cd-8560-3cdb6e7a2729",0x09] = "TsProxySendToServer",
 
-		# TSVIPPublic - MSDN Ref: Terminal Services Runtime Interface Protocol [ms-tsts]
+
 		["53b46b02-c73b-4a3e-8dee-b16b80672fc0",0x00] = "RpcGetSessionIP",
 
-		# W32Time - MSDN Ref: W32Time Remote Protocol [ms-w32t]
+
 		["8fb6d884-2388-11d0-8c35-00c04fda2795",0x00] = "W32TimeSync",
 		["8fb6d884-2388-11d0-8c35-00c04fda2795",0x01] = "W32TimeGetNetlogonServiceBits",
 		["8fb6d884-2388-11d0-8c35-00c04fda2795",0x02] = "W32TimeQueryProviderStatus",
@@ -3088,14 +3088,14 @@ export {
 		["8fb6d884-2388-11d0-8c35-00c04fda2795",0x06] = "W32TimeQueryStatus",
 		["8fb6d884-2388-11d0-8c35-00c04fda2795",0x07] = "W32TimeLog",
 
-		# WdsRpcInterface - MSDN Ref: Windows Deployment Services Control Protocol [ms-wdsc]
+
 		["1a927394-352e-4553-ae3f-7cf4aafca620",0x00] = "WdsRpcMessage",
 
-		# winsi2 - MSDN Ref: Remote Administrative Interface: WINS [ms-raiw]
+
 		["811109bf-a4e1-11d1-ab54-00a0c91e9b45",0x00] = "R_WinsTombstoneDbRecs",
 		["811109bf-a4e1-11d1-ab54-00a0c91e9b45",0x01] = "R_WinsCheckAccess",
 
-		# Witness - MSDN Ref: Service Witness Protocol [ms-swn]
+
 		["ccd8c074-d0e5-4a40-92b4-d074faa6ba28",0x00] = "WitnessrGetInterfaceList",
 		["ccd8c074-d0e5-4a40-92b4-d074faa6ba28",0x01] = "WitnessrRegister",
 		["ccd8c074-d0e5-4a40-92b4-d074faa6ba28",0x02] = "WitnessrUnRegister",

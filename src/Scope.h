@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -55,11 +55,11 @@ public:
 
     IDPtr GenerateTemporary(const char* name);
 
-    // Returns the list of variables needing initialization, and
-    // removes it from this Scope.
+
+
     std::vector<IDPtr> GetInits();
 
-    // Adds a variable to the list.
+
     void AddInit(IDPtr id) { inits.emplace_back(std::move(id)); }
 
     void Describe(ODesc* d) const override;
@@ -73,15 +73,15 @@ protected:
     std::map<std::string, IDPtr, std::less<>> local;
     std::vector<IDPtr> inits;
 
-    // We keep track of identifiers in the order that they're added.
-    // This is necessary for script optimization to be able to find
-    // event/hook parameters for instances where the declaration of
-    // an additional handler uses different names for the parameters
-    // than the original declaration.
+
+
+
+
+
     std::vector<IntrusivePtr<ID>> ordered_vars;
 };
 
-// If no_global is true, don't search in the default "global" namespace.
+
 extern const IDPtr& lookup_ID(const char* name, const char* module, bool no_global = false,
                               bool same_module_only = false, bool check_export = true);
 
@@ -90,16 +90,16 @@ extern IDPtr install_ID(const char* name, const char* module_name, bool is_globa
 extern void push_scope(IDPtr id, std::unique_ptr<std::vector<AttrPtr>> attrs);
 extern void push_existing_scope(ScopePtr scope);
 
-// Returns the one popped off.
+
 extern ScopePtr pop_scope();
 
 extern ScopePtr current_scope();
 extern ScopePtr global_scope();
 
-// Current module (identified by its name).
+
 ZEEK_EXTERN_DATA std::string current_module;
 
-} // namespace detail
-} // namespace zeek
+}
+}
 
 extern bool in_debug;

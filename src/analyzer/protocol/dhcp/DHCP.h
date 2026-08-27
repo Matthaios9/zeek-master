@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -20,4 +20,4 @@ protected:
     binpac::DHCP::DHCP_Conn* interp;
 };
 
-} // namespace zeek::analyzer::dhcp
+}

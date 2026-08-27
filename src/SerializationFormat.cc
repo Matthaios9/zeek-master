@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/SerializationFormat.h"
 
@@ -63,16 +63,16 @@ bool SerializationFormat::ReadData(void* b, size_t count) {
 }
 
 bool SerializationFormat::WriteData(const void* b, size_t count) {
-    // Increase buffer if necessary.
+
     bool size_changed = false;
     while ( output_pos + count > output_size ) {
         output_size *= GROWTH_FACTOR;
         size_changed = true;
     }
 
-    // The glibc standard states explicitly that calling realloc with the same
-    // size is a no-op, but the same claim can't be made on other platforms.
-    // There's really no reason to do that though.
+
+
+
     if ( size_changed )
         output = reinterpret_cast<char*>(util::safe_realloc(output, output_size));
 
@@ -177,8 +177,8 @@ bool BinarySerializationFormat::Read(char** str, int* len, const char* tag) {
     if ( len )
         *len = l;
     else {
-        // If len isn't given, make sure that the string
-        // doesn't contain any nulls.
+
+
         for ( int i = 0; i < l; i++ )
             if ( ! s[i] ) {
                 reporter->Error("binary Format: string contains null; replaced by '_'");
@@ -375,7 +375,7 @@ bool BinarySerializationFormat::Write(const char* buf, int len, const char* tag)
     return WriteData(&l, sizeof(l)) && WriteData(buf, len);
 }
 
-} // namespace zeek::detail
+}
 
 #include "zeek/3rdparty/doctest.h"
 
@@ -384,14 +384,14 @@ TEST_SUITE_BEGIN("serialization format");
 TEST_CASE("type addr") {
     zeek::threading::Value v;
     zeek::detail::BinarySerializationFormat bf;
-    // type, subtype, present
-    std::string buf = std::string("\x00\x00\x00\x0b", 4); // type: 11, addr
-    buf += std::string("\x00\x00\x00\x16", 4);            // subtype: 22, error (not used)
-    buf += std::string("\x01");                           // present: true
+
+    std::string buf = std::string("\x00\x00\x00\x0b", 4);
+    buf += std::string("\x00\x00\x00\x16", 4);
+    buf += std::string("\x01");
 
     SUBCASE("valid 4") {
-        buf += std::string("\x04");             // addr-family: 4
-        buf += std::string("\x01\x02\x03\x04"); // address value (4 bytes)
+        buf += std::string("\x04");
+        buf += std::string("\x01\x02\x03\x04");
 
         bf.StartRead(buf.data(), buf.size());
         REQUIRE(v.Read(&bf));
@@ -404,8 +404,8 @@ TEST_CASE("type addr") {
     }
 
     SUBCASE("valid 6") {
-        buf += std::string("\x06");             // addr-family: 6
-        buf += std::string("\x01\x02\x03\x04"); // address value (16 bytes)
+        buf += std::string("\x06");
+        buf += std::string("\x01\x02\x03\x04");
         buf += std::string("\x05\x06\x07\x08");
         buf += std::string("\x09\x0a\x0b\x0c");
         buf += std::string("\x0d\x0e\x0f\x10");
@@ -421,8 +421,8 @@ TEST_CASE("type addr") {
     }
 
     SUBCASE("invalid") {
-        buf += std::string("\x03");             // addr-family: 5 (valid: 4 or 6)
-        buf += std::string("\x01\x02\x03\x04"); // address value (4 bytes)
+        buf += std::string("\x03");
+        buf += std::string("\x01\x02\x03\x04");
 
         bf.StartRead(buf.data(), buf.size());
         REQUIRE_FALSE(v.Read(&bf));
@@ -433,15 +433,15 @@ TEST_CASE("type addr") {
 TEST_CASE("type subnet") {
     zeek::threading::Value v;
     zeek::detail::BinarySerializationFormat bf;
-    // type, subtype, present
-    std::string buf = std::string("\x00\x00\x00\x0c", 4); // type: 12, subnet
-    buf += std::string("\x00\x00\x00\x16", 4);            // subtype: 22, error (not used)
-    buf += std::string("\x01");                           // present: true
+
+    std::string buf = std::string("\x00\x00\x00\x0c", 4);
+    buf += std::string("\x00\x00\x00\x16", 4);
+    buf += std::string("\x01");
 
     SUBCASE("valid 4") {
-        buf += std::string("\x70");                // subnet-len: 112 (/16)
-        buf += std::string("\x04");                // addr-family: 4
-        buf += std::string("\x01\x02\x00\x00", 4); // address value (4 bytes)
+        buf += std::string("\x70");
+        buf += std::string("\x04");
+        buf += std::string("\x01\x02\x00\x00", 4);
 
         bf.StartRead(buf.data(), buf.size());
         REQUIRE(v.Read(&bf));
@@ -449,9 +449,9 @@ TEST_CASE("type subnet") {
     }
 
     SUBCASE("valid 6") {
-        buf += std::string("\x40");                // subnet-len: 64 (/64)
-        buf += std::string("\x06");                // addr-family: 5 (valid: 4 or 6)
-        buf += std::string("\x01\x02\x03\x04", 4); // address value (16 bytes)
+        buf += std::string("\x40");
+        buf += std::string("\x06");
+        buf += std::string("\x01\x02\x03\x04", 4);
         buf += std::string("\x05\x06\x07\x08", 4);
         buf += std::string("\x00\x00\x00\x00", 4);
         buf += std::string("\x00\x00\x00\x00", 4);
@@ -462,9 +462,9 @@ TEST_CASE("type subnet") {
     }
 
     SUBCASE("invalid") {
-        buf += std::string("\x70");             // subnet-len: 112 (/16)
-        buf += std::string("\x03");             // addr-family: 5 (valid: 4 or 6)
-        buf += std::string("\x01\x02\x03\x04"); // address value (16 bytes)
+        buf += std::string("\x70");
+        buf += std::string("\x03");
+        buf += std::string("\x01\x02\x03\x04");
 
         bf.StartRead(buf.data(), buf.size());
         REQUIRE_FALSE(v.Read(&bf));
@@ -477,11 +477,11 @@ TEST_CASE("type") {
     zeek::detail::BinarySerializationFormat bf;
 
     SUBCASE("invalid type") {
-        // type, subtype, present
-        std::string buf = std::string("\x00\x00\x00\xff", 4); // type: 255, bad
-        buf += std::string("\x00\x00\x00\x16", 4);            // subtype: 22, error (not used)
-        buf += std::string("\x01");                           // present: true
-        buf += std::string("\x01\x02\x03\x03");               // stuff
+
+        std::string buf = std::string("\x00\x00\x00\xff", 4);
+        buf += std::string("\x00\x00\x00\x16", 4);
+        buf += std::string("\x01");
+        buf += std::string("\x01\x02\x03\x03");
 
         bf.StartRead(buf.data(), buf.size());
         REQUIRE_FALSE(v.Read(&bf));
@@ -489,14 +489,14 @@ TEST_CASE("type") {
     }
 
     SUBCASE("set with invalid subtype - never checked") {
-        std::string buf = std::string("\x00\x00\x00\x0e", 4); // type: 14, table/set
-        buf += std::string("\x00\x00\x00\xff", 4);            // subtype: 255, bad
-        buf += std::string("\x01");                           // present: true
-        buf += std::string("\x00\x00\x00\x00", 4);            // set-size: 0
+        std::string buf = std::string("\x00\x00\x00\x0e", 4);
+        buf += std::string("\x00\x00\x00\xff", 4);
+        buf += std::string("\x01");
+        buf += std::string("\x00\x00\x00\x00", 4);
         buf += std::string("\x00\x00\x00\x00", 4);
 
         bf.StartRead(buf.data(), buf.size());
-        // This succeeds, even though subtype is bad (255)
+
         REQUIRE(v.Read(&bf));
         bf.EndRead();
     }
@@ -505,38 +505,38 @@ TEST_CASE("type") {
 TEST_CASE("set") {
     zeek::threading::Value v;
     zeek::detail::BinarySerializationFormat bf;
-    std::string buf = std::string("\x00\x00\x00\x0e", 4); // type: 14, table/set
-    buf += std::string("\x00\x00\x00\x01", 4);            // subtype: bool / ignored
-    buf += std::string("\x01");                           // present: true
+    std::string buf = std::string("\x00\x00\x00\x0e", 4);
+    buf += std::string("\x00\x00\x00\x01", 4);
+    buf += std::string("\x01");
 
     SUBCASE("two bools") {
-        // Note how the subtype of a set/table isn't actually used and we
-        // encode the bool type for every element over and over again.
-        // Using 9 bytes at a time to describe the (redundant) bool type
-        // and subtype, then another 8 bytes for its value. 17 bytes for
-        // essentially a single bit of information.
-        //
-        // I think we should take a good look at doing something else here.
-        //
-        // MessagePack looks pretty promising. A set with two bools would
-        // take up 3 bytes because it uses clever encoding. It also supports
-        // ext types, so you can include non-standard types, something that
-        // JSON doesn't allow.
-        buf += std::string("\x00\x00\x00\x00", 4); // set-size: 2
-        buf += std::string("\x00\x00\x00\x02", 4); // set-size: 2
-        buf += std::string("\x00\x00\x00\x01", 4); // bool type
-        buf += std::string("\x00\x00\x00\x00", 4); // bool subtype
-        buf += std::string("\x01", 1);             // bool present
-        buf += std::string("\x00\x00\x00\x00", 4); // bool: true
-        buf += std::string("\x00\x00\x00\x01", 4); // bool: true
-        buf += std::string("\x00\x00\x00\x01", 4); // bool type
-        buf += std::string("\x00\x00\x00\x00", 4); // bool subtype
-        buf += std::string("\x01", 1);             // bool present
-        buf += std::string("\x00\x00\x00\x00", 4); // bool: false
-        buf += std::string("\x00\x00\x00\x00", 4); // bool: false
+
+
+
+
+
+
+
+
+
+
+
+
+        buf += std::string("\x00\x00\x00\x00", 4);
+        buf += std::string("\x00\x00\x00\x02", 4);
+        buf += std::string("\x00\x00\x00\x01", 4);
+        buf += std::string("\x00\x00\x00\x00", 4);
+        buf += std::string("\x01", 1);
+        buf += std::string("\x00\x00\x00\x00", 4);
+        buf += std::string("\x00\x00\x00\x01", 4);
+        buf += std::string("\x00\x00\x00\x01", 4);
+        buf += std::string("\x00\x00\x00\x00", 4);
+        buf += std::string("\x01", 1);
+        buf += std::string("\x00\x00\x00\x00", 4);
+        buf += std::string("\x00\x00\x00\x00", 4);
 
         bf.StartRead(buf.data(), buf.size());
-        // This succeeds, even though subtype is bad (255)
+
         REQUIRE(v.Read(&bf));
         bf.EndRead();
 
@@ -550,9 +550,9 @@ TEST_CASE("set") {
     }
 
     SUBCASE("underflow") {
-        buf += std::string("\x00\x00\x00\x00", 4); // set-size: 2
-        buf += std::string("\x00\x00\x00\x02", 4); // set-size: 2
-                                                   // missing bytes.
+        buf += std::string("\x00\x00\x00\x00", 4);
+        buf += std::string("\x00\x00\x00\x02", 4);
+
 
         bf.StartRead(buf.data(), buf.size());
         REQUIRE_FALSE(v.Read(&bf));
@@ -564,16 +564,16 @@ TEST_CASE("vector") {
     zeek::threading::Value v;
     zeek::detail::BinarySerializationFormat bf;
 
-    std::string buf = std::string("\x00\x00\x00\x13", 4); // type: 19, vector
-    buf += std::string("\x00\x00\x00\xff", 4);            // subtype: 255, bad, ignored
-    buf += std::string("\x01");                           // present: true
-                                                          //
+    std::string buf = std::string("\x00\x00\x00\x13", 4);
+    buf += std::string("\x00\x00\x00\xff", 4);
+    buf += std::string("\x01");
+
     SUBCASE("empty") {
-        buf += std::string("\x00\x00\x00\x00", 4); // vector-size: 0
-        buf += std::string("\x00\x00\x00\x00", 4); // vector-size: 0
-                                                   //
+        buf += std::string("\x00\x00\x00\x00", 4);
+        buf += std::string("\x00\x00\x00\x00", 4);
+
         bf.StartRead(buf.data(), buf.size());
-        // This succeeds, even though subtype is bad (255)
+
         REQUIRE(v.Read(&bf));
         bf.EndRead();
 
@@ -583,18 +583,18 @@ TEST_CASE("vector") {
     }
 
     SUBCASE("two bools") {
-        buf += std::string("\x00\x00\x00\x00", 4); // vector-size: 2
-        buf += std::string("\x00\x00\x00\x02", 4); // vector-size: 2
-        buf += std::string("\x00\x00\x00\x01", 4); // bool type
-        buf += std::string("\x00\x00\x00\x00", 4); // bool subtype
-        buf += std::string("\x01", 1);             // bool present
-        buf += std::string("\x00\x00\x00\x00", 4); // bool: true
-        buf += std::string("\x00\x00\x00\x01", 4); // bool: true
-        buf += std::string("\x00\x00\x00\x01", 4); // bool type
-        buf += std::string("\x00\x00\x00\x00", 4); // bool subtype
-        buf += std::string("\x01", 1);             // bool present
-        buf += std::string("\x00\x00\x00\x00", 4); // bool: false
-        buf += std::string("\x00\x00\x00\x00", 4); // bool: false
+        buf += std::string("\x00\x00\x00\x00", 4);
+        buf += std::string("\x00\x00\x00\x02", 4);
+        buf += std::string("\x00\x00\x00\x01", 4);
+        buf += std::string("\x00\x00\x00\x00", 4);
+        buf += std::string("\x01", 1);
+        buf += std::string("\x00\x00\x00\x00", 4);
+        buf += std::string("\x00\x00\x00\x01", 4);
+        buf += std::string("\x00\x00\x00\x01", 4);
+        buf += std::string("\x00\x00\x00\x00", 4);
+        buf += std::string("\x01", 1);
+        buf += std::string("\x00\x00\x00\x00", 4);
+        buf += std::string("\x00\x00\x00\x00", 4);
 
         bf.StartRead(buf.data(), buf.size());
         REQUIRE(v.Read(&bf));
@@ -610,9 +610,9 @@ TEST_CASE("vector") {
     }
 
     SUBCASE("underflow") {
-        buf += std::string("\x00\x00\x00\x00", 4); // vector-size: 2
-        buf += std::string("\x00\x00\x00\x02", 4); // vector-size: 2
-                                                   // missing bytes
+        buf += std::string("\x00\x00\x00\x00", 4);
+        buf += std::string("\x00\x00\x00\x02", 4);
+
         bf.StartRead(buf.data(), buf.size());
         REQUIRE_FALSE(v.Read(&bf));
         bf.EndRead();
@@ -623,13 +623,13 @@ TEST_CASE("string") {
     zeek::threading::Value v;
     zeek::detail::BinarySerializationFormat bf;
 
-    std::string buf = std::string("\x00\x00\x00\x07", 4); // type: 7, string
-    buf += std::string("\x00\x00\x00\x16", 4);            // subtype: 22, error, ignored
-    buf += std::string("\x01");                           // present: true
-                                                          //
+    std::string buf = std::string("\x00\x00\x00\x07", 4);
+    buf += std::string("\x00\x00\x00\x16", 4);
+    buf += std::string("\x01");
+
     SUBCASE("negative length") {
-        buf += std::string("\xff\xff\xff\xff", 4); // string-size: -1, two-complement
-        buf += std::string("\x41\x42\x43\x44", 4); // A B C D
+        buf += std::string("\xff\xff\xff\xff", 4);
+        buf += std::string("\x41\x42\x43\x44", 4);
 
         bf.StartRead(buf.data(), buf.size());
         REQUIRE_FALSE(v.Read(&bf));
@@ -637,8 +637,8 @@ TEST_CASE("string") {
     }
 
     SUBCASE("too long for input") {
-        buf += std::string("\x00\x00\x00\xff", 4); // string-size: 255, too long for input
-        buf += std::string("\x41\x42\x43\x44", 4); // A B C D
+        buf += std::string("\x00\x00\x00\xff", 4);
+        buf += std::string("\x41\x42\x43\x44", 4);
 
         bf.StartRead(buf.data(), buf.size());
         REQUIRE_FALSE(v.Read(&bf));
@@ -646,8 +646,8 @@ TEST_CASE("string") {
     }
 
     SUBCASE("4") {
-        buf += std::string("\x00\x00\x00\x04", 4); // string-size: 4
-        buf += std::string("\x41\x42\x43\x44", 4); // A B C D
+        buf += std::string("\x00\x00\x00\x04", 4);
+        buf += std::string("\x41\x42\x43\x44", 4);
 
         bf.StartRead(buf.data(), buf.size());
         REQUIRE(v.Read(&bf));

@@ -1,11 +1,11 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_paramtype_h
 #define pac_paramtype_h
 
 #include "pac_type.h"
 
-// An instantiated type: ID + expression list
+
 class ParameterizedType : public Type {
 public:
     ParameterizedType(ID* type_id, ExprList* args);
@@ -13,7 +13,7 @@ public:
     Type* clone() const;
 
     string EvalMember(const ID* member_id) const override;
-    // Env *member_env() const;
+
 
     void AddParamArg(Expr* arg);
 
@@ -22,8 +22,8 @@ public:
     string DefaultValue() const override { return "0"; }
     Type* MemberDataType(const ID* member_id) const override;
 
-    // "throw_exception" specifies whether to throw an exception
-    // if the referred data type is not found
+
+
     Type* ReferredDataType(bool throw_exception) const;
 
     void GenCleanUpCode(Output* out, Env* env) override;
@@ -58,4 +58,4 @@ private:
     void GenDynamicSize(Output* out, Env* env, const DataPtr& data) override;
 };
 
-#endif // pac_paramtype_h
+#endif

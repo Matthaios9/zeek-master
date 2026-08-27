@@ -1,5 +1,5 @@
-##! Implements base functionality for KRB analysis. Generates the kerberos.log
-##! file.
+
+
 
 @load ./consts
 @load base/protocols/conn/removal-hooks
@@ -9,72 +9,72 @@ module KRB;
 export {
 	redef enum Log::ID += { LOG };
 
-	## Well-known ports for KRB over TCP.
+
 	const tcp_ports = { 88/tcp } &redef;
 
-	## Well-known ports for KRB over UDP.
+
 	const udp_ports = { 88/udp } &redef;
 
 	global log_policy: Log::PolicyHook;
 
 	type Info: record {
-		## Timestamp for when the event happened.
+
 		ts:            time     &log;
-		## Unique ID for the connection.
+
 		uid:           string   &log;
-		## The connection's 4-tuple of endpoint addresses/ports.
+
 		id:            conn_id  &log;
 
-		## Request type - Authentication Service ("AS") or
-		## Ticket Granting Service ("TGS") or
-		## Application Request ("AP")
+
+
+
 		request_type:  string   &log &optional;
-		## Client
+
 		client:        string   &log &optional;
-		## Service
+
 		service:       string   &log &optional;
 
-		## Request result
+
 		success:       bool     &log &optional;
-		## Error code
+
 		error_code:    count    &optional;
-		## Error message
+
 		error_msg:     string   &log &optional;
 
-		## Ticket valid from
+
 		from:          time     &log &optional;
-		## Ticket valid till
+
 		till:          time     &log &optional;
-		## Ticket encryption type
+
 		cipher:        string   &log &optional;
 
-		## Forwardable ticket requested
+
 		forwardable:   bool     &log &optional;
-		## Renewable ticket requested
+
 		renewable:     bool     &log &optional;
 
-		## We've already logged this
+
 		logged:        bool     &default=F;
 	};
 
-	## The server response error texts which are *not* logged.
+
 	option ignored_errors: set[string] = {
-		# This will significantly increase the noisiness of the log.
-		# However, one attack is to iterate over principals, looking
-		# for ones that don't require preauth, and then perform
-		# an offline attack on that ticket. To detect that attack,
-		# log NEEDED_PREAUTH.
+
+
+
+
+
 		"NEEDED_PREAUTH",
-		# This is a more specific version of NEEDED_PREAUTH that's used
-		# by Windows AD Kerberos.
+
+
 		"Need to use PA-ENC-TIMESTAMP/PA-PK-AS-REQ",
 	};
 
-	## Event that can be handled to access the KRB record as it is sent on
-	## to the logging framework.
+
+
 	global log_krb: event(rec: Info);
 
-	## Kerberos finalization hook.  Remaining Kerberos info may get logged when it's called.
+
 	global finalize_krb: Conn::RemovalHook;
 }
 
@@ -196,7 +196,7 @@ event krb_ap_request(c: connection, ticket: KRB::Ticket, opts: KRB::AP_Options, 
 	if ( set_session(c) )
 		return;
 
-	# Ignore AP requests part of the PADATA in the AS/TGS messages.
+
 	if ( in_kdc_padata )
 		return;
 
@@ -207,7 +207,7 @@ event krb_ap_request(c: connection, ticket: KRB::Ticket, opts: KRB::AP_Options, 
 	if ( ticket?$cipher )
 		c$krb$cipher = cipher_name[ticket$cipher];
 
-	# An AP request does not carry a client name, so log the realm alone.
+
 	if ( ticket?$realm )
 		c$krb$client = fmt("/%s", ticket$realm);
 	}
@@ -217,8 +217,8 @@ event krb_ap_response(c: connection) &priority=5
 	if ( set_session(c) )
 		return;
 
-	# AP-REP indicates that mutual authentication succeeded. A failure would be
-	# a KRB-ERROR instead, which krb_error handles.
+
+
 	c$krb$success = T;
 	}
 

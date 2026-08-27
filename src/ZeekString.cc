@@ -1,11 +1,11 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/ZeekString.h"
 
 #include <algorithm>
 #include <cctype>
 #include <iostream>
-#include <sstream> // Needed for unit testing
+#include <sstream>
 
 #include "zeek/ID.h"
 #include "zeek/Reporter.h"
@@ -24,10 +24,10 @@ using namespace std::string_literals;
 
 namespace zeek {
 
-// This constructor forces the user to specify arg_final_NUL.  When str
-// is a *normal* NUL-terminated string, make arg_n == strlen(str) and
-// arg_final_NUL == 1; when str is a sequence of n bytes, make
-// arg_final_NUL == 0.
+
+
+
+
 
 String::String(bool arg_final_NUL, byte_vec str, int arg_n) {
     b = str;
@@ -117,8 +117,8 @@ void String::Adopt(byte_vec bytes, int len) {
 
     b = bytes;
 
-    // Check if the string ends with a NUL.  If so, mark it as having
-    // a final NUL and adjust the length accordingly.
+
+
     final_NUL = (b[len - 1] == '\0');
     n = len - final_NUL;
 }
@@ -159,7 +159,7 @@ std::pair<const char*, size_t> String::CheckStringWithSize() const {
 
     nulTerm = memchr(b, '\0', n + final_NUL);
     if ( nulTerm != &b[n] ) {
-        // Either an embedded NUL, or no final NUL.
+
         char* exp_s = Render();
 
         if ( nulTerm )
@@ -184,8 +184,8 @@ std::string_view String::ToStdStringView() const {
 }
 
 char* String::Render(int format, int* len) const {
-    // Maximum character expansion is as \xHH, so a factor of 4.
-    char* s = new char[n * 4 + 1]; // +1 is for final '\0'
+
+    char* s = new char[n * 4 + 1];
     char* sp = s;
     int tmp_len;
 
@@ -219,7 +219,7 @@ char* String::Render(int format, int* len) const {
         }
     }
 
-    *sp++ = '\0'; // NUL-terminate.
+    *sp++ = '\0';
     tmp_len = sp - s;
 
     if ( (format & ESC_SER) ) {
@@ -247,14 +247,14 @@ std::ostream& String::Render(std::ostream& os, int format) const {
 std::istream& String::Read(std::istream& is, int format) {
     if ( (format & String::ESC_SER) ) {
         int len;
-        is >> len; // Get the length of the string
+        is >> len;
 
         char c;
-        is.read(&c, 1); // Eat single whitespace
+        is.read(&c, 1);
 
         char* buf = new char[len + 1];
         is.read(buf, len);
-        buf[len] = '\0'; // NUL-terminate just for safety
+        buf[len] = '\0';
 
         Adopt(reinterpret_cast<u_char*>(buf), len + 1);
     }
@@ -273,7 +273,7 @@ void String::ToUpper() {
 }
 
 String* String::GetSubstring(int start, int len) const {
-    // This code used to live in zeek.bif's sub_bytes() routine.
+
     if ( start < 0 || start > n )
         return nullptr;
 
@@ -289,29 +289,29 @@ String::Vec* String::Split(const String::IdxVec& indices) const {
     if ( indices.empty() )
         return nullptr;
 
-    // Copy input, ensuring space for "0":
+
     IdxVec idx(1 + indices.size());
 
     idx[0] = 0;
     idx.insert(idx.end(), indices.begin(), indices.end());
 
-    // Sanity checks.
+
     std::ranges::transform(idx.begin(), idx.end(), idx.begin(), [this](int v) {
         if ( v >= n || v < 0 )
             return 0;
         return v;
     });
 
-    // Sort it:
+
     std::ranges::sort(idx);
 
-    // Shuffle vector so duplicate entries are used only once. "ret" here is the first
-    // element after the last unique element. "last" should be the end of the vector.
+
+
     auto [ret, last] = std::ranges::unique(idx);
 
-    // Each element in idx is now the start index of a new
-    // substring, and we know that all indices are within [0, n].
-    //
+
+
+
     Vec* result = new Vec();
     result->reserve(std::distance(idx.begin(), ret));
 
@@ -340,7 +340,7 @@ int Bstr_eq(const String* s1, const String* s2) {
         return 0;
 
     if ( ! s1->Bytes() || ! s2->Bytes() )
-        // memcmp() arguments should never be null, so help avoid that
+
         return s1->Bytes() == s2->Bytes();
 
     return memcmp(s1->Bytes(), s2->Bytes(), s1->Len()) == 0;
@@ -348,15 +348,15 @@ int Bstr_eq(const String* s1, const String* s2) {
 
 int Bstr_cmp(const String* s1, const String* s2) {
     int n = std::min(s1->Len(), s2->Len());
-    // memcmp() arguments should never be null, so help avoid that
-    // (assuming that we only ever have null pointers when lengths are zero).
+
+
     int cmp = n == 0 ? 0 : memcmp(s1->Bytes(), s2->Bytes(), n);
 
     if ( cmp || s1->Len() == s2->Len() )
         return cmp;
 
-    // Compared equal, but one was shorter than the other.  Treat
-    // it as less than the other.
+
+
     if ( s1->Len() < s2->Len() )
         return -1;
     else
@@ -414,7 +414,7 @@ void delete_strings(std::vector<const String*>& v) {
     v.clear();
 }
 
-} // namespace zeek
+}
 
 TEST_SUITE_BEGIN("ZeekString");
 
@@ -437,8 +437,8 @@ TEST_CASE("construction") {
     zeek::String s4{"abcdef"};
     CHECK_EQ(s4.Len(), 6);
 
-    // Test the copy constructor.
-    // coverity[copy_instead_of_move]
+
+
     zeek::String s6{s4};
     CHECK_EQ(s6.Len(), 6);
 
@@ -463,7 +463,7 @@ TEST_CASE("construction") {
     s10.SetUseFreeToDelete(1);
     CHECK_EQ(s10.Bytes(), text5);
 
-    // Test the move constructor.
+
     zeek::String s11{std::move(s4)};
     CHECK_EQ(s11.Len(), 6);
 }
@@ -496,8 +496,8 @@ TEST_CASE("set/assignment/comparison") {
     CHECK_EQ(s, "abcdef");
     CHECK_FALSE(s == s2);
 
-    // This is a clearly invalid string and we probably shouldn't allow it to be
-    // constructed, but this test covers one if statement in Bstr_eq.
+
+
     zeek::String s4(false, nullptr, 3);
     CHECK_FALSE(s4 == s2);
 
@@ -586,7 +586,7 @@ TEST_CASE("rendering") {
     delete[] r;
 
     std::ostringstream os1;
-    // This uses ESC_HEX, so it should be the same as the test above
+
     os1 << s2;
     CHECK_EQ(os1.str(), "\\x03\\x04\\x05\\x06\\\'");
 
@@ -605,7 +605,7 @@ TEST_CASE("read") {
     std::string text2("abcde");
     std::istringstream iss2(text2);
     zeek::String s2{};
-    // Setting to something else disables reading the serialization format
+
     s2.Read(iss2, zeek::String::ESC_HEX);
     CHECK_EQ(s2, text2);
 }

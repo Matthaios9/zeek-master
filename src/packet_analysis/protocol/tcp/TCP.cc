@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/protocol/tcp/TCP.h"
 
@@ -44,29 +44,29 @@ bool TCPAnalyzer::WantConnection(uint16_t src_port, uint16_t dst_port, const u_c
     uint8_t tcp_flags = tp->th_flags;
 
     if ( ! (tcp_flags & TH_SYN) || (tcp_flags & TH_ACK) ) {
-        // The new connection is starting either without a SYN,
-        // or with a SYN ack. This means it's a partial connection.
+
+
         if ( ! zeek::detail::partial_connection_ok )
             return false;
 
         if ( tcp_flags & TH_SYN && ! zeek::detail::tcp_SYN_ack_ok )
             return false;
 
-        // Try to guess true responder by the port numbers.
-        // (We might also think that for SYN acks we could
-        // safely flip the roles, but that doesn't work
-        // for stealth scans.)
-        if ( IsLikelyServerPort(src_port) ) { // connection is a candidate for flipping
+
+
+
+
+        if ( IsLikelyServerPort(src_port) ) {
             if ( IsLikelyServerPort(dst_port) )
-                // Hmmm, both source and destination
-                // are plausible.  Heuristic: flip only
-                // if (1) this isn't a SYN ACK (to avoid
-                // confusing stealth scans) and
-                // (2) dest port > src port (to favor
-                // more plausible servers).
+
+
+
+
+
+
                 flip_roles = ! (tcp_flags & TH_SYN) && src_port < dst_port;
             else
-                // Source is plausible, destination isn't.
+
                 flip_roles = true;
         }
     }
@@ -77,8 +77,8 @@ bool TCPAnalyzer::WantConnection(uint16_t src_port, uint16_t dst_port, const u_c
 void TCPAnalyzer::DeliverPacket(Connection* c, double t, bool is_orig, int remaining, Packet* pkt) {
     const u_char* data = pkt->ip_hdr->Payload();
     int len = pkt->ip_hdr->PayloadLen();
-    // If the header length is zero, tcp checksum offloading is probably enabled
-    // In this case, let's fix up the length.
+
+
     if ( pkt->ip_hdr->TotalLen() == 0 )
         len = remaining;
     auto* adapter = static_cast<TCPSessionAdapter*>(c->GetSessionAdapter());
@@ -89,8 +89,8 @@ void TCPAnalyzer::DeliverPacket(Connection* c, double t, bool is_orig, int remai
         return;
     }
 
-    // We need the min() here because Ethernet frame padding can lead to
-    // remaining > len.
+
+
     if ( packet_contents )
         adapter->PacketContents(data, std::min(len, remaining));
 
@@ -103,40 +103,40 @@ void TCPAnalyzer::DeliverPacket(Connection* c, double t, bool is_orig, int remai
         return;
     }
 
-    // Store the session in the packet in case we get an encapsulation here. We need it for
-    // handling those properly.
+
+
     pkt->session = c;
 
-    // Tap the packet before processing/forwarding.
+
     adapter->TapPacket(pkt);
 
-    // Adapter Process() updates the state of TCP connections.
-    //
-    // Watch out: The connection can flip from under us on the second packet
-    // (see TCP_Endpoint::CheckHistory()) and this causes the local is_orig
-    // parameter to be stale. I.e., child analyzers that receive packet
-    // and stream data further down via adapter->DeliverPacket(...) will
-    // have been flipped, so we need to ensure they receive the correct
-    // is_orig value. We flip the local is_orig by checking if the originator
-    // endpoint has changed after adapter->Process() ran.
-    //
-    // See the docs/devel/conn.rst for more details and ideas how to
-    // improve here. This pretty tricky and fragile.
+
+
+
+
+
+
+
+
+
+
+
+
     const auto* originator = adapter->Orig();
 
     adapter->Process(is_orig, tp, len, ip, data, remaining);
 
-    // If the connection flipped during adapter->Process(), update the local is_orig
-    // to reflect that so that child analyzers observe the right value.
+
+
     if ( originator != adapter->Orig() )
         is_orig = ! is_orig;
 
-    // Send the packet back into the packet analysis framework.
+
     ForwardPacket(std::min(len, remaining), data, pkt);
 
-    // Call DeliverPacket on the adapter directly here. Normally we'd call ForwardPacket
-    // but this adapter does some other things in its DeliverPacket with the packet children
-    // analyzers.
+
+
+
     adapter->DeliverPacket(std::min(len, remaining), data, is_orig, adapter->LastRelDataSeq(), ip.get(), pkt->cap_len);
 }
 
@@ -151,12 +151,12 @@ const struct tcphdr* TCPAnalyzer::ExtractTCP_Header(const u_char*& data, int& le
     }
 
     if ( tcp_hdr_len > static_cast<uint32_t>(len) || tcp_hdr_len > static_cast<uint32_t>(remaining) ) {
-        // This can happen even with the above test, due to TCP options.
+
         adapter->Weird("truncated_header");
         return nullptr;
     }
 
-    len -= tcp_hdr_len; // remove TCP header
+    len -= tcp_hdr_len;
     remaining -= tcp_hdr_len;
     data += tcp_hdr_len;
 

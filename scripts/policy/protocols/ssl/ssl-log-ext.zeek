@@ -1,54 +1,54 @@
-##! This file adds a lot of additional information to the SSL log
-##! It is not loaded by default since the information significantly expands
-##! the log and is probably not interesting for a majority of people.
+
+
+
 
 @load base/protocols/ssl
 
 module SSL;
 
 redef record SSL::Info += {
-	## Numeric version of the server in the server hello
+
 	server_version: count &log &optional;
-	## Numeric version of the client in the client hello
+
 	client_version: count &log &optional;
-	## Ciphers that were offered by the client for the connection
+
 	client_ciphers: vector of count  &log &optional;
-	## SSL Client extensions
+
 	ssl_client_exts: vector of count &log &optional;
-	## SSL server extensions
+
 	ssl_server_exts: vector of count &log &optional;
-	## Suggested ticket lifetime sent in the session ticket handshake
-	## by the server.
+
+
 	ticket_lifetime_hint: count &log &optional;
-	## The diffie helman parameter size, when using DH.
+
 	dh_param_size: count &log &optional;
-	## supported elliptic curve point formats
+
 	point_formats: vector of count  &log &optional;
-	## The curves supported by the client.
+
 	client_curves: vector of count  &log &optional;
-	## Application layer protocol negotiation extension sent by the client.
+
 	orig_alpn: vector of string &log &optional;
-	## TLS 1.3 supported versions
+
 	client_supported_versions: vector of count &log &optional;
-	## TLS 1.3 supported versions
+
 	server_supported_version: count &log &optional;
-	## TLS 1.3 Pre-shared key exchange modes
+
 	psk_key_exchange_modes: vector of count &log &optional;
-	## Key share groups from client hello
+
 	client_key_share_groups: vector of count &log &optional;
-	## Selected key share group from server hello
+
 	server_key_share_group: count &log &optional;
-	## Client supported compression methods
+
 	client_comp_methods: vector of count &log &optional;
-	## Server chosen compression method
+
 	comp_method: count &optional;
-	## Client supported signature algorithms
+
 	sigalgs: vector of count &log &optional;
-	## Client supported hash algorithms
+
 	hashalgs: vector of count &log &optional;
-	## HPKE KDF identifier from the encrypted_client_hello extension.
+
 	ech_kdf_id: count &log &optional;
-	## HPKE AEAD identifier from the encrypted_client_hello extension.
+
 	ech_aead_id: count &log &optional;
 };
 
@@ -126,7 +126,7 @@ event ssl_dh_server_params(c: connection, p: string, q: string, Ys: string)
 	{
 	set_session(c);
 
-	local key_length = |Ys| * 8; # key length in bits
+	local key_length = |Ys| * 8;
 	c$ssl$dh_param_size = key_length;
 	}
 

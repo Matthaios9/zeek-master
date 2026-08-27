@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/protocol/ip/IPBasedAnalyzer.h"
 
@@ -27,14 +27,14 @@ IPBasedAnalyzer::~IPBasedAnalyzer() {
 }
 
 bool IPBasedAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* pkt) {
-    static IPBasedConnKeyPtr key; // Note, this is static for reuse:
+    static IPBasedConnKeyPtr key;
     if ( ! key ) {
         ConnKeyPtr ck = conn_key_mgr->GetFactory().NewConnKey();
 
-        // The IPBasedAnalyzer requires a factory that produces IPBasedConnKey instances.
-        // We could check with dynamic_cast, but that's probably slow, so assume plugin
-        // providers know what they're doing here and anyhow, we don't really have analyzers
-        // that instantiate non-IP connections today and definitely not here!
+
+
+
+
         key = IPBasedConnKeyPtr(static_cast<IPBasedConnKey*>(ck.release()));
     }
 
@@ -71,8 +71,8 @@ bool IPBasedAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* pkt
     if ( ! conn )
         return false;
 
-    // If we successfully made a connection for this packet that means it'll eventually
-    // get logged, which means we can mark this packet as having been processed.
+
+
     pkt->processed = true;
 
     bool is_orig = (src_addr == conn->OrigAddr()) && (src_port == conn->OrigPort());
@@ -110,15 +110,15 @@ bool IPBasedAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* pkt
     run_state::current_timestamp = 0;
     run_state::current_pkt = nullptr;
 
-    // If the packet is reassembled, disable packet dumping because the
-    // pointer math to dump the data wouldn't work.
+
+
     if ( pkt->ip_hdr->Reassembled() )
         pkt->dump_packet = false;
     else if ( conn->RecordPackets() ) {
         pkt->dump_packet = true;
 
-        // If we don't want the content, set the dump size to include just
-        // the header.
+
+
         if ( ! conn->RecordContents() )
             pkt->dump_size = payload - pkt->data;
     }
@@ -127,8 +127,8 @@ bool IPBasedAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* pkt
 }
 
 bool IPBasedAnalyzer::CheckHeaderTrunc(size_t min_hdr_len, size_t remaining, Packet* packet) {
-    // If segment offloading or similar is enabled, the payload len will return 0.
-    // Thus, let's ignore that case.
+
+
     if ( packet->ip_hdr->PayloadLen() && packet->ip_hdr->PayloadLen() < min_hdr_len ) {
         Weird("truncated_header", packet);
         return false;
@@ -142,7 +142,7 @@ bool IPBasedAnalyzer::CheckHeaderTrunc(size_t min_hdr_len, size_t remaining, Pac
 }
 
 bool IPBasedAnalyzer::IsLikelyServerPort(uint32_t port) const {
-    // We keep a cached in-core version of the table to speed up the lookup.
+
     static std::set<zeek_uint_t> port_cache;
     static bool have_cache = false;
 
@@ -154,7 +154,7 @@ bool IPBasedAnalyzer::IsLikelyServerPort(uint32_t port) const {
         have_cache = true;
     }
 
-    // We exploit our knowledge of PortVal's internal storage mechanism here.
+
     port |= server_port_mask;
 
     return port_cache.contains(port);
@@ -188,10 +188,10 @@ void IPBasedAnalyzer::BuildSessionAnalyzerTree(Connection* conn) {
 
     bool scheduled = analyzer_mgr->ApplyScheduledAnalyzers(conn, false, root);
 
-    // Hmm... Do we want *just* the expected analyzer, or all
-    // other potential analyzers as well?  For now we only take
-    // the scheduled ones.
-    if ( ! scheduled ) { // Let's see if it's a port we know.
+
+
+
+    if ( ! scheduled ) {
         if ( ! analyzers_by_port.empty() && ! zeek::detail::dpd_ignore_ports ) {
             int resp_port = ntohs(conn->RespPort());
             std::set<zeek::Tag>* ports = LookupPort(resp_port, false);
@@ -211,7 +211,7 @@ void IPBasedAnalyzer::BuildSessionAnalyzerTree(Connection* conn) {
         }
     }
 
-    // Make analyzers added above through known ports visible via GetChildren()
+
     root->AppendNewChildren();
 
     root->AddExtraAnalyzers(conn);
@@ -245,7 +245,7 @@ bool IPBasedAnalyzer::UnregisterAnalyzerForPort(const zeek::Tag& tag, uint32_t p
     tag_set* l = LookupPort(port, true);
 
     if ( ! l )
-        return true; // still a "successful" unregistration
+        return true;
 
 #ifdef DEBUG
     const char* name = analyzer_mgr->GetComponentName(tag).c_str();

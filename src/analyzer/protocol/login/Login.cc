@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/login/Login.h"
 
@@ -27,9 +27,9 @@ Login_Analyzer::Login_Analyzer(const char* name, Connection* conn)
     : analyzer::tcp::TCP_ApplicationAnalyzer(name, conn) {
     state = LOGIN_STATE_AUTHENTICATE;
     num_user_lines_seen = lines_scanned = 0;
-    // Set last_failure_num_user_lines so we will always generate
-    // at least one failure message, even if the user doesn't
-    // type anything (but we see, e.g., a timeout).
+
+
+
     last_failure_num_user_lines = -1;
     login_prompt_line = failure_line = 0;
     user_text_first = 0;
@@ -75,7 +75,7 @@ void Login_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
 
     char* str = new char[length + 1];
 
-    // Eliminate NUL characters.
+
     int j = 0;
     for ( int i = 0; i < length; ++i )
         if ( line[i] != '\0' )
@@ -107,7 +107,7 @@ void Login_Analyzer::NewLine(bool orig, char* line) {
     if ( state == LOGIN_STATE_AUTHENTICATE ) {
         if ( TCP() && (TCP()->OrigState() == analyzer::tcp::TCP_ENDPOINT_PARTIAL ||
                        TCP()->RespState() == analyzer::tcp::TCP_ENDPOINT_PARTIAL) )
-            state = LOGIN_STATE_CONFUSED; // unknown login state
+            state = LOGIN_STATE_CONFUSED;
         else {
             AuthenticationDialog(orig, line);
             return;
@@ -119,9 +119,9 @@ void Login_Analyzer::NewLine(bool orig, char* line) {
         return;
     }
 
-    // When we're in "confused", we feed each user input line to
-    // login_confused_text, but also scan the text in the
-    // other direction for evidence of successful login.
+
+
+
     if ( orig ) {
         (void)IsPloy(line);
         ConfusionText(line);
@@ -145,8 +145,8 @@ void Login_Analyzer::AuthenticationDialog(bool orig, char* line) {
                     return;
                 }
 
-                // VMS repeats the username, not the last line
-                // typed (which presumably is the password).
+
+
                 if ( username ) {
                     line = reinterpret_cast<char*>(username->AsString()->Bytes());
                     if ( strstr(line, VMS_REPEAT_SEQ) )
@@ -169,8 +169,8 @@ void Login_Analyzer::AuthenticationDialog(bool orig, char* line) {
         return;
     }
 
-    // Ignore blank lines from the responder - some systems spew
-    // out a whole bunch of these.
+
+
     if ( IsEmpty(line) )
         return;
 
@@ -182,20 +182,20 @@ void Login_Analyzer::AuthenticationDialog(bool orig, char* line) {
     if ( prompt && ! IsSuccessMsg(line) && ! is_timeout ) {
         is_VMS = strstr(line, "Username:") != nullptr;
 
-        // If we see multiple login prompts, presume that
-        // each is consuming one line of typeahead.
-        //
-        // We can also get multiple login prompts spread
-        // across adjacent lines, for example if the user
-        // enters a blank line or a line that wasn't accepted
-        // (e.g., "foo^C").
+
+
+
+
+
+
+
 
         int multi_line_prompt = (login_prompt_line == lines_scanned - 1 &&
-                                 // if login_prompt_line is the same as failure_line,
-                                 // then we didn't actually see a login prompt
-                                 // there, we're just remembering that as the
-                                 // prompt line so we can count typeahead with
-                                 // respect to it (see below).
+
+
+
+
+
                                  login_prompt_line != failure_line);
 
         const char* next_prompt = nullptr;
@@ -241,23 +241,23 @@ void Login_Analyzer::AuthenticationDialog(bool orig, char* line) {
 
     else if ( is_timeout || IsFailureMsg(line) ) {
         if ( num_user_lines_seen > last_failure_num_user_lines ) {
-            // The user has typed something since we last
-            // generated a failure event, so it's worth
-            // recording another failure event.
-            //
-            // We can otherwise wind up generating multiple
-            // failure events for sequences like:
-            //
-            //	Error reading command input
-            //	Timeout period expired
+
+
+
+
+
+
+
+
+
             if ( is_timeout )
                 AddUserText("<timeout>");
             LoginEvent(login_failure, line);
         }
 
-        // Set the login prompt line to be here, too, so
-        // that we require MAX_LOGIN_LOOKAHEAD beyond this
-        // point before deciding they've logged in.
+
+
+
         login_prompt_line = failure_line = lines_scanned;
         last_failure_num_user_lines = num_user_lines_seen;
     }
@@ -279,7 +279,7 @@ void Login_Analyzer::AuthenticationDialog(bool orig, char* line) {
 
 void Login_Analyzer::SetEnv(bool orig, char* name, char* val) {
     if ( ! orig )
-        // Why is the responder transmitting its environment??
+
         Confused("responder_environment", name);
 
     else {
@@ -293,7 +293,7 @@ void Login_Analyzer::SetEnv(bool orig, char* name, char* val) {
                 Unref(username);
             }
 
-            // "val" gets copied here.
+
             username = new StringVal(val);
         }
 
@@ -327,7 +327,7 @@ void Login_Analyzer::LoginEvent(EventHandlerPtr f, const char* line, bool no_use
     if ( login_prompt_line > failure_line ) {
         FlushEmptyTypeahead();
 
-        // We should've seen a username.
+
         if ( ! HaveTypeahead() ) {
             if ( no_user_okay ) {
                 Unref(username);
@@ -346,8 +346,8 @@ void Login_Analyzer::LoginEvent(EventHandlerPtr f, const char* line, bool no_use
     }
 
     else {
-        // Evidently the system reprompted for a password upon an
-        // earlier failure.  Use the previously-recorded username.
+
+
         if ( ! username ) {
             if ( no_user_okay ) {
                 Unref(username);
@@ -383,14 +383,14 @@ void Login_Analyzer::LineEvent(EventHandlerPtr f, const char* line) {
 }
 
 void Login_Analyzer::Confused(const char* msg, const char* line) {
-    state = LOGIN_STATE_CONFUSED; // to suppress further messages
+    state = LOGIN_STATE_CONFUSED;
 
     if ( login_confused )
         EnqueueConnEvent(login_confused, ConnVal(), make_intrusive<StringVal>(msg), make_intrusive<StringVal>(line));
 
     if ( login_confused_text ) {
-        // Send all of the typeahead, and the current line, as
-        // confusion text.
+
+
         while ( HaveTypeahead() ) {
             char* s = PopUserText();
             ConfusionText(s);
@@ -423,7 +423,7 @@ bool Login_Analyzer::IsSkipAuthentication(const char* line) const {
 const char* Login_Analyzer::IsLoginPrompt(const char* line) const {
     int prompt_match = re_login_prompts->MatchAnywhere(line);
     if ( ! prompt_match || IsFailureMsg(line) )
-        // IRIX can report "login: ERROR: Login incorrect"
+
         return nullptr;
 
     return &line[prompt_match];
@@ -521,4 +521,4 @@ RE_Matcher* init_RE(ListVal* l) {
     return re;
 }
 
-} // namespace zeek::analyzer::login
+}

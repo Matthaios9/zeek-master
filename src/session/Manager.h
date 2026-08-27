@@ -1,10 +1,10 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
 #include "zeek/zeek-config.h"
 
-#include <sys/types.h> // for u_char
+#include <sys/types.h>
 #include <unordered_map>
 
 #include "zeek/ConnKey.h"
@@ -18,7 +18,7 @@ class CounterFamily;
 using CounterFamilyPtr = std::shared_ptr<CounterFamily>;
 class Counter;
 using CounterPtr = std::shared_ptr<Counter>;
-} // namespace telemetry
+}
 
 namespace detail {
 class PacketFilter;
@@ -60,27 +60,27 @@ public:
     Manager();
     ~Manager();
 
-    // Looks up the connection referred to by the given Val,
-    // which should be a conn_id record.  Returns nil if there's
-    // no such connection or the Val is ill-formed.
+
+
+
     Connection* FindConnection(Val* v);
 
-    /**
-     * Looks up the connection referred to by a given key.
-     *
-     * @param conn_key The key for the connection to search for.
-     * @return The connection, or nullptr if one doesn't exist.
-     */
+
+
+
+
+
+
     Connection* FindConnection(const zeek::ConnKey& conn_key);
 
     void Remove(Session* s);
     void Insert(Session* c, bool remove_existing = true);
 
-    // Generating connection_pending events for all connections
-    // that are still active.
+
+
     void Drain();
 
-    // Clears the session maps.
+
     void Clear();
 
     void GetStats(Stats& s);
@@ -93,11 +93,11 @@ public:
 private:
     using SessionMap = std::unordered_map<detail::Key, Session*, detail::KeyHash>;
 
-    // Inserts a new connection into the sessions map. If a connection with
-    // the same key already exists in the map, it will be overwritten by
-    // the new one.  Connection count stats get updated either way (so most
-    // cases should likely check that the key is not already in the map to
-    // avoid unnecessary incrementing of connecting counts).
+
+
+
+
+
     void InsertSession(detail::Key key, Session* session);
 
     SessionMap session_map;
@@ -106,9 +106,9 @@ private:
     telemetry::CounterPtr ended_by_inactivity_metric;
 };
 
-} // namespace session
+}
 
-// Manager for the currently active sessions.
+
 ZEEK_EXTERN_DATA session::Manager* session_mgr;
 
-} // namespace zeek
+}

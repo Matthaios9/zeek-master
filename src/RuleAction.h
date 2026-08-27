@@ -1,8 +1,8 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
-#include <sys/types.h> // for u_char
+#include <sys/types.h>
 #include <string>
 
 #include "zeek/EventHandler.h"
@@ -19,10 +19,10 @@ namespace detail {
 class Rule;
 class RuleEndpointState;
 
-// Returns true if the given C-string represents a registered event.
+
 bool is_event(const char* id);
 
-// Base class of all rule actions.
+
 class RuleAction {
 public:
     RuleAction() = default;
@@ -32,7 +32,7 @@ public:
     virtual void PrintDebug() = 0;
 };
 
-// Implements the "event" keyword.
+
 class RuleActionEvent : public RuleAction {
 public:
     explicit RuleActionEvent(const char* arg_msg);
@@ -45,7 +45,7 @@ public:
 private:
     StringValPtr msg;
     EventHandlerPtr handler;
-    bool want_end_of_match = false; // Whether handler accepts end_of_match parameter.
+    bool want_end_of_match = false;
 };
 
 class RuleActionMIME : public RuleAction {
@@ -65,7 +65,7 @@ private:
     int strength = 0;
 };
 
-// Base class for enable/disable actions.
+
 class RuleActionAnalyzer : public RuleAction {
 public:
     explicit RuleActionAnalyzer(const char* analyzer);
@@ -100,5 +100,5 @@ public:
     void PrintDebug() override;
 };
 
-} // namespace detail
-} // namespace zeek
+}
+}

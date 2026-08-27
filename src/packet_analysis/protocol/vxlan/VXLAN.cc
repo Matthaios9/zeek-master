@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/protocol/vxlan/VXLAN.h"
 
@@ -10,9 +10,9 @@ using namespace zeek::packet_analysis::VXLAN;
 VXLAN_Analyzer::VXLAN_Analyzer() : zeek::packet_analysis::Analyzer("VXLAN") {}
 
 bool VXLAN_Analyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* packet) {
-    // VXLAN always comes from a UDP connection, which means that session should always
-    // be valid and always be a connection. Return a weird if we didn't have a session
-    // stored.
+
+
+
     if ( ! packet->session ) {
         Analyzer::Weird("vxlan_missing_connection");
         return false;
@@ -43,11 +43,11 @@ bool VXLAN_Analyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* pack
     len -= hdr_size;
     data += hdr_size;
 
-    // We've successfully parsed the VXLAN part, so we might as well confirm this.
+
     AnalyzerConfirmation(packet->session);
 
     if ( len == 0 ) {
-        // A VXLAN header that isn't followed by a tunnelled packet seems weird.
+
         Weird("vxlan_empty_packet", packet);
         return false;
     }

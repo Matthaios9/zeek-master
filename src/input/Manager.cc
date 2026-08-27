@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/input/Manager.h"
 
@@ -25,13 +25,13 @@ using zeek::threading::Value;
 
 namespace zeek::input {
 
-/**
- * InputHashes are used as Dictionaries to store the value and index hashes
- * for all lines currently stored in a table. Index hash is stored as
- * HashKey*, because it is thrown into other Zeek functions that need the
- * complex structure of it. For everything we do (with values), we just take
- * the hash_t value and compare it directly with "=="
- */
+
+
+
+
+
+
+
 struct InputHash {
     zeek::detail::hash_t valhash;
     zeek::detail::HashKey* idxkey;
@@ -45,15 +45,15 @@ static void input_hash_delete_func(void* val) {
     delete h;
 }
 
-/**
- * Base stuff that every stream can do.
- */
+
+
+
 class Manager::Stream {
 public:
     string name;
     bool removed = false;
 
-    StreamType stream_type; // to distinguish between event and table streams
+    StreamType stream_type;
 
     EnumVal* type = nullptr;
     ReaderFrontend* reader = nullptr;
@@ -133,7 +133,7 @@ Manager::TableStream::~TableStream() {
     if ( itype )
         Unref(itype);
 
-    if ( rtype ) // can be 0 for sets
+    if ( rtype )
         Unref(rtype);
 
     if ( currDict ) {
@@ -175,7 +175,7 @@ ReaderBackend* Manager::CreateBackend(ReaderFrontend* frontend, EnumVal* tag) {
     return backend;
 }
 
-// Create a new input reader object to be used at whomevers leisure later on.
+
 bool Manager::CreateStream(Stream* info, RecordVal* description) {
     RecordType* rtype = description->GetType()->AsRecordType();
     if ( ! (same_type(rtype, BifType::Record::Input::TableDescription, false) ||
@@ -194,7 +194,7 @@ bool Manager::CreateStream(Stream* info, RecordVal* description) {
 
     auto reader = description->GetFieldOrDefault("reader");
 
-    // get the source ...
+
     auto source_val = description->GetFieldOrDefault("source");
     const String* bsource = source_val->AsString();
     string source(reinterpret_cast<const char*>(bsource->Bytes()), bsource->Len());
@@ -219,8 +219,8 @@ bool Manager::CreateStream(Stream* info, RecordVal* description) {
     info->config = config.release()->AsTableVal();
 
     {
-        // create config mapping in ReaderInfo. Has to be done before the construction of
-        // reader_obj.
+
+
         auto* info_config_table = info->config->AsTable();
         for ( const auto& icte : *info_config_table ) {
             auto k = icte.GetHashKey();
@@ -249,13 +249,13 @@ bool Manager::CreateStream(Stream* info, RecordVal* description) {
     return true;
 }
 
-// Return true if v is a TypeVal that contains a record type, else false.
+
 static bool is_record_type_val(const zeek::ValPtr& v) {
     const auto& t = v->GetType();
     return t->Tag() == TYPE_TYPE && t->AsTypeType()->GetType()->Tag() == TYPE_RECORD;
 }
 
-// Return true if v contains a FuncVal, else false.
+
 static bool is_func_val(const zeek::ValPtr& v) { return v->GetType()->Tag() == TYPE_FUNC; }
 
 bool Manager::CreateEventStream(RecordVal* fval) {
@@ -370,7 +370,7 @@ bool Manager::CreateEventStream(RecordVal* fval) {
     if ( ! CheckErrorEventTypes(stream_name, error_event, false) )
         return false;
 
-    vector<Field*> fieldsV; // vector, because UnrollRecordType needs it
+    vector<Field*> fieldsV;
 
     bool status = (! UnrollRecordType(&fieldsV, fields, "", allow_file_func));
 
@@ -449,7 +449,7 @@ bool Manager::CreateTableStream(RecordVal* fval) {
         return false;
     }
 
-    // check if index fields match table description
+
     size_t num = idx->NumFields();
     const auto& tl = dst->GetType()->AsTableType()->GetIndexTypes();
     size_t j;
@@ -612,13 +612,13 @@ bool Manager::CreateTableStream(RecordVal* fval) {
     if ( ! CheckErrorEventTypes(stream_name, error_event, true) )
         return false;
 
-    vector<Field*> fieldsV; // vector, because we don't know the length beforehand
+    vector<Field*> fieldsV;
 
     bool status = (! UnrollRecordType(&fieldsV, idx, "", false));
 
     int idxfields = fieldsV.size();
 
-    if ( val ) // if we are not a set
+    if ( val )
         status = status || ! UnrollRecordType(&fieldsV, val.get(), "", BifConst::Input::accept_unsupported_types);
 
     int valfields = fieldsV.size() - idxfields;
@@ -749,7 +749,7 @@ bool Manager::CreateAnalysisStream(RecordVal* fval) {
 
     assert(stream->reader);
 
-    // reader takes in a byte stream as the only field
+
     Field** fields = new Field*[1];
     fields[0] = new Field("bytestream", nullptr, TYPE_STRING, TYPE_VOID, false);
     stream->reader->Init(1, fields);
@@ -811,7 +811,7 @@ bool Manager::IsCompatibleType(Type* t, bool atomic_only) {
 
 bool Manager::RemoveStream(Stream* i) {
     if ( i == nullptr )
-        return false; // not found
+        return false;
 
     if ( i->removed ) {
         reporter->Warning("Stream %s is already queued for removal. Ignoring remove.", i->name.c_str());
@@ -854,10 +854,10 @@ bool Manager::UnrollRecordType(vector<Field*>* fields, const RecordType* rec, co
     for ( int i = 0; i < rec->NumFields(); i++ ) {
         if ( ! IsCompatibleType(rec->GetFieldType(i).get()) ) {
             string name = nameprepend + rec->FieldName(i);
-            // If the field is a file, function, or opaque
-            // and it is optional, we accept it nevertheless.
-            // This allows importing logfiles containing this
-            // stuff that we actually cannot read :)
+
+
+
+
             if ( allow_file_func ) {
                 if ( (rec->GetFieldType(i)->Tag() == TYPE_FILE || rec->GetFieldType(i)->Tag() == TYPE_FUNC ||
                       rec->GetFieldType(i)->Tag() == TYPE_OPAQUE) &&
@@ -907,7 +907,7 @@ bool Manager::UnrollRecordType(vector<Field*>* fields, const RecordType* rec, co
                 st = rec->GetFieldType(i)->AsVectorType()->Yield()->Tag();
 
             else if ( ty == TYPE_PORT && rec->FieldDecl(i)->GetAttr(zeek::detail::ATTR_TYPE_COLUMN) ) {
-                // we have an annotation for the second column
+
 
                 c = eval_in_isolation(rec->FieldDecl(i)->GetAttr(zeek::detail::ATTR_TYPE_COLUMN)->GetExpr());
 
@@ -946,7 +946,7 @@ bool Manager::ForceUpdate(const string& name) {
     DBG_LOG(DBG_INPUT, "Forcing update of stream %s", name.c_str());
 #endif
 
-    return true; // update is async :(
+    return true;
 }
 
 Val* Manager::RecordValToIndexVal(RecordVal* r) const {
@@ -990,16 +990,16 @@ Val* Manager::ValueToIndexVal(const Stream* i, int num_fields, const RecordType*
                 l->Append({AdoptRef{}, rv});
             }
             else {
-                // Bail early here if we already have an error. ValueToVal() won't do
-                // anything in that case, and by checking first we know that if
-                // ValueToVal() returns nullptr, there is a new problem.
+
+
+
                 if ( have_error )
                     break;
 
                 auto v = ValueToVal(i, vals[position], type->GetFieldType(j).get(), have_error);
                 if ( ! v ) {
-                    // Since we're building a (list) value for indexing into
-                    // a table, it is for sure an error to miss a value.
+
+
                     auto source = i->reader->Info().source;
                     auto file_pos = vals[position]->GetFileLineNumber();
 
@@ -1083,16 +1083,16 @@ int Manager::SendEntryTable(Stream* i, const Value* const* vals) {
             delete (valhashkey);
         }
         else {
-            // empty line. index, but no values.
-            // hence we also have no hash value...
+
+
         }
     }
 
     InputHash* h = stream->lastDict->Lookup(idxhash);
     if ( h ) {
-        // seen before
+
         if ( stream->num_val_fields == 0 || h->valhash == valhash ) {
-            // ok, exact duplicate, move entry to new dictionary and do nothing else.
+
             stream->lastDict->Remove(idxhash);
             stream->currDict->Insert(idxhash, h);
             delete idxhash;
@@ -1101,9 +1101,9 @@ int Manager::SendEntryTable(Stream* i, const Value* const* vals) {
 
         else {
             assert(stream->num_val_fields > 0);
-            // entry was updated in some way
+
             stream->lastDict->Remove(idxhash);
-            // keep h for predicates
+
             updated = true;
         }
     }
@@ -1113,7 +1113,7 @@ int Manager::SendEntryTable(Stream* i, const Value* const* vals) {
 
     int position = stream->num_idx_fields;
 
-    bool convert_error = false; // this will be set to true by ValueTo* on Error
+    bool convert_error = false;
 
     if ( stream->num_val_fields == 0 )
         valval = nullptr;
@@ -1124,16 +1124,16 @@ int Manager::SendEntryTable(Stream* i, const Value* const* vals) {
     else
         valval = ValueToRecordVal(i, vals, stream->rtype, &position, convert_error);
 
-    // call stream first to determine if we really add / change the entry
+
     if ( stream->pred && ! convert_error ) {
         EnumValPtr ev;
         int startpos = 0;
         bool pred_convert_error = false;
         predidx = ValueToRecordVal(i, vals, stream->itype, &startpos, pred_convert_error);
 
-        // if we encountered a convert error here - just continue as we would have without
-        // emitting the event. I do not really think that can happen just here and not
-        // at the top-level. But - this is safe.
+
+
+
         if ( ! pred_convert_error ) {
             if ( updated )
                 ev = BifType::Enum::Input::Event->GetEnumVal(BifEnum::Input::EVENT_CHANGED);
@@ -1141,9 +1141,9 @@ int Manager::SendEntryTable(Stream* i, const Value* const* vals) {
                 ev = BifType::Enum::Input::Event->GetEnumVal(BifEnum::Input::EVENT_NEW);
 
             bool result;
-            if ( stream->num_val_fields > 0 ) // we have values
+            if ( stream->num_val_fields > 0 )
                 result = CallPred(stream->pred, 3, ev.release(), predidx->Ref(), valval->Ref());
-            else // no values
+            else
                 result = CallPred(stream->pred, 2, ev.release(), predidx->Ref());
 
             if ( result == false ) {
@@ -1151,13 +1151,13 @@ int Manager::SendEntryTable(Stream* i, const Value* const* vals) {
                 Unref(valval);
 
                 if ( ! updated ) {
-                    // just quit and delete everything we created.
+
                     delete idxhash;
                     return stream->num_val_fields + stream->num_idx_fields;
                 }
 
                 else {
-                    // keep old one
+
                     stream->currDict->Insert(idxhash, h);
                     delete idxhash;
                     return stream->num_val_fields + stream->num_idx_fields;
@@ -1166,20 +1166,20 @@ int Manager::SendEntryTable(Stream* i, const Value* const* vals) {
         }
     }
 
-    // now we don't need h anymore - if we are here, the entry is updated and a new h is created.
+
     delete h;
     h = nullptr;
 
     Val* idxval;
     if ( predidx != nullptr ) {
         idxval = RecordValToIndexVal(predidx);
-        // I think there is an unref missing here. But if I insert is, it crashes :)
+
     }
     else
         idxval = ValueToIndexVal(i, stream->num_idx_fields, stream->itype, vals, convert_error);
 
     if ( convert_error ) {
-        // abort here and free everything that was allocated so far.
+
         Unref(predidx);
         Unref(valval);
         Unref(idxval);
@@ -1193,7 +1193,7 @@ int Manager::SendEntryTable(Stream* i, const Value* const* vals) {
     ValPtr oldval;
     if ( updated == true ) {
         assert(stream->num_val_fields > 0);
-        // in that case, we need the old value to send the event (if we send an event).
+
         oldval = stream->tab->Find({NewRef{}, idxval});
     }
 
@@ -1220,11 +1220,11 @@ int Manager::SendEntryTable(Stream* i, const Value* const* vals) {
         Val* predidx = ValueToRecordVal(i, vals, stream->itype, &startpos, convert_error);
 
         if ( convert_error ) {
-            // the only thing to clean up here is predidx. Everything else should
-            // already be ok again
+
+
             Unref(predidx);
         }
-        else if ( updated ) { // in case of update send back the old value.
+        else if ( updated ) {
             assert(stream->num_val_fields > 0);
             auto ev = BifType::Enum::Input::Event->GetEnumVal(BifEnum::Input::EVENT_CHANGED);
             assert(oldval != nullptr);
@@ -1258,7 +1258,7 @@ void Manager::EndCurrentSend(ReaderFrontend* reader) {
 #ifdef DEBUG
         DBG_LOG(DBG_INPUT, "%s is event, sending end of data", i->name.c_str());
 #endif
-        // just signal the end of the data source
+
         SendEndOfData(i);
         return;
     }
@@ -1266,7 +1266,7 @@ void Manager::EndCurrentSend(ReaderFrontend* reader) {
     assert(i->stream_type == TABLE_STREAM);
     auto* stream = static_cast<TableStream*>(i);
 
-    // lastdict contains all deleted entries and should be empty apart from that
+
     for ( auto it = stream->lastDict->begin_robust(); it != stream->lastDict->end_robust(); ++it ) {
         auto lastDictIdxKey = it->GetHashKey();
         InputHash* ih = it->value;
@@ -1286,13 +1286,13 @@ void Manager::EndCurrentSend(ReaderFrontend* reader) {
         }
 
         if ( stream->pred ) {
-            // ask predicate, if we want to expire this element...
+
 
             bool result = CallPred(stream->pred, 3, ev->Ref(), predidx->Ref(), val->Ref());
 
             if ( result == false ) {
-                // Keep it. Hence - we quit and simply go to the next entry of lastDict
-                // ah well - and we have to add the entry to currDict...
+
+
                 stream->currDict->Insert(lastDictIdxKey.get(), stream->lastDict->RemoveEntry(lastDictIdxKey.get()));
                 continue;
             }
@@ -1306,11 +1306,11 @@ void Manager::EndCurrentSend(ReaderFrontend* reader) {
         }
 
         stream->tab->Remove(*ih->idxkey);
-        stream->lastDict->Remove(lastDictIdxKey.get()); // delete in next line
+        stream->lastDict->Remove(lastDictIdxKey.get());
         delete ih;
     }
 
-    stream->lastDict->Clear(); // should be empty. but well... who knows...
+    stream->lastDict->Clear();
     delete stream->lastDict;
 
     stream->lastDict = stream->currDict;
@@ -1390,7 +1390,7 @@ int Manager::SendEventStreamEvent(Stream* i, EnumVal* type, const Value* const* 
     list<Val*> out_vals;
     Ref(stream->description);
     out_vals.push_back(stream->description);
-    // no tracking, send everything with a new event...
+
     out_vals.push_back(type);
 
     int position = 0;
@@ -1425,7 +1425,7 @@ int Manager::SendEventStreamEvent(Stream* i, EnumVal* type, const Value* const* 
     }
 
     if ( convert_error ) {
-        // we have an error somewhere in our out_vals. Just delete all of them.
+
         for ( auto* val : out_vals )
             Unref(val);
     }
@@ -1462,23 +1462,23 @@ int Manager::PutTable(Stream* i, const Value* const* vals) {
         return stream->num_idx_fields + stream->num_val_fields;
     }
 
-    // if we have a subscribed event, we need to figure out, if this is an update or not
-    // same for predicates
+
+
     if ( stream->pred || stream->event ) {
         bool updated = false;
         ValPtr oldval;
 
         if ( stream->num_val_fields > 0 ) {
-            // in that case, we need the old value to send the event (if we send an event).
+
             oldval = stream->tab->Find({NewRef{}, idxval});
         }
 
         if ( oldval != nullptr ) {
-            // it is an update
+
             updated = true;
         }
 
-        // predicate if we want the update or not
+
         if ( stream->pred ) {
             EnumValPtr ev;
             int startpos = 0;
@@ -1494,16 +1494,16 @@ int Manager::PutTable(Stream* i, const Value* const* vals) {
                     ev = BifType::Enum::Input::Event->GetEnumVal(BifEnum::Input::EVENT_NEW);
 
                 bool result;
-                if ( stream->num_val_fields > 0 ) // we have values
+                if ( stream->num_val_fields > 0 )
                 {
                     Ref(valval);
                     result = CallPred(stream->pred, 3, ev.release(), predidx, valval);
                 }
-                else // no values
+                else
                     result = CallPred(stream->pred, 2, ev.release(), predidx);
 
                 if ( result == false ) {
-                    // do nothing
+
                     Unref(idxval);
                     Unref(valval);
                     return stream->num_val_fields + stream->num_idx_fields;
@@ -1522,7 +1522,7 @@ int Manager::PutTable(Stream* i, const Value* const* vals) {
                 Unref(predidx);
             else {
                 if ( updated ) {
-                    // in case of update send back the old value.
+
                     assert(stream->num_val_fields > 0);
                     auto ev = BifType::Enum::Input::Event->GetEnumVal(BifEnum::Input::EVENT_CHANGED);
                     assert(oldval != nullptr);
@@ -1539,15 +1539,15 @@ int Manager::PutTable(Stream* i, const Value* const* vals) {
         }
     }
 
-    else // no predicates or other stuff
+    else
         stream->tab->Assign({NewRef{}, idxval}, {AdoptRef{}, valval});
 
-    Unref(idxval); // not consumed by assign
+    Unref(idxval);
 
     return stream->num_idx_fields + stream->num_val_fields;
 }
 
-// Todo:: perhaps throw some kind of clear-event?
+
 void Manager::Clear(ReaderFrontend* reader) {
     Stream* i = FindStream(reader);
     if ( i == nullptr ) {
@@ -1565,7 +1565,7 @@ void Manager::Clear(ReaderFrontend* reader) {
     stream->tab->RemoveAll();
 }
 
-// put interface: delete old entry from table.
+
 bool Manager::Delete(ReaderFrontend* reader, Value** vals) {
     Stream* i = FindStream(reader);
     if ( i == nullptr ) {
@@ -1605,14 +1605,14 @@ bool Manager::Delete(ReaderFrontend* reader, Value** vals) {
                     streamresult = CallPred(stream->pred, 3, ev.release(), predidx, IntrusivePtr{val}.release());
 
                     if ( streamresult == false ) {
-                        // keep it.
+
                         Unref(idxval);
                         success = true;
                     }
                 }
             }
 
-            // only if stream = true -> no streaming
+
             if ( streamresult && stream->event ) {
                 Ref(idxval);
                 assert(val != nullptr);
@@ -1625,7 +1625,7 @@ bool Manager::Delete(ReaderFrontend* reader, Value** vals) {
             }
         }
 
-        // only if stream = true -> no streaming
+
         if ( streamresult ) {
             if ( ! stream->tab->Remove(*idxval) )
                 Warning(i, "Internal error while deleting values from input table");
@@ -1639,7 +1639,7 @@ bool Manager::Delete(ReaderFrontend* reader, Value** vals) {
     }
 
     else if ( i->stream_type == ANALYSIS_STREAM ) {
-        // can't do anything
+
         success = true;
     }
 
@@ -1706,10 +1706,10 @@ void Manager::SendEvent(EventHandlerPtr ev, const list<Val*>& events) const {
         event_mgr.Enqueue(ev, std::move(vl), util::detail::SOURCE_LOCAL);
 }
 
-// Convert a Zeek list value to a Zeek record value.
-// I / we could think about moving this functionality to val.cc
+
+
 RecordVal* Manager::ListValToRecordVal(ListVal* list, RecordType* request_type, int* position) const {
-    assert(position != nullptr); // we need the pointer to point to data;
+    assert(position != nullptr);
 
     auto* rec = new RecordVal({NewRef{}, request_type});
 
@@ -1733,10 +1733,10 @@ RecordVal* Manager::ListValToRecordVal(ListVal* list, RecordType* request_type, 
     return rec;
 }
 
-// Convert a threading value to a record value
+
 RecordVal* Manager::ValueToRecordVal(const Stream* stream, const Value* const* vals, RecordType* request_type,
                                      int* position, bool& have_error) const {
-    assert(position != nullptr); // we need the pointer to point to data.
+    assert(position != nullptr);
 
     auto rec = make_intrusive<RecordVal>(RecordTypePtr{NewRef{}, request_type});
     for ( int i = 0; i < request_type->NumFields(); i++ ) {
@@ -1746,13 +1746,13 @@ RecordVal* Manager::ValueToRecordVal(const Stream* stream, const Value* const* v
                 ValueToRecordVal(stream, vals, request_type->GetFieldType(i)->AsRecordType(), position, have_error);
         else if ( request_type->GetFieldType(i)->Tag() == TYPE_FILE ||
                   request_type->GetFieldType(i)->Tag() == TYPE_FUNC ) {
-            // If those two unsupported types are encountered here, they have
-            // been let through by the type checking.
-            // That means that they are optional & the user agreed to ignore
-            // them and has been warned by reporter.
-            // Hence -> assign null to the field, done.
 
-            // Better check that it really is optional. You never know.
+
+
+
+
+
+
             assert(request_type->FieldDecl(i)->GetAttr(zeek::detail::ATTR_OPTIONAL));
         }
         else if ( ! vals[*position]->present && ! request_type->FieldDecl(i)->GetAttr(zeek::detail::ATTR_OPTIONAL) ) {
@@ -1781,10 +1781,10 @@ RecordVal* Manager::ValueToRecordVal(const Stream* stream, const Value* const* v
     return rec.release();
 }
 
-// Count the length of the values used to create a correct length buffer for
-// hashing later
+
+
 int Manager::GetValueLength(const Value* val) const {
-    assert(val->present); // presence has to be checked elsewhere
+    assert(val->present);
     int length = 0;
 
     switch ( val->type ) {
@@ -1854,10 +1854,10 @@ int Manager::GetValueLength(const Value* val) const {
     return length;
 }
 
-// Given a threading::value, copy the raw data bytes into *data and return how many bytes were
-// copied. Used for hashing the values for lookup in the Zeek table
+
+
 int Manager::CopyValue(char* data, const int startpos, const Value* val) const {
-    assert(val->present); // presence has to be checked elsewhere
+    assert(val->present);
 
     switch ( val->type ) {
         case TYPE_BOOL:
@@ -1889,8 +1889,8 @@ int Manager::CopyValue(char* data, const int startpos, const Value* val) const {
         case TYPE_STRING:
         case TYPE_ENUM: {
             memcpy(data + startpos, val->val.string_val.data, val->val.string_val.length);
-            // Add a \0 to the end. To be able to hash zero-length
-            // strings and differentiate from !present.
+
+
             memset(data + startpos + val->val.string_val.length, 0, 1);
             return val->val.string_val.length + 1;
         }
@@ -1938,7 +1938,7 @@ int Manager::CopyValue(char* data, const int startpos, const Value* val) const {
         }
 
         case TYPE_PATTERN: {
-            // include null-terminator
+
             int length = strlen(val->val.pattern_val.text) + 1;
             memcpy(data + startpos, val->val.pattern_val.text, length);
             memcpy(data + startpos + length, &val->val.pattern_val.is_case_insensitive,
@@ -1975,8 +1975,8 @@ int Manager::CopyValue(char* data, const int startpos, const Value* val) const {
     return 0;
 }
 
-// Hash num_elements threading values and return the HashKey for them. At least one of the vals has
-// to be ->present.
+
+
 zeek::detail::HashKey* Manager::HashValues(const int num_elements, const Value* const* vals) const {
     int length = 0;
 
@@ -1985,7 +1985,7 @@ zeek::detail::HashKey* Manager::HashValues(const int num_elements, const Value* 
         if ( val->present )
             length += GetValueLength(val);
 
-        // And in any case add 1 for the end-of-field-identifier.
+
         length++;
     }
 
@@ -2002,8 +2002,8 @@ zeek::detail::HashKey* Manager::HashValues(const int num_elements, const Value* 
         if ( val->present )
             position += CopyValue(data, position, val);
 
-        memset(data + position, 1, 1); // Add end-of-field-marker. Does not really matter which
-                                       // value it is, it just has to be... something.
+        memset(data + position, 1, 1);
+
 
         position++;
     }
@@ -2015,10 +2015,10 @@ zeek::detail::HashKey* Manager::HashValues(const int num_elements, const Value* 
     return key;
 }
 
-// convert threading value to Zeek value
-// have_error is a reference to a boolean which is set to true as soon as an error occurs.
-// When have_error is set to true at the beginning of the function, it is assumed that
-// an error already occurred in the past and processing is aborted.
+
+
+
+
 Val* Manager::ValueToVal(const Stream* i, const Value* val, Type* request_type, bool& have_error) const {
     if ( have_error )
         return nullptr;
@@ -2030,7 +2030,7 @@ Val* Manager::ValueToVal(const Stream* i, const Value* val, Type* request_type, 
     }
 
     if ( ! val->present )
-        return nullptr; // unset field
+        return nullptr;
 
     switch ( val->type ) {
         case TYPE_BOOL: return val_mgr->Bool(val->val.int_val)->Ref();
@@ -2094,7 +2094,7 @@ Val* Manager::ValueToVal(const Stream* i, const Value* val, Type* request_type, 
         }
 
         case TYPE_TABLE: {
-            // all entries have to have the same type...
+
             const auto& type = request_type->AsTableType()->GetIndices()->GetPureType();
             auto set_index = make_intrusive<TypeList>(type);
             set_index->Append(type);
@@ -2113,7 +2113,7 @@ Val* Manager::ValueToVal(const Stream* i, const Value* val, Type* request_type, 
         }
 
         case TYPE_VECTOR: {
-            // all entries have to have the same type...
+
             const auto& type = request_type->AsVectorType()->Yield();
             auto vt = make_intrusive<VectorType>(type);
             auto v = make_intrusive<VectorVal>(std::move(vt));
@@ -2131,16 +2131,16 @@ Val* Manager::ValueToVal(const Stream* i, const Value* val, Type* request_type, 
         }
 
         case TYPE_ENUM: {
-            // Convert to string first to not have to deal with missing
-            // \0's...
+
+
             string enum_string(val->val.string_val.data, val->val.string_val.length);
 
             string module = zeek::detail::extract_module_name(enum_string.c_str());
             string var = zeek::detail::extract_var_name(enum_string.c_str());
 
-            // Well, this is kind of stupid, because EnumType just
-            // mangles the module name and the var name together again...
-            // but well.
+
+
+
             zeek_int_t index = request_type->AsEnumType()->Lookup(module, var.c_str());
             if ( index == -1 ) {
                 auto source = i->reader->Info().source;
@@ -2185,8 +2185,8 @@ Manager::Stream* Manager::FindStream(ReaderFrontend* reader) const {
     return nullptr;
 }
 
-// Function is called on Zeek shutdown.
-// Signal all frontends that they will cease operation.
+
+
 void Manager::Terminate() {
     for ( const auto& [_, stream] : readers ) {
         if ( stream->removed )
@@ -2264,7 +2264,7 @@ void Manager::ErrorHandler(const Stream* i, ErrorType et, bool reporter_send, co
         return;
     }
 
-    // send our script level error event
+
     if ( i->error_event ) {
         EnumValPtr ev;
         switch ( et ) {
@@ -2298,4 +2298,4 @@ void Manager::ErrorHandler(const Stream* i, ErrorType et, bool reporter_send, co
     free(buf);
 }
 
-} // namespace zeek::input
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/SmithWaterman.h"
 
@@ -152,30 +152,30 @@ bool SubstringCmp::operator()(const Substring* bst1, const Substring* bst2) cons
     return (bst1->GetAlignments()[_index].index < bst2->GetAlignments()[_index].index);
 }
 
-// A node in Smith-Waterman's dynamic programming matrix.  Each node
-// contains the byte it represents in the case of a match, the score
-// at this point, and a pointer to the previous cell. Previous means
-// one up and left in case of a match, or a jump somewhere above and
-// left in case of a gap.
-//
+
+
+
+
+
+
 struct SWNode {
-    // ID field for the cell, for debugging purposes.
+
     int id;
 
     u_char swn_byte;
     bool swn_byte_assigned;
     bool swn_visited;
 
-    // The score in this cell. The cell with the globally best score
-    // marks the end of the alignment.
+
+
     int swn_score;
 
-    // Pointer to previous match, walking back yields subsequence.
+
     SWNode* swn_prev;
 };
 
-// A matrix of Smith-Waterman nodes.
-//
+
+
 class SWNodeMatrix {
 public:
     SWNodeMatrix(const String* s1, const String* s2) : _s1(s1), _s2(s2), _rows(s1->Len() + 1), _cols(s2->Len() + 1) {
@@ -186,7 +186,7 @@ public:
     ~SWNodeMatrix() { delete[] _nodes; }
 
     SWNode* operator()(int row, int col) {
-        // Make sure access is in allowed range.
+
         if ( row < 0 || static_cast<size_t>(row) >= _rows )
             return nullptr;
         if ( col < 0 || static_cast<size_t>(col) >= _cols )
@@ -201,9 +201,9 @@ public:
     int GetHeight() const { return _rows; }
     int GetWidth() const { return _cols; }
 
-    // Quick helper function that calculates the coordinates of a
-    // node in the matrix via pointer arithmetic.
-    //
+
+
+
     void GetNodeIndices(SWNode* node, int& row, int& col) {
         SWNode* base = &_nodes[0];
         int offset = (node - base);
@@ -219,32 +219,32 @@ private:
     SWNode* _nodes;
 };
 
-// Returns the common subsequence starting from a given node.
-// @result: vector holding results on return.
-// @matrix: SW matrix.
-// @node: starting node.
-// @params: SW parameters.
-//
+
+
+
+
+
+
 static void sw_collect_single(Substring::Vec* result, SWNodeMatrix& matrix, SWNode* node, SWParams& params) {
     std::string substring("");
     int row = 0;
     int col = 0;
 
     while ( node ) {
-        //		printf("NODE: %i\n", node->id);
+
         node->swn_visited = true;
 
-        // Once we hit a gap, terminate the string and prepend
-        // it to our result vector, IF it has at least the length
-        // requested through the params._min_toklen parameter.
-        //
+
+
+
+
         if ( node->swn_byte_assigned ) {
             matrix.GetNodeIndices(node, row, col);
             substring += node->swn_byte;
-            //			printf("SUBSTRING: %s\n", substring.c_str());
+
         }
         else {
-            //			printf("GAP\n");
+
             if ( substring.size() >= params._min_toklen ) {
                 std::ranges::reverse(substring);
                 auto* bst = new Substring(substring);
@@ -259,9 +259,9 @@ static void sw_collect_single(Substring::Vec* result, SWNodeMatrix& matrix, SWNo
         node = node->swn_prev;
     }
 
-    // Anything left over now is the first string of an alignment and is
-    // manually added and marked as the beginning of a new alignment.
-    //
+
+
+
     if ( ! substring.empty() ) {
         std::ranges::reverse(substring);
         auto* bst = new Substring(substring);
@@ -274,15 +274,15 @@ static void sw_collect_single(Substring::Vec* result, SWNodeMatrix& matrix, SWNo
         result->back()->MarkNewAlignment(true);
 }
 
-// Returns repeated common-subsequence alignments.
-// @result: vector holding results on return.
-// @matrix: SW matrix.
-// @params: SW parameters.
-//
-// The approach taken is to essentially follow back from all starting points of
-// common subsequences while tracking which nodes were visited earlier and which
-// substrings are redundant (i.e., fully covered by a larger common substring).
-//
+
+
+
+
+
+
+
+
+
 static void sw_collect_multiple(Substring::Vec* result, SWNodeMatrix& matrix, SWParams& params) {
     std::vector<Substring::Vec*> als;
 
@@ -336,8 +336,8 @@ static void sw_collect_multiple(Substring::Vec* result, SWNodeMatrix& matrix, SW
     }
 }
 
-// The main Smith-Waterman algorithm.
-//
+
+
 Substring::Vec* smith_waterman(const String* s1, const String* s2, SWParams& params) {
     auto* result = new Substring::Vec();
 
@@ -345,9 +345,9 @@ Substring::Vec* smith_waterman(const String* s1, const String* s2, SWParams& par
          s2->Len() < static_cast<int>(params._min_toklen) )
         return result;
 
-    // Length of both strings, plus one because SW needs
-    // an extra row and column.
-    //
+
+
+
     int len1 = s1->Len() + 1;
     int len2 = s2->Len() + 1;
 
@@ -357,23 +357,23 @@ Substring::Vec* smith_waterman(const String* s1, const String* s2, SWParams& par
     byte_vec string1 = s1->Bytes();
     byte_vec string2 = s2->Bytes();
 
-    SWNodeMatrix matrix(s1, s2);   // dynamic programming matrix.
-    SWNode* node_max = nullptr;    // pointer to the best score's node
-    SWNode* node_br_max = nullptr; // pointer to lowest-right matching node
+    SWNodeMatrix matrix(s1, s2);
+    SWNode* node_max = nullptr;
+    SWNode* node_br_max = nullptr;
 
-    // The highest score in the matrix, globally.  We initialize to 1
-    // because we are only interested in real scores (initializing to
-    // -infty would mean 0 is larger, and would complicate the link
-    // structure in the matrix).
-    //
+
+
+
+
+
     int matrix_max = 1;
     int br_max_r = 0;
     int br_max_b = 0;
 
-    // Matrix initialization ----------------------------------------------
 
-    // Assign IDs to each cell -- this is only for debugging purposes
-    // and can go later.
+
+
+
 
     int counter = 1;
 
@@ -381,62 +381,62 @@ Substring::Vec* smith_waterman(const String* s1, const String* s2, SWParams& par
         for ( int j = 1; j < len2; ++j )
             matrix(i, j)->id = counter++;
 
-    // Subsequence calculation --------------------------------------------
+
 
     for ( int i = 1; i < len1; ++i ) {
         for ( int j = 1; j < len2; ++j ) {
-            // Current node, top/left neighbours.
-            //
+
+
             SWNode* current = matrix(i, j);
             SWNode* node_tl = matrix(i - 1, j - 1);
             SWNode* node_l = matrix(i, j - 1);
             SWNode* node_t = matrix(i - 1, j);
 
-            // Scores of neighbouring nodes.
-            //
+
+
             int score_t = node_t->swn_score;
             int score_l = node_l->swn_score;
             int score_tl = node_tl->swn_score;
 
-            // If strings at current indices match, assign new
-            // score to current node.  Minus-one adjustments
-            // are necessary since matrix has one extra
-            // row + column.
-            //
+
+
+
+
+
             if ( string1[i - 1] == string2[j - 1] ) {
-                // We have a match: improve previous score.
-                //
+
+
                 score_tl += 1;
 
-                // If we're continuing a chain of matches, rate
-                // higher.  This favours longer consecutive
-                // substrings.
-                //
+
+
+
+
                 if ( node_tl->swn_byte_assigned )
                     score_tl += 99;
 
-                // Store the byte we've matched in the node for
-                // easier access.
-                //
+
+
+
                 current->swn_byte = string1[i - 1];
                 current->swn_byte_assigned = true;
             }
 
-            // Pick the score among the neighbours that is now highest.
-            // This is the core of Smith-Waterman.
-            //
+
+
+
             if ( current->swn_byte_assigned )
                 current->swn_score = score_tl;
             else
                 current->swn_score = std::max({score_t, score_l, score_tl});
 
-            // Establish predecessor chain according to neighbor
-            // with best score.
-            //
+
+
+
             if ( current->swn_score == score_tl && current->swn_byte_assigned ) {
-                // If we had matched bytes (*and* it's the
-                // best neighbor), mark the node accordingly
-                //
+
+
+
                 if ( i >= br_max_b && j >= br_max_r ) {
                     node_br_max = current;
                     br_max_b = i;
@@ -450,11 +450,11 @@ Substring::Vec* smith_waterman(const String* s1, const String* s2, SWParams& par
             else
                 current->swn_prev = node_l;
 
-            // Check if we have a new global maximum -- we
-            // specifically track the node that is the global
-            // maximum so we now from where to backtrack at
-            // the end of the matrix iteration.
-            //
+
+
+
+
+
             if ( current->swn_score > matrix_max ) {
                 node_max = current;
                 matrix_max = current->swn_score;
@@ -468,7 +468,7 @@ Substring::Vec* smith_waterman(const String* s1, const String* s2, SWParams& par
 		 		current->swn_prev ? current->swn_prev->id : 0,
 			       string1[i-1], string2[j-1]);
 #endif
-            // printf("%.5i ", current->swn_score);
+
         }
 
 #if 0
@@ -476,12 +476,12 @@ Substring::Vec* smith_waterman(const String* s1, const String* s2, SWParams& par
 #endif
     }
 
-    // Result generation.
 
-    // How we do this depends on the mode we operate in.  In SW_SINGLE, we
-    // follow the path from the best node until there is no predecessor
-    // (that is, when we hit a node in row 0), and stop.  In SW_MULTIPLE,
-    // we collect all non-redundant common subsequences.
+
+
+
+
+
 
     if ( params._sw_variant == SW_MULTIPLE )
         sw_collect_multiple(result, matrix, params);
@@ -496,4 +496,4 @@ Substring::Vec* smith_waterman(const String* s1, const String* s2, SWParams& par
     return result;
 }
 
-} // namespace zeek::detail
+}

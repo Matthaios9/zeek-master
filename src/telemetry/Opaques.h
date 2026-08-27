@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -19,11 +19,11 @@ class GaugeFamily;
 class Histogram;
 class HistogramFamily;
 
-} // namespace telemetry
+}
 
-/**
- * Base class for metric handles. Handle types are not serializable.
- */
+
+
+
 class TelemetryVal : public OpaqueVal {
 protected:
     explicit TelemetryVal(const std::shared_ptr<telemetry::Counter>&);
@@ -67,4 +67,4 @@ using GaugeMetricFamilyVal = TelemetryValImpl<telemetry::GaugeFamily>;
 using HistogramMetricVal = TelemetryValImpl<telemetry::Histogram>;
 using HistogramMetricFamilyVal = TelemetryValImpl<telemetry::HistogramFamily>;
 
-} // namespace zeek
+}

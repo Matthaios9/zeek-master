@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_regex.h"
 
@@ -6,7 +6,7 @@
 #include "pac_id.h"
 #include "pac_output.h"
 
-// Depends on the regular expression library we are using
+
 const char* RegEx::kREMatcherType = "RegExMatcher";
 const char* RegEx::kMatchPrefix = "MatchPrefix";
 

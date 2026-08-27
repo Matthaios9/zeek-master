@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/sip/SIP.h"
 
@@ -15,7 +15,7 @@ void SIP_Analyzer::DeliverPacket(int len, const u_char* data, bool orig, uint64_
     if ( len > 6 && data[0] == 'S' && data[1] == 'I' && data[2] == 'P' && data[3] == '/' )
         real_orig = false;
 
-    // Sometimes we see some packets with just '\r\n' - ignore those
+
     if ( len == 2 && data[0] == '\r' )
         return;
 
@@ -28,4 +28,4 @@ void SIP_Analyzer::DeliverPacket(int len, const u_char* data, bool orig, uint64_
     }
 }
 
-} // namespace zeek::analyzer::sip
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/iosource/Packet.h"
 
@@ -99,36 +99,36 @@ RecordValPtr Packet::ToRawPktHdrVal() const {
     else if ( l3_proto == L3_ARP )
         l3 = BifEnum::L3_ARP;
 
-    // TODO: Get rid of hardcoded l3 protocols.
-    // l2_hdr layout:
-    //      encap: link_encap;      ##< L2 link encapsulation.
-    //      len: count;		##< Total frame length on wire.
-    //      cap_len: count;		##< Captured length.
-    //      src: string &optional;	##< L2 source (if Ethernet).
-    //      dst: string &optional;	##< L2 destination (if Ethernet).
-    //      vlan: count &optional;	##< Outermost VLAN tag if any (and Ethernet).
-    //      vlan_pcp: count &optional;	##< Outermost VLAN PCP if vlan header is present.
-    //      vlan_dei: bool &optional;	##< Outermost VLAN DEI if vlan header is present.
-    //      inner_vlan: count &optional;	##< Innermost VLAN tag if any (and Ethernet).
-    //      inner_vlan_pcp: count &optional;	##< Innermost VLAN PCP if inner vlan header is present.
-    //      inner_vlan_dei: bool &optional;	##< Innermost VLAN DEI if inner vlan header is present.
-    //      eth_type: count &optional;	##< Innermost Ethertype (if Ethernet).
-    //      proto: layer3_proto;	##< L3 protocol.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     if ( is_ethernet ) {
-        // Ethernet header layout is:
-        //    dst[6bytes] src[6bytes] ethertype[2bytes]...
+
+
         l2_hdr->Assign(0, BifType::Enum::link_encap->GetEnumVal(BifEnum::LINK_ETHERNET));
 
-        // FmtEUI48 needs at least 6 bytes to print out the mac address, plus 6 bytes for
-        // skipping over the destination address.
+
+
         if ( cap_len >= 12 )
-            l2_hdr->Assign(3, FmtEUI48(data + 6)); // src
+            l2_hdr->Assign(3, FmtEUI48(data + 6));
         else
             l2_hdr->Assign(3, "00:00:00:00:00:00");
 
         if ( cap_len >= 6 )
-            l2_hdr->Assign(4, FmtEUI48(data)); // dst
+            l2_hdr->Assign(4, FmtEUI48(data));
         else
             l2_hdr->Assign(4, "00:00:00:00:00:00");
 
@@ -147,7 +147,7 @@ RecordValPtr Packet::ToRawPktHdrVal() const {
         l2_hdr->Assign(11, eth_type);
 
         if ( eth_type == ETHERTYPE_ARP || eth_type == ETHERTYPE_REVARP )
-            // We also identify ARP for L3 over ethernet
+
             l3 = BifEnum::L3_ARP;
     }
     else
@@ -160,13 +160,13 @@ RecordValPtr Packet::ToRawPktHdrVal() const {
 
     pkt_hdr->Assign(0, std::move(l2_hdr));
 
-    // The cap_len >= ip_hdr->TotalLen() and Reassembled() checks ensure that
-    // ToPktHdrVal() doesn't access out of bounds memory. For reassembled datagrams,
-    // cap_len ends up less than the reassembled packets total length.
+
+
+
     if ( ip_hdr && (cap_len >= ip_hdr->TotalLen() || ip_hdr->Reassembled()) &&
          (l3_proto == L3_IPV4 || l3_proto == L3_IPV6) )
-        // Packet analysis will have stored the IP header in the packet, so we can use
-        // that to build the output.
+
+
         return ip_hdr->ToPktHdrVal(std::move(pkt_hdr), 1);
     else
         return pkt_hdr;
@@ -202,16 +202,16 @@ ValPtr Packet::FmtEUI48(const u_char* mac) const {
     return make_intrusive<StringVal>(buf);
 }
 
-} // namespace zeek
+}
 
 TEST_SUITE("Packet") {
     TEST_CASE("Packet::Init fields") {
-        // This test verifies that Packet::Init() resets unaffected fields back
-        // to constructor defaults.
+
+
 
         zeek::Packet p;
 
-        // Adjust the fields to non-default values:
+
 
         u_char tmp = 1;
 
@@ -236,8 +236,8 @@ TEST_SUITE("Packet") {
         p.gre_link_type = DLT_EN10MB;
         p.session = reinterpret_cast<zeek::session::Session*>(1);
 
-        // Re-initialize the packet and verify that these fields now match
-        // constructor defaults.
+
+
 
         pkt_timeval ts = {2, 2};
         const u_char tmp2[2] = {2, 2};

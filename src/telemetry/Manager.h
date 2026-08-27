@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -25,12 +25,12 @@
 namespace zeek {
 class RecordVal;
 using RecordValPtr = IntrusivePtr<RecordVal>;
-} // namespace zeek
+}
 
 namespace prometheus {
 class Exposer;
 class Registry;
-} // namespace prometheus
+}
 
 namespace zeek::telemetry {
 
@@ -40,9 +40,9 @@ using CollectCallbackPtr = std::function<double()>;
 
 class ZeekCollectable;
 
-/**
- * Manages a collection of metric families.
- */
+
+
+
 class Manager final : public iosource::IOSource {
 public:
     Manager();
@@ -50,180 +50,180 @@ public:
     Manager(const Manager&) = delete;
     Manager& operator=(const Manager&) = delete;
 
-    ~Manager() override; // = default;
+    ~Manager() override;
 
-    /**
-     * Initialization of the manager. This is called late during Zeek's initialization
-     * after any scripts are processed. Sets up the process stats metrics.
-     */
+
+
+
+
     void InitPostScript();
 
-    /**
-     * Initializes the Prometheus server. This is called during Zeek startup via
-     * zeek_init().
-     *
-     * @param metrics_addr Address the server will listen on
-     * @param metrics_port Port number the server will listen on
-     * @param expose_services_json Whether services.json will be exposed on this server
-     */
+
+
+
+
+
+
+
+
     void ListenPrometheus(std::string_view metrics_addr, int port, bool expose_services_json);
 
     void Terminate();
 
-    /**
-     * @return A VectorVal containing all counter and gauge metrics and their values matching prefix and name.
-     * @param prefix The prefix pattern to use for filtering. Supports globbing.
-     * @param name The name pattern to use for filtering. Supports globbing.
-     */
+
+
+
+
+
     ValPtr CollectMetrics(std::string_view prefix, std::string_view name);
 
-    /**
-     * @return A VectorVal containing all histogram metrics and their values matching prefix and name.
-     * @param prefix The prefix pattern to use for filtering. Supports globbing.
-     * @param name The name pattern to use for filtering. Supports globbing.
-     */
+
+
+
+
+
     ValPtr CollectHistogramMetrics(std::string_view prefix, std::string_view name);
 
-    /**
-     * @return A counter metric family. Creates the family lazily if necessary.
-     * @param prefix The prefix (namespace) this family belongs to.
-     * @param name The human-readable name of the metric, e.g., `requests`.
-     * @param labels Names for all label dimensions of the metric.
-     * @param helptext Short explanation of the metric.
-     * @param unit Unit of measurement.
-     */
+
+
+
+
+
+
+
+
     CounterFamilyPtr CounterFamily(std::string_view prefix, std::string_view name,
                                    std::span<const std::string_view> labels, std::string_view helptext,
                                    std::string_view unit = "");
 
-    /// @copydoc CounterFamily
+
     CounterFamilyPtr CounterFamily(std::string_view prefix, std::string_view name,
                                    std::initializer_list<std::string_view> labels, std::string_view helptext,
                                    std::string_view unit = "");
 
-    /**
-     * Accesses a counter instance. Creates the hosting metric family as well
-     * as the counter lazily if necessary.
-     * @param prefix The prefix (namespace) this family belongs to.
-     * @param name The human-readable name of the metric, e.g., `requests`.
-     * @param labels Values for all label dimensions of the metric.
-     * @param helptext Short explanation of the metric.
-     * @param unit Unit of measurement.
-     * @param callback Passing a callback method will enable asynchronous mode. The callback method will be called
-     * by the metrics subsystem whenever data is requested.
-     */
+
+
+
+
+
+
+
+
+
+
+
     CounterPtr CounterInstance(std::string_view prefix, std::string_view name, std::span<const LabelView> labels,
                                std::string_view helptext, std::string_view unit = "",
                                detail::CollectCallbackPtr callback = nullptr);
 
-    /// @copydoc counterInstance
+
     CounterPtr CounterInstance(std::string_view prefix, std::string_view name, std::initializer_list<LabelView> labels,
                                std::string_view helptext, std::string_view unit = "",
                                detail::CollectCallbackPtr callback = nullptr);
 
-    /**
-     * @return A gauge metric family. Creates the family lazily if necessary.
-     * @param prefix The prefix (namespace) this family belongs to.
-     * @param name The human-readable name of the metric, e.g., `requests`.
-     * @param labels Names for all label dimensions of the metric.
-     * @param helptext Short explanation of the metric.
-     * @param unit Unit of measurement.
-     */
+
+
+
+
+
+
+
+
     GaugeFamilyPtr GaugeFamily(std::string_view prefix, std::string_view name, std::span<const std::string_view> labels,
                                std::string_view helptext, std::string_view unit = "");
 
-    /// @copydoc GaugeFamily
+
     GaugeFamilyPtr GaugeFamily(std::string_view prefix, std::string_view name,
                                std::initializer_list<std::string_view> labels, std::string_view helptext,
                                std::string_view unit = "");
 
-    /**
-     * Accesses a gauge instance. Creates the hosting metric family as well
-     * as the gauge lazily if necessary.
-     * @param prefix The prefix (namespace) this family belongs to.
-     * @param name The human-readable name of the metric, e.g., `requests`.
-     * @param labels Values for all label dimensions of the metric.
-     * @param helptext Short explanation of the metric.
-     * @param unit Unit of measurement.
-     * @param callback Passing a callback method will enable asynchronous mode. The callback method will be called
-     * by the metrics subsystem whenever data is requested.
-     */
+
+
+
+
+
+
+
+
+
+
+
     GaugePtr GaugeInstance(std::string_view prefix, std::string_view name, std::span<const LabelView> labels,
                            std::string_view helptext, std::string_view unit = "",
                            detail::CollectCallbackPtr callback = nullptr);
 
-    /// @copydoc GaugeInstance
+
     GaugePtr GaugeInstance(std::string_view prefix, std::string_view name, std::initializer_list<LabelView> labels,
                            std::string_view helptext, std::string_view unit = "",
                            detail::CollectCallbackPtr callback = nullptr);
 
-    /**
-     * Returns a histogram metric family. Creates the family lazily if
-     * necessary.
-     * @param prefix The prefix (namespace) this family belongs to. Usually the
-     *               application or protocol name, e.g., `http`. The prefix `caf`
-     *               as well as prefixes starting with an underscore are
-     *               reserved.
-     * @param name The human-readable name of the metric, e.g., `requests`.
-     * @param labels Names for all label dimensions of the metric.
-     * @param bounds Upper bounds for the metric buckets.
-     * @param helptext Short explanation of the metric.
-     * @param unit Unit of measurement. Please use base units such as `bytes` or
-     *             `seconds` (prefer lowercase). The pseudo-unit `1` identifies
-     *             dimensionless counts.
-     * @note The first call wins when calling this function multiple times with
-     *       different bucket settings. Users may also override
-     *       @p bounds via run-time configuration.
-     */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     HistogramFamilyPtr HistogramFamily(std::string_view prefix, std::string_view name,
                                        std::span<const std::string_view> labels, std::span<const double> bounds,
                                        std::string_view helptext, std::string_view unit = "");
 
-    /// @copydoc HistogramFamily
+
     HistogramFamilyPtr HistogramFamily(std::string_view prefix, std::string_view name,
                                        std::initializer_list<std::string_view> labels, std::span<const double> bounds,
                                        std::string_view helptext, std::string_view unit = "");
 
-    /**
-     * Returns a histogram. Creates the family lazily if necessary.
-     * @param prefix The prefix (namespace) this family belongs to. Usually the
-     *               application or protocol name, e.g., `http`. The prefix `caf`
-     *               as well as prefixes starting with an underscore are
-     *               reserved.
-     * @param name The human-readable name of the metric, e.g., `requests`.
-     * @param labels Names for all label dimensions of the metric.
-     * @param bounds Upper bounds for the metric buckets.
-     * @param helptext Short explanation of the metric.
-     * @param unit Unit of measurement. Please use base units such as `bytes` or
-     *             `seconds` (prefer lowercase). The pseudo-unit `1` identifies
-     *             dimensionless counts.
-     * @note The first call wins when calling this function multiple times with
-     *       different bucket settings. Users may also override
-     *       @p bounds via run-time configuration.
-     */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     HistogramPtr HistogramInstance(std::string_view prefix, std::string_view name, std::span<const LabelView> labels,
                                    std::span<const double> bounds, std::string_view helptext,
                                    std::string_view unit = "");
 
-    /// @copdoc HistogramInstance
+
     HistogramPtr HistogramInstance(std::string_view prefix, std::string_view name,
                                    std::initializer_list<LabelView> labels, std::initializer_list<double> bounds,
                                    std::string_view helptext, std::string_view unit = "");
 
-    /**
-     * @return A JSON description of the cluster configuration for reporting
-     * to Prometheus for service discovery requests.
-     */
+
+
+
+
     std::string GetClusterJson() const { return cluster_json; }
 
-    /**
-     * @return The pointer to the prometheus-cpp registry used by the telemetry
-     * manager. This is public so that third parties (such as broker) can add
-     * elements to it directly.
-     */
+
+
+
+
+
     std::shared_ptr<prometheus::Registry> GetRegistry() const { return prometheus_registry; }
 
-    // IOSource interface
+
     double GetNextTimeout() override { return -1.0; }
     void Process() override {}
     const char* Tag() override { return "Telemetry::Manager"; }
@@ -250,25 +250,25 @@ protected:
 
     friend class ZeekCollectable;
 
-    /**
-     * Fires the flare for prometheus-cpp callback handling and waits for it to complete.
-     * This can be called from other threads to ensure the callback handling happens on
-     * the main thread.
-     */
+
+
+
+
+
     void WaitForPrometheusCallbacks();
 
 private:
     RecordValPtr GetMetricOptsRecord(const prometheus::MetricFamily& metric_family);
     void BuildClusterJson();
 
-    /**
-     * Runs the Telemetry::sync() hook in Zeek script land.
-     */
+
+
+
     void InvokeTelemetrySyncHook();
 
-    /**
-     * Runs the telemetry sync hooks and metric callbacks.
-     */
+
+
+
     void UpdateMetrics();
 
     bool in_sync_hook = false;
@@ -295,14 +295,14 @@ private:
     zeek::detail::Flare collector_flare;
     std::condition_variable collector_cv;
     std::mutex collector_cv_mtx;
-    // Only modified under collector_cv_mtx!
+
     uint64_t collector_request_idx = 0;
     uint64_t collector_response_idx = 0;
 };
 
-} // namespace zeek::telemetry
+}
 
 namespace zeek {
 ZEEK_EXTERN_DATA telemetry::Manager* telemetry_mgr;
 
-} // namespace zeek
+}

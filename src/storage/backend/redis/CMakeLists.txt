@@ -2,10 +2,10 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 find_package(Hiredis)
 
-# Default to building Reids only if the hiredis library was found.
-#
-# If a user enabled the backend explicitly (-D ENABLE_STORAGE_BACKEND_REDIS:bool=ON),
-# but hiredis wasn't found, hard bail.
+
+
+
+
 option(ENABLE_STORAGE_BACKEND_REDIS "Enable the Redis storage backend" ${HIREDIS_FOUND})
 
 if (ENABLE_STORAGE_BACKEND_REDIS)

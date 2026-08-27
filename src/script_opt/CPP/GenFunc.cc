@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/CPP/Compile.h"
 
@@ -59,14 +59,14 @@ void CPPCompile::DefineBody(const FuncTypePtr& ft, const ProfileFunc* pf, const 
 
     StartBlock();
 
-    // Deal with "any" parameters, if any.
+
     TranslateAnyParams(ft, pf);
 
-    // Make sure that any events referred to in this function have
-    // been initialized.
+
+
     InitializeEvents(pf);
 
-    // Create the local variables.
+
     DeclareLocals(pf);
 
     GenStmt(body);
@@ -76,8 +76,8 @@ void CPPCompile::DefineBody(const FuncTypePtr& ft, const ProfileFunc* pf, const 
         in_hook = false;
     }
 
-    // Seatbelts for running off the end of a function that's supposed
-    // to return a non-native type.
+
+
     if ( ! IsNativeType(ret_type) )
         Emit("return nullptr;");
 
@@ -91,17 +91,17 @@ void CPPCompile::TranslateAnyParams(const FuncTypePtr& ft, const ProfileFunc* pf
     for ( auto i = 0; i < n; ++i ) {
         const auto& t = formals->GetFieldType(i);
         if ( t->Tag() != TYPE_ANY )
-            // Not a relevant parameter.
+
             continue;
 
         auto param_id = FindParam(i, pf);
         if ( ! param_id )
-            // Parameter isn't used, skip it.
+
             continue;
 
         const auto& pt = param_id->GetType();
         if ( pt->Tag() == TYPE_ANY )
-            // It's already "any", nothing more to do.
+
             continue;
 
         auto any_i = string("any_param__CPP_") + Fmt(i);
@@ -111,22 +111,22 @@ void CPPCompile::TranslateAnyParams(const FuncTypePtr& ft, const ProfileFunc* pf
 }
 
 void CPPCompile::InitializeEvents(const ProfileFunc* pf) {
-    // Make sure that any events referred to in this function have
-    // been initialized.  We have to do this dynamically because it
-    // depends on whether the final script using the compiled code
-    // happens to load the associated event handler
+
+
+
+
     for ( const auto& e : pf->Events() ) {
         auto ev_name = globals[e] + "_ev";
 
-        // Create a scope so we don't have to individualize the
-        // variables.
+
+
         Emit("{");
         Emit("static bool did_init = false;");
         Emit("if ( ! did_init )");
         StartBlock();
 
-        // We do both a Lookup and a Register because only the latter
-        // returns an EventHandlerPtr, sigh.
+
+
         Emit("if ( event_registry->Lookup(\"%s\") )", e);
         StartBlock();
         Emit("%s = event_registry->Register(\"%s\");", ev_name, e);
@@ -138,8 +138,8 @@ void CPPCompile::InitializeEvents(const ProfileFunc* pf) {
 }
 
 void CPPCompile::DeclareLocals(const ProfileFunc* pf) {
-    // We track captures by their names rather than their ID*'s because the
-    // latter can be inconsistent when inlining.
+
+
     set<string> capture_names;
     if ( lambda_ids )
         for ( const auto& li : *lambda_ids )
@@ -148,8 +148,8 @@ void CPPCompile::DeclareLocals(const ProfileFunc* pf) {
     const auto& ls = pf->Locals();
     int num_params = static_cast<int>(pf->Params().size());
 
-    // Track whether we generated a declaration.  This is just for
-    // tidiness in the output.
+
+
     bool did_decl = false;
 
     for ( const auto& l : ls ) {
@@ -157,10 +157,10 @@ void CPPCompile::DeclareLocals(const ProfileFunc* pf) {
         auto cn = CaptureName(l);
 
         if ( capture_names.contains(cn) )
-            // No need to declare these, they're passed in as parameters.
+
             ln = std::move(cn);
 
-        else if ( ! params.contains(l) && l->Offset() >= num_params ) { // Not a parameter, so must be a local.
+        else if ( ! params.contains(l) && l->Offset() >= num_params ) {
             Emit("%s %s;", FullTypeName(l->GetType()), ln);
             did_decl = true;
         }
@@ -177,12 +177,12 @@ string CPPCompile::BodyName(const FuncInfo& func) {
     const auto& body = func.Body();
     auto fname = f->GetName();
 
-    // Extend name with location information.
+
     auto loc = body->GetLocationInfo();
     if ( loc->FileName() ) {
         auto fn = loc->FileName();
 
-        // Skip leading goop that gets added by search paths.
+
         while ( *fn == '.' || *fn == '/' )
             ++fn;
 
@@ -192,7 +192,7 @@ string CPPCompile::BodyName(const FuncInfo& func) {
         std::ranges::transform(fns, fns.begin(), canonicalize);
 
         if ( ! isalpha(fns[0]) )
-            // This can happen for filenames beginning with numbers.
+
             fns = "_" + fns;
 
         fname = fns + "__" + fname;
@@ -203,7 +203,7 @@ string CPPCompile::BodyName(const FuncInfo& func) {
     if ( bodies.size() == 1 )
         return fname;
 
-    // Make the name distinct-per-body.
+
 
     size_t i;
     for ( i = 0; i < bodies.size(); ++i )
@@ -259,4 +259,4 @@ string CPPCompile::GenArgs(const RecordTypePtr& params, const Expr* e) {
     return gen;
 }
 
-} // namespace zeek::detail
+}

@@ -1,11 +1,11 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/cluster/websocket/Plugin.h"
 
 namespace zeek::plugin::Cluster_WebSocket {
-// Definition of plugin.
+
 Plugin plugin;
-}; // namespace zeek::plugin::Cluster_WebSocket
+};
 
 namespace zeek::plugin::Cluster_WebSocket {
 
@@ -16,4 +16,4 @@ zeek::plugin::Configuration Plugin::Configure() {
     return config;
 }
 
-} // namespace zeek::plugin::Cluster_WebSocket
+}

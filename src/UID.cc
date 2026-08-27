@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/UID.h"
 
@@ -31,11 +31,11 @@ std::string UID::Base62(std::string prefix) const {
     if ( ! initialized )
         reporter->InternalError("use of uninitialized UID");
 
-    char tmp[sizeof(uid) * 8 + 1]; // enough for even binary representation
+    char tmp[sizeof(uid) * 8 + 1];
     for ( const auto& digit : uid )
         prefix.append(util::uitoa_n(digit, tmp, sizeof(tmp), 62));
 
     return prefix;
 }
 
-} // namespace zeek
+}

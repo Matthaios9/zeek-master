@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/protocol/ip/IP.h"
 
@@ -29,8 +29,8 @@ IPAnalyzer::IPAnalyzer() : zeek::packet_analysis::Analyzer("IP") {
 IPAnalyzer::~IPAnalyzer() { delete discarder; }
 
 bool IPAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* packet) {
-    // Check to make sure we have enough data left for an IP header to be here. Note we only
-    // check ipv4 here. We'll check ipv6 later once we determine we have an ipv6 header.
+
+
     if ( len < sizeof(struct ip) ) {
         Weird("truncated_IP", packet);
         return false;
@@ -38,8 +38,8 @@ bool IPAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* packet) 
 
     int32_t hdr_size = static_cast<int32_t>(data - packet->data);
 
-    // Cast the current data pointer to an IP header pointer so we can use it to get some
-    // data about the header.
+
+
     auto ip = reinterpret_cast<const struct ip*>(data);
     uint32_t protocol = ip->ip_v;
     std::shared_ptr<IP_Hdr> ip_hdr;
@@ -62,19 +62,19 @@ bool IPAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* packet) 
         return false;
     }
 
-    // TotalLen() returns the full length of the IP portion of the packet, including
-    // the IP header and payload.
+
+
     uint32_t total_len = ip_hdr->TotalLen();
     if ( total_len == 0 ) {
-        // TCP segmentation offloading can zero out the ip_len field.
+
         Weird("ip_hdr_len_zero", packet);
 
         if ( zeek::detail::ignore_checksums )
-            // Cope with the zero'd out ip_len field by using the caplen.
+
             total_len = packet->cap_len - hdr_size;
         else
-            // If this is caused by segmentation offloading, the checksum will
-            // also be incorrect. If checksum validation is enabled - just bail here.
+
+
             return false;
     }
 
@@ -83,8 +83,8 @@ bool IPAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* packet) 
         return false;
     }
 
-    // For both of these it is safe to pass ip_hdr because the presence
-    // is guaranteed for the functions that pass data to us.
+
+
     uint16_t ip_hdr_len = ip_hdr->HdrLen();
     if ( ip_hdr_len > total_len ) {
         Weird("invalid_IP_header_size", packet);
@@ -111,18 +111,18 @@ bool IPAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* packet) 
         }
     }
 
-    // If we got here, the IP_Hdr is most likely valid and safe to use.
+
     packet->ip_hdr = std::move(ip_hdr);
 
-    // If there's an encapsulation stack in this packet, meaning this packet is part of a chain
-    // of tunnels, make sure to store the IP header in the last flow in the stack so it can be
-    // used by previous analyzers as we return up the chain.
+
+
+
     if ( packet->encap ) {
         if ( auto* ec = packet->encap->Last() )
             ec->ip_hdr = packet->ip_hdr;
     }
 
-    // Ignore if packet matches packet filter.
+
     zeek::detail::PacketFilter* packet_filter = packet_mgr->GetPacketFilter(false);
     if ( packet_filter && packet_filter->Match(packet->ip_hdr, total_len, len) )
         return false;
@@ -139,19 +139,19 @@ bool IPAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* packet) 
 
     zeek::detail::FragReassembler* f = nullptr;
 
-    // Store this off so that it can be reset back to the original value before returning from
-    // this method.
+
+
     size_t orig_cap_len = packet->cap_len;
 
     if ( packet->ip_hdr->IsFragment() ) {
-        packet->dump_packet = true; // always record fragments
+        packet->dump_packet = true;
 
         if ( len < total_len ) {
             Weird("incompletely_captured_fragment", packet);
 
-            // Don't try to reassemble, that's doomed.
-            // Discard all except the first fragment (which
-            // is useful in analyzing header-only traces)
+
+
+
             if ( packet->ip_hdr->FragOffset() != 0 )
                 return false;
         }
@@ -161,13 +161,13 @@ bool IPAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* packet) 
             std::shared_ptr<IP_Hdr> ih = f->ReassembledPkt();
 
             if ( ! ih )
-                // It didn't reassemble into anything yet.
+
                 return true;
 
             ip4 = ih->IP4_Hdr();
 
-            // Switch the stored ip header over to the one from the
-            // fragmented packet.
+
+
             packet->ip_hdr = std::move(ih);
 
             len = total_len = packet->ip_hdr->TotalLen();
@@ -179,27 +179,27 @@ bool IPAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* packet) 
             }
 
             packet->cap_len = total_len + hdr_size;
-            // Assumes reassembled packet has wire length == capture length.
+
             packet->len = packet->cap_len;
         }
     }
 
     zeek::detail::FragReassemblerTracker frt(f);
 
-    // We stop building the chain when seeing IPPROTO_ESP so if it's
-    // there, it's always the last.
+
+
     if ( packet->ip_hdr->LastHeader() == IPPROTO_ESP ) {
         packet->dump_packet = true;
         if ( esp_packet )
             event_mgr.Enqueue(esp_packet, packet->ip_hdr->ToPktHdrVal());
 
-        // Can't do more since upper-layer payloads are going to be encrypted.
+
         packet->cap_len = orig_cap_len;
         return true;
     }
 
-    // We stop building the chain when seeing IPPROTO_MOBILITY so it's always
-    // last if present.
+
+
     if ( packet->ip_hdr->LastHeader() == IPPROTO_MOBILITY ) {
         packet->dump_packet = true;
 
@@ -219,41 +219,41 @@ bool IPAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* packet) 
         return true;
     }
 
-    // Set the data pointer to match the payload from the IP header. This makes sure that it's also
-    // pointing at the reassembled data for a fragmented packet.
+
+
     data = packet->ip_hdr->Payload();
     len -= ip_hdr_len;
 
     if ( packet->ip_hdr->PayloadLen() != 0 )
         len = std::min<size_t>(len, packet->ip_hdr->PayloadLen());
 
-    // Session analysis assumes that the header size stored in the packet does not include the IP
-    // header size. There are two reasons for this: 1) Packet::ToRawPktHdrVal() wants to look at the
-    // IP header for reporting, and 2) The VXLAN analyzer uses the header position to create the
-    // next packet in the tunnel chain. Once the TCP/UDP work is done and the VXLAN analyzer can
-    // move into packet analysis, this can change, but for now we leave it as it is.
+
+
+
+
+
 
     bool return_val = true;
     int proto = packet->ip_hdr->NextProto();
 
     packet->proto = proto;
 
-    // Double check the lengths one more time before forwarding this on.
+
     if ( total_len < packet->ip_hdr->HdrLen() ) {
         Weird("bogus_IP_header_lengths", packet);
         packet->cap_len = orig_cap_len;
         return false;
     }
 
-    // If the next protocol is a tunneled type, set the tunnel_type field in the packet to IP
-    // so that it gets handled correctly.
+
+
     if ( proto == IPPROTO_IPV4 || proto == IPPROTO_IPV6 )
         packet->tunnel_type = BifEnum::Tunnel::IP;
 
     if ( proto == IPPROTO_NONE ) {
-        // If the packet is encapsulated in Teredo, then it was a bubble and
-        // the Teredo analyzer may have raised an event for that, else we're
-        // not sure the reason for the No Next header in the packet.
+
+
+
         if ( ! (packet->encap && packet->encap->LastType() == BifEnum::Tunnel::TEREDO) ) {
             Weird("ipv6_no_next", packet);
             return_val = false;
@@ -262,8 +262,8 @@ bool IPAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* packet) 
     else {
         packet->proto = proto;
 
-        // For everything else, pass it on to another analyzer. If there's no one to handle
-        // that, it'll report a Weird.
+
+
         return_val = ForwardPacket(len, data, packet, proto);
     }
 

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/CompHash.h"
 
@@ -17,8 +17,8 @@
 
 namespace zeek::detail {
 
-// A comparison callable to assist with consistent iteration order over tables
-// during reservation & writes.
+
+
 struct HashKeyComparer {
     bool operator()(const std::unique_ptr<HashKey>& a, const std::unique_ptr<HashKey>& b) const {
         if ( a->Hash() != b->Hash() )
@@ -32,8 +32,8 @@ struct HashKeyComparer {
 using HashkeyMap = std::map<std::unique_ptr<HashKey>, ListValPtr, HashKeyComparer>;
 using HashkeyMapPtr = std::unique_ptr<HashkeyMap>;
 
-// Helper that produces a table from HashKeys to the ListVal indexes into the
-// table, that we can iterate over in sorted-Hashkey order.
+
+
 static HashkeyMapPtr ordered_hashkeys(const TableVal* tv) {
     auto res = std::make_unique<HashkeyMap>();
     auto tbl = tv->AsTable();
@@ -41,13 +41,13 @@ static HashkeyMapPtr ordered_hashkeys(const TableVal* tv) {
 
     for ( const auto& entry : *tbl ) {
         auto k = entry.GetHashKey();
-        // Potential optimization: we could do without the following if
-        // the caller uses k directly to determine key length &
-        // content. But: the way k got serialized might differ somewhat
-        // from how we'll end up doing it (e.g. singleton vs
-        // non-singleton), and looking up a table value with the hashkey
-        // is tricky in case of subnets (consider the special-casing in
-        // TableVal::Find()).
+
+
+
+
+
+
+
         auto lv = tv->RecreateIndex(*k);
         res->insert_or_assign(std::move(k), lv);
     }
@@ -67,8 +67,8 @@ std::unique_ptr<HashKey> CompositeHash::MakeHashKey(const Val& argv, bool type_c
     if ( is_singleton ) {
         const Val* v = &argv;
 
-        // This is the "singleton" case -- actually just a single value
-        // that may come bundled in a list. If so, unwrap it.
+
+
         if ( v->GetType()->Tag() == TYPE_LIST ) {
             auto lv = v->AsListVal();
 
@@ -90,10 +90,10 @@ std::unique_ptr<HashKey> CompositeHash::MakeHashKey(const Val& argv, bool type_c
     if ( ! ReserveKeySize(*res, &argv, type_check, false) )
         return nullptr;
 
-    // Size computation has done requested type-checking, no further need
+
     type_check = false;
 
-    // The size computation resulted in a requested buffer size; allocate it.
+
     res->Allocate();
 
     for ( auto i = 0u; i < tl.size(); ++i ) {
@@ -278,10 +278,10 @@ bool CompositeHash::RecoverOneVal(const HashKey& hk, Type* t, ValPtr* pval, bool
                             return false;
                         }
 
-                        // An earlier call to reporter->InternalError would have called
-                        // abort() and broken the call tree that clang-tidy is relying on to
-                        // get the error described.
-                        // NOLINTNEXTLINE(clang-analyzer-core.uninitialized.Branch)
+
+
+
+
                         if ( ! (v || is_optional) ) {
                             reporter->InternalError("didn't recover expected number of fields from HashKey");
                             *pval = nullptr;
@@ -293,7 +293,7 @@ bool CompositeHash::RecoverOneVal(const HashKey& hk, Type* t, ValPtr* pval, bool
 
                     ASSERT(int(values.size()) == num_fields);
 
-                    auto rv = make_intrusive<RecordVal>(IntrusivePtr{NewRef{}, rt}, false /* init_fields */);
+                    auto rv = make_intrusive<RecordVal>(IntrusivePtr{NewRef{}, rt}, false );
 
                     for ( int i = 0; i < num_fields; ++i )
                         rv->AppendField(std::move(values[i]), rt->GetFieldType(i));
@@ -413,15 +413,15 @@ bool CompositeHash::SingleValHash(HashKey& hk, const Val* v, Type* bt, bool type
     }
 
     if ( optional ) {
-        // Add a marker saying whether the optional field is set.
+
         hk.Write("optional", v != nullptr);
 
         if ( ! v )
             return true;
     }
 
-    // All of the rest of the code here depends on v not being null, since it needs
-    // to get values from it.
+
+
     if ( ! v )
         return false;
 
@@ -466,9 +466,9 @@ bool CompositeHash::SingleValHash(HashKey& hk, const Val* v, Type* bt, bool type
                     uint32_t id;
 
                     if ( id_mapping == func_to_func_id->end() ) {
-                        // We need the pointer to stick around
-                        // for our lifetime, so we have to get
-                        // a non-const version we can ref.
+
+
+
                         FuncPtr fptr = {NewRef{}, const_cast<Func*>(f)};
 
                         id = func_id_to_func->size();
@@ -598,7 +598,7 @@ bool CompositeHash::SingleValHash(HashKey& hk, const Val* v, Type* bt, bool type
                 }
             }
 
-            break; // case TYPE_INTERNAL_VOID/OTHER
+            break;
         }
 
         case TYPE_INTERNAL_STRING: {
@@ -686,7 +686,7 @@ bool CompositeHash::ReserveSingleTypeKeySize(HashKey& hk, Type* bt, const Val* v
                         hk.ReserveType<uint64_t>("pattern-len2");
                     }
 
-                    // +1 in the following to include null terminators
+
                     hk.Reserve("pattern-string1", strlen(v->AsPattern()->PatternText()) + 1, 0);
                     hk.Reserve("pattern-string1", strlen(v->AsPattern()->AnywherePatternText()) + 1, 0);
                     break;
@@ -783,7 +783,7 @@ bool CompositeHash::ReserveSingleTypeKeySize(HashKey& hk, Type* bt, const Val* v
                 }
             }
 
-            break; // case TYPE_INTERNAL_VOID/OTHER
+            break;
         }
 
         case TYPE_INTERNAL_STRING:
@@ -800,4 +800,4 @@ bool CompositeHash::ReserveSingleTypeKeySize(HashKey& hk, Type* bt, const Val* v
     return true;
 }
 
-} // namespace zeek::detail
+}

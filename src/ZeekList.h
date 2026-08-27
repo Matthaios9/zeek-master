@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -13,7 +13,7 @@ class Stmt;
 class Attr;
 class Timer;
 
-} // namespace detail
+}
 
 class Val;
 class Type;
@@ -24,4 +24,4 @@ using TypePList = PList<Type>;
 using AttrPList = PList<detail::Attr>;
 using TimerPList = PList<detail::Timer, ListOrder::UNORDERED>;
 
-} // namespace zeek
+}

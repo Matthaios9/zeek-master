@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef binpac_buffer_h
 #define binpac_buffer_h
@@ -18,10 +18,10 @@ public:
     };
 
     enum LineBreakStyle : uint8_t {
-        CR_OR_LF,     // CR or LF or CRLF
-        STRICT_CRLF,  // CR followed by LF
-        CR_LF_NUL,    // CR or LF or CR-LF or CR-NUL
-        LINE_BREAKER, // User specified linebreaker
+        CR_OR_LF,
+        STRICT_CRLF,
+        CR_LF_NUL,
+        LINE_BREAKER,
     };
 
     FlowBuffer(LineBreakStyle linebreak_style = CR_OR_LF);
@@ -30,18 +30,18 @@ public:
     void NewData(const_byteptr begin, const_byteptr end);
     void NewGap(int length);
 
-    // Interface for delayed parsing. Sometimes BinPAC doesn't get the
-    // buffering right and then one can use these to feed parts
-    // individually and assemble them internally. After calling
-    // FinishBuffer(), one can send the upper-layer flow an FlowEOF() to
-    // trigger parsing.
+
+
+
+
+
     void BufferData(const_byteptr data, const_byteptr end);
     void FinishBuffer();
 
-    // Discard unprocessed data
+
     void DiscardData();
 
-    // Whether there is enough data for the frame
+
     bool ready() const { return message_complete_ || mode_ == UNKNOWN_MODE; }
 
     inline const_byteptr begin() const {
@@ -76,7 +76,7 @@ public:
     void SetLineBreaker(unsigned char* lbreaker);
     void UnsetLineBreaker();
     void NewLine();
-    // A negative frame_length represents a frame till EOF
+
     void NewFrame(int frame_length, bool chunked_);
     void GrowFrame(int new_frame_length);
 
@@ -95,33 +95,33 @@ public:
     static void init(Policy p) { policy = p; }
 
 protected:
-    // Reset the buffer for a new message
+
     void NewMessage();
 
     void ClearPreviousData();
 
-    // Expand the buffer to at least <length> bytes. If there
-    // are contents in the existing buffer, copy them to the new
-    // buffer.
+
+
+
     void ExpandBuffer(int length);
 
-    // Contract the buffer to some minimum capacity.
-    // Existing contents in the buffer are preserved (but only usage
-    // at the time of creation this function is when the contents
-    // are being discarded due to parsing exception or have already been
-    // copied out after parsing a complete unit).
+
+
+
+
+
     void ContractBuffer();
 
-    // Reset line state when transit from frame mode to line mode.
+
     void ResetLineState();
 
     void AppendToBuffer(const_byteptr data, int len);
 
-    // MarkOrCopy{Line,Frame} sets message_complete_ and
-    // marks begin/end pointers if a line/frame is complete,
-    // otherwise it clears message_complete_ and copies all
-    // the original data to the buffer.
-    //
+
+
+
+
+
     void MarkOrCopy();
     void MarkOrCopyLine();
     void MarkOrCopyFrame();
@@ -130,8 +130,8 @@ protected:
     void MarkOrCopyLine_STRICT_CRLF();
     void MarkOrCopyLine_LINEBREAK();
 
-    int buffer_n_;      // number of bytes in the buffer
-    int buffer_length_; // size of the buffer
+    int buffer_n_;
+    int buffer_length_;
     unsigned char* buffer_;
     bool message_complete_;
     int frame_length_;
@@ -165,6 +165,6 @@ protected:
 
 using flow_buffer_t = FlowBuffer*;
 
-} // namespace binpac
+}
 
-#endif // binpac_buffer_h
+#endif

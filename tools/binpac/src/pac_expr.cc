@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_expr.h"
 
@@ -45,7 +45,7 @@ string EvalExprList(ExprList* exprlist, Output* out, Env* env) {
 }
 
 static const char* expr_fmt[] = {
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+
 #define EXPR_DEF(type, num_op, fmt) fmt,
 #include "pac_expr.def"
 #undef EXPR_DEF
@@ -171,7 +171,7 @@ void Expr::AddCaseExpr(CaseExpr* case_expr) {
 }
 
 void Expr::GenStrFromFormat(Env* env) {
-    // The format != "@custom@"
+
     ASSERT(*expr_fmt[expr_type_] != '@');
 
     switch ( num_operands_ ) {
@@ -197,7 +197,7 @@ RecordField* GetRecordField(const ID* id, Env* env) {
     return r;
 }
 
-} // namespace
+}
 
 void Expr::GenCaseEval(Output* out_cc, Env* env) {
     ASSERT(expr_type_ == EXPR_CASE);
@@ -207,14 +207,14 @@ void Expr::GenCaseEval(Output* out_cc, Env* env) {
     Type* val_type = DataType(env);
     ID* val_var = env->AddTempID(val_type);
 
-    // DataType(env) can return a null pointer if an enum value is not
-    // defined.
+
+
     if ( ! val_type )
         throw Exception(this, "undefined case value");
 
     out_cc->println("%s %s;", val_type->DataTypeStr().c_str(), env->LValue(val_var));
 
-    // force evaluation of IDs appearing in case stmt
+
     operand_[0]->ForceIDEval(out_cc, env);
     foreach (i, CaseExprList, cases_)
         (*i)->value()->ForceIDEval(out_cc, env);
@@ -243,7 +243,7 @@ void Expr::GenCaseEval(Output* out_cc, Env* env) {
         }
     }
 
-    // Generate the default case after all other cases
+
     GenCaseStr(nullptr, out_cc, env, switch_type);
     out_cc->inc_indent();
     if ( default_case ) {
@@ -276,12 +276,12 @@ void Expr::GenEval(Output* out_cc, Env* env) {
             break;
 
         case EXPR_MEMBER: {
-            /*
-            For member expressions such X.Y, evaluating
-            X only is sufficient. (Actually trying to
-            evaluate Y will lead to error because Y is
-            not defined in the current environment.)
-            */
+
+
+
+
+
+
             operand_[0]->GenEval(out_cc, env);
 
             Type* ty0 = operand_[0]->DataType(env);
@@ -342,7 +342,7 @@ void Expr::GenEval(Output* out_cc, Env* env) {
         case EXPR_CASE: GenCaseEval(out_cc, env); break;
 
         default:
-            // Evaluate every operand by default
+
             for ( auto& op : operand_ )
                 if ( op )
                     op->GenEval(out_cc, env);
@@ -376,7 +376,7 @@ void Expr::ForceIDEval(Output* out_cc, Env* env) {
         } break;
 
         default:
-            // Evaluate every operand by default
+
             for ( auto& op : operand_ )
                 if ( op )
                     op->ForceIDEval(out_cc, env);
@@ -396,7 +396,7 @@ Type* Expr::DataType(Env* env) const {
         case EXPR_ID: data_type = env->GetDataType(id_); break;
 
         case EXPR_MEMBER: {
-            // Get type of the parent
+
             Type* parent_type = operand_[0]->DataType(env);
             if ( ! parent_type )
                 return nullptr;
@@ -404,7 +404,7 @@ Type* Expr::DataType(Env* env) const {
         } break;
 
         case EXPR_SUBSCRIPT: {
-            // Get type of the parent
+
             Type* parent_type = operand_[0]->DataType(env);
             data_type = parent_type->ElementDataType();
         } break;
@@ -442,8 +442,8 @@ Type* Expr::DataType(Env* env) const {
                             int largest;
                             int contender;
 
-                            // External C++ types like "int", "bool", "enum" use "int"
-                            // storage internally.
+
+
                             if ( numeric_with_largest_width->tot() == Type::EXTERN )
                                 largest = sizeof(int);
                             else
@@ -511,7 +511,7 @@ string Expr::SetFunc(Output* out, Env* env) {
     switch ( expr_type_ ) {
         case EXPR_ID: return set_function(id_);
         case EXPR_MEMBER: {
-            // Evaluate the parent
+
             string parent_val(operand_[0]->EvalExpr(out, env));
             return parent_val + "->" + set_function(operand_[1]->id());
         } break;
@@ -528,41 +528,41 @@ bool Expr::ConstFold(Env* env, int* pn) const {
         case EXPR_NUM: *pn = num_->Num(); return true;
         case EXPR_ID: return env->GetConstant(id_, pn);
         default:
-            // ### FIXME: folding consts
+
             return false;
     }
 }
 
-// TODO: build a generic data dependency extraction process
+
 namespace {
 
-// Maximum of two minimal header sizes
+
 int mhs_max(int h1, int h2) {
     if ( h1 < 0 || h2 < 0 )
         return -1;
     else {
-        // return max(h1, h2);
+
         return h1 > h2 ? h1 : h2;
     }
 }
 
-// MHS required to evaluate the field
+
 int mhs_letfield(Env* env, LetField* field) { return field->expr()->MinimalHeaderSize(env); }
 
 int mhs_recordfield(Env* env, RecordField* field) {
     int offset = field->static_offset();
-    if ( offset < 0 ) // offset cannot be statically determined
+    if ( offset < 0 )
         return -1;
     int size = field->StaticSize(env, offset);
-    if ( size < 0 ) // size cannot be statically determined
+    if ( size < 0 )
         return -1;
     return offset + size;
 }
 
 int mhs_casefield(Env* env, CaseField* field) {
-    // TODO: deal with the index
+
     int size = field->StaticSize(env);
-    if ( size < 0 ) // size cannot be statically determined
+    if ( size < 0 )
         return -1;
     return size;
 }
@@ -600,7 +600,7 @@ int mhs_field(Env* env, Field* field) {
         case TEMP_VAR_FIELD: mhs = 0; break;
 
         case WITHINPUT_FIELD: {
-            // ### TODO: fix this
+
             mhs = -1;
         } break;
     }
@@ -624,7 +624,7 @@ int mhs_id(Env* env, const ID* id) {
             mhs = mhs_field(env, field);
         } break;
         case UNION_VAR:
-            // TODO: deal with UNION_VAR
+
             mhs = -1;
             break;
         case MACRO: {
@@ -634,24 +634,24 @@ int mhs_id(Env* env, const ID* id) {
     }
     return mhs;
 }
-} // namespace
+}
 
 int Expr::MinimalHeaderSize(Env* env) {
     int mhs;
 
     switch ( expr_type_ ) {
         case EXPR_NUM:
-            // Zero byte is required
+
             mhs = 0;
             break;
 
         case EXPR_ID: mhs = mhs_id(env, id_); break;
 
         case EXPR_MEMBER:
-            // TODO: this is not a tight bound because
-            // one actually does not have to parse the
-            // whole record to compute one particular
-            // field.
+
+
+
+
             mhs = operand_[0]->MinimalHeaderSize(env);
             break;
 
@@ -697,7 +697,7 @@ int Expr::MinimalHeaderSize(Env* env) {
             mhs = field->static_offset();
             if ( mhs < 0 ) {
                 mhs = 0;
-                // Take the MHS of the preceding (non-let) field
+
                 RecordField* prev_field = field->prev();
                 ASSERT(prev_field);
                 mhs = mhs_recordfield(env, prev_field);
@@ -720,7 +720,7 @@ int Expr::MinimalHeaderSize(Env* env) {
             }
         } break;
         default:
-            // Evaluate every operand by default
+
             mhs = 0;
             for ( auto& op : operand_ )
                 if ( op )
@@ -752,7 +752,7 @@ bool Expr::HasReference(const ID* id) const {
             return false;
 
         default:
-            // Evaluate every operand by default
+
             for ( auto& op : operand_ ) {
                 if ( op && op->HasReference(id) ) {
                     return true;
@@ -767,12 +767,12 @@ bool Expr::DoTraverse(DataDepVisitor* visitor) {
         case EXPR_ID: break;
 
         case EXPR_MEMBER:
-            /*
-            For member expressions such X.Y, evaluating
-            X only is sufficient. (Actually trying to
-            evaluate Y will lead to error because Y is
-            not defined in the current environment.)
-            */
+
+
+
+
+
+
             if ( ! operand_[0]->Traverse(visitor) )
                 return false;
             break;
@@ -790,7 +790,7 @@ bool Expr::DoTraverse(DataDepVisitor* visitor) {
         } break;
 
         default:
-            // Evaluate every operand by default
+
             for ( auto& op : operand_ ) {
                 if ( op && ! op->Traverse(visitor) ) {
                     return false;
@@ -807,12 +807,12 @@ bool Expr::RequiresAnalyzerContext() const {
         case EXPR_ID: return *id_ == *analyzer_context_id;
 
         case EXPR_MEMBER:
-            /*
-            For member expressions such X.Y, evaluating
-            X only is sufficient. (Actually trying to
-            evaluate Y will lead to error because Y is
-            not defined in the current environment.)
-            */
+
+
+
+
+
+
             return operand_[0]->RequiresAnalyzerContext();
 
         case EXPR_CALLARGS: {
@@ -830,7 +830,7 @@ bool Expr::RequiresAnalyzerContext() const {
             return false;
 
         default:
-            // Evaluate every operand by default
+
             for ( auto& op : operand_ )
                 if ( op && op->RequiresAnalyzerContext() ) {
                     DEBUG_MSG("'%s' requires analyzer context\n", op->orig());
@@ -859,6 +859,6 @@ bool CaseExpr::DoTraverse(DataDepVisitor* visitor) {
 bool CaseExpr::HasReference(const ID* id) const { return value_->HasReference(id); }
 
 bool CaseExpr::RequiresAnalyzerContext() const {
-    // index_ should evaluate to constants
+
     return value_->RequiresAnalyzerContext();
 }

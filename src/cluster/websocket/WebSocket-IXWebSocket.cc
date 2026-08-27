@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Implementation of a WebSocket server and clients using the IXWebSocket client library.
+
+
 #include "zeek/cluster/websocket/WebSocket.h"
 
 #include <sys/socket.h>
@@ -19,9 +19,9 @@
 
 namespace zeek::cluster::websocket::detail::ixwebsocket {
 
-/**
- * Implementation of WebSocketClient for the IXWebsocket library.
- */
+
+
+
 class IxWebSocketClient : public WebSocketClient {
 public:
     IxWebSocketClient(std::shared_ptr<ix::ConnectionState> cs, std::shared_ptr<ix::WebSocket> ws)
@@ -42,7 +42,7 @@ public:
 
     SendInfo SendText(std::string_view sv) override {
         if ( cs->isTerminated() )
-            return {true}; // small lie
+            return {true};
 
         auto send_info = ws->sendUtf8Text(ix::IXWebSocketSendData{sv.data(), sv.size()});
         return SendInfo{send_info.success};
@@ -57,9 +57,9 @@ private:
     std::shared_ptr<ix::WebSocket> ws;
 };
 
-/**
- * Implementation of WebSocketServer using the IXWebsocket library.
- */
+
+
+
 class IXWebSocketServer : public WebSocketServer {
 public:
     IXWebSocketServer(std::unique_ptr<WebSocketEventDispatcher> dispatcher, std::unique_ptr<ix::WebSocketServer> server)
@@ -67,7 +67,7 @@ public:
 
 private:
     void DoTerminate() override {
-        // Stop the server.
+
         server->stop();
     }
 
@@ -104,8 +104,8 @@ std::unique_ptr<WebSocketServer> StartServer(std::unique_ptr<WebSocketEventDispa
                 ix_tls_options.caFile = tls_options.ca_file;
         }
         else {
-            // This is the IXWebSocket library's way of
-            // disabling peer verification.
+
+
             ix_tls_options.caFile = "NONE";
         }
 
@@ -115,14 +115,14 @@ std::unique_ptr<WebSocketServer> StartServer(std::unique_ptr<WebSocketEventDispa
         server->setTLSOptions(ix_tls_options);
     }
 
-    // Using the legacy IXWebsocketAPI API to acquire a shared_ptr to the ix::WebSocket instance.
+
     ix::WebSocketServer::OnConnectionCallback connection_callback =
         [dispatcher = dispatcher.get()](const std::weak_ptr<ix::WebSocket>& websocket,
                                         std::shared_ptr<ix::ConnectionState> cs) -> void {
-        // Hold a shared_ptr to the WebSocket object until we see the close.
+
         std::shared_ptr<ix::WebSocket> ws = websocket.lock();
 
-        // Client already gone or terminated? Weird...
+
         if ( ! ws || cs->isTerminated() )
             return;
 
@@ -132,8 +132,8 @@ std::unique_ptr<WebSocketServer> StartServer(std::unique_ptr<WebSocketEventDispa
 
         auto ixws = std::make_shared<IxWebSocketClient>(std::move(cs), ws);
 
-        // These callbacks run in per client threads. The actual processing happens
-        // on the main thread via a single WebSocketDemux instance.
+
+
         ix::OnMessageCallback message_callback = [dispatcher, id = std::move(id), remotePort,
                                                   remoteIp = std::move(remoteIp),
                                                   ixws = std::move(ixws)](const ix::WebSocketMessagePtr& msg) mutable {
@@ -164,11 +164,11 @@ std::unique_ptr<WebSocketServer> StartServer(std::unique_ptr<WebSocketEventDispa
     server->setOnConnectionCallback(connection_callback);
 
 
-    // Set sockets as SOCK_CLOEXEC such that child processes spawned by
-    // system() in script land or raw readers do not inherit the WebSocket
-    // server or client FDs.
-    //
-    // XXX: Not implemented on Windows and using it makes listen() fail.
+
+
+
+
+
 #ifndef _MSC_VER
     server->setCloseOnExec();
 #endif
@@ -186,12 +186,12 @@ std::unique_ptr<WebSocketServer> StartServer(std::unique_ptr<WebSocketEventDispa
 }
 
 
-} // namespace zeek::cluster::websocket::detail::ixwebsocket
+}
 
 using namespace zeek::cluster::websocket::detail;
 
 std::unique_ptr<WebSocketServer> zeek::cluster::websocket::detail::StartServer(
     std::unique_ptr<WebSocketEventDispatcher> dispatcher, const ServerOptions& options) {
-    // Just delegate to the above IXWebSocket specific implementation.
+
     return ixwebsocket::StartServer(std::move(dispatcher), options);
 }

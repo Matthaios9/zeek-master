@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_conn_h
 #define pac_conn_h
@@ -31,4 +31,4 @@ protected:
     Type* data_type_;
 };
 
-#endif // pac_conn_h
+#endif

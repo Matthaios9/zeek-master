@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -32,15 +32,15 @@ public:
 
     void EnableReassembly();
 
-    // Add a child analyzer that will always get the packets,
-    // independently of whether we do any reassembly.
+
+
     void AddChildPacketAnalyzer(analyzer::Analyzer* a);
 
     Analyzer* FindChild(analyzer::ID id) override;
     Analyzer* FindChild(zeek::Tag tag) override;
     bool RemoveChildAnalyzer(analyzer::ID id) override;
 
-    // True if the connection has closed in some sense, false otherwise.
+
     bool IsClosed() const { return orig->did_close || resp->did_close; }
     bool BothClosed() const { return orig->did_close && resp->did_close; }
 
@@ -57,17 +57,17 @@ public:
     uint32_t OrigSeq() const { return orig->LastSeq(); }
     uint32_t RespSeq() const { return resp->LastSeq(); }
 
-    // True if either endpoint still has pending data.  closing_endp
-    // is an endpoint that has indicated it is closing (i.e., for
-    // which we have seen a FIN) - for it, data is pending unless
-    // everything's been delivered up to the FIN.  For its peer,
-    // the test is whether it has any outstanding, un-acked data.
+
+
+
+
+
     bool DataPending(analyzer::tcp::TCP_Endpoint* closing_endp);
 
     void SetContentsFile(unsigned int direction, FilePtr f) override;
     FilePtr GetContentsFile(unsigned int direction) const override;
 
-    // From Analyzer.h
+
     void UpdateConnVal(RecordVal* conn_val) override;
 
     void AddExtraAnalyzers(Connection* conn) override;
@@ -83,7 +83,7 @@ protected:
     friend class analyzer::pia::PIA_TCP;
     friend class packet_analysis::TCP::TCPAnalyzer;
 
-    // Analyzer interface.
+
     void Init() override;
     void Done() override;
     void DeliverPacket(int len, const u_char* data, bool orig, uint64_t seq, const IP_Hdr* ip, int caplen) override;
@@ -95,12 +95,12 @@ protected:
     void SetPartialStatus(analyzer::tcp::TCP_Flags flags, bool is_orig);
     void SetFirstPacketSeen(bool is_orig);
 
-    // Update the state machine of the TCPs based on the activity.  This
-    // includes our pseudo-states such as TCP_ENDPOINT_PARTIAL.
-    //
-    // On return, do_close is true if we should consider the connection
-    // as closed, and gen_event if we should generate an event about
-    // this fact.
+
+
+
+
+
+
     void UpdateStateMachine(double t, analyzer::tcp::TCP_Endpoint* endpoint, analyzer::tcp::TCP_Endpoint* peer,
                             uint32_t base_seq, uint32_t ack_seq, int len, int32_t delta_last, bool is_orig,
                             analyzer::tcp::TCP_Flags flags, bool& do_close, bool& gen_event);
@@ -166,15 +166,15 @@ private:
     unsigned int is_active : 1;
     unsigned int finished : 1;
 
-    // Whether we're waiting on final data delivery before closing
-    // this connection.
+
+
     unsigned int close_deferred : 1;
 
-    // Whether to generate an event when we finally do close it.
+
     unsigned int deferred_gen_event : 1;
 
-    // Whether we have seen the first ACK from the originator.
+
     unsigned int seen_first_ACK : 1;
 };
 
-} // namespace zeek::packet_analysis::TCP
+}

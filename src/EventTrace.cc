@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/EventTrace.h"
 
@@ -15,8 +15,8 @@ namespace zeek::detail {
 
 std::unique_ptr<EventTraceMgr> event_trace_mgr;
 
-// Helper function for generating a correct script-level representation
-// of a string constant.
+
+
 static std::string escape_string(const u_char* b, int len) {
     std::string res = "\"";
 
@@ -105,7 +105,7 @@ bool ValTrace::operator==(const ValTrace& vt) const {
 
         case TYPE_TYPE: return v->AsType() == vt_v->AsType();
 
-        case TYPE_OPAQUE: return false; // needs pointer equivalence
+        case TYPE_OPAQUE: return false;
 
         case TYPE_LIST: return SameList(vt);
 
@@ -149,29 +149,29 @@ void ValTrace::ComputeDelta(const ValTrace* prev, DeltaVector& deltas) const {
         case TYPE_FUNC:
         case TYPE_PATTERN:
         case TYPE_TYPE:
-            // These don't change in place.  No need to create
-            // them as stand-alone variables, since we can just
-            // use the constant representation instead.
+
+
+
             break;
 
         case TYPE_ANY:
         case TYPE_FILE:
         case TYPE_OPAQUE:
-            // If we have a previous instance, we can ignore this
-            // one, because we know it's equivalent (due to the
-            // test at the beginning of this method), and it's
-            // not meaningful to recurse inside it looking for
-            // interior changes.
+
+
+
+
+
             if ( ! prev )
                 deltas.emplace_back(std::make_unique<DeltaUnsupportedCreate>(this));
             break;
 
         case TYPE_LIST:
-            // We shouldn't see these exposed directly, as they're
-            // not manipulable at script-level.  An exception
-            // might be for "any" types that are then decomposed
-            // via compound assignment; for now, we don't support
-            // those.
+
+
+
+
+
             reporter->InternalError("list type seen in ValTrace::ComputeDelta");
             break;
 
@@ -187,10 +187,10 @@ void ValTrace::ComputeDelta(const ValTrace* prev, DeltaVector& deltas) const {
                 ComputeTableDelta(prev, deltas);
 
             else if ( GetType()->AsTableType()->IsUnspecifiedTable() )
-                // For unspecified values, we generate them
-                // as empty constructors, because we don't
-                // know their yield type and thus can't
-                // create variables corresponding to them.
+
+
+
+
                 break;
 
             else if ( t->Yield() )
@@ -204,7 +204,7 @@ void ValTrace::ComputeDelta(const ValTrace* prev, DeltaVector& deltas) const {
                 ComputeVectorDelta(prev, deltas);
 
             else if ( GetType()->AsVectorType()->IsUnspecifiedVector() )
-                // See above for empty tables/sets.
+
                 break;
 
             else
@@ -282,18 +282,18 @@ bool ValTrace::SameTable(const ValTrace& vt) const {
 
     ASSERT(n2 == 0 || n == n2);
 
-    // We accommodate the possibility that keys are out-of-order
-    // between the two sets of elements.
 
-    // The following is O(N^2), but presumably if tables are somehow
-    // involved (in fact we can only get here if they're used as
-    // indices into other tables), then they'll likely be small.
+
+
+
+
+
     for ( auto i = 0U; i < n; ++i ) {
         auto& elem_i = elems[i];
 
-        // See if we can find a match for it.  If we do, we don't
-        // have to worry that another entry matched it too, since
-        // all table/set indices will be distinct.
+
+
+
         auto j = 0U;
         for ( ; j < n; ++j ) {
             auto& vt_elem_j = vt_elems[j];
@@ -302,11 +302,11 @@ bool ValTrace::SameTable(const ValTrace& vt) const {
         }
 
         if ( j == n )
-            // No match for the index.
+
             return false;
 
         if ( n2 > 0 ) {
-            // Need a match for the corresponding yield values.
+
             if ( *elems2[i] != *vt_elems2[j] )
                 return false;
         }
@@ -362,7 +362,7 @@ void ValTrace::ComputeRecordDelta(const ValTrace* prev, DeltaVector& deltas) con
                 }
 
                 if ( trace_i->SameSingleton(*prev_trace_i) )
-                    // No further work needed.
+
                     continue;
             }
 
@@ -382,21 +382,21 @@ void ValTrace::ComputeTableDelta(const ValTrace* prev, DeltaVector& deltas) cons
     auto is_set = elems2.empty();
     auto prev_n = prev_elems.size();
 
-    // We can't compare pointers for the indices because they're
-    // new objects generated afresh by TableVal::ToMap.  So we do
-    // explicit full comparisons for equality, distinguishing values
-    // newly added, common to both, or (implicitly) removed.  We'll
-    // then go through the common to check them further.
-    //
-    // Our approach is O(N^2), but presumably these tables aren't
-    // large, and in any case generating event traces is not something
-    // requiring high performance, so we opt for conceptual simplicity.
 
-    // Track which index values are newly added:
+
+
+
+
+
+
+
+
+
+
     std::set<const Val*> added_indices;
 
-    // Track which entry traces are in common.  Indexed by previous
-    // trace elem index, yielding current trace elem index.
+
+
     std::map<int, int> common_entries;
 
     for ( auto i = 0U; i < n; ++i ) {
@@ -440,9 +440,9 @@ void ValTrace::ComputeTableDelta(const ValTrace* prev, DeltaVector& deltas) cons
         if ( is_set )
             continue;
 
-        // If we get here, we're analyzing a table for which there's
-        // a common index.  The remaining question is whether the
-        // yield has changed.
+
+
+
         auto i = common_pair->second;
         auto& trace2 = elems2[i];
         const auto prev_trace2 = prev_elems2[j];
@@ -451,7 +451,7 @@ void ValTrace::ComputeTableDelta(const ValTrace* prev, DeltaVector& deltas) cons
         auto& prev_yield = prev_trace2->GetVal();
 
         if ( yield == prev_yield )
-            // Same yield, look for differences in its sub-elements.
+
             trace2->ComputeDelta(prev_trace2.get(), deltas);
 
         else if ( ! trace2->SameSingleton(*prev_trace2) )
@@ -464,16 +464,16 @@ void ValTrace::ComputeVectorDelta(const ValTrace* prev, DeltaVector& deltas) con
     auto n = elems.size();
     auto prev_n = prev_elems.size();
 
-    // TODO: The following hasn't been tested for robustness to vector holes.
+
 
     if ( n < prev_n ) {
-        // The vector shrank in size.  Easiest to just build it
-        // from scratch.
+
+
         deltas.emplace_back(std::make_unique<DeltaVectorCreate>(this));
         return;
     }
 
-    // Look for existing entries that need reassignment.
+
     auto i = 0U;
     for ( ; i < prev_n; ++i ) {
         const auto trace_i = elems[i].get();
@@ -488,7 +488,7 @@ void ValTrace::ComputeVectorDelta(const ValTrace* prev, DeltaVector& deltas) con
             deltas.emplace_back(std::make_unique<DeltaVectorSet>(this, i, elem_i));
     }
 
-    // Now append any new entries.
+
     for ( ; i < n; ++i ) {
         auto& trace_i = elems[i];
         auto& elem_i = trace_i->GetVal();
@@ -681,10 +681,10 @@ void EventTrace::Generate(FILE* f, ValTraceMgr& vtm, const DeltaGenVec& dvec, co
     fprintf(f, "\tevent %s(%s);\n\n", ev->GetName().c_str(), args.c_str());
 
     if ( successor.empty() ) {
-        // The following isn't necessary with our current approach
-        // to managing chains of events, which avoids having to set
-        // exit_only_after_terminate=T.
-        // fprintf(f, "\tterminate();\n");
+
+
+
+
     }
     else {
         auto tm = vtm.TimeConstant(nt);
@@ -729,8 +729,8 @@ void ValTraceMgr::TraceEventValues(std::shared_ptr<EventTrace> et, const zeek::A
 
     curr_ev->SetArgs(std::move(ev_args));
 
-    // Now look for any values newly-processed with this event and
-    // remember them so we can catch uses of them in future events.
+
+
     for ( auto i = num_vals; i < vals.size(); ++i ) {
         processed_vals.insert(vals[i].get());
         ASSERT(val_names.contains(vals[i].get()));
@@ -786,7 +786,7 @@ void ValTraceMgr::AddVal(ValPtr v) {
 }
 
 void ValTraceMgr::NewVal(ValPtr v) {
-    // Make sure the Val sticks around into the future.
+
     vals.push_back(v);
 
     auto vt = std::make_shared<ValTrace>(v);
@@ -797,7 +797,7 @@ void ValTraceMgr::NewVal(ValPtr v) {
 void ValTraceMgr::ValUsed(const ValPtr& v) {
     ASSERT(val_names.contains(v.get()));
     if ( processed_vals.contains(v.get()) )
-        // We saw this value when processing a previous event.
+
         globals.insert(v.get());
 }
 
@@ -806,9 +806,9 @@ void ValTraceMgr::AssessChange(const ValTrace* vt, const ValTrace* prev_vt) {
 
     vt->ComputeDelta(prev_vt, deltas);
 
-    // Used to track deltas across the batch, to suppress redundant ones
-    // (which can arise due to two aggregates both including the same
-    // sub-element).
+
+
+
     std::unordered_set<std::string> previous_deltas;
 
     for ( auto& d : deltas ) {
@@ -826,8 +826,8 @@ void ValTraceMgr::AssessChange(const ValTrace* vt, const ValTrace* prev_vt) {
 
         ASSERT(val_names.contains(v));
 
-        // The "/" in the following is just to have a delimiter
-        // to make sure the string is unambiguous.
+
+
         auto full_delta = val_names[v] + "/" + rhs;
         if ( previous_deltas.contains(full_delta) )
             continue;
@@ -849,14 +849,14 @@ void ValTraceMgr::TrackVar(const Val* v) {
 }
 
 std::string ValTraceMgr::GenValName(const ValPtr& v) {
-    if ( IsAggr(v->GetType()) && ! IsUnspecifiedAggregate(v) ) { // Aggregate shouldn't exist; create it
+    if ( IsAggr(v->GetType()) && ! IsUnspecifiedAggregate(v) ) {
         ASSERT(! val_map.contains(v.get()));
         NewVal(v);
         return val_names[v.get()];
     }
 
-    // Non-aggregate (or unspecified aggregate) can be expressed using
-    // a constant.
+
+
     auto t = v->GetType();
     auto tag = t->Tag();
     std::string rep;
@@ -888,7 +888,7 @@ std::string ValTraceMgr::GenValName(const ValPtr& v) {
             rep = TimeConstant(tm);
 
             if ( tm > 0.0 && rep.find("__base_time") == std::string::npos )
-                // We're not representing it using base_time.
+
                 track_constant = true;
 
             break;
@@ -910,8 +910,8 @@ std::string ValTraceMgr::GenValName(const ValPtr& v) {
             track_constant = true;
 
             if ( tag == TYPE_ADDR || tag == TYPE_SUBNET ) {
-                // Fix up deficiency that IPv6 addresses are
-                // described without surrounding []'s.
+
+
                 const auto& addr = tag == TYPE_ADDR ? v->AsAddr() : v->AsSubNet().Prefix();
                 if ( addr.GetFamily() == IPv6 )
                     rep = "[" + rep + "]";
@@ -962,7 +962,7 @@ EventTraceMgr::EventTraceMgr(const std::string& trace_file) {
 EventTraceMgr::~EventTraceMgr() {
     if ( f ) {
         if ( fclose(f) )
-            // Not fatal, won't do anything with it anymore anyhow.
+
             reporter->Error("failed to close event trace file: %s", strerror(errno));
 
         f = nullptr;
@@ -1039,4 +1039,4 @@ void EventTraceMgr::EndEvent(const ScriptFunc* ev, const zeek::Args* args) {
 
 void EventTraceMgr::ScriptEventQueued(const EventHandlerPtr& h) { script_events.insert(h->Name()); }
 
-} // namespace zeek::detail
+}

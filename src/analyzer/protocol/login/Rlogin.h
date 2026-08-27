@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -10,24 +10,24 @@ namespace zeek::analyzer::login {
 class Rlogin_Analyzer;
 
 enum rlogin_state : uint8_t {
-    RLOGIN_FIRST_NULL,       // waiting to see first NUL
-    RLOGIN_CLIENT_USER_NAME, // scanning client user name up to NUL
-    RLOGIN_SERVER_USER_NAME, // scanning server user name up to NUL
-    RLOGIN_TERMINAL_TYPE,    // scanning terminal type & speed
+    RLOGIN_FIRST_NULL,
+    RLOGIN_CLIENT_USER_NAME,
+    RLOGIN_SERVER_USER_NAME,
+    RLOGIN_TERMINAL_TYPE,
 
-    RLOGIN_SERVER_ACK, // waiting to see NUL from server to ack client
+    RLOGIN_SERVER_ACK,
 
-    RLOGIN_IN_BAND_CONTROL_FF2, // waiting to see the second FF
+    RLOGIN_IN_BAND_CONTROL_FF2,
 
-    RLOGIN_WINDOW_CHANGE_S1,        // waiting to see the first 's'
-    RLOGIN_WINDOW_CHANGE_S2,        // waiting to see the second 's'
-    RLOGIN_WINDOW_CHANGE_REMAINDER, // remaining "bytes_to_scan" bytes
+    RLOGIN_WINDOW_CHANGE_S1,
+    RLOGIN_WINDOW_CHANGE_S2,
+    RLOGIN_WINDOW_CHANGE_REMAINDER,
 
-    RLOGIN_LINE_MODE, // switch to line-oriented processing
+    RLOGIN_LINE_MODE,
 
-    RLOGIN_PRESUMED_REJECTED, // apparently server said No Way
+    RLOGIN_PRESUMED_REJECTED,
 
-    RLOGIN_UNKNOWN, // we don't know what state we're in
+    RLOGIN_UNKNOWN,
 };
 
 class Contents_Rlogin_Analyzer final : public analyzer::tcp::ContentLine_Analyzer {
@@ -60,4 +60,4 @@ public:
     static analyzer::Analyzer* Instantiate(Connection* conn) { return new Rlogin_Analyzer(conn); }
 };
 
-} // namespace zeek::analyzer::login
+}

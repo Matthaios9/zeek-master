@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/http/HTTP.h"
 
@@ -19,8 +19,8 @@ namespace zeek::analyzer::http {
 
 const bool DEBUG_http = false;
 
-// The EXPECT_*_NOTHING states are used to prevent further parsing. Used if a
-// message was interrupted.
+
+
 enum HTTP_ExpectRequest : uint8_t {
     EXPECT_REQUEST_LINE,
     EXPECT_REQUEST_MESSAGE,
@@ -41,7 +41,7 @@ HTTP_Entity::HTTP_Entity(HTTP_Message* arg_message, analyzer::mime::MIME_Entity*
     http_message = arg_message;
     expect_body = arg_expect_body;
     chunked_transfer_state = NON_CHUNKED_TRANSFER;
-    content_length = range_length = -1; // unspecified
+    content_length = range_length = -1;
     expect_data_length = 0;
     body_length = 0;
     header_length = 0;
@@ -50,10 +50,10 @@ HTTP_Entity::HTTP_Entity(HTTP_Message* arg_message, analyzer::mime::MIME_Entity*
     zip = nullptr;
     is_partial_content = false;
     offset = 0;
-    instance_length = -1; // unspecified
+    instance_length = -1;
     send_size = true;
-    // Always override what MIME_Entity set for want_all_headers: HTTP doesn't
-    // raise the generic MIME events, but rather it's own specific ones.
+
+
     want_all_headers = static_cast<bool>(http_all_headers);
 }
 
@@ -90,7 +90,7 @@ void HTTP_Entity::Deliver(int len, const char* data, bool trailing_CRLF) {
     }
 
     if ( end_of_data ) {
-        // Multipart entities may have trailers
+
         if ( content_type != analyzer::mime::CONTENT_TYPE_MULTIPART )
             IllegalFormat("data trailing the end of entity");
         return;
@@ -105,16 +105,16 @@ void HTTP_Entity::Deliver(int len, const char* data, bool trailing_CRLF) {
         return;
     }
 
-    // Entity body.
+
     if ( content_type == analyzer::mime::CONTENT_TYPE_MULTIPART ||
          content_type == analyzer::mime::CONTENT_TYPE_MESSAGE ) {
-        DeliverBody(len, data, trailing_CRLF); // NOLINT(bugprone-branch-clone)
+        DeliverBody(len, data, trailing_CRLF);
 
-        // If this is the top-level entity and a content_length was
-        // set, ensure we do not consume more bytes than the content
-        // length specified by client or server.
-        //
-        // This is a copy of the content_length > 0 path below :-(
+
+
+
+
+
         if ( Depth() == 0 && content_length > 0 ) {
             expect_data_length -= len;
             if ( trailing_CRLF )
@@ -134,7 +134,7 @@ void HTTP_Entity::Deliver(int len, const char* data, bool trailing_CRLF) {
     else if ( chunked_transfer_state != NON_CHUNKED_TRANSFER ) {
         switch ( chunked_transfer_state ) {
             case EXPECT_CHUNK_SIZE:
-                ASSERT(Depth() == 0); // chunked transfer only allowed for top-level entity
+                ASSERT(Depth() == 0);
                 ASSERT(trailing_CRLF);
                 if ( ! util::atoi_n(len, data, nullptr, 16, expect_data_length) ) {
                     std::string addl(data, len);
@@ -147,7 +147,7 @@ void HTTP_Entity::Deliver(int len, const char* data, bool trailing_CRLF) {
                     SetPlainDelivery(expect_data_length);
                 }
                 else {
-                    // This is the last chunk
+
                     in_header = 1;
                     chunked_transfer_state = EXPECT_CHUNK_TRAILER;
                 }
@@ -208,7 +208,7 @@ void HTTP_Entity::DeliverBody(int len, const char* data, bool trailing_CRLF) {
             encoding == GZIP ? analyzer::zip::ZIP_Analyzer::GZIP : analyzer::zip::ZIP_Analyzer::DEFLATE;
 
         if ( ! zip ) {
-            // We don't care about the direction here.
+
             zip = new analyzer::zip::ZIP_Analyzer(http_message->MyHTTP_Analyzer()->Conn(), false, method);
             zip->SetOutputHandler(new UncompressedOutput(this));
         }
@@ -239,19 +239,19 @@ void HTTP_Entity::DeliverBodyClear(int len, const char* data, bool trailing_CRLF
     http_message->MyHTTP_Analyzer()->Conn()->Match(rule, reinterpret_cast<const u_char*>(data), len,
                                                    http_message->IsOrig(), new_data, false, new_data);
 
-    // FIXME: buffer data for forwarding (matcher might match later).
+
     http_message->MyHTTP_Analyzer()->ForwardStream(len, reinterpret_cast<const u_char*>(data), http_message->IsOrig());
 }
 
-// Returns 1 if the undelivered bytes are completely within the body,
-// otherwise returns 0.
+
+
 bool HTTP_Entity::Undelivered(int64_t len) {
     if ( DEBUG_http ) {
         DEBUG_MSG("Content gap %" PRId64 ", expect_data_length %" PRId64 "\n", len, expect_data_length);
     }
 
-    // Don't propagate an entity (file) gap if we're still in the headers,
-    // or the body length was declared to be zero.
+
+
     if ( (end_of_data && in_header) || body_length == 0 )
         return false;
 
@@ -307,7 +307,7 @@ void HTTP_Entity::SubmitData(int len, const char* buf) {
         analyzer::mime::MIME_Entity::SubmitData(len, buf);
 
     if ( send_size && (encoding == GZIP || encoding == DEFLATE) )
-        // Auto-decompress in DeliverBody invalidates sizes derived from headers
+
         send_size = false;
 
     if ( is_partial_content ) {
@@ -348,29 +348,29 @@ void HTTP_Entity::SetPlainDelivery(int64_t length) {
 
     http_message->SetPlainDelivery(length);
 
-    // If we skip HTTP data, the skipped part will appear as
-    // 'undelivered' data, so we do not need to adjust
-    // expect_data_length.
+
+
+
 }
 
 void HTTP_Entity::SubmitHeader(analyzer::mime::MIME_Header* h) {
     if ( Depth() == 0 && h->get_fold_lines() > 1 ) {
-        // RFC 7230 (2014) deprecates line folding and calls it
-        // obsolete line folding (obs-fold) as it can be leveraged
-        // to smuggle requests. Some intermediaries may interpret the
-        // line folding differently.
-        //
-        // Start raising weirds for folded lines. It's 2026.
-        //
-        // https://datatracker.ietf.org/doc/html/rfc7230#section-3.2.4
+
+
+
+
+
+
+
+
         auto hname = h->get_name();
         std::string addl(hname.data, hname.length);
         http_message->MyHTTP_Analyzer()->Weird("HTTP_obsolete_line_folding", addl.c_str());
     }
 
     if ( analyzer::mime::istrequal(h->get_name(), "content-length") ) {
-        // First: If we've switched into chunked transfer, seeing
-        // a Content-Length header is weird.
+
+
         if ( chunked_transfer_state != NON_CHUNKED_TRANSFER )
             http_message->MyHTTP_Analyzer()->Weird("HTTP_content_length_and_chunked");
 
@@ -386,22 +386,22 @@ void HTTP_Entity::SubmitHeader(analyzer::mime::MIME_Header* h) {
                 content_length = n;
 
                 if ( is_partial_content && range_length != content_length ) {
-                    // Possible evasion attempt.
+
                     http_message->Weird("HTTP_range_not_matching_len");
 
-                    // Take the maximum of both lengths to avoid evasions.
+
                     if ( range_length > content_length )
                         content_length = range_length;
                 }
 
-                // Weird if Content-Length is 0 and Expect: 100-continue header used.
-                // This is replicated in the "expect" header processing.
+
+
                 if ( content_length == 0 && expect_100_cont )
                     http_message->MyHTTP_Analyzer()->Weird("HTTP_content_length_0_and_expect_100_cont");
             }
             else {
-                // atoi_n bailed on the content length
-                // value or it was negative.
+
+
                 std::string addl(vt.data, vt.length);
                 http_message->analyzer->Weird("HTTP_bad_content_length", addl.c_str());
                 content_length = 0;
@@ -409,11 +409,11 @@ void HTTP_Entity::SubmitHeader(analyzer::mime::MIME_Header* h) {
         }
     }
 
-    // Figure out content-length for HTTP 206 Partial Content response
+
     else if ( analyzer::mime::istrequal(h->get_name(), "content-range") &&
               http_message->MyHTTP_Analyzer()->HTTP_ReplyCode() == 206 ) {
-        // First: If we've switched into chunked transfer, seeing
-        // a Content-Range header is weird.
+
+
         if ( chunked_transfer_state != NON_CHUNKED_TRANSFER )
             http_message->MyHTTP_Analyzer()->Weird("HTTP_content_range_and_chunked");
 
@@ -468,8 +468,8 @@ void HTTP_Entity::SubmitHeader(analyzer::mime::MIME_Header* h) {
             return;
         }
 
-        // The range is first and last, inclusive,so need to add 1 below.
-        // Ensure this won't overflow.
+
+
         if ( (l - f) > std::numeric_limits<int64_t>::max() - 1 ) {
             http_message->MyHTTP_Analyzer()->Weird("HTTP_content_range_overflow", byte_range.c_str());
             return;
@@ -495,10 +495,10 @@ void HTTP_Entity::SubmitHeader(analyzer::mime::MIME_Header* h) {
 
             if ( content_length > 0 ) {
                 if ( content_length != range_length ) {
-                    // Possible evasion attempt.
+
                     http_message->Weird("HTTP_range_not_matching_len");
 
-                    // Take the maximum of both lengths to avoid evasions.
+
                     if ( range_length > content_length )
                         content_length = range_length;
                 }
@@ -509,20 +509,20 @@ void HTTP_Entity::SubmitHeader(analyzer::mime::MIME_Header* h) {
     }
 
     else if ( analyzer::mime::istrequal(h->get_name(), "transfer-encoding") ) {
-        // Only process Transfer-Encoding headers of the top-level entity.
-        //
-        // Processing this header changes the analyzer behavior and we only
-        // want to allow this for the most outer HTTP entity, not for any
-        // nested MIME entities in the HTTP body.
-        //
-        // Previously one could set a Transfer-Encoding header within a MIME
-        // message of a HTTP body and modify plain delivery parameters.
+
+
+
+
+
+
+
+
         if ( Depth() == 0 ) {
             HTTP_Analyzer::HTTP_VersionNumber http_version;
 
             if ( http_message->analyzer->GetRequestOngoing() )
                 http_version = http_message->analyzer->GetRequestVersionNumber();
-            else // reply_ongoing
+            else
                 http_version = http_message->analyzer->GetReplyVersionNumber();
 
             data_chunk_t vt = h->get_value_token();
@@ -531,14 +531,14 @@ void HTTP_Entity::SubmitHeader(analyzer::mime::MIME_Header* h) {
 
                 data_chunk_t rest = h->get_value_after_token();
                 if ( rest.length > 0 && rest.data != nullptr ) {
-                    // If something follows the chunked value in the header,
-                    // that's weird and might be an attempt to smuggle something.
+
+
                     std::string addl(rest.data, rest.length);
                     http_message->MyHTTP_Analyzer()->Weird("HTTP_chunked_multi", addl.c_str());
                 }
 
-                // Just switched into chunked transfer mode. If we previously parsed
-                // a valid Content-Length or Content-Range header, that's weird.
+
+
                 if ( content_length >= 0 )
                     http_message->MyHTTP_Analyzer()->Weird("HTTP_content_length_and_chunked");
             }
@@ -557,7 +557,7 @@ void HTTP_Entity::SubmitHeader(analyzer::mime::MIME_Header* h) {
     }
     else if ( analyzer::mime::istrequal(h->get_name(), "expect") ) {
         data_chunk_t vt = h->get_value_token();
-        // Expect: 100-continue should only have 100-continue as value.
+
         if ( ! analyzer::mime::istrequal(vt, "100-continue") ) {
             std::string addl(vt.data, vt.length);
             http_message->MyHTTP_Analyzer()->Weird("HTTP_expect_not_100_continue", addl.c_str());
@@ -565,8 +565,8 @@ void HTTP_Entity::SubmitHeader(analyzer::mime::MIME_Header* h) {
 
         expect_100_cont = true;
 
-        // Weird if Content-Length is 0 and Expect: 100-continue header used.
-        // This is replicated in the "content-length" header processing.
+
+
         if ( content_length == 0 && expect_100_cont )
             http_message->MyHTTP_Analyzer()->Weird("HTTP_content_length_0_and_expect_100_cont");
     }
@@ -575,7 +575,7 @@ void HTTP_Entity::SubmitHeader(analyzer::mime::MIME_Header* h) {
 }
 
 void HTTP_Entity::SubmitAllHeaders() {
-    // in_header should be set to false when SubmitAllHeaders() is called.
+
     ASSERT(! in_header);
 
     if ( DEBUG_http )
@@ -586,13 +586,13 @@ void HTTP_Entity::SubmitAllHeaders() {
                   content_length, http_message->IsOrig());
 
     if ( Parent() && Parent()->MIMEContentType() == analyzer::mime::CONTENT_TYPE_MULTIPART ) {
-        // Don't treat single \r or \n characters in the multipart body content
-        // as lines because the MIME_Entity code will implicitly add back a
-        // \r\n for each line it receives.  We do this instead of setting
-        // plain delivery mode for the content line analyzer because
-        // the size of the content to deliver "plainly" may be unknown
-        // and just leaving it in that mode indefinitely screws up the
-        // detection of multipart boundaries.
+
+
+
+
+
+
+
         http_message->content_line->SuppressWeirds(true);
         http_message->content_line->SetCRLFAsEOL(0);
     }
@@ -600,9 +600,9 @@ void HTTP_Entity::SubmitAllHeaders() {
     if ( content_length >= 0 )
         http_message->SetDeliverySize(content_length);
 
-    // The presence of a message-body in a request is signaled by
-    // the inclusion of a Content-Length or Transfer-Encoding
-    // header field in the request's message-headers.
+
+
+
     if ( chunked_transfer_state == EXPECT_CHUNK_TRAILER ) {
         http_message->SubmitTrailingHeaders(headers);
         chunked_transfer_state = EXPECT_NOTHING;
@@ -619,23 +619,23 @@ void HTTP_Entity::SubmitAllHeaders() {
 
     if ( content_type == analyzer::mime::CONTENT_TYPE_MULTIPART ||
          content_type == analyzer::mime::CONTENT_TYPE_MESSAGE ) {
-        // Do nothing.
-        // Make sure that we check for multiple/message contents first,
-        // because we do not have to turn on .
+
+
+
         if ( chunked_transfer_state != NON_CHUNKED_TRANSFER ) {
             http_message->Weird("HTTP_chunked_transfer_for_multipart_message");
         }
 
-        // For the top-level entity, even if it is multipart or a MIME message,
-        // we do not want to consume more bytes than what the Content-Length
-        // header specifies, so set expect_data_length accordingly.
+
+
+
         if ( Depth() == 0 && content_length >= 0 ) {
             if ( content_length > 0 ) {
                 expect_data_length = content_length;
                 http_message->SetDeliverySize(content_length);
             }
             else
-                EndOfData(); // handle the case that content-length = 0
+                EndOfData();
         }
     }
 
@@ -644,30 +644,30 @@ void HTTP_Entity::SubmitAllHeaders() {
 
     else if ( content_length >= 0 ) {
         if ( content_length > 0 ) {
-            // If Content-Length is set at a Depth() > 0, the outer Content-Length
-            // should be larger or unbounded via IsConnectionClose or
-            // Transfer-Encoding: chunked.
+
+
+
             expect_data_length = content_length;
             SetPlainDelivery(content_length);
         }
         else
-            EndOfData(); // handle the case that content-length = 0
+            EndOfData();
     }
 
-    // Turn plain delivery on permanently for compressed bodies without
-    // content-length headers or if connection is to be closed afterwards
-    // anyway.
+
+
+
     else if ( http_message->MyHTTP_Analyzer()->IsConnectionClose() || encoding == GZIP || encoding == DEFLATE ) {
-        // FIXME: Using INT_MAX is kind of a hack here.  Better
-        // would be to make -1 as special value interpreted as
-        // "until the end of the connection".
+
+
+
         expect_data_length = INT_MAX;
         SetPlainDelivery(INT_MAX);
     }
 
     else {
         if ( expect_body != HTTP_BODY_EXPECTED )
-            // there is no body
+
             EndOfData();
     }
 }
@@ -714,11 +714,11 @@ void HTTP_Message::Done(bool interrupted, const char* detail) {
 
     analyzer::mime::MIME_Message::Done();
 
-    // DEBUG_MSG("%.6f HTTP message done.\n", run_state::network_time);
+
     top_level->EndOfData();
 
     if ( is_orig || MyHTTP_Analyzer()->HTTP_ReplyCode() != 206 ) {
-        // multipart/byteranges may span multiple connections, so don't EOF.
+
         HTTP_Entity* he = dynamic_cast<HTTP_Entity*>(top_level);
 
         if ( he && ! he->FileID().empty() )
@@ -772,8 +772,8 @@ void HTTP_Message::EndEntity(analyzer::mime::MIME_Entity* entity) {
         content_line->SetCRLFAsEOL();
     }
 
-    // It is necessary to call Done when EndEntity is triggered by
-    // SubmitAllHeaders (through EndOfData).
+
+
     if ( entity == top_level )
         Done();
 
@@ -798,11 +798,11 @@ void HTTP_Message::SubmitAllHeaders(analyzer::mime::MIME_HeaderList& hlist) {
                                    current_entity->GetContentType(), current_entity->GetContentSubType());
 }
 
-void HTTP_Message::SubmitTrailingHeaders(analyzer::mime::MIME_HeaderList& /* hlist */) {
-    // Do nothing for now.  Note that if this ever changes do something
-    // which relies on the header list argument, that's currently not
-    // populated unless the http_all_headers or mime_all_headers events
-    // are being used (so you may need to change that, too).
+void HTTP_Message::SubmitTrailingHeaders(analyzer::mime::MIME_HeaderList& ) {
+
+
+
+
 }
 
 void HTTP_Message::SubmitData(int len, const char* buf) {
@@ -820,7 +820,7 @@ bool HTTP_Message::RequestBuffer(int* plen, char** pbuf) {
 }
 
 void HTTP_Message::SubmitAllData() {
-    // This marks the end of message
+
 }
 
 void HTTP_Message::SubmitEvent(int event_type, const char* detail) {
@@ -899,10 +899,10 @@ void HTTP_Analyzer::Done() {
     RequestMade(true, "message interrupted when connection done");
     ReplyMade(true, "message interrupted when connection done");
 
-    // Call Done() on support and child analyzers only after RequestMade()
-    // and ReplyMade() completed. These methods may interact with the analyzer's
-    // child analyzers (specifically through HTTP_Entity's EndOfData() and
-    // ForwardEndOfData()) which isn't valid after a call to Done().
+
+
+
+
     analyzer::tcp::TCP_ApplicationAnalyzer::Done();
 
     delete request_message;
@@ -917,11 +917,11 @@ void HTTP_Analyzer::Done() {
 
     file_mgr->EndOfFile(GetAnalyzerTag(), Conn(), true);
 
-    /* TODO: this might be nice to have, but reply code is cleared by now.
-    if ( HTTP_ReplyCode() != 206 )
-        // multipart/byteranges may span multiple connections
-        file_mgr->EndOfFile(GetAnalyzerTag(), Conn(), false);
-    */
+
+
+
+
+
 }
 
 void HTTP_Analyzer::DeliverStream(int len, const u_char* data, bool is_orig) {
@@ -940,8 +940,8 @@ void HTTP_Analyzer::DeliverStream(int len, const u_char* data, bool is_orig) {
         return;
 
     if ( upgraded || pia ) {
-        // There will be a PIA instance if this connection has been identified
-        // as a connect proxy, or a child analyzer if there was an upgrade.
+
+
         ForwardStream(len, data, is_orig);
         return;
     }
@@ -949,7 +949,7 @@ void HTTP_Analyzer::DeliverStream(int len, const u_char* data, bool is_orig) {
     const char* line = reinterpret_cast<const char*>(data);
     const char* end_of_line = line + len;
 
-    // HTTP 0.9 is just raw data directly from the server, special case.
+
     if ( reply_state == EXPECT_REPLY_HTTP09 && ! is_orig ) {
         if ( ! reply_message ) {
             SetVersion(&reply_version, {0, 9});
@@ -959,17 +959,17 @@ void HTTP_Analyzer::DeliverStream(int len, const u_char* data, bool is_orig) {
                 unanswered_requests.pop();
             }
 
-            // Expect the server to close the connection after replying. This is used within
-            // HTTP_Message() below to switch the message into plain delivery mode (and
-            // the content_line_analyzer, but that's not used anymore).
+
+
+
             connection_close = 1;
             reply_ongoing = 1;
 
             HTTP_Reply();
             InitHTTPMessage(content_line_resp, reply_message, is_orig, ExpectReplyMessageBody(), 0);
 
-            // Finish header processing right way and switch into plain delivery.
-            // Need trailing_CRLF set to avoid a weird.
+
+
             reply_message->Deliver(0, "", true);
         }
 
@@ -993,7 +993,7 @@ void HTTP_Analyzer::DeliverStream(int len, const u_char* data, bool is_orig) {
         return;
     }
 
-    // HTTP_Event("HTTP line", to_string_val(length, line));
+
 
     if ( is_orig ) {
         ++num_request_lines;
@@ -1017,18 +1017,18 @@ void HTTP_Analyzer::DeliverStream(int len, const u_char* data, bool is_orig) {
                     HTTP_Request();
                     InitHTTPMessage(content_line, request_message, is_orig, HTTP_BODY_MAYBE, len);
 
-                    // For HTTP/0.9, turn off the content_line analyzer for the
-                    // responder because we expect raw data.
+
+
                     if ( request_version == HTTP_VersionNumber{0, 9} ) {
                         if ( request_method->ToStdString() != "GET" )
                             Weird("invalid_http_09_request_method", request_method->CheckString());
 
-                        // If we already have a reply_message that means we saw
-                        // an HTTP response before a request and interpreted
-                        // it as HTTP/1.1 already. Reset the state here because
-                        // we're removing the ContentLine support analyzer and
-                        // any assumptions about expected delivery size state
-                        // become invalid.
+
+
+
+
+
+
                         if ( reply_message ) {
                             Weird("http_09_reply_before_request");
                             reply_message->Done();
@@ -1045,14 +1045,14 @@ void HTTP_Analyzer::DeliverStream(int len, const u_char* data, bool is_orig) {
                     if ( ! RequestExpected() )
                         HTTP_Event("crud_trailing_HTTP_request", analyzer::mime::to_string_val(line, end_of_line));
                     else {
-                        // We do see HTTP requests with a
-                        // trailing EOL that's not accounted
-                        // for by the content-length. This
-                        // will lead to a call to this method
-                        // with len==0 while we are expecting
-                        // a new request. Since HTTP servers
-                        // handle such requests gracefully,
-                        // we should do so as well.
+
+
+
+
+
+
+
+
                         if ( len == 0 )
                             Weird("empty_http_request");
                         else {
@@ -1069,7 +1069,7 @@ void HTTP_Analyzer::DeliverStream(int len, const u_char* data, bool is_orig) {
             case EXPECT_REQUEST_NOTHING: break;
         }
     }
-    else { // HTTP reply
+    else {
         switch ( reply_state ) {
             case EXPECT_REPLY_LINE:
                 if ( HTTP_ReplyLine(line, end_of_line) ) {
@@ -1084,7 +1084,7 @@ void HTTP_Analyzer::DeliverStream(int len, const u_char* data, bool is_orig) {
                     HTTP_Reply();
 
                     if ( connect_request && reply_code != 200 )
-                        // Request failed, do not set up tunnel.
+
                         connect_request = false;
 
                     InitHTTPMessage(content_line, reply_message, is_orig, ExpectReplyMessageBody(), len);
@@ -1102,8 +1102,8 @@ void HTTP_Analyzer::DeliverStream(int len, const u_char* data, bool is_orig) {
                 reply_message->Deliver(len, line, true);
 
                 if ( connect_request && len == 0 ) {
-                    // End of message header reached, set up
-                    // tunnel decapsulation.
+
+
                     pia = new analyzer::pia::PIA_TCP(Conn());
 
                     if ( AddChildAnalyzer(pia) ) {
@@ -1112,33 +1112,33 @@ void HTTP_Analyzer::DeliverStream(int len, const u_char* data, bool is_orig) {
 
                         int remaining_in_content_line = content_line_resp->GetDeliverStreamRemainingLength();
                         if ( remaining_in_content_line > 0 ) {
-                            // If there's immediately data following the empty line
-                            // of a successful CONNECT reply, that's at least curious.
-                            // Further, switch the responder's ContentLine analyzer
-                            // into plain delivery mode so anything left is sent to
-                            // PIA unaltered.
+
+
+
+
+
                             const char* addl = zeek::util::fmt("%d", remaining_in_content_line);
                             Weird("protocol_data_with_HTTP_CONNECT_reply", addl);
                             content_line_resp->SetPlainDelivery(remaining_in_content_line);
                         }
 
 
-                        // This connection has transitioned to no longer
-                        // being http and the content line support analyzers
-                        // need to be removed.
+
+
+
                         RemoveSupportAnalyzer(content_line_orig);
                         RemoveSupportAnalyzer(content_line_resp);
                     }
 
                     else
-                        // AddChildAnalyzer() will have deleted PIA.
+
                         pia = nullptr;
                 }
 
                 break;
 
             case EXPECT_REPLY_HTTP09:
-                // unreachable
+
             case EXPECT_REPLY_TRAILER:
             case EXPECT_REPLY_NOTHING: break;
         }
@@ -1148,7 +1148,7 @@ void HTTP_Analyzer::DeliverStream(int len, const u_char* data, bool is_orig) {
 void HTTP_Analyzer::Undelivered(uint64_t seq, int len, bool is_orig) {
     analyzer::tcp::TCP_ApplicationAnalyzer::Undelivered(seq, len, is_orig);
 
-    // DEBUG_MSG("Undelivered from %"PRIu64": %d bytes\n", seq, length);
+
 
     HTTP_Message* msg = is_orig ? request_message : reply_message;
 
@@ -1159,16 +1159,16 @@ void HTTP_Analyzer::Undelivered(uint64_t seq, int len, bool is_orig) {
             msg->SubmitEvent(analyzer::mime::MIME_EVENT_CONTENT_GAP, util::fmt("seq=%" PRIu64 ", len=%d", seq, len));
     }
 
-    // Check if the content gap falls completely within a message body
+
     if ( msg && msg->Undelivered(len) )
-        // If so, we are safe to skip the content and go on parsing
+
         return;
 
-    // Otherwise stop parsing the connection
+
     if ( is_orig ) {
-        // Stop parsing reply messages too, because whether a
-        // reply contains a body may depend on knowing the
-        // request method
+
+
+
 
         RequestMade(true, "message interrupted by a content gap");
         ReplyMade(true, "message interrupted by a content gap");
@@ -1184,26 +1184,26 @@ void HTTP_Analyzer::Undelivered(uint64_t seq, int len, bool is_orig) {
 void HTTP_Analyzer::FlipRoles() {
     analyzer::tcp::TCP_ApplicationAnalyzer::FlipRoles();
 
-    // If FlipRoles() is invoked after we've upgraded to something,
-    // don't do anything. This shouldn't happen as flipping of TCP
-    // connections currently happens before any data is transferred,
-    // but better safe than sorry.
+
+
+
+
     if ( upgraded || pia ) {
         Weird("HTTP_late_flip_roles");
         return;
     }
 
-    // If we haven't upgraded but saw request or replies, just bail
-    // for the rest of this connection. Again, this should never happen
-    // right now, but raise a weird in case it starts to happen.
+
+
+
     if ( num_requests > 0 || num_replies > 0 ) {
         Weird("HTTP_late_flip_roles");
         SetSkip(true);
         return;
     }
 
-    // IsOrig() of the support analyzer has been updated, but we still need
-    // to change the analyzer's local state and the partial skipping setting.
+
+
     bool skip_partial_orig = content_line_orig->SkipPartial();
     bool skip_partial_resp = content_line_resp->SkipPartial();
     std::swap(content_line_orig, content_line_resp);
@@ -1214,7 +1214,7 @@ void HTTP_Analyzer::FlipRoles() {
 void HTTP_Analyzer::EndpointEOF(bool is_orig) {
     analyzer::tcp::TCP_ApplicationAnalyzer::EndpointEOF(is_orig);
 
-    // DEBUG_MSG("%.6f eof\n", run_state::network_time);
+
 
     if ( is_orig )
         RequestMade(false, "message ends as connection contents are completely delivered");
@@ -1225,7 +1225,7 @@ void HTTP_Analyzer::EndpointEOF(bool is_orig) {
 void HTTP_Analyzer::ConnectionFinished(bool half_finished) {
     analyzer::tcp::TCP_ApplicationAnalyzer::ConnectionFinished(half_finished);
 
-    // DEBUG_MSG("%.6f connection finished\n", run_state::network_time);
+
     RequestMade(true, "message ends as connection is finished");
     ReplyMade(true, "message ends as connection is finished");
 }
@@ -1253,7 +1253,7 @@ void HTTP_Analyzer::GenStats() {
         r->Assign(2, request_version.ToDouble());
         r->Assign(3, reply_version.ToDouble());
 
-        // DEBUG_MSG("%.6f http_stats\n", run_state::network_time);
+
         EnqueueConnEvent(http_stats, ConnVal(), std::move(r));
     }
 }
@@ -1269,7 +1269,7 @@ const char* HTTP_Analyzer::PrefixMatch(const char* line, const char* end_of_line
     }
 
     if ( *prefix )
-        // It didn't match.
+
         return nullptr;
 
     return line;
@@ -1284,15 +1284,15 @@ const char* HTTP_Analyzer::PrefixWordMatch(const char* line, const char* end_of_
     line = util::skip_whitespace(line, end_of_line);
 
     if ( line == orig_line )
-        // Word didn't end at prefix.
+
         return nullptr;
 
     return line;
 }
 
 static bool is_HTTP_token_char(unsigned char c) {
-    return c > 31 && c < 127 &&     // Exclude non-ascii and DEL/CTL per RFC 2616
-           c != ' ' && c != '\t' && // Separators.
+    return c > 31 && c < 127 &&
+           c != ' ' && c != '\t' &&
            c != '(' && c != ')' && c != '<' && c != '>' && c != '@' && c != ',' && c != ';' && c != ':' && c != '\\' &&
            c != '"' && c != '/' && c != '[' && c != ']' && c != '?' && c != '=' && c != '{' && c != '}';
 }
@@ -1309,9 +1309,9 @@ int HTTP_Analyzer::HTTP_RequestLine(const char* line, const char* end_of_line) {
     const char* end_of_method = get_HTTP_token(line, end_of_line);
 
     if ( end_of_method == line ) {
-        // something went wrong with get_HTTP_token
-        // perform a weak test to see if the string "HTTP/"
-        // is found at the end of the RequestLine
+
+
+
         if ( end_of_line - 9 >= line && strncasecmp(end_of_line - 9, " HTTP/", 6) == 0 )
             goto bad_http_request_with_version;
 
@@ -1328,9 +1328,9 @@ int HTTP_Analyzer::HTTP_RequestLine(const char* line, const char* end_of_line) {
         return -1;
     }
 
-    // If we determined HTTP/0.9 (no HTTP/ in the request line), assert that
-    // minimally we have an URI and a 3 character method (HTTP 0.9 only
-    // supports GET). If that doesn't hold, probably not HTTP or very strange.
+
+
+
     if ( request_version == HTTP_VersionNumber{0, 9} ) {
         bool maybe_get_method = (end_of_method - line) >= 3;
         bool has_uri = request_URI && request_URI->Len() > 0;
@@ -1368,8 +1368,8 @@ bool HTTP_Analyzer::ParseRequest(const char* line, const char* end_of_line) {
 
     match = PrefixMatch(line, end_of_line, "HTTP/", false);
     if ( ! match ) {
-        // If the uppercase version didn't match, try a case-insensitive version, but
-        // send a weird if it matches.
+
+
         match = PrefixMatch(line, end_of_line, "HTTP/", true);
         if ( match )
             Weird("lowercase_HTTP_keyword");
@@ -1377,7 +1377,7 @@ bool HTTP_Analyzer::ParseRequest(const char* line, const char* end_of_line) {
 
     if ( end_of_uri >= end_of_line && match ) {
         Weird("missing_HTTP_uri");
-        end_of_uri = line; // Leave URI empty.
+        end_of_uri = line;
     }
 
     for ( version_start = end_of_uri; version_start < end_of_line; ++version_start ) {
@@ -1385,8 +1385,8 @@ bool HTTP_Analyzer::ParseRequest(const char* line, const char* end_of_line) {
         version_start = util::skip_whitespace(version_start, end_of_line);
         if ( PrefixMatch(version_start, end_of_line, "HTTP/", false) )
             break;
-        // If the uppercase version didn't match, try a case-insensitive version, but
-        // send a weird if it matches.
+
+
         if ( PrefixMatch(version_start, end_of_line, "HTTP/", true) ) {
             Weird("lowercase_HTTP_keyword");
             break;
@@ -1394,12 +1394,12 @@ bool HTTP_Analyzer::ParseRequest(const char* line, const char* end_of_line) {
     }
 
     if ( version_start >= end_of_line ) {
-        // If no version is found
+
         SetVersion(&request_version, {0, 9});
     }
     else {
         if ( version_start + 8 <= end_of_line ) {
-            version_start += 5; // "HTTP/"
+            version_start += 5;
             SetVersion(&request_version, HTTP_Version(end_of_line - version_start, version_start));
 
             version_end = version_start + 3;
@@ -1410,7 +1410,7 @@ bool HTTP_Analyzer::ParseRequest(const char* line, const char* end_of_line) {
             HTTP_Event("bad_HTTP_version", analyzer::mime::to_string_val(line, end_of_line));
     }
 
-    // NormalizeURI(line, end_of_uri);
+
 
     request_URI = make_intrusive<StringVal>(end_of_uri - line, line);
     unescaped_URI = make_intrusive<StringVal>(
@@ -1419,7 +1419,7 @@ bool HTTP_Analyzer::ParseRequest(const char* line, const char* end_of_line) {
     return true;
 }
 
-// Only recognize [0-9][.][0-9].
+
 HTTP_Analyzer::HTTP_VersionNumber HTTP_Analyzer::HTTP_Version(int len, const char* data) {
     if ( len >= 3 && data[0] >= '0' && data[0] <= '9' && data[1] == '.' && data[2] >= '0' && data[2] <= '9' ) {
         uint8_t major = data[0] - '0';
@@ -1451,7 +1451,7 @@ void HTTP_Analyzer::HTTP_Event(const char* category, const char* detail) {
 
 void HTTP_Analyzer::HTTP_Event(const char* category, StringValPtr detail) {
     if ( http_event )
-        // DEBUG_MSG("%.6f http_event\n", run_state::network_time);
+
         EnqueueConnEvent(http_event, ConnVal(), make_intrusive<StringVal>(category), std::move(detail));
 }
 
@@ -1478,7 +1478,7 @@ void HTTP_Analyzer::HTTP_Request() {
         connect_request = true;
 
     if ( http_request )
-        // DEBUG_MSG("%.6f http_request\n", run_state::network_time);
+
         EnqueueConnEvent(http_request, ConnVal(), request_method, TruncateURI(request_URI), TruncateURI(unescaped_URI),
                          make_intrusive<StringVal>(util::fmt("%.1f", request_version.ToDouble())));
 }
@@ -1501,7 +1501,7 @@ void HTTP_Analyzer::RequestMade(bool interrupted, const char* msg) {
     if ( request_message )
         request_message->Done(interrupted, msg);
 
-    // DEBUG_MSG("%.6f request made\n", run_state::network_time);
+
 
     request_method = nullptr;
     unescaped_URI = nullptr;
@@ -1521,20 +1521,20 @@ void HTTP_Analyzer::ReplyMade(bool interrupted, const char* msg) {
 
     reply_ongoing = 0;
 
-    // DEBUG_MSG("%.6f reply made\n", run_state::network_time);
+
 
     if ( reply_message )
         reply_message->Done(interrupted, msg);
 
-    // 1xx replies do not indicate the final response to a request,
-    // so don't pop an unanswered request in that case.
+
+
     if ( (reply_code < 100 || reply_code >= 200) && ! unanswered_requests.empty() )
         unanswered_requests.pop();
 
     if ( reply_reason_phrase )
         reply_reason_phrase = nullptr;
 
-    // unanswered requests = 1 because there is no pop after 101.
+
     if ( reply_code == 101 && unanswered_requests.size() == 1 && upgrade_connection && ! upgrade_protocol.empty() )
         HTTP_Upgrade();
 
@@ -1549,30 +1549,30 @@ void HTTP_Analyzer::ReplyMade(bool interrupted, const char* msg) {
 }
 
 void HTTP_Analyzer::HTTP_Upgrade() {
-    // Upgraded connection that switches immediately - e.g. websocket.
+
 
     int remaining_in_content_line = content_line_resp->GetDeliverStreamRemainingLength();
 
     if ( remaining_in_content_line > 0 ) {
-        // We've seen a complete HTTP response for an upgrade request and there's
-        // more data buffered in the ContentLine analyzer. This means the next
-        // protocol's data is in the same packet as the HTTP reply. Log a weird
-        // as this seems not very likely to happen in the wild.
+
+
+
+
         const char* addl = zeek::util::fmt("%d", remaining_in_content_line);
         Weird("protocol_data_with_HTTP_upgrade_reply", addl);
 
-        // Switch the ContentLine analyzer to deliver anything remaining in
-        // plain mode so it can be forwarded to the upgrade analyzer.
+
+
         content_line_resp->SetPlainDelivery(remaining_in_content_line);
     }
 
-    // Lookup an analyzer tag in the HTTP::upgrade_analyzer table.
+
     static const auto& upgrade_analyzers = id::find_val<TableVal>("HTTP::upgrade_analyzers");
 
     auto upgrade_protocol_val = make_intrusive<StringVal>(upgrade_protocol);
     auto v = upgrade_analyzers->Find(upgrade_protocol_val);
     if ( ! v ) {
-        // If not found, try the all lower version, too.
+
         auto lower_upgrade_protocol = util::strtolower(upgrade_protocol);
         upgrade_protocol_val = make_intrusive<StringVal>(lower_upgrade_protocol);
         v = upgrade_analyzers->Find(upgrade_protocol_val);
@@ -1588,19 +1588,19 @@ void HTTP_Analyzer::HTTP_Upgrade() {
         if ( analyzer ) {
             AddChildAnalyzer(analyzer);
 
-            // The analyzer's Init() may have scheduled an event for analyzer configuration.
-            // Drain the event queue now to process it. This further ensures that other
-            // events already in the event queue (http_reply, http_header, ...) are drained
-            // as well and accessible when the configuration runs.
-            //
-            // Don't just copy this code into a new analyzer, there might be better and more
-            // more general approaches.
-            //
-            // Alternative proposal from Robin:
-            //
-            //   Collect all HTTP headers (pattern/names configurable by script land)
-            //   and forward the collected headers to the analyzer via a custom
-            //   configuration method or some in-band channel.
+
+
+
+
+
+
+
+
+
+
+
+
+
             event_mgr.Drain();
         }
     }
@@ -1622,10 +1622,10 @@ void HTTP_Analyzer::HTTP_Upgrade() {
         EnqueueConnEvent(http_connection_upgrade, ConnVal(), make_intrusive<StringVal>(upgrade_protocol));
 }
 
-void HTTP_Analyzer::RequestClash(Val* /* clash_val */) {
+void HTTP_Analyzer::RequestClash(Val* ) {
     Weird("multiple_HTTP_request_elements");
 
-    // Flush out old values.
+
     RequestMade(true, "request clash");
 }
 
@@ -1638,17 +1638,17 @@ int HTTP_Analyzer::HTTP_ReplyLine(const char* line, const char* end_of_line) {
 
     rest = PrefixMatch(line, end_of_line, "HTTP/", false);
     if ( ! rest ) {
-        // If the uppercase version didn't match, try a case-insensitive version, but
-        // send a weird if it matches.
+
+
         rest = PrefixMatch(line, end_of_line, "HTTP/", true);
         if ( rest )
             Weird("lowercase_HTTP_keyword");
     }
 
     if ( ! rest ) {
-        // ##TODO: some server replies with an HTML document
-        // without a status line and a MIME header, when the
-        // request is malformed.
+
+
+
         HTTP_Event("bad_HTTP_reply", analyzer::mime::to_string_val(line, end_of_line));
         return 0;
     }
@@ -1679,7 +1679,7 @@ int HTTP_Analyzer::HTTP_ReplyLine(const char* line, const char* end_of_line) {
 
     if ( rest >= end_of_line ) {
         HTTP_Event("HTTP_reply_reason_phrase_missing", analyzer::mime::to_string_val(line, end_of_line));
-        // Tolerate missing reason phrase?
+
         return 1;
     }
 
@@ -1697,16 +1697,16 @@ int HTTP_Analyzer::HTTP_ReplyCode(const char* code_str) {
 }
 
 int HTTP_Analyzer::ExpectReplyMessageBody() {
-    // RFC 2616:
-    //
-    //     For response messages, whether or not a message-body is included with
-    //     a message is dependent on both the request method and the response
-    //     status code (section 6.1.1). All responses to the HEAD request method
-    //     MUST NOT include a message-body, even though the presence of entity-
-    //     header fields might lead one to believe they do. All 1xx
-    //     (informational), 204 (no content), and 304 (not modified) responses
-    //     MUST NOT include a message-body. All other responses do include a
-    //     message-body, although it MAY be of zero length.
+
+
+
+
+
+
+
+
+
+
 
     const String* method = UnansweredRequestMethod();
 
@@ -1720,10 +1720,10 @@ int HTTP_Analyzer::ExpectReplyMessageBody() {
 }
 
 void HTTP_Analyzer::HTTP_Header(bool is_orig, analyzer::mime::MIME_Header* h) {
-    // To be "liberal", we only look at "keep-alive" on the client
-    // side, and if seen assume the connection to be persistent.
-    // This seems fairly safe - at worst, the client does indeed
-    // send additional requests, and the server ignores them.
+
+
+
+
     if ( is_orig && analyzer::mime::istrequal(h->get_name(), "connection") ) {
         if ( analyzer::mime::istrequal(h->get_value_token(), "keep-alive") )
             keep_alive = 1;
@@ -1767,8 +1767,8 @@ void HTTP_Analyzer::HTTP_EntityData(bool is_orig, String* entity_data) {
         delete entity_data;
 }
 
-// Calls request/reply done
-void HTTP_Analyzer::HTTP_MessageDone(bool is_orig, HTTP_Message* /* message */) {
+
+void HTTP_Analyzer::HTTP_MessageDone(bool is_orig, HTTP_Message* ) {
     if ( is_orig )
         RequestMade(false, "message ends normally");
     else
@@ -1784,7 +1784,7 @@ void HTTP_Analyzer::InitHTTPMessage(analyzer::tcp::ContentLine_Analyzer* cl, HTT
         delete message;
     }
 
-    // DEBUG_MSG("%.6f init http message\n", run_state::network_time);
+
     message = new HTTP_Message(this, cl, is_orig, expect_body, init_header_length);
 }
 
@@ -1795,11 +1795,11 @@ void HTTP_Analyzer::SkipEntityData(bool is_orig) {
         msg->SkipEntityData();
 }
 
-bool is_reserved_URI_char(unsigned char ch) { // see RFC 3986 (definition of URI)
+bool is_reserved_URI_char(unsigned char ch) {
     return strchr(":/?#[]@!$&'()*+,;=", ch) != nullptr;
 }
 
-bool is_unreserved_URI_char(unsigned char ch) { // see RFC 3986 (definition of URI)
+bool is_unreserved_URI_char(unsigned char ch) {
     return isalnum(ch) != 0 || strchr("-_.!~*\'()", ch) != nullptr;
 }
 
@@ -1825,8 +1825,8 @@ String* unescape_URI(const u_char* line, const u_char* line_end, analyzer::Analy
             }
 
             else if ( line + 1 == line_end ) {
-                // % + one character at end of line. Log weird
-                // and just add to unescaped URI.
+
+
                 *URI_p++ = '%';
                 *URI_p++ = *line;
                 if ( analyzer )
@@ -1835,35 +1835,35 @@ String* unescape_URI(const u_char* line, const u_char* line_end, analyzer::Analy
             }
 
             else if ( *line == '%' ) {
-                // Double '%' might be either due to
-                // software bug, or more likely, an
-                // evasion (e.g. used by Nimda).
-                // *URI_p++ = '%';
+
+
+
+
                 if ( analyzer )
                     analyzer->Weird("double_%_in_URI");
-                --line; // ignore the first '%'
+                --line;
             }
 
             else if ( isxdigit(line[0]) && isxdigit(line[1]) ) {
                 *URI_p++ = (util::decode_hex(line[0]) << 4) + util::decode_hex(line[1]);
-                ++line; // place line at the last hex digit
+                ++line;
             }
 
             else if ( line_end - line >= 5 && line[0] == 'u' && isxdigit(line[1]) && isxdigit(line[2]) &&
                       isxdigit(line[3]) && isxdigit(line[4]) ) {
-                // Decode escaping like this: %u00AE
-                // The W3C rejected escaping this way, and
-                // there is no RFC that specifies it.
-                // Apparently there is some software doing
-                // this sort of 4 byte unicode encoding anyway.
-                // Likely causing an increase in it's use is
-                // the third edition of the ECMAScript spec
-                // having functions for encoding and decoding
-                // data in this format.
 
-                // If the first byte is null, let's eat it.
-                // It could just be ASCII encoded into this
-                // unicode escaping structure.
+
+
+
+
+
+
+
+
+
+
+
+
                 if ( ! (line[1] == '0' && line[2] == '0') )
                     *URI_p++ = (util::decode_hex(line[1]) << 4) + util::decode_hex(line[2]);
 
@@ -1875,8 +1875,8 @@ String* unescape_URI(const u_char* line, const u_char* line_end, analyzer::Analy
             else {
                 if ( analyzer )
                     analyzer->Weird("unescaped_%_in_URI");
-                *URI_p++ = '%';   // put back initial '%'
-                *URI_p++ = *line; // take char w/o interp.
+                *URI_p++ = '%';
+                *URI_p++ = *line;
             }
         }
 
@@ -1891,4 +1891,4 @@ String* unescape_URI(const u_char* line, const u_char* line_end, analyzer::Analy
     return new String(true, decoded_URI, URI_p - decoded_URI);
 }
 
-} // namespace zeek::analyzer::http
+}

@@ -1,10 +1,10 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/CCL.h"
 
 #include <algorithm>
 
-#include "zeek/NFA.h" // for SYM_BOL and SYM_EOL
+#include "zeek/NFA.h"
 #include "zeek/RE.h"
 
 namespace zeek::detail {
@@ -26,7 +26,7 @@ void CCL::Negate() {
 void CCL::Add(int sym) {
     auto sym_p = static_cast<std::intptr_t>(sym);
 
-    // Check to see if the character is already in the ccl.
+
     for ( auto sym_entry : *syms )
         if ( sym_entry == sym_p )
             return;
@@ -36,4 +36,4 @@ void CCL::Add(int sym) {
 
 void CCL::Sort() { std::ranges::sort(*syms); }
 
-} // namespace zeek::detail
+}

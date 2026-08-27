@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/DNS_Mapping.h"
 
@@ -124,8 +124,8 @@ void DNS_Mapping::Init(struct hostent* h) {
     }
 
     if ( h->h_name )
-        // for now, just use the official name
-        // TODO: this could easily be expanded to include all of the aliases as well
+
+
         names.emplace_back(h->h_name);
 
     if ( h->h_addr_list ) {
@@ -165,8 +165,8 @@ void DNS_Mapping::Merge(const DNS_MappingPtr& other) {
     std::ranges::copy(other->addrs, std::back_inserter(addrs));
 }
 
-// This value needs to be incremented if something changes in the data stored by Save(). This
-// allows us to change the structure of the cache without breaking something in DNS_Mgr.
+
+
 constexpr int FILE_VERSION = 1;
 
 void DNS_Mapping::InitializeCache(FILE* f) { fprintf(f, "%d\n", FILE_VERSION); }
@@ -185,9 +185,9 @@ bool DNS_Mapping::ValidateCacheVersion(FILE* f) {
     return FILE_VERSION == version;
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////
+
+
+
 
 TEST_CASE("dns_mapping init null hostent") {
     DNS_Mapping mapping("www.apple.com", nullptr, 123, T_A);
@@ -275,8 +275,8 @@ TEST_CASE("dns_mapping init addr") {
 }
 
 TEST_CASE("dns_mapping save reload") {
-    // TODO: this test uses fmemopen and mkdtemp, both of which aren't available on
-    // Windows. We'll have to figure out another way to do this test there.
+
+
 #ifndef _MSC_VER
     IPAddr addr("1.2.3.4");
     in4_addr in4;
@@ -291,30 +291,30 @@ TEST_CASE("dns_mapping save reload") {
     std::vector<in_addr*> addrs = {&in4, nullptr};
     he.h_addr_list = reinterpret_cast<char**>(addrs.data());
 
-    // Create a temporary file in memory and fseek to the end of it so we're at
-    // EOF for the next bit.
+
+
     char buffer[4096];
     memset(buffer, 0, 4096);
     FILE* tmpfile = fmemopen(buffer, 4096, "r+");
     if ( fseek(tmpfile, 0, SEEK_END) < 0 )
         reporter->Error("DNS_Mapping: seek failed");
 
-    // Try loading from the file at EOF. This should cause a mapping failure.
+
     DNS_Mapping mapping(tmpfile);
     CHECK(mapping.NoMapping());
     fseek(tmpfile, 0, SEEK_SET);
 
-    // Try reading from the empty file. This should cause an init failure.
+
     DNS_Mapping mapping2(tmpfile);
     CHECK(mapping2.InitFailed());
     fseek(tmpfile, 0, SEEK_SET);
 
-    // Save a valid mapping into the file and rewind to the start.
+
     DNS_Mapping mapping3(addr, &he, 123);
     mapping3.Save(tmpfile);
     fseek(tmpfile, 0, SEEK_SET);
 
-    // Test loading the mapping back out of the file
+
     DNS_Mapping mapping4(tmpfile);
     fclose(tmpfile);
     CHECK(mapping4.Valid());
@@ -407,4 +407,4 @@ TEST_CASE("dns_mapping ipv6") {
     delete[] he.h_name;
 }
 
-} // namespace zeek::detail
+}

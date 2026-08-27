@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/protocol/udp/UDP.h"
 
@@ -20,7 +20,7 @@ constexpr uint32_t HIST_ORIG_DATA_PKT = 0x1;
 constexpr uint32_t HIST_RESP_DATA_PKT = 0x2;
 constexpr uint32_t HIST_ORIG_CORRUPT_PKT = 0x4;
 constexpr uint32_t HIST_RESP_CORRUPT_PKT = 0x8;
-// constexpr uint32_t HIST_UNKNOWN_PKT = 0x400;  (do not use - used in Session.h)
+
 
 UDPAnalyzer::UDPAnalyzer() : IPBasedAnalyzer("UDP", TRANSPORT_UDP, UDP_PORT_MASK, false) {}
 
@@ -72,8 +72,8 @@ void UDPAnalyzer::DeliverPacket(Connection* c, double t, bool is_orig, int remai
 
     const u_char* data = pkt->ip_hdr->Payload();
     int len = pkt->ip_hdr->PayloadLen();
-    // If segment offloading or similar is enabled, the payload len will return 0.
-    // Thus, let's ignore that case.
+
+
     if ( len == 0 )
         len = remaining;
 
@@ -82,13 +82,13 @@ void UDPAnalyzer::DeliverPacket(Connection* c, double t, bool is_orig, int remai
 
     adapter->DeliverPacket(len, data, is_orig, -1, ip.get(), remaining);
 
-    // Increment data before checksum check so that data will
-    // point to UDP payload even if checksum fails. Particularly,
-    // it allows event packet_contents to get to the data.
+
+
+
     data += sizeof(struct udphdr);
 
-    // We need the min() here because Ethernet frame padding can lead to
-    // remaining > len.
+
+
     if ( packet_contents )
         adapter->PacketContents(data, std::min(len, remaining) - sizeof(struct udphdr));
 
@@ -104,9 +104,9 @@ void UDPAnalyzer::DeliverPacket(Connection* c, double t, bool is_orig, int remai
     if ( validate_checksum && len > (static_cast<int>(sizeof(struct udphdr)) + vxlan_len + eth_len) &&
          (data[0] & 0x08) == 0x08 ) {
         if ( std::ranges::find(vxlan_ports, ntohs(up->uh_dport)) != vxlan_ports.end() ) {
-            // Looks like VXLAN on a well-known port, so the checksum should be
-            // transmitted as zero, and we should accept that.  If not
-            // transmitted as zero, then validating the checksum is optional.
+
+
+
             if ( chksum == 0 )
                 validate_checksum = false;
             else
@@ -122,7 +122,7 @@ void UDPAnalyzer::DeliverPacket(Connection* c, double t, bool is_orig, int remai
                 bad = true;
         }
 
-        /* checksum is not optional for IPv6 */
+
         else if ( ! ValidateChecksum(ip.get(), up, len) )
             bad = true;
 
@@ -187,20 +187,20 @@ void UDPAnalyzer::DeliverPacket(Connection* c, double t, bool is_orig, int remai
         adapter->Event(udp_reply);
     }
 
-    // Store the session in the packet in case we get an encapsulation here. We need it for
-    // handling those properly.
+
+
     pkt->session = c;
 
-    // Tap the packet before processing/forwarding.
+
     adapter->TapPacket(pkt);
 
-    // Send the packet back into the packet analysis framework. We only check the response
-    // port here because the orig/resp should have already swapped around based on
-    // likely_server_ports. This also prevents us from processing things twice if protocol
-    // detection has to be used.
+
+
+
+
     ForwardPacket(std::min(len, remaining), data, pkt, ntohs(c->RespPort()));
 
-    // Forward any data through session-analysis, too.
+
     adapter->ForwardPacket(std::min(len, remaining), data, is_orig, -1, ip.get(), pkt->cap_len);
 }
 

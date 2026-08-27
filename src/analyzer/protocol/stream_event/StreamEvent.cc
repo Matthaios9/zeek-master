@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/stream_event/StreamEvent.h"
 
@@ -24,4 +24,4 @@ void StreamEvent_Analyzer::Undelivered(uint64_t seq, int len, bool orig) {
     BifEvent::enqueue_stream_undelivered(this, Conn(), orig, seq, len);
 }
 
-} // namespace zeek::analyzer::stream_event
+}

@@ -6,68 +6,68 @@
 module SSL;
 
 export {
-	## Set this to true to include the server certificate subject and
-	## issuer from the SSL log file. This information is still available
-	## in x509.log.
+
+
+
 	const log_include_server_certificate_subject_issuer = F &redef;
 
-	## Set this to true to include the client certificate subject
-	## and issuer in the SSL logfile. This information is rarely present
-	## and probably only interesting in very specific circumstances
+
+
+
 	const log_include_client_certificate_subject_issuer = F &redef;
 
 	redef record Info += {
-		## Chain of certificates offered by the server to validate its
-		## complete signing chain.
+
+
 		cert_chain: vector of Files::Info &optional;
 
-		## An ordered vector of all certificate fingerprints for the
-		## certificates offered by the server.
+
+
 		cert_chain_fps: vector of string &optional &log;
 
-		## Chain of certificates offered by the client to validate its
-		## complete signing chain.
+
+
 		client_cert_chain: vector of Files::Info &optional;
 
-		## An ordered vector of all certificate fingerprints for the
-		## certificates offered by the client.
+
+
 		client_cert_chain_fps: vector of string &optional &log;
 
-		## Subject of the X.509 certificate offered by the server.
+
 		subject: string &log &optional;
 
-		## Issuer of the signer of the X.509 certificate offered by the
-		## server.
+
+
 		issuer: string &log &optional;
 
-		## Subject of the X.509 certificate offered by the client.
+
 		client_subject: string &log &optional;
 
-		## Subject of the signer of the X.509 certificate offered by the
-		## client.
+
+
 		client_issuer: string &log &optional;
 
-		## Set to true if the hostname sent in the SNI matches the certificate.
-		## Set to false if they do not match. Unset if the client did not send
-		## an SNI.
+
+
+
 		sni_matches_cert: bool &log &optional;
 
-		## Current number of certificates seen from either side. Used
-		## to create file handles.
+
+
 		server_depth: count &default=0;
 		client_depth: count &default=0;
 	};
 
-	## Default file handle provider for SSL.
+
 	global get_file_handle: function(c: connection, is_orig: bool): string;
 
-	## Default file describer for SSL.
+
 	global describe_file: function(f: fa_file): string;
 }
 
 function get_file_handle(c: connection, is_orig: bool): string
 	{
-	# Unused.  File handles are generated in the analyzer.
+
 	return "";
 	}
 
@@ -76,11 +76,11 @@ function describe_file(f: fa_file): string
 	if ( f$source != "SSL" || ! f?$info || ! f$info?$x509 || ! f$info$x509?$certificate )
 		return "";
 
-	# It is difficult to reliably describe a certificate - especially since
-	# we do not know when this function is called (hence, if the data structures
-	# are already populated).
-	#
-	# Just return a bit of our connection information and hope that is good enough.
+
+
+
+
+
 	for ( _, c in f$conns )
 		{
 		if ( c?$ssl )
@@ -135,7 +135,7 @@ event file_sniff(f: fa_file, meta: fa_metadata) &priority=5
 	         || f$info$mime_type == "application/pkix-cert" ) )
 		return;
 
-	local c: connection &is_assigned;	# to help static analysis
+	local c: connection &is_assigned;
 
 	for ( _, c in f$conns )
 		{
@@ -151,7 +151,7 @@ event file_sniff(f: fa_file, meta: fa_metadata) &priority=5
 		c$ssl$client_cert_chain_fps = string_vec();
 		}
 
-	# Note - for SSL connections, is_orig indicates client/server, not necessary originator/responder.
+
 	if ( f$is_orig )
 		c$ssl$client_cert_chain += f$info;
 	else

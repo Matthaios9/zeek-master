@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_utils.h"
 
@@ -20,7 +20,7 @@ const char* do_fmt(const char* format, va_list ap) {
     return buf;
 }
 
-} // namespace
+}
 
 string strfmt(const char* format, ...) {
     va_list ap;

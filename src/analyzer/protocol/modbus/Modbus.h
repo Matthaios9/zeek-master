@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -25,4 +25,4 @@ protected:
     binpac::ModbusTCP::ModbusTCP_Conn* interp;
 };
 
-} // namespace zeek::analyzer::modbus
+}

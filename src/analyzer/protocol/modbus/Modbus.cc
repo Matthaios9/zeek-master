@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/modbus/Modbus.h"
 
@@ -34,4 +34,4 @@ void ModbusTCP_Analyzer::EndpointEOF(bool is_orig) {
     interp->FlowEOF(is_orig);
 }
 
-} // namespace zeek::analyzer::modbus
+}

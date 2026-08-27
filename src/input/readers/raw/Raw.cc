@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/input/readers/raw/Raw.h"
 
@@ -42,7 +42,7 @@ using UniqueHandle = zeek::detail::UniqueWinHandle;
 
 namespace zeek::input::reader::detail {
 
-const int Raw::block_size = 4096; // how big do we expect our chunks of data to be.
+const int Raw::block_size = 4096;
 
 Raw::Raw(ReaderFrontend* frontend) : ReaderBackend(frontend), file(nullptr, fclose), stderrfile(nullptr, fclose) {
     execute = false;
@@ -72,7 +72,7 @@ Raw::Raw(ReaderFrontend* frontend) : ReaderBackend(frontend), file(nullptr, fclo
     child_job_handle_ = INVALID_HANDLE_VALUE;
 #endif
 
-    stdin_towrite = 0; // by default do not open stdin
+    stdin_towrite = 0;
     use_stderr = false;
 }
 
@@ -87,7 +87,7 @@ void Raw::DoClose() {
         HANDLE h = static_cast<HANDLE>(child_process_handle_);
         HANDLE job = static_cast<HANDLE>(child_job_handle_);
 
-        // Terminate via job object to kill the entire process tree.
+
         if ( job != INVALID_HANDLE_VALUE ) {
             TerminateJobObject(job, 1);
             CloseHandle(job);
@@ -108,13 +108,13 @@ void Raw::DoClose() {
         }
 #else
         if ( kill(childpid, 0) == 0 ) {
-            // Kill child process group.
+
             kill(-childpid, SIGTERM);
 
             if ( forcekill ) {
-                usleep(200); // 200 msecs should be enough for anyone ;)
+                usleep(200);
 
-                if ( kill(childpid, 0) == 0 ) // perhaps it is already gone
+                if ( kill(childpid, 0) == 0 )
                     kill(-childpid, SIGKILL);
             }
         }
@@ -156,13 +156,13 @@ std::unique_lock<std::mutex> Raw::AcquireForkMutex() {
 
 bool Raw::Execute() {
 #ifdef _MSC_VER
-    // Pipe the command to bash's stdin to avoid quoting issues
+
 
     SECURITY_ATTRIBUTES sa = {};
     sa.nLength = sizeof(SECURITY_ATTRIBUTES);
     sa.bInheritHandle = TRUE;
 
-    // Create stdout pipe
+
     HANDLE hStdoutReadRaw, hStdoutWriteRaw;
     if ( ! CreatePipe(&hStdoutReadRaw, &hStdoutWriteRaw, &sa, 0) ) {
         Error(Fmt("Failed to create stdout pipe: %lu", GetLastError()));
@@ -172,7 +172,7 @@ bool Raw::Execute() {
     UniqueHandle hStdoutWrite(hStdoutWriteRaw);
     SetHandleInformation(hStdoutRead.get(), HANDLE_FLAG_INHERIT, 0);
 
-    // Create stderr pipe if needed
+
     UniqueHandle hStderrRead;
     UniqueHandle hStderrWrite;
     if ( use_stderr ) {
@@ -186,7 +186,7 @@ bool Raw::Execute() {
         SetHandleInformation(hStderrRead.get(), HANDLE_FLAG_INHERIT, 0);
     }
 
-    // Always create a stdin pipe so we can send the command to bash.
+
     HANDLE hStdinReadRaw, hStdinWriteRaw;
     if ( ! CreatePipe(&hStdinReadRaw, &hStdinWriteRaw, &sa, 0) ) {
         Error(Fmt("Failed to create stdin pipe: %lu", GetLastError()));
@@ -203,14 +203,14 @@ bool Raw::Execute() {
     si.hStdError = use_stderr ? hStderrWrite.get() : GetStdHandle(STD_ERROR_HANDLE);
     si.hStdInput = hStdinRead.get();
 
-    // Launch bash with no arguments — commands come via stdin.
-    // CreateProcessA may modify the command-line buffer in place,
-    // so use a buffer with extra space.
+
+
+
     char cmdline[MAX_PATH] = "bash";
 
-    // Find bash.exe by searching PATH directories in order.
-    // CreateProcessA(NULL, "bash") searches System32 before PATH,
-    // which finds WSL's bash.exe instead of MSYS/Git Bash.
+
+
+
     char bash_path[MAX_PATH] = {};
     const char* app_name = nullptr;
     char path_env[32768];
@@ -224,7 +224,7 @@ bool Raw::Execute() {
     BOOL ok = CreateProcessA(app_name, cmdline, nullptr, nullptr, TRUE, CREATE_NEW_PROCESS_GROUP | CREATE_SUSPENDED,
                              nullptr, nullptr, &si, &pi);
 
-    // Close child-side pipe ends regardless of success
+
     hStdoutWrite.reset();
     if ( use_stderr )
         hStderrWrite.reset();
@@ -238,8 +238,8 @@ bool Raw::Execute() {
     UniqueHandle hProcess(pi.hProcess);
     UniqueHandle hThread(pi.hThread);
 
-    // Put the child in a Job Object so TerminateJobObject kills the
-    // entire process tree (matching POSIX kill(-pid, SIGTERM) semantics).
+
+
     UniqueHandle job(CreateJobObjectA(nullptr, nullptr));
     if ( job ) {
         JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = {};
@@ -255,12 +255,12 @@ bool Raw::Execute() {
     childpid = static_cast<int>(pi.dwProcessId);
     child_process_handle_ = hProcess.release();
 
-    // Write command (and any user stdin data) to bash, then close to signal EOF.
-    // MSYS2's inotify emulation doesn't deliver events reliably when bash
-    // is spawned by a native Windows executable (as we do here).  Override
-    // the tail command to disable inotify so it falls back to stat-based
-    // polling.  The ---disable-inotify flag is a long-standing (since 2009)
-    // GNU coreutils testing knob that forces the portable polling path.
+
+
+
+
+
+
     std::string cmd_input = "tail() { command tail ---disable-inotify -s 0.5 \"$@\"; }\n" + fname + "\n";
     DWORD written;
     WriteFile(hStdinWrite.get(), cmd_input.c_str(), static_cast<DWORD>(cmd_input.size()), &written, nullptr);
@@ -272,13 +272,13 @@ bool Raw::Execute() {
 
     hStdinWrite.reset();
 
-    // Convert stdout handle to FILE*
+
     int stdout_fd = _open_osfhandle(reinterpret_cast<intptr_t>(hStdoutRead.get()), _O_RDONLY);
     if ( stdout_fd == -1 ) {
         Error("Could not convert stdout handle to file descriptor");
         return false;
     }
-    hStdoutRead.release(); // fd now owns the handle
+    hStdoutRead.release();
 
     file = std::unique_ptr<FILE, int (*)(FILE*)>(_fdopen(stdout_fd, "rb"), fclose);
     if ( ! file ) {
@@ -293,7 +293,7 @@ bool Raw::Execute() {
             Error("Could not convert stderr handle to file descriptor");
             return false;
         }
-        hStderrRead.release(); // fd now owns the handle
+        hStderrRead.release();
 
         stderrfile = std::unique_ptr<FILE, int (*)(FILE*)>(_fdopen(stderr_fd, "rb"), fclose);
         if ( ! stderrfile ) {
@@ -305,14 +305,14 @@ bool Raw::Execute() {
 
     return true;
 #else
-    // AFAICT, pipe/fork/exec should be thread-safe, but actually having
-    // multiple threads set up pipes and fork concurrently sometimes
-    // results in problems w/ a stdin pipe not ever getting an EOF even
-    // though both ends of it are closed.  But if the same threads
-    // allocate pipes and fork individually or sequentially, that issue
-    // never crops up... ("never" meaning I haven't seen in it in
-    // hundreds of tests using 50+ threads where before I'd see the issue
-    // w/ just 2 threads ~33% of the time).
+
+
+
+
+
+
+
+
     auto lock = AcquireForkMutex();
 
     if ( pipe(pipes) != 0 || pipe(pipes + 2) || pipe(pipes + 4) ) {
@@ -321,7 +321,7 @@ bool Raw::Execute() {
     }
 
     short spawn_flags = 0;
-    // equivalent to setpgid(0,0) in the child
+
     spawn_flags |= POSIX_SPAWN_SETPGROUP;
 
     posix_spawn_file_actions_t actions;
@@ -353,25 +353,25 @@ bool Raw::Execute() {
         return false;
     }
 
-    // this can only fail with EINVAL - and we don't care too much about this.
+
     posix_spawnattr_setflags(&attrs, spawn_flags);
 
-    // Signal mask is inherited, so reset any ignored
-    // signals to default behavior and unblock any blocked signals.
-    // The old code in the child process calls SIG_UNBLOCK on a full mask,
-    // and set SIGPIPE to the default signal, ignoring anything else. New
-    // code replicates this behavior.
+
+
+
+
+
     sigset_t mask;
     sigemptyset(&mask);
     spawn_flags |= POSIX_SPAWN_SETSIGMASK;
-    // this can only fail with EINVAL - which is not fatal
+
     posix_spawnattr_setsigmask(&attrs, &mask);
 
     spawn_flags |= POSIX_SPAWN_SETSIGDEF;
     sigset_t sigdefault;
     sigemptyset(&sigdefault);
     sigaddset(&sigdefault, SIGPIPE);
-    // this can only fail with EINVAL - which is not fatal
+
     posix_spawnattr_setsigdefault(&attrs, &sigdefault);
 
     const char* spawn_argv[] = {"sh", "-c", fname.c_str(), nullptr};
@@ -397,14 +397,14 @@ bool Raw::Execute() {
     ClosePipeEnd(stdin_in);
 
     if ( stdin_towrite ) {
-        // Ya, just always set this to nonblocking. We do not
-        // want to block on a program receiving data. Note
-        // that there is a small gotcha with it. More data is
-        // queued when more data is read from the program
-        // output. Hence, when having a program in
-        // mode_manual where the first write cannot write
-        // everything, the rest will be stuck in a queue that
-        // is never emptied.
+
+
+
+
+
+
+
+
         if ( ! SetFDFlags(pipes[stdin_out], F_SETFL, O_NONBLOCK) )
             return false;
     }
@@ -427,7 +427,7 @@ bool Raw::Execute() {
         return false;
     }
 
-    pipes[stdout_in] = -1; // will be closed by fclose
+    pipes[stdout_in] = -1;
 
     if ( use_stderr ) {
         stderrfile = std::unique_ptr<FILE, int (*)(FILE*)>(fdopen(pipes[stderr_in], "r"), fclose);
@@ -437,7 +437,7 @@ bool Raw::Execute() {
             return false;
         }
 
-        pipes[stderr_in] = -1; // will be closed by fclose
+        pipes[stderr_in] = -1;
     }
 
     return true;
@@ -454,7 +454,7 @@ bool Raw::OpenInput() {
                                                      fclose);
         if ( ! file ) {
             if ( Info().mode == MODE_STREAM )
-                // Wait for file to appear
+
                 return true;
 
             Error(Fmt("Init: cannot open %s", fname.c_str()));
@@ -463,10 +463,10 @@ bool Raw::OpenInput() {
 
         if ( Info().mode == MODE_STREAM || Info().mode == MODE_REREAD ) {
             struct stat sb;
-            // Use stat() on the path (not fstat on the fd) to stay
-            // consistent with the stat() calls in DoUpdate() that
-            // compare against these stored values.  On Windows the two
-            // functions may return different st_dev / st_ino values.
+
+
+
+
             if ( stat(fname.c_str(), &sb) == -1 ) {
                 Error(Fmt("Could not get stat for %s", fname.c_str()));
                 return false;
@@ -484,7 +484,7 @@ bool Raw::OpenInput() {
 
     if ( offset ) {
         int whence = (offset >= 0) ? SEEK_SET : SEEK_END;
-        int64_t pos = (offset >= 0) ? offset : offset + 1; // we want -1 to be the end of the file
+        int64_t pos = (offset >= 0) ? offset : offset + 1;
 
         if ( fseek(file.get(), pos, whence) < 0 ) {
             char buf[256];
@@ -545,24 +545,24 @@ bool Raw::DoInit(const ReaderInfo& info, int num_fields, const Field* const* fie
         fname = source.substr(0, fname.length() - 1);
     }
 
-    ReaderInfo::config_map::const_iterator it = info.config.find("stdin"); // data that is sent to the child process
+    ReaderInfo::config_map::const_iterator it = info.config.find("stdin");
     if ( it != info.config.end() ) {
         stdin_string = it->second;
         stdin_towrite = stdin_string.length();
     }
 
-    it = info.config.find("read_stderr"); // we want to read stderr
+    it = info.config.find("read_stderr");
     if ( it != info.config.end() && execute ) {
         use_stderr = true;
         want_fields = 2;
     }
 
-    it = info.config.find("force_kill"); // we want to be sure that our child is dead when we exit
+    it = info.config.find("force_kill");
     if ( it != info.config.end() && execute ) {
         forcekill = true;
     }
 
-    it = info.config.find("offset"); // we want to seek to a given offset inside the file
+    it = info.config.find("offset");
     if ( it != info.config.end() && ! execute && (Info().mode == MODE_STREAM || Info().mode == MODE_MANUAL) ) {
         std::string offset_s = it->second;
         offset = strtoll(offset_s.c_str(), nullptr, 10);
@@ -594,7 +594,7 @@ bool Raw::DoInit(const ReaderInfo& info, int num_fields, const Field* const* fie
     }
 
     if ( execute && Info().mode == MODE_REREAD ) {
-        // for execs this makes no sense - would have to execute each heartbeat?
+
         Error("Rereading only supported for files, not for executables.");
         return false;
     }
@@ -608,7 +608,7 @@ bool Raw::DoInit(const ReaderInfo& info, int num_fields, const Field* const* fie
     Debug(DBG_INPUT, "Raw reader created, will perform first update");
 #endif
 
-    // after initialization - do update
+
     DoUpdate();
 
 #ifdef DEBUG
@@ -628,13 +628,13 @@ int64_t Raw::GetLine(FILE* arg_file) {
 
     for ( ;; ) {
 #ifdef _MSC_VER
-        // On Windows, pipes don't support O_NONBLOCK / fcntl().
-        // For STREAM mode, use PeekNamedPipe + _read() to bypass the
-        // CRT's FILE* buffering layer (fread may read ahead into an
-        // internal buffer that PeekNamedPipe cannot see).  _read() is
-        // the CRT's unbuffered I/O call — equivalent to POSIX read().
-        // For other modes (MANUAL, REREAD), let fread block — same as
-        // Linux where the pipe is left in blocking mode.
+
+
+
+
+
+
+
         size_t readbytes;
         bool at_eof = false;
         if ( execute && Info().mode == MODE_STREAM ) {
@@ -643,9 +643,9 @@ int64_t Raw::GetLine(FILE* arg_file) {
             DWORD avail = 0;
             if ( PeekNamedPipe(h, nullptr, 0, nullptr, &avail, nullptr) ) {
                 if ( avail == 0 && bufpos == 0 )
-                    return -2; // truly no data anywhere
+                    return -2;
                 if ( avail == 0 ) {
-                    readbytes = 0; // no new data; search existing buffer below
+                    readbytes = 0;
                 }
                 else {
                     unsigned int to_read = std::min<unsigned int>(bufsize - bufpos, avail);
@@ -656,9 +656,9 @@ int64_t Raw::GetLine(FILE* arg_file) {
                 }
             }
             else {
-                // Pipe broken — _read() won't block on a broken pipe.
-                // It returns 0 (EOF), letting the existing separator /
-                // EOF logic below flush any remaining buffered data.
+
+
+
                 unsigned int to_read = static_cast<unsigned int>(bufsize - bufpos);
                 int r = (to_read > 0) ? _read(fd, buf.get() + bufpos, to_read) : 0;
                 readbytes = (r > 0) ? static_cast<size_t>(r) : 0;
@@ -675,37 +675,37 @@ int64_t Raw::GetLine(FILE* arg_file) {
 
         bufpos = bufpos + readbytes;
 
-        // Nothing in the buffer and errno set, yield.
+
         if ( bufpos == 0 && errno != 0 )
             break;
 
-        // researching everything each time is a bit... cpu-intensive. But otherwise we have
-        // to deal with situations where the separator is multi-character and split over multiple
-        // reads...
-        //
-        // memmem() would be more appropriate, but not available on Windows.
+
+
+
+
+
         int found = util::strstr_n(bufpos, reinterpret_cast<u_char*>(buf.get()), separator.size(),
                                    reinterpret_cast<const u_char*>(separator.c_str()));
 
         if ( found == -1 ) {
-            // we did not find it and have to search again in the next try.
-            // but first check if we encountered the file end - because if we did this was it.
+
+
 #ifdef _MSC_VER
-            // _read() signals EOF via return value (at_eof), not via feof().
+
             bool is_eof = at_eof || feof(arg_file) != 0;
 #else
             bool is_eof = feof(arg_file) != 0;
 #endif
             if ( is_eof ) {
                 if ( bufpos == 0 )
-                    return -1; // signal EOF - and that we had no more data.
+                    return -1;
                 else {
-                    outbuf = std::move(buf); // buf is null after this
-                    return bufpos;           // flush out remaining buffered data as line
+                    outbuf = std::move(buf);
+                    return bufpos;
                 }
             }
 
-            // No separator found and buffer full, realloc and retry reading more right away.
+
             if ( bufpos == bufsize ) {
                 std::unique_ptr<char[]> newbuf = std::unique_ptr<char[]>(new char[bufsize + block_size]);
                 memcpy(newbuf.get(), buf.get(), bufsize);
@@ -713,9 +713,9 @@ int64_t Raw::GetLine(FILE* arg_file) {
                 bufsize = bufsize + block_size;
             }
             else {
-                // Short or empty read, some data in the buffer, but no separator found
-                // and also not EOF: This is likely reading from a pipe where the separator
-                // wasn't yet produced. Yield to retry on the next heartbeat.
+
+
+
                 return -2;
             }
         }
@@ -727,7 +727,7 @@ int64_t Raw::GetLine(FILE* arg_file) {
             outbuf = std::move(buf);
 
             if ( remaining > 0 ) {
-                // we have leftovers. copy them into the buffer for the next line
+
                 assert(remaining <= block_size);
                 buf = std::unique_ptr<char[]>(new char[block_size]);
                 bufpos = remaining;
@@ -744,13 +744,13 @@ int64_t Raw::GetLine(FILE* arg_file) {
         return -2;
 
     else {
-        // an error code we did no expect. This probably is bad.
+
         Error(Fmt("Reader encountered unexpected error code %d", errno));
         return -3;
     }
 }
 
-// write to the stdin of the child process
+
 void Raw::WriteToStdin() {
     assert(stdin_towrite <= stdin_string.length());
     uint64_t pos = stdin_string.length() - stdin_towrite;
@@ -764,7 +764,7 @@ void Raw::WriteToStdin() {
         stdin_towrite = 0;
     }
 
-    if ( stdin_towrite == 0 ) // send EOF when we are done.
+    if ( stdin_towrite == 0 )
         ClosePipeEnd(stdin_out);
 
     if ( Info().mode == MODE_MANUAL && stdin_towrite != 0 ) {
@@ -774,7 +774,7 @@ void Raw::WriteToStdin() {
     }
 }
 
-// read the entire file and send appropriate thingies back to InputMgr
+
 bool Raw::DoUpdate() {
     if ( firstrun )
         firstrun = false;
@@ -782,8 +782,8 @@ bool Raw::DoUpdate() {
     else {
         switch ( Info().mode ) {
             case MODE_REREAD: {
-                assert(childpid == -1); // mode may not be used to execute child programs
-                // check if the file has changed
+                assert(childpid == -1);
+
                 struct stat sb;
                 if ( stat(fname.c_str(), &sb) == -1 ) {
                     Error(Fmt("Could not get stat for %s", fname.c_str()));
@@ -793,16 +793,16 @@ bool Raw::DoUpdate() {
                 file_ino_t current_ino = reliable_inode(fname.c_str(), sb.st_ino);
 
                 if ( sb.st_dev == dev && current_ino == ino && sb.st_mtime == mtime && sb.st_size == fsize )
-                    // no change
+
                     return true;
 
                 mtime = sb.st_mtime;
                 ino = current_ino;
                 dev = sb.st_dev;
                 fsize = sb.st_size;
-                // file changed. reread.
-                //
-                // fallthrough
+
+
+
             }
 
             case MODE_MANUAL:
@@ -813,36 +813,36 @@ bool Raw::DoUpdate() {
                 break;
 
             case MODE_STREAM:
-                // Clear possible EOF condition
+
                 if ( file )
                     clearerr(file.get());
 
-                // Done if reading from a pipe
+
                 if ( execute )
                     break;
 
-                // Check if the file has changed
+
                 struct stat sb;
                 if ( stat(fname.c_str(), &sb) == -1 )
-                    // File was removed
+
                     break;
 
-                // Is it the same file? In STREAM mode this only detects
-                // file replacement (different inode), not appended data.
+
+
                 {
                     file_ino_t current_ino = reliable_inode(fname.c_str(), sb.st_ino);
                     if ( file && current_ino == ino && sb.st_dev == dev )
                         break;
                 }
 
-                // File was replaced
+
                 FILE* tfile;
                 tfile = zeek::input::reader::detail::fopen_with_share_delete(fname.c_str(), "r");
                 if ( ! tfile )
                     break;
 
-                // Stat newly opened file (use stat on the path, not
-                // fstat, to stay consistent with the comparison above).
+
+
                 if ( stat(fname.c_str(), &sb) == -1 ) {
                     Error(Fmt("Could not stat %s", fname.c_str()));
                     fclose(tfile);
@@ -867,7 +867,7 @@ bool Raw::DoUpdate() {
             WriteToStdin();
 
         if ( ! file && Info().mode == MODE_STREAM )
-            // Wait for file to appear
+
             break;
 
         int64_t length = GetLine(file.get());
@@ -876,13 +876,13 @@ bool Raw::DoUpdate() {
             return false;
 
         else if ( length == -2 || length == -1 )
-            // no data ready or eof
+
             break;
 
-        Value** fields = new Value*[2]; // just always reserve 2. This means that our [] is too long
-                                        // by a count of 1 if not using stderr. But who cares...
+        Value** fields = new Value*[2];
 
-        // filter has exactly one text field. convert to it.
+
+
         Value* val = new Value(TYPE_STRING, true);
         val->val.string_val.data = outbuf.release();
         val->val.string_val.length = length;
@@ -900,7 +900,7 @@ bool Raw::DoUpdate() {
     if ( use_stderr ) {
         for ( ;; ) {
             int64_t length = GetLine(stderrfile.get());
-            // printf("Read stderr %lld bytes\n", length);
+
             if ( length == -3 )
                 return false;
 
@@ -913,7 +913,7 @@ bool Raw::DoUpdate() {
             val->val.string_val.length = length;
             fields[0] = val;
             Value* bval = new Value(TYPE_BOOL, true);
-            bval->val.int_val = 1; // yes, we are stderr
+            bval->val.int_val = 1;
             fields[1] = bval;
 
             Put(fields);
@@ -921,10 +921,10 @@ bool Raw::DoUpdate() {
     }
 
     if ( (Info().mode == MODE_MANUAL) || (Info().mode == MODE_REREAD) )
-        // done with the current data source
+
         EndCurrentSend();
 
-    // and let's check if the child process is still alive
+
     int return_code;
 #ifdef _MSC_VER
     HANDLE h = static_cast<HANDLE>(child_process_handle_);
@@ -942,7 +942,7 @@ bool Raw::DoUpdate() {
             Error(Fmt("Child process exited with non-zero return code %d", code));
 #else
     if ( childpid != -1 && waitpid(childpid, &return_code, WNOHANG) != 0 ) {
-        // child died
+
         childpid = -1;
         bool signal = false;
         int code = 0;
@@ -976,7 +976,7 @@ bool Raw::DoUpdate() {
         vals[3] = new Value(TYPE_BOOL, true);
         vals[3]->val.int_val = signal;
 
-        // and in this case we can signal end_of_data even for the streaming reader
+
         if ( Info().mode == MODE_STREAM )
             EndCurrentSend();
 
@@ -994,7 +994,7 @@ bool Raw::DoUpdate() {
 bool Raw::DoHeartbeat(double network_time, double current_time) {
     switch ( Info().mode ) {
         case MODE_MANUAL:
-            // yay, we do nothing :)
+
             break;
 
         case MODE_REREAD:
@@ -1002,8 +1002,8 @@ bool Raw::DoHeartbeat(double network_time, double current_time) {
 #ifdef DEBUG
             Debug(DBG_INPUT, "Starting Heartbeat update");
 #endif
-            Update(); // call update and not DoUpdate, because update
-                      // checks disabled.
+            Update();
+
 #ifdef DEBUG
             Debug(DBG_INPUT, "Finished with heartbeat update");
 #endif
@@ -1014,4 +1014,4 @@ bool Raw::DoHeartbeat(double network_time, double current_time) {
     return true;
 }
 
-} // namespace zeek::input::reader::detail
+}

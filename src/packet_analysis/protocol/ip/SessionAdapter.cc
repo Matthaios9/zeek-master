@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/protocol/ip/SessionAdapter.h"
 
@@ -16,11 +16,11 @@ void SessionAdapter::Done() {
 
 bool SessionAdapter::IsReuse(double t, const u_char* pkt) { return parent->IsReuse(t, pkt); }
 
-void SessionAdapter::SetContentsFile(unsigned int /* direction */, FilePtr /* f */) {
+void SessionAdapter::SetContentsFile(unsigned int , FilePtr ) {
     reporter->Error("analyzer type does not support writing to a contents file");
 }
 
-zeek::FilePtr SessionAdapter::GetContentsFile(unsigned int /* direction */) const {
+zeek::FilePtr SessionAdapter::GetContentsFile(unsigned int ) const {
     reporter->Error("analyzer type does not support writing to a contents file");
     return nullptr;
 }
@@ -40,10 +40,10 @@ void SessionAdapter::AddTapAnalyzer(TapAnalyzerPtr ta) {
 }
 
 bool SessionAdapter::RemoveTapAnalyzer(const TapAnalyzer* ta) {
-    // Find the raw pointer, call Done(), remove it, thereby destructing it.
+
     for ( auto it = tap_analyzers.begin(); it != tap_analyzers.end(); ++it ) {
         if ( it->get() == ta ) {
-            // Ensure Done() is called only after removal from tap_analyzers.
+
             auto ptr{std::move(*it)};
             tap_analyzers.erase(it);
             ptr->Done();

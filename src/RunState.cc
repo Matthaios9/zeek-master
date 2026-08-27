@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/RunState.h"
 
@@ -37,7 +37,7 @@ extern "C" {
 #include "zeek/plugin/Manager.h"
 #include "zeek/session/Manager.h"
 
-static double last_watchdog_proc_time = 0.0; // value of above during last watchdog
+static double last_watchdog_proc_time = 0.0;
 extern int signal_val;
 
 namespace zeek::run_state {
@@ -55,29 +55,29 @@ bool zeek_init_done = false;
 bool time_updated = false;
 bool bare_mode = false;
 
-RETSIGTYPE watchdog(int /* signo */) {
+RETSIGTYPE watchdog(int ) {
     if ( processing_start_time != 0.0 ) {
-        // The signal arrived while we're processing a packet and/or
-        // its corresponding event queue.  Check whether we've been
-        // spending too much time, which we take to mean we've wedged.
 
-        // Note that it's subtle how exactly to test this.  In
-        // processing_start_time we have the timestamp of the packet
-        // we're currently working on.  But that *doesn't* mean that
-        // we began work on the packet at that time; we could have
-        // begun at a much later time, depending on how long the
-        // packet filter waited (to fill its buffer) before handing
-        // up this packet.  So what we require is that the current
-        // processing_start_time matches the processing_start_time we
-        // observed last time the watchdog went off.  If so, then
-        // we've been working on the current packet for at least
-        // watchdog_interval seconds.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         if ( processing_start_time == last_watchdog_proc_time ) {
-            // snprintf() calls alloc/free routines if you use %f!
-            // We need to avoid doing that given we're in a single
-            // handler and the allocation routines are not
-            // reentrant.
+
+
+
+
 
             double ct = util::current_time();
 
@@ -89,10 +89,10 @@ RETSIGTYPE watchdog(int /* signo */) {
 
             if ( current_pkt ) {
                 if ( ! pkt_dumper ) {
-                    // We aren't dumping packets; however,
-                    // saving the packet which caused the
-                    // watchdog to trigger may be helpful,
-                    // so we'll save that one nevertheless.
+
+
+
+
                     pkt_dumper = iosource_mgr->OpenPktDumper("watchdog-pkt.pcap", false);
                     if ( ! pkt_dumper || pkt_dumper->IsError() ) {
                         reporter->Error("watchdog: can't open watchdog-pkt.pcap for writing");
@@ -124,16 +124,16 @@ void update_network_time(double new_network_time) {
     PLUGIN_HOOK_VOID(HOOK_UPDATE_NETWORK_TIME, HookUpdateNetworkTime(new_network_time));
 }
 
-// Logic to decide when updating network_time is acceptable:
+
 static bool should_forward_network_time() {
-    // In pseudo_realtime mode, always update time once
-    // we've dispatched and processed the first packet.
+
+
     if ( pseudo_realtime != 0.0 && run_state::detail::first_timestamp != 0.0 )
         return true;
 
     if ( iosource::PktSrc* ps = iosource_mgr->GetPktSrc() ) {
-        // Offline packet sources always control network time
-        // unless we're running pseudo_realtime, see above.
+
+
         if ( ! ps->IsLive() )
             return false;
 
@@ -141,8 +141,8 @@ static bool should_forward_network_time() {
             return false;
     }
 
-    // We determined that we don't have a packet source, or it is idle.
-    // Unless it has been disabled, network_time will now be moved forward.
+
+
     return BifConst::allow_network_time_forward;
 }
 
@@ -181,10 +181,10 @@ void init_run(const std::optional<std::string>& interface, const std::optional<s
     }
 
     else
-        // have_pending_timers = true, possibly.  We don't set
-        // that here, though, because at this point we don't know
-        // whether the user's zeek_init() event will indeed set
-        // a timer.
+
+
+
+
         reading_traces = reading_live = false;
 
     if ( pcap_output_file ) {
@@ -206,7 +206,7 @@ void init_run(const std::optional<std::string>& interface, const std::optional<s
     session_mgr = new session::Manager();
 
     if ( do_watchdog ) {
-        // Set up the watchdog to make sure we don't wedge.
+
         (void)setsignal(SIGALRM, watchdog);
         (void)alarm(zeek::detail::watchdog_interval);
     }
@@ -228,7 +228,7 @@ void dispatch_packet(Packet* pkt, iosource::PktSrc* pkt_src) {
             first_timestamp = pkt->time;
         }
 
-        // Scale pkt time based on pseudo_realtime
+
         t = check_pseudo_time(pkt);
     }
 
@@ -242,7 +242,7 @@ void dispatch_packet(Packet* pkt, iosource::PktSrc* pkt_src) {
     current_iosrc = pkt_src;
     current_pktsrc = pkt_src;
 
-    // network_time never goes back.
+
     update_network_time(zeek::detail::timer_mgr->Time() < t ? t : zeek::detail::timer_mgr->Time());
     processing_start_time = t;
     expire_timers();
@@ -250,7 +250,7 @@ void dispatch_packet(Packet* pkt, iosource::PktSrc* pkt_src) {
     packet_mgr->ProcessPacket(pkt);
     event_mgr.Drain();
 
-    processing_start_time = 0.0; // = "we're not processing now"
+    processing_start_time = 0.0;
     current_dispatched = 0;
 
     current_iosrc = nullptr;
@@ -270,8 +270,8 @@ void run_loop() {
 #ifdef DEBUG
         static int loop_counter = 0;
 
-        // If no source is ready, we log only every 100th cycle,
-        // starting with the first.
+
+
         if ( ! ready.empty() || loop_counter++ % 100 == 0 ) {
             DBG_LOG(DBG_MAINLOOP, "realtime=%.6f ready_count=%zu", util::current_time(), ready.size());
 
@@ -293,20 +293,20 @@ void run_loop() {
             }
         }
         else if ( (have_pending_timers || BifConst::exit_only_after_terminate) && pseudo_realtime == 0.0 ) {
-            // Take advantage of the lull to get up to
-            // date on timers and events.  Because we only
-            // have timers as sources, going to sleep here
-            // doesn't risk blocking on other inputs.
-            //
-            // TBD: Is this actually still relevant given that the TimerMgr
-            //      is an IO source now? It'll be processed once its
-            //      GetNextTimeout() yields 0 and before that there's nothing
-            //      to expire anyway.
+
+
+
+
+
+
+
+
+
             forward_network_time_if_applicable();
             expire_timers();
 
-            // Prevent another forward_network_time_if_applicable() below
-            // even if time wasn't actually updated.
+
+
             time_updated = true;
         }
 
@@ -315,7 +315,7 @@ void run_loop() {
 
         event_mgr.Drain();
 
-        processing_start_time = 0.0; // = "we're not processing now"
+        processing_start_time = 0.0;
         current_dispatched = 0;
         current_iosrc = nullptr;
 
@@ -324,18 +324,18 @@ void run_loop() {
              || ::signal_val == SIGBREAK
 #endif
         )
-            // We received a signal while processing the
-            // current packet and its related events.
-            // Should we put the signal handling into an IOSource?
+
+
+
             zeek_terminate_loop("received termination signal");
 
         if ( ! reading_traces )
-            // Check whether we have timers scheduled for
-            // the future on which we need to wait.
+
+
             have_pending_timers = zeek::detail::timer_mgr->Size() > 0;
 
-        // Terminate if we're running pseudo_realtime and
-        // the interface has been closed.
+
+
         if ( pseudo_realtime != 0.0 ) {
             iosource::PktSrc* ps = iosource_mgr->GetPktSrc();
             if ( ps && ! ps->IsOpen() )
@@ -343,8 +343,8 @@ void run_loop() {
         }
     }
 
-    // Get the final statistics now, as we don't want to ding
-    // for any packets dropped beyond this point.
+
+
     get_final_stats();
 }
 
@@ -403,12 +403,12 @@ double check_pseudo_time(const Packet* pkt) {
 
 iosource::PktSrc* current_packet_source() { return dynamic_cast<iosource::PktSrc*>(current_iosrc); }
 
-} // namespace detail
+}
 
 double current_packet_timestamp() { return detail::current_pseudo; }
 
 double current_packet_wallclock() {
-    // We stop time when we are suspended.
+
     if ( run_state::is_processing_suspended() )
         detail::current_wallclock = util::current_time(true);
 
@@ -418,12 +418,12 @@ double current_packet_wallclock() {
 bool reading_live = false;
 bool reading_traces = false;
 double pseudo_realtime = 0.0;
-double network_time = 0.0;          // time according to last packet timestamp
-                                    // (or current time)
-double processing_start_time = 0.0; // time started working on current pkt
-double zeek_start_time = 0.0;       // time Zeek started.
-double zeek_start_network_time;     // timestamp of first packet
-bool terminating = false;           // whether we're done reading and finishing up
+double network_time = 0.0;
+
+double processing_start_time = 0.0;
+double zeek_start_time = 0.0;
+double zeek_start_network_time;
+bool terminating = false;
 bool is_parsing = false;
 
 const Packet* current_pkt = nullptr;
@@ -454,4 +454,4 @@ void continue_processing() {
 
 bool is_processing_suspended() { return _processing_suspended > 0; }
 
-} // namespace zeek::run_state
+}

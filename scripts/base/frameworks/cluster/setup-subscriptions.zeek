@@ -1,4 +1,4 @@
-##! This script contains the common subscription setup logic.
+
 @load ./main
 @load ./pools
 

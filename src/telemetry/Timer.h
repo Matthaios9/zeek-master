@@ -1,5 +1,5 @@
 
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -9,9 +9,9 @@
 
 namespace zeek::telemetry {
 
-/// Convenience helper for measuring durations such as latency using a histogram
-/// with second resolution. The measurement starts when creating the objects and
-/// finishes when the Timer goes out of scope.
+
+
+
 class [[nodiscard]] Timer {
 public:
     using Clock = std::chrono::steady_clock;
@@ -24,13 +24,13 @@ public:
 
     ~Timer() { Observe(h_, start_); }
 
-    /// @return The histogram handle.
+
     auto Handle() const noexcept { return h_; }
 
-    /// @return The recorded start time.
+
     auto Started() const noexcept { return start_; }
 
-    /// Calls `h.Observe` with the time passed since `start`.
+
     static void Observe(const std::shared_ptr<Histogram>& h, Clock::time_point start) {
         using Sec = std::chrono::duration<double>;
         if ( auto end = Clock::now(); end > start )
@@ -42,4 +42,4 @@ private:
     Clock::time_point start_;
 };
 
-} // namespace zeek::telemetry
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -48,8 +48,8 @@ extern void begin_func(IDPtr id, const char* module_name, FunctionFlavor flavor,
 
 extern void end_func(StmtPtr body, const char* module_name, bool free_of_conditionals);
 
-// Gather all IDs referenced inside a body that aren't part of a given scope.
+
 extern IDPList gather_outer_ids(ScopePtr scope, StmtPtr body);
 
-} // namespace detail
-} // namespace zeek
+}
+}

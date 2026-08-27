@@ -1,4 +1,4 @@
-##! Implementation of catch-and-release functionality for NetControl.
+
 
 @load base/frameworks/netcontrol
 @load base/frameworks/cluster
@@ -11,151 +11,151 @@ export {
 
 	global log_policy_catch_release: Log::PolicyHook;
 
-	## This record is used for storing information about current blocks that are
-	## part of catch and release.
+
+
 	type BlockInfo: record {
-		## Absolute time indicating until when a block is inserted using NetControl.
+
 		block_until: time &optional;
-		## Absolute time indicating until when an IP address is watched to reblock it.
+
 		watch_until: time;
-		## Number of times an IP address was reblocked.
+
 		num_reblocked: count &default=0;
-		## Number indicating at which catch and release interval we currently are.
+
 		current_interval: count;
-		## ID of the inserted block, if any.
+
 		current_block_id: string;
-		## User specified string.
+
 		location: string &optional;
 	};
 
-	## The enum that contains the different kinds of messages that are logged by
-	## catch and release.
+
+
 	type CatchReleaseActions: enum {
-		## Log lines marked with info are purely informational; no action was taken.
+
 		INFO,
-		## A rule for the specified IP address already existed in NetControl (outside
-		## of catch-and-release). Catch and release did not add a new rule, but is now
-		## watching the IP address and will add a new rule after the current rule expires.
+
+
+
 		ADDED,
-		## A drop was requested by catch and release.
+
 		DROP_REQUESTED,
-		## An address was successfully blocked by catch and release.
+
 		DROPPED,
-		## An address was unblocked after the timeout expired.
+
 		UNBLOCK,
-		## An address was forgotten because it did not reappear within the `watch_until` interval.
+
 		FORGOTTEN,
-		## A watched IP address was seen again; catch and release will re-block it.
+
 		SEEN_AGAIN
 	};
 
-	## The record type that is used for representing and logging
+
 	type CatchReleaseInfo: record {
-		## The absolute time indicating when the action for this log-line occurred.
+
 		ts: time &log;
-		## The rule id that this log line refers to.
+
 		rule_id: string &log &optional;
-		## The IP address that this line refers to.
+
 		ip: addr &log;
-		## The action that was taken in this log-line.
+
 		action: CatchReleaseActions &log;
-		## The current block_interval (for how long the address is blocked).
+
 		block_interval: interval &log &optional;
-		## The current watch_interval (for how long the address will be watched and re-block if it reappears).
+
 		watch_interval: interval &log &optional;
-		## The absolute time until which the address is blocked.
+
 		blocked_until: time &log &optional;
-		## The absolute time until which the address will be monitored.
+
 		watched_until: time &log &optional;
-		## Number of times that this address was blocked in the current cycle.
+
 		num_blocked: count &log &optional;
-		## The user specified location string.
+
 		location: string &log &optional;
-		## Additional informational string by the catch and release framework about this log-line.
+
 		message: string &log &optional;
-		## Plugin triggering the log entry.
+
 		plugin: string		&log &optional;
 	};
 
-	## Stops all packets involving an IP address from being forwarded. This function
-	## uses catch-and-release functionality, where the IP address is only dropped for
-	## a short amount of time that is incremented steadily when the IP is encountered
-	## again.
-	##
-	## In cluster mode, this function works on workers as well as the manager. On managers,
-	## the returned :zeek:see:`NetControl::BlockInfo` record will not contain the block ID,
-	## which will be assigned on the manager.
-	##
-	## a: The address to be dropped.
-	##
-	## t: How long to drop it, with 0 being indefinitely.
-	##
-	## location: An optional string describing where the drop was triggered.
-	##
-	## Returns: The :zeek:see:`NetControl::BlockInfo` record containing information about
-	##          the inserted block.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	global drop_address_catch_release: function(a: addr, location: string &default="") : BlockInfo;
 
-	## Removes an address from being watched with catch and release. Returns true if the
-	## address was found and removed; returns false if it was unknown to catch and release.
-	##
-	## If the address is currently blocked, and the block was inserted by catch and release,
-	## the block is removed.
-	##
-	## a: The address to be unblocked.
-	##
-	## reason: A reason for the unblock.
-	##
-	## Returns: True if the address was unblocked.
+
+
+
+
+
+
+
+
+
+
+
 	global unblock_address_catch_release: function(a: addr, reason: string &default="") : bool;
 
-	## This function can be called to notify the catch and release script that activity by
-	## an IP address was seen. If the respective IP address is currently monitored by catch and
-	## release and not blocked, the block will be reinstated. See the documentation of watch_new_connection
-	## which events the catch and release functionality usually monitors for activity.
-	##
-	## a: The address that was seen and should be re-dropped if it is being watched.
+
+
+
+
+
+
 	global catch_release_seen: function(a: addr);
 
-	## Get the :zeek:see:`NetControl::BlockInfo` record for an address currently blocked by catch and release.
-	## If the address is unknown to catch and release, the watch_until time will be set to 0.
-	##
-	## In cluster mode, this function works on the manager and workers. On workers, the data will
-	## lag slightly behind the manager; if you add a block, it will not be instantly available via
-	## this function.
-	##
-	## a: The address to get information about.
-	##
-	## Returns: The :zeek:see:`NetControl::BlockInfo` record containing information about
-	##          the inserted block.
+
+
+
+
+
+
+
+
+
+
+
 	global get_catch_release_info: function(a: addr) : BlockInfo;
 
-	## Event is raised when catch and release cases management of an IP address because no
-	## activity was seen within the watch_until period.
-	##
-	## a: The address that is no longer being managed.
-	##
-	## bi: The :zeek:see:`NetControl::BlockInfo` record containing information about the block.
+
+
+
+
+
+
 	global catch_release_forgotten: event(a: addr, bi: BlockInfo);
 
-	## If true, catch_release_seen is called on the connection originator in new_connection,
-	## connection_established, partial_connection, connection_attempt, connection_rejected,
-	## connection_reset and connection_pending
+
+
+
 	const watch_connections = T &redef;
 
-	## If true, catch and release warns if packets of an IP address are still seen after it
-	## should have been blocked.
+
+
 	option catch_release_warn_blocked_ip_encountered = F;
 
-	## Time intervals for which subsequent drops of the same IP take
-	## effect.
+
+
 	const catch_release_intervals: vector of interval = vector(10min, 1hr, 24hrs, 7days) &redef;
 
-	## Event that can be handled to access the :zeek:type:`NetControl::CatchReleaseInfo`
-	## record as it is sent on to the logging framework.
+
+
 	global log_netcontrol_catch_release: event(rec: CatchReleaseInfo);
 
-	# Cluster events for catch and release
+
 	global catch_release_block_new: event(a: addr, b: BlockInfo);
 	global catch_release_block_delete: event(a: addr);
 	global catch_release_add: event(a: addr, location: string);
@@ -163,7 +163,7 @@ export {
 	global catch_release_encountered: event(a: addr);
 }
 
-# Set that is used to only send seen notifications to the master every ~30 seconds.
+
 global catch_release_recently_notified: set[addr] &create_expire=30secs;
 
 event zeek_init() &priority=5
@@ -219,9 +219,9 @@ function per_block_interval(t: table[addr] of BlockInfo, idx: addr): interval
 	return remaining_time;
 	}
 
-# This is the internally maintained table containing all the addresses that are currently being
-# watched to see if they will re-surface. After the time is reached, monitoring of that specific
-# IP will stop.
+
+
+
 global blocks: table[addr] of BlockInfo = {}
 	&create_expire=0secs
 	&expire_func=per_block_interval;
@@ -388,7 +388,7 @@ function drop_address_catch_release(a: addr, location: string &default=""): Bloc
 		return bi;
 		}
 
-	# No entry in blocks.
+
 	local block_interval = catch_release_intervals[0];
 
 @if ( ! Cluster::is_enabled() || ( Cluster::is_enabled()  && Cluster::local_node_type() == Cluster::MANAGER ) )
@@ -458,7 +458,7 @@ function catch_release_seen(a: addr)
 			if ( catch_release_warn_blocked_ip_encountered == F )
 				return;
 
-			# This should be blocked - block has not been applied yet by hardware? Ignore for the moment...
+
 			log = populate_log_record(a, bi, INFO);
 			log$action = INFO;
 			log$message = "Block seen while in rule_entities. No action taken.";
@@ -466,7 +466,7 @@ function catch_release_seen(a: addr)
 			return;
 			}
 
-		# ok, this one returned again while still in the backoff period.
+
 
 		local try = bi$current_interval;
 		if ( (try+1) in catch_release_intervals )

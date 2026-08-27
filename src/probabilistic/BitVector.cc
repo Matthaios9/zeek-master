@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/probabilistic/BitVector.h"
 
@@ -28,7 +28,7 @@ constexpr uint8_t count_table[] = {0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 
                                    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5,
                                    5, 6, 5, 6, 6, 7, 4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8};
 
-} // namespace
+}
 
 BitVector::Reference::Reference(block_type& block, block_type i) : block(block), mask(static_cast<block_type>(1) << i) {
     assert(i < bits_per_block);
@@ -363,7 +363,7 @@ BitVector::size_type BitVector::Count() const {
         block_type block = *first;
 
         while ( block ) {
-            // TODO: use _popcnt if available.
+
             n += count_table[block & ((1u << 8) - 1)];
             block >>= 8;
         }
@@ -411,7 +411,7 @@ uint64_t BitVector::Hash() const {
         zeek::detail::hash_update(ctx, &bits[i], sizeof(bits[i]));
 
     zeek::detail::hash_final(ctx, buf);
-    memcpy(&digest, buf, sizeof(digest)); // Use the first bytes as digest
+    memcpy(&digest, buf, sizeof(digest));
     return digest;
 }
 
@@ -484,4 +484,4 @@ BitVector::size_type BitVector::find_from(size_type i) const {
     return i * bits_per_block + lowest_bit(bits[i]);
 }
 
-} // namespace zeek::probabilistic::detail
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/file_analysis/Manager.h"
 
@@ -22,8 +22,8 @@ Manager::~Manager() {
     for ( const auto& [_, tag] : mime_types )
         delete tag;
 
-    // Have to assume that too much of Zeek has been shutdown by this point
-    // to do anything more than reclaim memory.
+
+
     for ( const auto& entry : id_map )
         delete entry.second;
 
@@ -89,12 +89,12 @@ string Manager::DataIn(const u_char* data, uint64_t len, uint64_t offset, const 
     if ( ! file )
         return "";
 
-    // This only has any effect when
-    // * called for the first time for a file
-    // * being called before file->DataIn is called for the first time (before data is
-    //   added to the bof buffer).
-    // Afterwards SetMime just ignores what is passed to it. Thus this only has effect during
-    // the first Manager::DataIn call for each file.
+
+
+
+
+
+
     if ( ! mime_type.empty() )
         file->SetMime(mime_type);
 
@@ -111,8 +111,8 @@ string Manager::DataIn(const u_char* data, uint64_t len, uint64_t offset, const 
 string Manager::DataIn(const u_char* data, uint64_t len, const zeek::Tag& tag, Connection* conn, bool is_orig,
                        const string& precomputed_id, const string& mime_type) {
     string id = precomputed_id.empty() ? GetFileID(tag, conn, is_orig) : precomputed_id;
-    // Sequential data input shouldn't be going over multiple conns, so don't
-    // do the check to update connection set.
+
+
     File* file = GetFile(id, conn, tag, is_orig, false);
 
     if ( ! file )
@@ -169,7 +169,7 @@ void Manager::EndOfFile(const zeek::Tag& tag, Connection* conn) {
 }
 
 void Manager::EndOfFile(const zeek::Tag& tag, Connection* conn, bool is_orig) {
-    // Don't need to create a file if we're just going to remove it right away.
+
     RemoveFile(GetFileID(tag, conn, is_orig));
 }
 
@@ -295,10 +295,10 @@ File* Manager::GetFile(const string& file_id, Connection* conn, const zeek::Tag&
 
         rval->ScheduleInactivityTimer();
 
-        // Generate file_new after inserting it into manager's mapping
-        // in case script-layer calls back into core from the event.
+
+
         rval->FileEvent(file_new);
-        // Same for file_over_new_connection.
+
         rval->RaiseFileOverNewConnection(conn, is_orig);
 
         if ( IsIgnored(file_id) )
@@ -355,9 +355,9 @@ bool Manager::IgnoreFile(const string& file_id) {
 }
 
 bool Manager::RemoveFile(const string& file_id) {
-    // Can't remove from the dictionary/map right away as invoking EndOfFile
-    // may cause some events to be executed which actually depend on the file
-    // still being in the dictionary/map.
+
+
+
     File* f = LookupFile(file_id);
 
     if ( ! f )
@@ -390,7 +390,7 @@ string Manager::GetFileID(const zeek::Tag& tag, Connection* c, bool is_orig) {
     const auto& tagval = tag.AsVal();
 
     event_mgr.Enqueue(get_file_handle, tagval, c->GetVal(), val_mgr->Bool(is_orig));
-    event_mgr.Drain(); // need file handle immediately so we don't have to buffer data
+    event_mgr.Drain();
     return current_file_id;
 }
 
@@ -482,4 +482,4 @@ VectorValPtr GenMIMEMatchesVal(const zeek::detail::RuleMatcher::MIME_Matches& m)
     return rval;
 }
 
-} // namespace zeek::file_analysis
+}

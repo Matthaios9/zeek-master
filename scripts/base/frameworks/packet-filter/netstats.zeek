@@ -1,6 +1,6 @@
-##! This script reports on packet loss from the various packet sources.
-##! When Zeek is reading input from trace files, this script will not
-##! report any packet loss statistics.
+
+
+
 
 @load base/frameworks/notice
 
@@ -8,11 +8,11 @@ module PacketFilter;
 
 export {
 	redef enum Notice::Type += {
-		## Indicates packets were dropped by the packet filter.
+
 		Dropped_Packets,
 	};
 
-	## This is the interval between individual statistics collection.
+
 	const stats_collection_interval = 5min;
 }
 
@@ -35,8 +35,8 @@ event net_stats_update(last_stat: NetStats)
 
 event zeek_init()
 	{
-	# Since this currently only calculates packet drops, let's skip the stats
-	# collection if reading traces.
+
+
 	if ( ! reading_traces() )
 		schedule stats_collection_interval { net_stats_update(get_net_stats()) };
 	}

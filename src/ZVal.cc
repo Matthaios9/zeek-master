@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/File.h"
 #include "zeek/Func.h"
@@ -11,9 +11,9 @@ bool* ZVal::zval_was_nil_addr = nullptr;
 
 ZVal::ZVal(ValPtr v, const TypePtr& t) {
     if ( ! v ) {
-        // This can happen for some forms of error propagation.
-        // We can deal with it iff the type is managed, and thus
-        // we can employ a "nil" placeholder.
+
+
+
         ASSERT(IsManagedType(t));
         managed_val = nullptr;
         return;

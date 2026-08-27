@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/pia/PIA.h"
 
@@ -94,7 +94,7 @@ void PIA::PIA_DeliverPacket(int len, const u_char* data, bool is_orig, uint64_t 
             new_state = zeek::detail::dpd_match_only_beginning ? SKIPPING : MATCHING_ONLY;
     }
 
-    // FIXME: I'm not sure why it does not work with eol=true...
+
     DoMatch(data, len, is_orig, true, false, false, ip);
 
     if ( clear_state )
@@ -129,11 +129,11 @@ void PIA::DoMatch(const u_char* data, int len, bool is_orig, bool bol, bool eol,
 void PIA_UDP::ActivateAnalyzer(zeek::Tag tag, const zeek::detail::Rule* rule) {
     if ( pkt_buffer.state == MATCHING_ONLY ) {
         DBG_LOG(DBG_ANALYZER, "analyzer found but buffer already exceeded");
-        // FIXME: This is where to check whether an analyzer
-        // supports partial connections once we get such.
+
+
 
         if ( protocol_late_match ) {
-            // Queue late match event
+
             if ( ! tag )
                 tag = GetAnalyzerTag();
 
@@ -159,7 +159,7 @@ void PIA_UDP::ActivateAnalyzer(zeek::Tag tag, const zeek::detail::Rule* rule) {
 
 void PIA_UDP::DeactivateAnalyzer(zeek::Tag tag) { reporter->InternalError("PIA_UDP::Deact not implemented yet"); }
 
-//// TCP PIA
+
 
 PIA_TCP::~PIA_TCP() { ClearBuffer(&stream_buffer); }
 
@@ -189,9 +189,9 @@ void PIA::FirstPacket(bool is_orig, const std::optional<TransportProto>& proto, 
     static IP_Hdr* ip4_tcp_hdr = nullptr;
     static IP_Hdr* ip4_udp_hdr = nullptr;
 
-    if ( ! ip && proto ) { // proto needed here to avoid GCC warning that it may be used uninitialized
-        // Create a dummy packet.  Not very elegant, but everything
-        // else would be *really* ugly ...
+    if ( ! ip && proto ) {
+
+
         switch ( *proto ) {
             case TransportProto::TRANSPORT_TCP: {
                 DBG_LOG(DBG_ANALYZER, "PIA/TCP FirstPacket(%s)", (is_orig ? "T" : "F"));
@@ -202,13 +202,13 @@ void PIA::FirstPacket(bool is_orig, const std::optional<TransportProto>& proto, 
                     ip4_tcp->ip_len = sizeof(struct ip) + sizeof(struct tcphdr);
                     ip4_tcp->ip_hl = sizeof(struct ip) >> 2;
 
-                    // Cast to const so that it doesn't delete it.
+
                     ip4_tcp_hdr = new IP_Hdr(ip4_tcp, false);
                 }
 
-                // Locals used to avoid potential alignment problems
-                // with some archs/compilers when grabbing the address
-                // of the struct member directly in the following.
+
+
+
                 in_addr tmp_src;
                 in_addr tmp_dst;
 
@@ -241,13 +241,13 @@ void PIA::FirstPacket(bool is_orig, const std::optional<TransportProto>& proto, 
                     ip4_udp->ip_len = sizeof(struct ip) + sizeof(struct udphdr);
                     ip4_udp->ip_hl = sizeof(struct ip) >> 2;
 
-                    // Cast to const so that it doesn't delete it.
+
                     ip4_udp_hdr = new IP_Hdr(ip4_udp, false);
                 }
 
-                // Locals used to avoid potential alignment problems
-                // with some archs/compilers when grabbing the address
-                // of the struct member directly in the following.
+
+
+
                 in_addr tmp_src;
                 in_addr tmp_dst;
 
@@ -294,7 +294,7 @@ void PIA_TCP::DeliverStream(int len, const u_char* data, bool is_orig) {
     State new_state = stream_buffer.state;
 
     if ( stream_buffer.state == INIT ) {
-        // FIXME: clear payload-matching state here...
+
         new_state = BUFFERING;
     }
 
@@ -316,7 +316,7 @@ void PIA_TCP::Undelivered(uint64_t seq, int len, bool is_orig) {
     if ( stream_buffer.state != BUFFERING )
         return;
 
-    // We use data=nil to mark an undelivered.
+
     AddToBuffer(&stream_buffer, seq, len, nullptr, is_orig);
 
     if ( ++stream_buffer.chunks > zeek::detail::dpd_max_packets ) {
@@ -328,11 +328,11 @@ void PIA_TCP::Undelivered(uint64_t seq, int len, bool is_orig) {
 void PIA_TCP::ActivateAnalyzer(zeek::Tag tag, const zeek::detail::Rule* rule) {
     if ( stream_buffer.state == MATCHING_ONLY ) {
         DBG_LOG(DBG_ANALYZER, "analyzer found but buffer already exceeded");
-        // FIXME: This is where to check whether an analyzer supports
-        // partial connections once we get such.
+
+
 
         if ( protocol_late_match ) {
-            // Queue late match event
+
             if ( ! tag )
                 tag = GetAnalyzerTag();
 
@@ -351,43 +351,43 @@ void PIA_TCP::ActivateAnalyzer(zeek::Tag tag, const zeek::detail::Rule* rule) {
 
     a->SetSignature(rule);
 
-    // We have two cases here:
-    //
-    // (a) We have already got stream input.
-    //     => Great, somebody's already reassembling and we can just
-    //		replay our stream buffer to the new analyzer.
+
+
+
+
+
     if ( stream_mode ) {
         ReplayStreamBuffer(a);
         return;
     }
 
-    // (b) We have only got packet input so far (or none at all).
-    //     => We have to switch from packet-mode to stream-mode.
-    //
-    // Here's what we do:
-    //
-    //   (1) We create new tcp::TCP_Reassemblers and feed them the buffered
-    //       packets.
-    //
-    //   (2) The reassembler will give us their results via the
-    //       stream-interface and we buffer it as usual.
-    //
-    //   (3) We replay the now-filled stream-buffer to the analyzer.
-    //
-    //   (4) We hand the two reassemblers to the TCP Analyzer (our parent),
-    //       turning reassembly now on for all subsequent data.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     DBG_LOG(DBG_ANALYZER, "PIA_TCP switching from packet-mode to stream-mode");
     stream_mode = true;
 
-    // FIXME: The reassembler will query the endpoint for state. Not sure
-    // if this is works in all cases...
+
+
 
     if ( ! Parent()->IsAnalyzer("TCP") ) {
-        // Our parent is not the TCP analyzer, which can only mean
-        // we have been inserted somewhere further down in the
-        // analyzer tree.  In this case, we will never have seen
-        // any input at this point (because we don't get packets).
+
+
+
+
         assert(! pkt_buffer.head);
         assert(! stream_buffer.head);
         return;
@@ -403,9 +403,9 @@ void PIA_TCP::ActivateAnalyzer(zeek::Tag tag, const zeek::detail::Rule* rule) {
     uint64_t resp_seq = 0;
 
     for ( DataBlock* b = pkt_buffer.head; b; b = b->next ) {
-        // We don't have the TCP flags here during replay. We could
-        // funnel them through, but it's non-trivial and doesn't seem
-        // worth the effort.
+
+
+
 
         if ( b->is_orig )
             reass_orig->DataSent(run_state::network_time, orig_seq = b->seq, b->len, b->data, tcp::TCP_Flags(), true);
@@ -413,7 +413,7 @@ void PIA_TCP::ActivateAnalyzer(zeek::Tag tag, const zeek::detail::Rule* rule) {
             reass_resp->DataSent(run_state::network_time, resp_seq = b->seq, b->len, b->data, tcp::TCP_Flags(), true);
     }
 
-    // We also need to pass the current packet on.
+
     DataBlock* current = CurrentPacket();
     if ( current->data ) {
         if ( current->is_orig )
@@ -449,4 +449,4 @@ void PIA_TCP::ReplayStreamBuffer(analyzer::Analyzer* analyzer) {
     }
 }
 
-} // namespace zeek::analyzer::pia
+}

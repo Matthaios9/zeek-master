@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/ZAM/Profile.h"
 
@@ -50,4 +50,4 @@ std::string ZAMLocInfo::Describe(bool include_lines) const {
     return desc;
 }
 
-} // namespace zeek::detail
+}

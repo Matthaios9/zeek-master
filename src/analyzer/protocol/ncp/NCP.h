@@ -1,21 +1,21 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
-// A very crude analyzer for NCP (Netware Core Protocol)
-//
-// For a brief introduction to NCP, take a look at:
-//
-//	 http://www.protocols.com/pbook/testcss.htm
-//
-// For list of function codes:
-//
-//	 http://faydoc.tripod.com/structures/20/2095.htm
-//
-// And for layout of individual request/reply packets, look at the following
-// pages under http://faydoc.tripod.com/structures/, such as:
-//
-//	http://faydoc.tripod.com/structures/21/2149.htm
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #include "zeek/analyzer/protocol/tcp/TCP.h"
 
@@ -24,9 +24,9 @@
 namespace zeek::analyzer::ncp {
 namespace detail {
 
-// Create a general NCP_Session class so that it can be used in
-// case the RPC conversation is tunneled through other connections,
-// e.g., through an SMB session.
+
+
+
 
 class NCP_Session {
 public:
@@ -49,8 +49,8 @@ public:
     explicit FrameBuffer(size_t header_length);
     virtual ~FrameBuffer();
 
-    // Returns -1 if frame is not ready, 0 if it else, and 1 if
-    // the frame would require too large of a buffer allocation.
+
+
     int Deliver(int& len, const u_char*& data);
 
     void Reset();
@@ -65,8 +65,8 @@ protected:
     size_t hdr_len;
     u_char* msg_buf;
     uint64_t msg_len;
-    size_t buf_n;   // number of bytes in msg_buf
-    size_t buf_len; // size off msg_buf
+    size_t buf_n;
+    size_t buf_len;
 };
 
 constexpr int NCP_TCPIP_HEADER_LENGTH = 8;
@@ -79,7 +79,7 @@ protected:
     void compute_msg_length() override;
 };
 
-} // namespace detail
+}
 
 class Contents_NCP_Analyzer : public analyzer::tcp::TCP_SupportAnalyzer {
 public:
@@ -92,7 +92,7 @@ protected:
     detail::NCP_FrameBuffer buffer;
     detail::NCP_Session* session;
 
-    // Re-sync for partial connections (or after a content gap).
+
     bool resync;
     bool resync_set;
 };
@@ -110,4 +110,4 @@ protected:
     Contents_NCP_Analyzer* r_ncp;
 };
 
-} // namespace zeek::analyzer::ncp
+}

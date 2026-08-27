@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "file-analyzer.h"
 
@@ -13,13 +13,13 @@ using namespace zeek;
 using namespace zeek::spicy;
 using namespace zeek::spicy::rt;
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+
 #ifdef DEBUG
 #define STATE_DEBUG_MSG(...) DebugMsg(__VA_ARGS__)
 #else
 #define STATE_DEBUG_MSG(...)
 #endif
-// NOLINTEND(cppcoreguidelines-macro-usage)
+
 
 void FileState::debug(const std::string& msg) { spicy::rt::debug(_cookie, msg); }
 
@@ -102,7 +102,7 @@ bool FileAnalyzer::Process(int len, const u_char* data) {
     } catch ( const hilti::rt::Exception& e ) {
         STATE_DEBUG_MSG(e.what());
         spicy_mgr->analyzerError(_state.file().analyzer, e.description(),
-                                 e.location()); // this sets Zeek to skip sending any further input
+                                 e.location());
     }
 
     return true;
@@ -118,7 +118,7 @@ void FileAnalyzer::Finish() {
         AnalyzerViolation(e.what(), "", 0, tag);
     } catch ( const hilti::rt::Exception& e ) {
         spicy_mgr->analyzerError(_state.file().analyzer, e.description(),
-                                 e.location()); // this sets Zeek to skip sending any further input
+                                 e.location());
     }
 }
 

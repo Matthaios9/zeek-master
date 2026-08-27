@@ -1,6 +1,6 @@
-##! Notice extension that mails out a pretty-printed version of notice_alarm.log
-##! in regular intervals, formatted for better human readability. If activated,
-##! that replaces the default summary mail having the raw log output.
+
+
+
 
 @load base/frameworks/cluster
 @load ../main
@@ -8,33 +8,33 @@
 module Notice;
 
 export {
-	## Activate pretty-printed alarm summaries.
+
 	const pretty_print_alarms = T &redef;
 
-	## Address to send the pretty-printed reports to. Default if not set is
-	## :zeek:id:`Notice::mail_dest`.
-	##
-	## Note that this is overridden by the ZeekControl MailAlarmsTo option.
+
+
+
+
 	const mail_dest_pretty_printed = "" &redef;
-	## If an address from one of these networks is reported, we mark
-	## the entry with an additional quote symbol (i.e., ">"). Many MUAs
-	## then highlight such lines differently.
+
+
+
 	global flag_nets: set[subnet] &redef;
 
-	## Function that renders a single alarm. Can be overridden.
+
 	global pretty_print_alarm: function(out: file, n: Info) &redef;
 
-	## Force generating mail file, even if reading from traces or no mail
-	## destination is defined. This is mainly for testing.
+
+
 	global force_email_summaries = F &redef;
 }
 
-# We maintain an old-style file recording the pretty-printed alarms.
+
 const  pp_alarms_name = "alarm-mail.txt";
 global pp_alarms: file;
 global pp_alarms_open: bool = F;
 
-# Returns True if pretty-printed alarm summaries are activated.
+
 function want_pp() : bool
 	{
 	if ( force_email_summaries )
@@ -44,7 +44,7 @@ function want_pp() : bool
 		&& (mail_dest != "" || mail_dest_pretty_printed != ""));
 	}
 
-# Opens and initializes the output file.
+
 function pp_open()
 	{
 	if ( pp_alarms_open )
@@ -54,7 +54,7 @@ function pp_open()
 	pp_alarms = open(pp_alarms_name);
 	}
 
-# Closes and mails out the current output file.
+
 function pp_send(rinfo: Log::RotationInfo)
 	{
 	if ( ! pp_alarms_open )
@@ -71,8 +71,8 @@ function pp_send(rinfo: Log::RotationInfo)
 		: mail_dest;
 
 	if ( dest == "" )
-		# No mail destination configured, just leave the file alone. This is mainly for
-		# testing.
+
+
 		return;
 
 	local headers = email_headers(subject, dest);
@@ -86,7 +86,7 @@ function pp_send(rinfo: Log::RotationInfo)
 		   header_name, pp_alarms_name, sendmail, header_name, pp_alarms_name));
 	}
 
-# Postprocessor function that triggers the email.
+
 function pp_postprocessor(info: Log::RotationInfo): bool
 	{
 	if ( want_pp() )
@@ -100,7 +100,7 @@ event zeek_init()
 	if ( ! want_pp() )
 		return;
 
-	# This replaces the standard non-pretty-printing filter.
+
 	Log::add_filter(Notice::ALARM_LOG,
 			Log::Filter($name="alarm-mail", $writer=Log::WRITER_NONE,
 			            $interv=Log::default_mail_alarms_interval,
@@ -124,7 +124,7 @@ hook notice(n: Notice::Info) &priority=-5
 function do_msg(out: file, n: Info, line1: string, line2: string, line3: string, host1: addr, name1: string, host2: addr, name2: string)
 	{
 	local country = "";
-@ifdef ( Notice::ACTION_ADD_GEODATA ) # Make tests happy, cyclic dependency.
+@ifdef ( Notice::ACTION_ADD_GEODATA )
 	if ( n?$remote_location && n$remote_location?$country_code  )
 		country = fmt(" (remote location %s)", n$remote_location$country_code);
 @endif
@@ -148,7 +148,7 @@ function do_msg(out: file, n: Info, line1: string, line2: string, line3: string,
 	print out, "";
 	}
 
-# Default pretty-printer.
+
 function pretty_print_alarm(out: file, n: Info)
 	{
 	local pdescr = "";

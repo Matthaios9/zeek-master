@@ -1,71 +1,71 @@
-##! Perform validation of Signed Certificate Timestamps, as used
-##! for Certificate Transparency. See RFC6962 for more details.
+
+
 
 @load base/protocols/ssl
 @load protocols/ssl/validate-certs
 
-# We need to know issuer certificates to be able to determine the IssuerKeyHash,
-# which is required for validating certificate extensions.
+
+
 redef SSL::ssl_store_valid_chain = T;
 
 module SSL;
 
 export {
 
-	## List of the different sources for Signed Certificate Timestamp
+
 	type SctSource: enum {
-		## Signed Certificate Timestamp was encountered in the extension of
-		## an X.509 certificate.
+
+
 		SCT_X509_EXT,
-		## Signed Certificate Timestamp was encountered in an TLS session
-		## extension.
+
+
 		SCT_TLS_EXT,
-		## Signed Certificate Timestamp was encountered in the extension of
-		## an stapled OCSP reply.
+
+
 		SCT_OCSP_EXT
 	};
 
-	## This record is used to store information about the SCTs that are
-	## encountered in a SSL connection.
+
+
 	type SctInfo: record {
-		## The version of the encountered SCT (should always be 0 for v1).
+
 		version: count;
-		## The ID of the log issuing this SCT.
+
 		logid: string;
-		## The timestamp at which this SCT was issued measured since the
-		## epoch (January 1, 1970, 00:00), ignoring leap seconds, in
-		## milliseconds. Not converted to a Zeek timestamp because we need
-		## the exact value for validation.
+
+
+
+
 		timestamp: count;
-		## The signature algorithm used for this sct.
+
 		sig_alg: count;
-		## The hash algorithm used for this sct.
+
 		hash_alg: count;
-		## The signature of this SCT.
+
 		signature: string;
-		## Source of this SCT.
+
 		source: SctSource;
-		## Validation result of this SCT.
+
 		valid: bool &optional;
 	};
 
 	redef record Info += {
-		## Number of valid SCTs that were encountered in the connection.
+
 		valid_scts: count &optional;
-		## Number of SCTs that could not be validated that were encountered in the connection.
+
 		invalid_scts: count &optional;
-		## Number of different Logs for which valid SCTs were encountered in the connection.
+
 		valid_ct_logs: count &log &optional;
-		## Number of different Log operators of which valid SCTs were encountered in the connection.
+
 		valid_ct_operators: count &log &optional;
-		## List of operators for which valid SCTs were encountered in the connection.
+
 		valid_ct_operators_list: set[string] &optional;
-		## Information about all SCTs that were encountered in the connection.
+
 		ct_proofs: vector of SctInfo &default=vector();
 	};
 }
 
-# Used to cache validations for 5 minutes to lessen computational load.
+
 global recently_validated_scts: table[string] of bool = table()
 	&read_expire=5mins &redef;
 
@@ -106,7 +106,7 @@ event x509_ocsp_ext_signed_certificate_timestamp(f: fa_file, version: count, log
 	c$ssl$ct_proofs += SctInfo($version=version, $logid=logid, $timestamp=timestamp, $sig_alg=signature_algorithm, $hash_alg=hash_algorithm, $signature=signature, $source=src);
 	}
 
-# Priority = 19 will be handled after validation is done
+
 hook ssl_finishing(c: connection) &priority=19
 	{
 	if ( ! c$ssl?$cert_chain || |c$ssl$cert_chain| == 0 || ! c$ssl$cert_chain[0]?$x509 )
@@ -126,7 +126,7 @@ hook ssl_finishing(c: connection) &priority=19
 		local proof = c$ssl$ct_proofs[i];
 		if ( proof$logid !in SSL::ct_logs )
 			{
-			# Well, if we don't know the log, there is nothing to do here...
+
 			proof$valid = F;
 			next;
 			}
@@ -151,17 +151,17 @@ hook ssl_finishing(c: connection) &priority=19
 			}
 		else if ( found_cache == F )
 			{
-			# X.509 proof. Here things get awkward because we need information about
-			# the issuer cert... and we need to try a few times, because we have to see if we got
-			# the right issuer cert.
-			#
-			# First - Let's try if a previous round already established the correct issuer key hash.
+
+
+
+
+
 			if ( issuer_key_hash != "" )
 				{
 				valid = sct_verify(cert, proof$logid, log$key, proof$signature, proof$timestamp, proof$hash_alg, issuer_key_hash);
 				}
 
-			# Second - let's see if we might already know the issuer cert through verification.
+
 			if ( ! valid && issuer_name_hash in intermediate_cache )
 				{
 				issuer_key_hash = x509_spki_hash(intermediate_cache[issuer_name_hash][0], 4);
@@ -173,12 +173,12 @@ hook ssl_finishing(c: connection) &priority=19
 				valid = sct_verify(cert, proof$logid, log$key, proof$signature, proof$timestamp, proof$hash_alg, issuer_key_hash);
 				}
 
-			# ok, if it still did not work - let's just try with all the certs that were sent
-			# in the connection. Perhaps it will work with one of them.
+
+
 			if ( !valid )
 				for ( i in c$ssl$cert_chain )
 					{
-					if ( i == 0 ) # end-host-cert
+					if ( i == 0 )
 						next;
 					if ( ! c$ssl$cert_chain[i]?$x509 || ! c$ssl$cert_chain[i]$x509?$handle )
 						next;

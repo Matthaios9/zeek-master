@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/storage/backend/sqlite/SQLite.h"
 
@@ -39,8 +39,8 @@ OperationResult SQLite::RunPragma(std::string_view name, std::optional<std::stri
 
     OperationResult success_res;
 
-    // Make a unique_ptr out of the statement so we don't have to manually call sqlite3_finalize
-    // one it when we return in various places.
+
+
     unique_stmt_ptr stmt_ptr{stmt, sqlite3_finalize};
 
     while ( pragma_timeout == 0ms || time_spent < pragma_timeout ) {
@@ -50,8 +50,8 @@ OperationResult SQLite::RunPragma(std::string_view name, std::optional<std::stri
             break;
         }
         else if ( res.code == ReturnCode::TIMEOUT ) {
-            // If we got back that the database is busy, it likely means that another process is trying to
-            // do their pragmas at startup too. Exponentially back off and try again after a sleep.
+
+
             sqlite3_free(errorMsg);
             std::this_thread::sleep_for(pragma_wait_on_busy);
             time_spent += pragma_wait_on_busy;
@@ -82,12 +82,12 @@ std::string SQLite::DoGetConfigMetricsLabel() const {
     return tag;
 }
 
-/**
- * Called by the manager system to open the backend.
- */
+
+
+
 OperationResult SQLite::DoOpen(OpenResultCallback* cb, RecordValPtr options) {
-    // Allow connections to same DB to use single data/schema cache. Also
-    // allows simultaneous writes to one file.
+
+
 #ifndef ZEEK_TSAN
     sqlite3_enable_shared_cache(1);
 #endif
@@ -141,8 +141,8 @@ OperationResult SQLite::DoOpen(OpenResultCallback* cb, RecordValPtr options) {
         }
     }
 
-    // Open a second connection to the database. This one is used for expiration and exists to prevent
-    // simultaneous multi-threaded access to the same connection.
+
+
     if ( auto open_res =
              CheckError(sqlite3_open_v2(full_path.c_str(), &expire_db,
                                         SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX, nullptr));
@@ -167,8 +167,8 @@ OperationResult SQLite::DoOpen(OpenResultCallback* cb, RecordValPtr options) {
 
     sqlite3_free(errorMsg);
 
-    // Create a table for controlling expiration contention. The ukey column here ensures that only
-    // one row exists for this backend's table.
+
+
     cmd = util::fmt("create table if not exists zeek_storage_expiry_runs (ukey primary key, last_run double);");
     if ( int res = sqlite3_exec(db, cmd.c_str(), nullptr, nullptr, &errorMsg); res != SQLITE_OK ) {
         std::string err = util::fmt("Error executing table creation statement: (%d) %s", res, errorMsg);
@@ -180,9 +180,9 @@ OperationResult SQLite::DoOpen(OpenResultCallback* cb, RecordValPtr options) {
 
     sqlite3_free(errorMsg);
 
-    // Attempt to insert an initial value into the table if this is the first run with
-    // this file. This may result in a SQLITE_CONSTRAINT if the row already exists. That's
-    // not an error, as it's possible if the file already existed.
+
+
+
     cmd = util::fmt("insert into zeek_storage_expiry_runs (ukey, last_run) values('%s', 0);", table_name.c_str());
     if ( int res = sqlite3_exec(db, cmd.c_str(), nullptr, nullptr, &errorMsg);
          res != SQLITE_OK && res != SQLITE_CONSTRAINT ) {
@@ -197,38 +197,38 @@ OperationResult SQLite::DoOpen(OpenResultCallback* cb, RecordValPtr options) {
     sqlite3_free(errorMsg);
 
     std::array<std::pair<std::string, sqlite3*>, 8> statements =
-        {// Normal put
+        {
          std::make_pair(util::fmt("insert into %s (key_str, value_str, expire_time) values(?, ?, ?) "
                                   "ON CONFLICT(key_str) DO UPDATE SET value_str=?, expire_time=? "
                                   "WHERE expire_time > 0.0 AND expire_time < ?",
                                   table_name.c_str()),
                         db),
-         // Put with forced overwrite
+
          std::make_pair(util::fmt("insert into %s (key_str, value_str, expire_time) values(?, ?, ?) "
                                   "ON CONFLICT(key_str) DO UPDATE SET value_str=?, expire_time=?",
                                   table_name.c_str()),
                         db),
-         // Get
+
          std::make_pair(util::fmt("select value_str, expire_time from %s where key_str=? and "
                                   "(expire_time > ? OR expire_time == 0.0)",
                                   table_name.c_str()),
                         db),
-         // Erase
+
          std::make_pair(util::fmt("delete from %s where key_str=?", table_name.c_str()), db),
-         // Check for expired entries
+
          std::make_pair(
              util::fmt("select count(*) from %s where expire_time > 0 and expire_time != 0 and expire_time <= ?",
                        table_name.c_str()),
              expire_db),
-         // Remove expired entries
+
          std::make_pair(util::fmt("delete from %s where expire_time > 0 and expire_time != 0 and expire_time <= ?",
                                   table_name.c_str()),
                         expire_db),
-         // Get the last time expiry ran
+
          std::make_pair(util::fmt("select last_run from zeek_storage_expiry_runs where ukey = '%s'",
                                   table_name.c_str()),
                         expire_db),
-         // Update the last time expiry ran
+
          std::make_pair(util::fmt("update zeek_storage_expiry_runs set last_run = ? where ukey = '%s'",
                                   table_name.c_str()),
                         expire_db)};
@@ -286,14 +286,14 @@ OperationResult SQLite::DoOpen(OpenResultCallback* cb, RecordValPtr options) {
     return {ReturnCode::SUCCESS};
 }
 
-/**
- * Finalizes the backend when it's being closed.
- */
+
+
+
 OperationResult SQLite::DoClose(ResultCallback* cb) {
     OperationResult op_res{ReturnCode::SUCCESS};
 
     if ( db ) {
-        // These will all call sqlite3_finalize as they're deleted.
+
         put_stmt.reset();
         put_update_stmt.reset();
         get_stmt.reset();
@@ -306,8 +306,8 @@ OperationResult SQLite::DoClose(ResultCallback* cb) {
         char* errmsg;
         if ( int res = sqlite3_exec(db, "pragma optimize", nullptr, nullptr, &errmsg);
              res != SQLITE_OK && res != SQLITE_BUSY ) {
-            // We're shutting down so capture the error message here for informational
-            // reasons, but don't do anything else with it.
+
+
             op_res = {ReturnCode::DISCONNECTION_FAILED, util::fmt("Sqlite failed to optimize at shutdown: %s", errmsg)};
             sqlite3_free(errmsg);
         }
@@ -339,9 +339,9 @@ OperationResult SQLite::DoClose(ResultCallback* cb) {
     return op_res;
 }
 
-/**
- * The workhorse method for Put(). This must be implemented by plugins.
- */
+
+
+
 OperationResult SQLite::DoPut(ResultCallback* cb, ValPtr key, ValPtr value, bool overwrite, double expiration_time) {
     if ( ! db )
         return {ReturnCode::NOT_CONNECTED};
@@ -379,7 +379,7 @@ OperationResult SQLite::DoPut(ResultCallback* cb, ValPtr key, ValPtr value, bool
         return res;
     }
 
-    // This duplicates the above binding, but it's to overwrite the expiration time on the entry.
+
     if ( auto res = CheckError(sqlite3_bind_double(stmt.get(), 5, expiration_time)); res.code != ReturnCode::SUCCESS ) {
         return res;
     }
@@ -403,9 +403,9 @@ OperationResult SQLite::DoPut(ResultCallback* cb, ValPtr key, ValPtr value, bool
     return step_result;
 }
 
-/**
- * The workhorse method for Get(). This must be implemented for plugins.
- */
+
+
+
 OperationResult SQLite::DoGet(ResultCallback* cb, ValPtr key) {
     if ( ! db )
         return {ReturnCode::NOT_CONNECTED};
@@ -442,9 +442,9 @@ OperationResult SQLite::DoGet(ResultCallback* cb, ValPtr key) {
     return Step(stmt.get(), value_parser);
 }
 
-/**
- * The workhorse method for Erase(). This must be implemented for plugins.
- */
+
+
+
 OperationResult SQLite::DoErase(ResultCallback* cb, ValPtr key) {
     if ( ! db )
         return {ReturnCode::NOT_CONNECTED};
@@ -463,17 +463,17 @@ OperationResult SQLite::DoErase(ResultCallback* cb, ValPtr key) {
     return Step(stmt.get(), nullptr);
 }
 
-/**
- * Removes any entries in the backend that have expired. Can be overridden by
- * derived classes.
- */
+
+
+
+
 void SQLite::DoExpire(double current_network_time) {
     int status;
     char* errMsg = nullptr;
     unique_stmt_ptr stmt;
 
-    // Begin an exclusive transaction here to lock the database for this one process. That
-    // will ensure there isn't a TOCTOU bug in the time check below.
+
+
     while ( true ) {
         status = sqlite3_exec(expire_db, "begin immediate transaction", nullptr, nullptr, &errMsg);
         sqlite3_free(errMsg);
@@ -481,14 +481,14 @@ void SQLite::DoExpire(double current_network_time) {
         if ( status == SQLITE_OK )
             break;
         else
-            // If any other status is returned here, give up. Notably, this includes
-            // SQLITE_BUSY which will be returned if there was already a transaction
-            // running. If one node got in and made the transaction, expiration is
-            // happening so the rest don't need to retry.
+
+
+
+
             return;
     }
 
-    // Automatically rollback the transaction when this object is deleted.
+
     auto deferred_rollback = util::Deferred([this]() {
         char* errMsg = nullptr;
         if ( int status = sqlite3_exec(expire_db, "rollback transaction", nullptr, nullptr, &errMsg);
@@ -498,7 +498,7 @@ void SQLite::DoExpire(double current_network_time) {
         sqlite3_free(errMsg);
     });
 
-    // Check if there's anything to expire.
+
     stmt = unique_stmt_ptr(check_expire_stmt.get(), sqlite3_reset);
     status = sqlite3_bind_double(stmt.get(), 1, current_network_time);
     while ( status != SQLITE_ROW ) {
@@ -514,7 +514,7 @@ void SQLite::DoExpire(double current_network_time) {
             return;
     }
 
-    // Check if the expiration control key is less than the interval. Exit if not.
+
     stmt = unique_stmt_ptr(get_expiry_last_run_stmt.get(), sqlite3_reset);
     status = SQLITE_OK;
     while ( status != SQLITE_ROW ) {
@@ -533,7 +533,7 @@ void SQLite::DoExpire(double current_network_time) {
             return;
     }
 
-    // Update the expiration control key
+
     stmt = unique_stmt_ptr(update_expiry_last_run_stmt.get(), sqlite3_reset);
     status = sqlite3_bind_double(stmt.get(), 1, current_network_time);
     if ( status != SQLITE_OK ) {
@@ -554,7 +554,7 @@ void SQLite::DoExpire(double current_network_time) {
         return;
     }
 
-    // Delete the values.
+
     stmt = unique_stmt_ptr(expire_stmt.get(), sqlite3_reset);
 
     status = sqlite3_bind_double(stmt.get(), 1, current_network_time);
@@ -573,9 +573,9 @@ void SQLite::DoExpire(double current_network_time) {
         Error(err.c_str());
     }
 
-    // Get the number of changes from the delete statement. This should be identical to
-    // the num_to_expire value earlier because we're under a transaction, but this should
-    // be the exact number that changed.
+
+
+
     int changes = sqlite3_changes(db);
     IncExpiredEntriesMetric(changes);
 
@@ -585,12 +585,12 @@ void SQLite::DoExpire(double current_network_time) {
 
     sqlite3_free(errMsg);
 
-    // Don't try to rollback the transaction we just committed, since sqlite will just
-    // report an error.
+
+
     deferred_rollback.Cancel();
 }
 
-// returns true in case of error
+
 OperationResult SQLite::CheckError(int code) {
     if ( code != SQLITE_OK && code != SQLITE_DONE ) {
         return {ReturnCode::OPERATION_FAILED, util::fmt("SQLite call failed: %s", sqlite3_errmsg(db)), nullptr};
@@ -609,8 +609,8 @@ OperationResult SQLite::Step(sqlite3_stmt* stmt, const StepResultParser& parser,
         else if ( ! is_pragma )
             ret = {ReturnCode::OPERATION_FAILED, "sqlite3_step should not have returned a value"};
         else
-            // For most pragmas we don't care about the output, so we don't pass a parser. We still
-            // may get a row as a response, but we can discard it and just return SUCCESS.
+
+
             ret = {ReturnCode::SUCCESS};
     }
     else if ( step_status == SQLITE_DONE ) {
@@ -620,7 +620,7 @@ OperationResult SQLite::Step(sqlite3_stmt* stmt, const StepResultParser& parser,
             ret = {ReturnCode::SUCCESS};
     }
     else if ( step_status == SQLITE_BUSY || step_status == SQLITE_LOCKED )
-        // TODO: this could retry a number of times instead of just failing
+
         ret = {ReturnCode::TIMEOUT};
     else if ( step_status == SQLITE_CONSTRAINT )
         ret = {ReturnCode::KEY_EXISTS};
@@ -630,4 +630,4 @@ OperationResult SQLite::Step(sqlite3_stmt* stmt, const StepResultParser& parser,
     return ret;
 }
 
-} // namespace zeek::storage::backend::sqlite
+}

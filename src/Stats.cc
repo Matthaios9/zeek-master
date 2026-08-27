@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Stats.h"
 
@@ -55,7 +55,7 @@ protected:
 void ProfileTimer::Dispatch(double t, bool is_expire) {
     logger->Log();
 
-    // Reinstall timer.
+
     if ( ! is_expire )
         timer_mgr->Add(new ProfileTimer(run_state::network_time + interval, logger, interval));
 }
@@ -70,18 +70,18 @@ ProfileLogger::~ProfileLogger() { file->Close(); }
 
 void ProfileLogger::Log() {
     if ( run_state::terminating )
-        // Connections have been flushed already.
+
         return;
 
     file->Write(util::fmt("%.06f ------------------------\n", run_state::network_time));
 
-    // Do expensive profiling only occasionally.
+
     bool expensive = false;
 
     if ( expensive_profiling_multiple )
         expensive = (++log_count) % expensive_profiling_multiple == 0;
 
-    // Memory information.
+
     struct rusage r;
     getrusage(RUSAGE_SELF, &r);
     struct timeval tv_utime = r.ru_utime;
@@ -121,8 +121,8 @@ void ProfileLogger::Log() {
                           (utime + stime) - (first_utime + first_stime), utime - first_utime, stime - first_stime,
                           rtime - first_rtime));
 
-    // TODO: This previously output the number of connections, but now that we're storing
-    // sessions as well as connections, this might need to be renamed.
+
+
     file->Write(util::fmt("%.06f Conns: total=%" PRIu64 " current=%" PRIu64 "/%zu\n", run_state::network_time,
                           Connection::TotalConnections(), Connection::CurrentConnections(),
                           session_mgr->CurrentSessions()));
@@ -137,26 +137,26 @@ void ProfileLogger::Log() {
     packet_analysis::TCP::TCPAnalyzer::GetStats().PrintStats(file,
                                                              util::fmt("%.06f TCP-States:", run_state::network_time));
 
-    // Alternatively, if you prefer more compact output...
-    /*
-    file->Write(util::fmt("%.8f TCP-States: I=%d S=%d SA=%d SR=%d E=%d EF=%d ER=%d F=%d P=%d\n",
-               run_state::network_time,
-               session_mgr->tcp_stats.StateInactive(),
-               session_mgr->tcp_stats.StateRequest(),
-               session_mgr->tcp_stats.StateSuccRequest(),
-               session_mgr->tcp_stats.StateRstRequest(),
-               session_mgr->tcp_stats.StateEstablished(),
-               session_mgr->tcp_stats.StateHalfClose(),
-               session_mgr->tcp_stats.StateHalfRst(),
-               session_mgr->tcp_stats.StateClosed(),
-               session_mgr->tcp_stats.StatePartial()
-               ));
-    */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     file->Write(util::fmt("%.06f Connections expired due to inactivity: %" PRIu64 "\n", run_state::network_time,
                           killed_by_inactivity));
 
-    // Signature engine.
+
     if ( expensive && rule_matcher ) {
         RuleMatcher::Stats stats;
         rule_matcher->GetStats(&stats);
@@ -217,15 +217,15 @@ void ProfileLogger::Log() {
                   cs.num_ids_outgoing));
 
     if ( expensive ) {
-        // Script-level state.
+
         int total_table_entries = 0;
         int total_table_rentries = 0;
 
         for ( const auto& global : global_scope()->Vars() ) {
             auto& id = global.second;
 
-            // We don't show/count internal globals as they are always
-            // contained in some other global user-visible container.
+
+
             if ( id->HasVal() ) {
                 const auto& v = id->GetVal();
 
@@ -237,14 +237,14 @@ void ProfileLogger::Log() {
                     entries = v->AsTable()->Length();
                     total_table_entries += entries;
 
-                    // ### 100 shouldn't be hardwired
-                    // in here.
+
+
                     if ( entries >= 100 )
                         print = true;
 
                     rentries = v->AsTableVal()->RecursiveSize();
                     total_table_rentries += rentries;
-                    if ( rentries >= 100 ) // ### or here
+                    if ( rentries >= 100 )
                         print = true;
                 }
 
@@ -259,9 +259,9 @@ void ProfileLogger::Log() {
                               total_table_entries, total_table_rentries));
     }
 
-    // Create an event so that scripts can log their information, too.
-    // (and for consistency we dispatch it *now*). Don't propagate this
-    // event to remote clients.
+
+
+
     if ( profiling_update ) {
         zeek::Args args{make_intrusive<FileVal>(IntrusivePtr{NewRef{}, file}), val_mgr->Bool(expensive)};
         event_mgr.Dispatch(profiling_update, std::move(args));
@@ -330,4 +330,4 @@ void PacketProfiler::ProfilePkt(double t, unsigned int bytes) {
     time = t;
 }
 
-} // namespace zeek::detail
+}

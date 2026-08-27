@@ -1,5 +1,5 @@
-//
-// See the file "COPYING" in the main distribution directory for copyright.
+
+
 
 #include "module_util.h"
 
@@ -10,7 +10,7 @@ using namespace std;
 
 static int streq(const char* s1, const char* s2) { return ! strcmp(s1, s2); }
 
-// Returns it without trailing "::".
+
 string extract_module_name(const char* name) {
     string module_name = name;
     string::size_type pos = module_name.rfind("::");

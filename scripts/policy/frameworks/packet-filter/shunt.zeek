@@ -4,43 +4,43 @@
 module PacketFilter;
 
 export {
-	## The maximum number of BPF based shunts that Zeek is allowed to perform.
+
 	const max_bpf_shunts = 100 &redef;
 
-	## Call this function to use BPF to shunt a connection (to prevent the
-	## data packets from reaching Zeek). For TCP connections, control
-	## packets are still allowed through so that Zeek can continue logging
-	## the connection and it can stop shunting once the connection ends.
+
+
+
+
 	global shunt_conn: function(id: conn_id): bool;
 
-	## This function will use a BPF expression to shunt traffic between
-	## the two hosts given in the ``conn_id`` so that the traffic is never
-	## exposed to Zeek's traffic processing.
+
+
+
 	global shunt_host_pair: function(id: conn_id): bool;
 
-	## Remove shunting for a host pair given as a ``conn_id``.  The filter
-	## is not immediately removed.  It waits for the occasional filter
-	## update done by the ``PacketFilter`` framework.
+
+
+
 	global unshunt_host_pair: function(id: conn_id): bool;
 
-	## Performs the same function as the :zeek:id:`PacketFilter::unshunt_host_pair`
-	## function, but it forces an immediate filter update.
+
+
 	global force_unshunt_host_pair: function(id: conn_id): bool;
 
-	## Retrieve the currently shunted connections.
+
 	global current_shunted_conns: function(): set[conn_id];
 
-	## Retrieve the currently shunted host pairs.
+
 	global current_shunted_host_pairs: function(): set[conn_id];
 
 	redef enum Notice::Type += {
-		## Indicative that :zeek:id:`PacketFilter::max_bpf_shunts`
-		## connections are already being shunted with BPF filters and
-		## no more are allowed.
+
+
+
 		No_More_Conn_Shunts_Available,
 
-		## Limitations in BPF make shunting some connections with BPF
-		## impossible. This notice encompasses those various cases.
+
+
 		Cannot_BPF_Shunt_Conn,
 	};
 }
@@ -50,7 +50,7 @@ global shunted_host_pairs: set[conn_id];
 
 function shunt_filters()
 	{
-	# NOTE: this could wrongly match if a connection happens with the ports reversed.
+
 	local tcp_filter = "";
 	local udp_filter = "";
 	for ( id in shunted_conns )
@@ -163,8 +163,8 @@ function shunt_conn(id: conn_id): bool
 
 event connection_state_remove(c: connection) &priority=-5
 	{
-	# Don't rebuild the filter right away because the packet filter framework
-	# will check every few minutes and update the filter if things have changed.
+
+
 	if ( c$id in shunted_conns )
 		delete shunted_conns[c$id];
 	}

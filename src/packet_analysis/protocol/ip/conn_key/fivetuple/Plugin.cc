@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/plugin/Plugin.h"
 
@@ -21,4 +21,4 @@ public:
 
 Plugin plugin;
 
-} // namespace zeek::plugin::Zeek_Conntuple_Fivetuple
+}

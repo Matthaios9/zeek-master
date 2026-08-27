@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/File.h"
 #include "zeek/RE.h"
@@ -9,28 +9,28 @@ using namespace std;
 namespace zeek::detail {
 
 shared_ptr<CPP_InitInfo> CPPCompile::RegisterConstant(const ValPtr& vp, int& consts_offset) {
-    // Make sure the value pointer, which might be transient
-    // in construction, sticks around so we can track its
-    // value.
+
+
+
     cv_indices.push_back(vp);
 
     auto v = vp.get();
     auto cv = const_vals.find(v);
 
     if ( cv != const_vals.end() ) {
-        // Already did this one.
+
         consts_offset = const_offsets[v];
         return cv->second;
     }
 
-    // Formulate a key that's unique per distinct constant.
+
 
     const auto& t = v->GetType();
     string c_desc;
 
     if ( t->Tag() == TYPE_STRING ) {
-        // We can't rely on these to render with consistent
-        // escaping, sigh.  Just use the raw string.
+
+
         auto s = v->AsString();
         auto b = reinterpret_cast<const char*>(s->Bytes());
         c_desc = string(b, s->Len()) + "string";
@@ -39,13 +39,13 @@ shared_ptr<CPP_InitInfo> CPPCompile::RegisterConstant(const ValPtr& vp, int& con
         ODesc d;
         v->Describe(&d);
 
-        // Don't confuse constants of different types that happen to
-        // render the same.
+
+
         t->Describe(&d);
 
         c_desc = d.Description();
 
-        // Aggregates need to be pointer-unique.
+
         if ( IsAggr(t) )
             c_desc += util::fmt("pointer %p", static_cast<void*>(v));
     }
@@ -108,4 +108,4 @@ shared_ptr<CPP_InitInfo> CPPCompile::RegisterConstant(const ValPtr& vp, int& con
     return gi;
 }
 
-} // namespace zeek::detail
+}

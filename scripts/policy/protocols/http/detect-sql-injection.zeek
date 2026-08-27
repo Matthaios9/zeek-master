@@ -1,8 +1,8 @@
-##! SQL injection attack detection in HTTP.
-##!
-##! The script annotates the notices it generates with an associated $uid
-##! connection identifier; always provides an attacker IP address in the
-##! $src field; and always provides a victim IP address in the $dst field.
+
+
+
+
+
 
 @load base/frameworks/notice
 @load base/frameworks/sumstats
@@ -12,32 +12,32 @@ module HTTP;
 
 export {
 	redef enum Notice::Type += {
-		## Indicates that a host performing SQL injection attacks was
-		## detected.
+
+
 		SQL_Injection_Attacker,
 
-		## Indicates that a host was seen to have SQL injection attacks
-		## against it.  This is tracked by IP address as opposed to
-		## hostname.
+
+
+
 		SQL_Injection_Victim,
 	};
 
 	redef enum Tags += {
-		## Indicator of a URI based SQL injection attack.
+
 		URI_SQLI,
 	};
 
-	## Defines the threshold that determines if an SQL injection attack
-	## is ongoing based on the number of requests that appear to be SQL
-	## injection attacks.
+
+
+
 	const sqli_requests_threshold: double = 50.0 &redef;
 
-	## Interval at which to watch for the
-	## :zeek:id:`HTTP::sqli_requests_threshold` variable to be crossed.
-	## At the end of each interval the counter is reset.
+
+
+
 	const sqli_requests_interval = 5 min &redef;
 
-	## Regular expression is used to match URI based SQL injections.
+
 	const match_sql_injection_uri =
 		  /[\?&][^[:blank:]\x00-\x1f\|\+]+?=[\-[:alnum:]%]+([[:blank:]\x00-\x1f\+]|\/\*.*?\*\/)*'?([[:blank:]\x00-\x1f\+]|\/\*.*?\*\/|\)?;)+.*?(having|union|exec|select|delete|drop|declare|create|insert)([[:blank:]\x00-\x1f\+]|\/\*.*?\*\/)+/i
 		| /[\?&][^[:blank:]\x00-\x1f\|\+]+?=[\-0-9%]+([[:blank:]\x00-\x1f\+]|\/\*.*?\*\/)*'?([[:blank:]\x00-\x1f\+]|\/\*.*?\*\/|\)?;)+(x?or|n?and)([[:blank:]\x00-\x1f\+]|\/\*.*?\*\/)+'?(([^a-zA-Z&]+)?=|exists)/i

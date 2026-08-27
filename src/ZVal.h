@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Low-level representation of Zeek scripting values.
+
+
 
 #pragma once
 
@@ -42,28 +42,28 @@ namespace detail {
 class ZBody;
 }
 
-// Note that a ZVal by itself is ambiguous: it doesn't track its type.
-// This makes them consume less memory and cheaper to copy.  It does
-// however require a separate way to determine the type.  Generally
-// this is doable using surrounding context, or can be statically
-// determined in the case of optimization/compilation.
-//
-// An alternative would be to use std::variant, but it will be larger
-// due to needing to track the variant type, and it won't allow access
-// to the managed_val member, which both simplifies memory management
-// and is also required for sharing of ZAM frame slots.
+
+
+
+
+
+
+
+
+
+
 
 union ZVal {
-    // Constructor for hand-populating the values.
+
     ZVal() { managed_val = nullptr; }
 
-    // Construct from a given higher-level script value with a given type.
+
     ZVal(ValPtr v, const TypePtr& t);
 
-    // Construct an empty value compatible with the given type.
+
     ZVal(const TypePtr& t);
 
-    // Construct directly.
+
     ZVal(bool v) { int_val = v; }
     ZVal(zeek_int_t v) { int_val = v; }
     ZVal(zeek_uint_t v) { uint_val = v; }
@@ -94,8 +94,8 @@ union ZVal {
     ZVal(VectorValPtr v) { vector_val = v.release(); }
     ZVal(TypeValPtr v) { type_val = v.release(); }
 
-    // Convert to a higher-level script value.  The caller needs to
-    // ensure that they're providing the correct type.
+
+
     ValPtr ToVal(const TypePtr& t) const;
 
     zeek_int_t AsInt() const { return int_val; }
@@ -119,8 +119,8 @@ union ZVal {
     Obj* ManagedVal() const { return managed_val; }
     void ClearManagedVal() { managed_val = nullptr; }
 
-    // The following return references that can be used to
-    // populate the ZVal.  Handy for compiled ZAM code.
+
+
     zeek_int_t& AsIntRef() { return int_val; }
     zeek_uint_t& AsCountRef() { return uint_val; }
     double& AsDoubleRef() { return double_val; }
@@ -139,44 +139,44 @@ union ZVal {
     Val*& AsAnyRef() { return any_val; }
     Obj*& ManagedValRef() { return managed_val; }
 
-    // True if a given type is one for which we manage the associated
-    // memory internally.
+
+
     static bool IsManagedType(const TypePtr& t);
 
-    // Deletes a managed value.  Caller needs to ensure that the ZVal
-    // indeed holds such.
+
+
     static void DeleteManagedType(ZVal& v) { Unref(v.ManagedVal()); }
 
-    // Deletes a possibly-managed value.
+
     static void DeleteIfManaged(ZVal& v, const TypePtr& t) {
         if ( IsManagedType(t) )
             DeleteManagedType(v);
     }
 
-    // Specifies the address of a flag to set if a ZVal is accessed
-    // that was missing (a nil pointer).  Used to generate run-time
-    // error messages.  We use an address-based interface so that
-    // this flag can be combined with a general-purpose error flag,
-    // allowing inner loops to only have to test a single flag.
+
+
+
+
+
     static void SetZValNilStatusAddr(bool* _zval_was_nil_addr) { zval_was_nil_addr = _zval_was_nil_addr; }
 
 private:
     friend class RecordVal;
     friend class VectorVal;
 
-    // Used for bool, int, enum.
+
     zeek_int_t int_val;
 
-    // Used for count and port.
+
     zeek_uint_t uint_val;
 
-    // Used for double, time, interval.
+
     double double_val;
 
-    // The types are all variants of Val, or more fundamentally Obj.
-    // They are raw pointers rather than IntrusivePtr's because
-    // unions can't contain the latter.  For memory management, we use
-    // Ref/Unref.
+
+
+
+
     StringVal* string_val;
     AddrVal* addr_val;
     SubNetVal* subnet_val;
@@ -190,19 +190,19 @@ private:
     VectorVal* vector_val;
     TypeVal* type_val;
 
-    // Used for "any" values.
+
     Val* any_val;
 
-    // Used for generic access to managed (derived-from-Obj) objects.
+
     Obj* managed_val;
 
-    // A class-wide status variable set to true when a missing
-    // value was accessed.  Only germane for managed types, since
-    // we don't track the presence of non-managed types.  Static
-    // because often the caller won't have direct access to the
-    // particular ZVal that produces the issue, and just wants to
-    // know whether it occurred at some point.
+
+
+
+
+
+
     static bool* zval_was_nil_addr;
 };
 
-} // namespace zeek
+}

@@ -1,4 +1,4 @@
-##! Calculate the average.
+
 
 @load ../main
 
@@ -6,12 +6,12 @@ module SumStats;
 
 export {
 	redef enum Calculation += {
-		## Calculate the average of the values.
+
 		AVERAGE
 	};
 
 	redef record ResultVal += {
-		## For numeric data, this is the average of all values.
+
 		average: double &optional;
 	};
 }

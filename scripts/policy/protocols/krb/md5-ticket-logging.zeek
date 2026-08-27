@@ -1,13 +1,13 @@
-##! Add MD5 Kerberos ticket hashes to the krb.log
+
 
 @load base/protocols/krb
 
 module KRB;
 
 redef record Info += {
-	## MD5 hash of ticket used to authorize request/transaction
+
 	auth_ticket: string &log &optional;
-	## MD5 hash of ticket returned by the KDC
+
 	new_ticket:  string &log &optional;
 };
 

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/supervisor/Supervisor.h"
 
@@ -26,7 +26,7 @@
 #include <windows.h>
 #endif
 
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+
 #define RAPIDJSON_HAS_STDSTRING 1
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
@@ -54,13 +54,13 @@ extern "C" {
 #include "zeek/util.h"
 #include "zeek/zeek-affinity.h"
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+
 #ifdef DEBUG
 #define DBG_STEM(...) stem->LogDebug(__VA_ARGS__);
 #else
 #define DBG_STEM(...)
 #endif
-// NOLINTEND(cppcoreguidelines-macro-usage)
+
 
 using namespace zeek;
 using zeek::detail::SupervisedNode;
@@ -72,17 +72,17 @@ std::optional<SupervisedNode> Supervisor::supervised_node;
 namespace {
 
 struct Stem {
-    /**
-     * State used to initialize the Stem process.
-     */
+
+
+
     struct State {
-        /**
-         * Bidirectional pipes that allow the Supervisor and Stem to talk.
-         */
+
+
+
         std::unique_ptr<detail::PipePair> pipe;
-        /**
-         * The Stem's parent process ID (i.e. PID of the Supervisor).
-         */
+
+
+
         pid_t parent_pid = 0;
     };
 
@@ -98,13 +98,13 @@ struct Stem {
 
     void Reap();
 
-    /**
-     * This performs fork() to initialize the supervised-node structure.
-     * There's three possible outcomes:
-     *   - return value is SupervisedNode: we are the child process
-     *   - return value is True: we are the parent and fork() succeeded
-     *   - return value is False: we are the parent and fork() failed
-     */
+
+
+
+
+
+
+
     std::variant<bool, SupervisedNode> Spawn(SupervisorNode* node);
 
     int AliveNodeCount() const;
@@ -132,7 +132,7 @@ struct Stem {
     std::unique_ptr<detail::Flare> signal_flare;
     std::unique_ptr<detail::PipePair> pipe;
     std::map<std::string, SupervisorNode> nodes;
-    // May be modified during Log() and ReportStatus() via write_msg().
+
     mutable std::string msg_buffer;
     bool shutting_down = false;
 #ifdef _MSC_VER
@@ -140,7 +140,7 @@ struct Stem {
     std::string zeek_exe_path;
 #endif
 };
-} // namespace
+}
 
 static Stem* stem = nullptr;
 
@@ -174,7 +174,7 @@ static std::vector<std::string> extract_msgs(std::string* buffer, char delim) {
         auto msg_end = buffer->find(delim);
 
         if ( msg_end == std::string::npos )
-            // Don't have any full messages left
+
             break;
 
         auto msg = buffer->substr(0, msg_end);
@@ -185,11 +185,11 @@ static std::vector<std::string> extract_msgs(std::string* buffer, char delim) {
     return rval;
 }
 
-// Read some bytes from the given fd and append them to buffer.
+
 static int read_bytes_into_buffer(int fd, std::string* buffer) {
 #ifdef _MSC_VER
-    // On Windows, pipe FDs are always blocking. Use PeekNamedPipe to
-    // check for data before reading to emulate non-blocking behavior.
+
+
     HANDLE h = (HANDLE)_get_osfhandle(fd);
 
     if ( h != INVALID_HANDLE_VALUE && h != (HANDLE)(intptr_t)-2 ) {
@@ -214,7 +214,7 @@ static int read_bytes_into_buffer(int fd, std::string* buffer) {
 
 static std::pair<int, std::vector<std::string>> read_msgs(int fd, std::string* buffer, char delim) {
     int bytes_read = read_bytes_into_buffer(fd, buffer);
-    if ( bytes_read < 0 && errno == EAGAIN ) // Treat EAGAIN as no bytes read.
+    if ( bytes_read < 0 && errno == EAGAIN )
         bytes_read = 0;
 
     if ( bytes_read < 0 )
@@ -223,14 +223,14 @@ static std::pair<int, std::vector<std::string>> read_msgs(int fd, std::string* b
     return {bytes_read, extract_msgs(buffer, delim)};
 }
 
-// Write a message to the OutFD() of the given pipe pair.
-//
-// Should the write() fail with EAGAIN, usleep() for a tiny amount
-// and retry after draining data pending on InFD() and appending
-// it to given buffer. Draining is done in case the other side of the
-// pipe is also blocking on a write() that we're blocking.
+
+
+
+
+
+
 static bool write_msg(const std::unique_ptr<detail::PipePair>& pipe, const std::string& msg, std::string* buffer) {
-    // Send the string including its '\0'
+
     int len = msg.size() + 1;
     const char* data = msg.data();
 
@@ -241,11 +241,11 @@ static bool write_msg(const std::unique_ptr<detail::PipePair>& pipe, const std::
             if ( errno == EINTR )
                 continue;
 
-            // If there's no room in the pipe and we would've blocked, relax
-            // a bit, but otherwise just retry again. No fancy polling.
-            //
-            // We drain the stem's queue for a best effort preventing it
-            // running into a full pipe as well.
+
+
+
+
+
             if ( errno == EAGAIN || errno == EWOULDBLOCK ) {
                 read_bytes_into_buffer(pipe->InFD(), buffer);
                 usleep(10);
@@ -276,16 +276,16 @@ detail::ParentProcessCheckTimer::ParentProcessCheckTimer(double t, double arg_in
     : Timer(t, TIMER_PPID_CHECK), interval(arg_interval) {}
 
 void detail::ParentProcessCheckTimer::Dispatch(double t, bool is_expire) {
-    // Note: only simple + portable way of detecting loss of parent
-    // process seems to be polling for change in PPID.  There's platform
-    // specific ways if we do end up needing something more responsive
-    // and/or have to avoid overhead of polling, but maybe not worth
-    // the additional complexity:
-    //   Linux:   prctl(PR_SET_PDEATHSIG, ...)
-    //   FreeBSD: procctl(PROC_PDEATHSIG_CTL)
-    // Also note the Stem process has its own polling loop with similar logic.
+
+
+
+
+
+
+
+
 #ifdef _MSC_VER
-    // On Windows, getppid() is stubbed. Check if parent process is alive.
+
     auto parent_pid = Supervisor::ThisNode()->parent_pid;
     detail::UniqueWinHandle h(OpenProcess(SYNCHRONIZE, FALSE, parent_pid));
 
@@ -327,7 +327,7 @@ Supervisor::Supervisor(Supervisor::Config cfg, SupervisorStemHandle sh)
     auto res = waitpid(stem_pid, &status, WNOHANG);
 
     if ( res == 0 )
-        // Good, stem process is alive and the SIGCHLD handler will keep it so.
+
         return;
 
     if ( res == -1 )
@@ -363,7 +363,7 @@ Supervisor::~Supervisor() {
     DBG_LOG(DBG_SUPERVISOR, "shutdown, killing stem process %d", stem_pid);
 
 #ifdef _MSC_VER
-    // Signal stem thread to shut down via its shutting_down flag and flare.
+
     if ( stem ) {
         stem->shutting_down = true;
         stem->signal_flare->Fire();
@@ -407,7 +407,7 @@ void Supervisor::ObserveChildSignal(int signo) {
 
 void Supervisor::ReapStem() {
 #ifdef _MSC_VER
-    // On Windows, the stem is a thread. Check if it's still running.
+
     if ( ! stem_pid )
         return;
 
@@ -415,7 +415,7 @@ void Supervisor::ReapStem() {
         DWORD result = WaitForSingleObject(stem_thread_handle.get(), 0);
 
         if ( result == WAIT_OBJECT_0 ) {
-            // Stem thread exited
+
             stem_pid = 0;
             stem_thread_handle.reset();
             DBG_LOG(DBG_SUPERVISOR, "stem thread exited");
@@ -429,7 +429,7 @@ void Supervisor::ReapStem() {
     auto res = waitpid(stem_pid, &status, WNOHANG);
 
     if ( res == 0 )
-        // Still alive
+
         return;
 
     if ( res == -1 ) {
@@ -484,13 +484,13 @@ static ForkResult fork_with_stdio_redirect(const char* where) {
             fprintf(stderr, "Supervisor %s fork() stderr redirect failed: %s\n", where, strerror(errno));
         }
 
-        // Default buffering for stdout may be fully-buffered if not a TTY,
-        // so set line-buffering since the Supervisor/Stem has to emit
-        // only line-buffered messages anyway.
+
+
+
         setlinebuf(stdout);
-        // Default buffering for stderr may be unbuffered, but since
-        // Supervisor/Stem has to emit line-buffered messages, just set
-        // it to line-buffered as well.
+
+
+
         setlinebuf(stderr);
     }
 
@@ -500,7 +500,7 @@ static ForkResult fork_with_stdio_redirect(const char* where) {
 
 void Supervisor::HandleChildSignal() {
 #ifdef _MSC_VER
-    // On Windows, stem is a thread. Just check if it's alive.
+
     ReapStem();
 #else
     if ( last_signal >= 0 ) {
@@ -519,7 +519,7 @@ void Supervisor::HandleChildSignal() {
     if ( stem_pid )
         return;
 
-    // Revive the Stem process
+
     auto stem_ppid = getpid();
     auto fork_res = fork_with_stdio_redirect("stem revival");
     stem_pid = fork_res.pid;
@@ -530,13 +530,13 @@ void Supervisor::HandleChildSignal() {
         util::zeek_strerror_r(errno, tmp, sizeof(tmp));
         reporter->Error("failed to fork Zeek supervisor stem process: %s\n", tmp);
         signal_flare.Fire();
-        // Sleep to avoid spinning too fast in a revival-fail loop.
+
         sleep(1);
         return;
     }
 
     if ( stem_pid == 0 ) {
-        // Child stem process needs to exec()
+
         auto stem_env = util::fmt("%d,%d,%d,%d,%d", stem_ppid, stem_pipe->In().ReadFD(), stem_pipe->In().WriteFD(),
                                   stem_pipe->Out().ReadFD(), stem_pipe->Out().WriteFD());
 
@@ -588,14 +588,14 @@ void Supervisor::HandleChildSignal() {
 
     DBG_LOG(DBG_SUPERVISOR, "stem process revived, new pid: %d", stem_pid);
 
-    // Parent supervisor process resends node configurations to recreate
-    // the desired process hierarchy.
 
-    // Note: there's probably a preferred order in which to create nodes.
-    // E.g. logger, manager, proxy, worker.  However, fully synchronizing
-    // a startup order like that is slow and complicated: essentially have
-    // to wait for each process to start up and reach the point just after
-    // it starts listening (and maybe that never happens for some error case).
+
+
+
+
+
+
+
     for ( const auto& n : nodes ) {
         const auto& node = n.second;
         auto msg = make_create_message(node.config);
@@ -628,16 +628,16 @@ void Supervisor::InitPostScript() {
 }
 
 double Supervisor::GetNextTimeout() {
-    // If there's any messages to be processed in the mg_buffer,
-    // let Zeek's IO loop know we are ready.
+
+
     if ( have_msgs(&msg_buffer, '\0') )
         return 0.0;
 
 #ifdef _MSC_VER
-    // On Windows, pipe FDs can't be registered with kqueue/select.
-    // Return 0 so the IOSource manager always considers us ready,
-    // ensuring Process() is called on every event loop iteration.
-    // During termination, return -1 so the event loop can exit.
+
+
+
+
     return run_state::terminating ? -1 : 0.0;
 #else
     return -1;
@@ -653,7 +653,7 @@ void Supervisor::Process() {
 
 void zeek::detail::LineBufferedPipe::Emit(const char* msg) const {
     if ( ! msg[0] )
-        // Skip empty lines.
+
         return;
 
     auto msg_start = msg;
@@ -729,7 +729,7 @@ size_t Supervisor::ProcessMessages() {
                                   val_mgr->Count(std::stoi(msg_tokens[2])));
         }
         else if ( type == "debug" ) {
-            // Already logged the unparsed message above.
+
         }
         else if ( type == "error" ) {
             msg_tokens.erase(msg_tokens.begin());
@@ -751,16 +751,16 @@ Stem::Stem(State ss) : parent_pid(ss.parent_pid), signal_flare(new detail::Flare
     setsignal(SIGCHLD, stem_signal_handler);
     setsignal(SIGTERM, stem_signal_handler);
 
-    // Note: changing the process group here so that SIGINT to the supervisor
-    // doesn't also get passed to the children.  I.e. the supervisor should be
-    // in charge of initiating orderly shutdown of the process tree.
-    // Technically calling setpgid() like this is a race-condition (if we get a
-    // SIGINT in between the fork() and setpgid() calls), but can treat that as
-    // mostly be harmless since the only affected node in the process tree at
-    // the point will be this Stem process and the Supervisor *should* do the
-    // right thing if it also sees SIGINT with the Stem already having exited
-    // (since that same type of situation with the Stem dying prematurely can
-    // happen for any arbitrary reason, not just for SIGINT).
+
+
+
+
+
+
+
+
+
+
     auto res = setpgid(0, 0);
 
     if ( res == -1 )
@@ -797,7 +797,7 @@ bool Stem::Wait(SupervisorNode* node, int options) const {
     if ( ! node->process_handle )
         return true;
 
-    // All callers use WNOHANG (non-blocking). On Windows, always use 0ms wait.
+
     DWORD result = WaitForSingleObject(node->process_handle.get(), 0);
 
     if ( result == WAIT_TIMEOUT )
@@ -823,7 +823,7 @@ bool Stem::Wait(SupervisorNode* node, int options) const {
     auto res = waitpid(node->pid, &status, options);
 
     if ( res == 0 )
-        // It's still alive.
+
         return false;
 
     if ( res == -1 ) {
@@ -868,13 +868,13 @@ void Stem::KillNode(SupervisorNode* node, int signal) const {
 #ifdef _MSC_VER
     if ( node->process_handle ) {
         if ( signal == 0 ) {
-            // Graceful: send CTRL_BREAK_EVENT.  The node is in its own
-            // process group (CREATE_NEW_PROCESS_GROUP), so this signal
-            // targets only the node and allows zeek_done() to run.
+
+
+
             GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, node->pid);
         }
         else {
-            // Forceful: TerminateProcess as last resort.
+
             TerminateProcess(node->process_handle.get(), 1);
         }
     }
@@ -888,7 +888,7 @@ void Stem::KillNode(SupervisorNode* node, int signal) const {
 
 static int get_kill_signal(int attempts, int max_attempts) {
 #ifdef _MSC_VER
-    // 0 = graceful (CTRL_BREAK_EVENT), non-zero = forceful (TerminateProcess).
+
     return attempts < max_attempts ? 0 : 1;
 #else
     if ( getenv("ZEEK_SUPERVISOR_NO_SIGKILL") )
@@ -915,9 +915,9 @@ void Stem::Destroy(SupervisorNode* node) const {
         auto sig = get_kill_signal(kill_attempts++, max_term_attempts);
         KillNode(node, sig);
 #ifdef _MSC_VER
-        // On Windows, TerminateProcess is asynchronous - the process
-        // needs a moment to fully terminate before WaitForSingleObject
-        // can detect it with a 0ms timeout.
+
+
+
         Sleep(100);
 #else
         usleep(10);
@@ -978,10 +978,10 @@ std::optional<SupervisedNode> Stem::Revive() {
 
 std::variant<bool, SupervisedNode> Stem::Spawn(SupervisorNode* node) {
 #ifdef _MSC_VER
-    // On Windows, spawn a new zeek process via CreateProcess.
+
     auto json_config = node->config.ToJSON();
 
-    // Build command line from zeek_argv.
+
     std::string cmd_line;
 
     for ( int i = 0; i < detail::zeek_argc; ++i ) {
@@ -996,7 +996,7 @@ std::variant<bool, SupervisedNode> Stem::Spawn(SupervisorNode* node) {
             cmd_line += arg;
     }
 
-    // Build environment block with ZEEK_SUPERVISED_NODE added.
+
     LPCH current_env = GetEnvironmentStrings();
 
     if ( ! current_env ) {
@@ -1016,7 +1016,7 @@ std::variant<bool, SupervisedNode> Stem::Spawn(SupervisorNode* node) {
     env_block.push_back('\0');
     env_block.push_back('\0');
 
-    // Create stdout/stderr redirect pipes.
+
     SECURITY_ATTRIBUTES sa = {};
     sa.nLength = sizeof(sa);
     sa.bInheritHandle = TRUE;
@@ -1043,10 +1043,10 @@ std::variant<bool, SupervisedNode> Stem::Spawn(SupervisorNode* node) {
     detail::UniqueWinHandle child_stderr_write(raw_stderr_write);
     SetHandleInformation(child_stderr_read.get(), HANDLE_FLAG_INHERIT, 0);
 
-    // Use STARTUPINFOEX with PROC_THREAD_ATTRIBUTE_HANDLE_LIST so only the
-    // stdio pipe handles are inherited by the child. Without this, Broker
-    // listening sockets leak into every child process, preventing port
-    // reuse when a node is restarted via TerminateProcess.
+
+
+
+
     HANDLE handles_to_inherit[3];
     DWORD handle_count = 0;
     handles_to_inherit[handle_count++] = child_stdout_write.get();
@@ -1092,12 +1092,12 @@ std::variant<bool, SupervisedNode> Stem::Spawn(SupervisorNode* node) {
         return false;
     }
 
-    // Close child-side pipe handles in the parent.
+
     child_stdout_write.reset();
     child_stderr_write.reset();
     detail::UniqueWinHandle thread_handle(pi.hThread);
 
-    // Transfer read handle ownership to _open_osfhandle (which takes over the handle).
+
     int stdout_fd = _open_osfhandle((intptr_t)child_stdout_read.release(), _O_RDONLY);
     int stderr_fd = _open_osfhandle((intptr_t)child_stderr_read.release(), _O_RDONLY);
     int stdout_fds[2] = {stdout_fd, -1};
@@ -1204,7 +1204,7 @@ void Stem::Shutdown(int exit_code) {
             sleep_time_left = sleep(sleep_time_left);
 
             if ( sleep_time_left > 0 ) {
-                // Interrupted by signal, so check if children exited
+
                 Reap();
                 nodes_alive = AliveNodeCount();
 
@@ -1230,7 +1230,7 @@ void Stem::Log(std::string_view type, const char* format, va_list args) const {
     auto raw_msg = util::vfmt(format, args);
 
     if ( getenv("ZEEK_DEBUG_STEM_STDERR") ) {
-        // Useful when debugging a breaking change to the IPC mechanism itself.
+
         fprintf(stderr, "%s\n", raw_msg);
         return;
     }
@@ -1268,20 +1268,20 @@ SupervisedNode Stem::Run() {
 #endif
     }
 
-    // Shouldn't be reached.
+
     assert(false);
     return {};
 }
 
 std::optional<SupervisedNode> Stem::Poll() {
 #ifdef _MSC_VER
-    // On Windows, poll() only works with sockets. We use PeekNamedPipe for
-    // pipe FDs and select() for the signal flare (which is a UDP socket).
-    // Use a short timeout so the stem responds quickly to supervisor messages
-    // and shutdown signals.
+
+
+
+
     int poll_timeout_ms = have_msgs(&msg_buffer, '\0') ? 0 : 100;
 
-    // Check signal flare (UDP socket) via select with short timeout
+
     bool flare_ready = false;
     {
         fd_set readfds;
@@ -1296,7 +1296,7 @@ std::optional<SupervisedNode> Stem::Poll() {
             flare_ready = true;
     }
 
-    // Check pipe from supervisor via PeekNamedPipe
+
     bool pipe_ready = false;
     {
         HANDLE h = (HANDLE)_get_osfhandle(pipe->InFD());
@@ -1309,7 +1309,7 @@ std::optional<SupervisedNode> Stem::Poll() {
         }
     }
 
-    // Check node stdout/stderr pipes
+
     for ( auto& [name, node] : nodes ) {
         if ( node.stdout_pipe.pipe ) {
             HANDLE h = (HANDLE)_get_osfhandle(node.stdout_pipe.pipe->ReadFD());
@@ -1334,11 +1334,11 @@ std::optional<SupervisedNode> Stem::Poll() {
         }
     }
 
-    // Stem is a thread; check if supervisor (same process) signaled shutdown.
+
     if ( shutting_down && ! shutdown_complete )
         Shutdown(0);
 
-    // Periodically reap/revive child processes (no SIGCHLD on Windows).
+
     Reap();
 
     if ( ! shutting_down ) {
@@ -1390,8 +1390,8 @@ std::optional<SupervisedNode> Stem::Poll() {
             pfds[pfd_idx++] = {static_cast<decltype(pollfd::fd)>(-1), POLLIN, 0};
     }
 
-    // Note: the poll timeout here is for periodically checking if the parent
-    // process died (see below).
+
+
     int poll_timeout_ms = have_msgs(&msg_buffer, '\0') ? 0 : 1000;
     auto res = poll(pfds.get(), total_fd_count, poll_timeout_ms);
 
@@ -1408,14 +1408,14 @@ std::optional<SupervisedNode> Stem::Poll() {
     }
 
     if ( getppid() != parent_pid ) {
-        // Note: only simple + portable way of detecting loss of parent
-        // process seems to be polling for change in PPID.  There's platform
-        // specific ways if we do end up needing something more responsive
-        // and/or have to avoid overhead of polling, but maybe not worth
-        // the additional complexity:
-        //   Linux:   prctl(PR_SET_PDEATHSIG, ...)
-        //   FreeBSD: procctl(PROC_PDEATHSIG_CTL)
-        // Also note the similar polling methodology in ParentProcessCheckTimer.
+
+
+
+
+
+
+
+
         DBG_STEM("Stem suicide");
         Shutdown(13);
     }
@@ -1450,21 +1450,21 @@ std::optional<SupervisedNode> Stem::Poll() {
     }
 #endif
 
-    // Process messages from Supervisor.
-    //
-    // Either the supervisor sent some new data and/or we already
-    // have some in msg_buffer populated during write_msg().
+
+
+
+
     std::vector<std::string> msgs;
 #ifdef _MSC_VER
     if ( pipe_ready ) {
 #else
     if ( pfds[0].revents ) {
 #endif
-        // New data from Supervisor.
+
         auto [bytes_read, msgs_] = read_msgs(pipe->InFD(), &msg_buffer, '\0');
 
         if ( bytes_read == 0 ) {
-            // EOF, supervisor must have exited
+
             DBG_STEM("Stem EOF");
             Shutdown(14);
         }
@@ -1477,7 +1477,7 @@ std::optional<SupervisedNode> Stem::Poll() {
         msgs = std::move(msgs_);
     }
     else if ( have_msgs(&msg_buffer, '\0') ) {
-        // Have some pending messages.
+
         msgs = extract_msgs(&msg_buffer, '\0');
     }
 
@@ -1548,8 +1548,8 @@ static unsigned __stdcall stem_thread_func(void* arg) {
 
 std::optional<SupervisorStemHandle> Supervisor::CreateStem(bool supervisor_mode) {
 #ifdef _MSC_VER
-    // On Windows, check if this process is a supervised node spawned
-    // via CreateProcess. The node config is passed via ZEEK_SUPERVISED_NODE.
+
+
     auto zeek_node_env = getenv("ZEEK_SUPERVISED_NODE");
 
     if ( zeek_node_env ) {
@@ -1558,7 +1558,7 @@ std::optional<SupervisorStemHandle> Supervisor::CreateStem(bool supervisor_mode)
         sn.config = std::move(node_config);
         sn.parent_pid = static_cast<int>(GetCurrentProcessId());
 
-        // Try to get the actual parent PID from the environment if available.
+
         detail::UniqueWinHandle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
 
         if ( snapshot.get() != INVALID_HANDLE_VALUE ) {
@@ -1578,19 +1578,19 @@ std::optional<SupervisorStemHandle> Supervisor::CreateStem(bool supervisor_mode)
         }
 
         supervised_node = std::move(sn);
-        // Clear the env var so child processes of this node don't also enter this path.
+
         SetEnvironmentVariableA("ZEEK_SUPERVISED_NODE", nullptr);
         return {};
     }
 #endif
 
-    // If the Stem needs to be re-created via fork()/exec(), then the necessary
-    // state information is communicated via ZEEK_STEM env. var.
+
+
     auto zeek_stem_env = getenv("ZEEK_STEM");
 
     if ( zeek_stem_env ) {
-        // Supervisor emits line-buffered messages stdout/stderr redirects
-        // so ensure they're at least not fully-buffered after doing exec()
+
+
         setlinebuf(stdout);
         setlinebuf(stderr);
         std::vector<std::string> zeek_stem_nums;
@@ -1622,11 +1622,11 @@ std::optional<SupervisorStemHandle> Supervisor::CreateStem(bool supervisor_mode)
         return {};
 
 #ifdef _MSC_VER
-    // On Windows, create the stem as a thread using _beginthreadex.
-    // Create the communication pipe pair.
+
+
     auto pipe = std::make_unique<detail::PipePair>(0, 0);
 
-    // Dup FDs so the stem thread has independent copies.
+
     int stem_fds[4] = {dup(pipe->In().ReadFD()), dup(pipe->In().WriteFD()), dup(pipe->Out().ReadFD()),
                        dup(pipe->Out().WriteFD())};
 
@@ -1646,7 +1646,7 @@ std::optional<SupervisorStemHandle> Supervisor::CreateStem(bool supervisor_mode)
         exit(1);
     }
 
-    // Wait for the stem thread to be initialized.
+
     WaitForSingleObject(ready_event.get(), INFINITE);
 
     SupervisorStemHandle sh;
@@ -1880,10 +1880,10 @@ RecordValPtr Supervisor::NodeConfig::ToRecord() const {
         rval->AssignField("cluster", json_res.value());
     }
     else {
-        // This should never happen: the JSON data comes from a table[string] of
-        // ClusterEndpoint and should therefore allow instantiation. Exiting
-        // here can be hard to debug. Other JSON code (see FromJSON()) fails
-        // silently when the JSON is misformatted. We just warn:
+
+
+
+
         fprintf(stderr, "Could not parse %s's cluster table from '%s': %s\n", name.c_str(), cluster.c_str(),
                 json_res.error().c_str());
         rval->AssignField("cluster", make_intrusive<TableVal>(std::move(tt)));

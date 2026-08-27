@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/protocol/linux_sll/LinuxSLL.h"
 
@@ -13,15 +13,15 @@ bool LinuxSLLAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* pa
         return false;
     }
 
-    // Note: We assume to see an Ethertype and don't consider different ARPHRD_types
-    // (see https://www.tcpdump.org/linktypes/LINKTYPE_LINUX_SLL.html)
+
+
     auto hdr = reinterpret_cast<const SLLHeader*>(data);
 
     uint32_t protocol = ntohs(hdr->protocol_type);
     packet->l2_src = reinterpret_cast<const u_char*>(&hdr->addr);
 
-    // SLL doesn't include a destination address in the header, but not setting l2_dst to something
-    // here will cause crashes elsewhere.
+
+
     packet->l2_dst = Packet::L2_EMPTY_ADDR;
 
     return ForwardPacket(len - len_sll_hdr, data + len_sll_hdr, packet, protocol);

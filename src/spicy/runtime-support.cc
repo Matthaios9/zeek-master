@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/spicy/runtime-support.h"
 
@@ -24,12 +24,12 @@ using namespace zeek::spicy;
 using namespace hilti::rt::string::literals;
 
 #ifdef _MSC_VER
-// On Windows, C++ exceptions cannot safely unwind through JIT DLL frames on
-// HILTI fiber stacks.  Instead of throwing, detail::to_val() catches
-// exceptions and stores the error description/location in thread-local
-// strings.  raise_event() (also zeek.exe code) checks these thread-locals
-// and reports the error directly via analyzerError(), then returns without
-// throwing — completely avoiding exception propagation on the fiber stack.
+
+
+
+
+
+
 static thread_local std::string pending_to_val_desc;
 static thread_local std::string pending_to_val_loc;
 #endif
@@ -68,7 +68,7 @@ void rt::register_type(const hilti::rt::String& ns, const hilti::rt::String& id,
     spicy_mgr->registerType(hilti::rt::fmt("%s::%s"_hs, (! ns.empty() ? ns : "GLOBAL"_hs), id), type);
 }
 
-// Helper to look up a global Zeek-side type, enforcing that it's of the expected type.
+
 static TypePtr findType(TypeTag tag, const std::string& ns, const std::string& id) {
     auto id_ = hilti::rt::fmt("%s::%s", ns, id);
     auto type = spicy_mgr->findType(id_);
@@ -118,11 +118,11 @@ TypePtr rt::create_base_type(ZeekTypeTag tag) {
     return base_type(zeekTypeForTag(tag));
 }
 
-std::string hilti::rt::detail::adl::to_string(const zeek::spicy::rt::ZeekTypeTag& v, detail::adl::tag /* unused */) {
+std::string hilti::rt::detail::adl::to_string(const zeek::spicy::rt::ZeekTypeTag& v, detail::adl::tag ) {
     return type_name(zeekTypeForTag(v));
 }
 
-std::string hilti::rt::detail::adl::to_string(const zeek::spicy::rt::AnalyzerType& v, detail::adl::tag /* unused */) {
+std::string hilti::rt::detail::adl::to_string(const zeek::spicy::rt::AnalyzerType& v, detail::adl::tag ) {
     switch ( v.value() ) {
         case zeek::spicy::rt::AnalyzerType::File: return "AnalyzerType::File";
         case zeek::spicy::rt::AnalyzerType::Packet: return "AnalyzerType::Packet";
@@ -147,7 +147,7 @@ extern TypePtr rt::create_enum_type(
         auto name = ::hilti::rt::fmt("%s_%s", std::string_view(id), std::string_view(lid));
 
         if ( lval == -1 )
-            // Zeek's enum can't be negative, so swap in max_int for our Undef.
+
             lval = std::numeric_limits<::zeek_int_t>::max();
 
         etype->AddName(std::string(ns), name.c_str(), lval, true, nullptr, true);
@@ -219,9 +219,9 @@ EventHandlerPtr rt::internal_handler(const hilti::rt::String& name) {
 
 void rt::raise_event(const EventHandlerPtr& handler, const hilti::rt::Vector<ValPtr>& args) {
 #ifdef _MSC_VER
-    // If detail::to_val() stored a pending error, report it directly via
-    // analyzerError and return without throwing — no exception propagation
-    // needed on the fiber stack.
+
+
+
     if ( ! pending_to_val_desc.empty() ) {
         if ( auto* cookie = static_cast<Cookie*>(hilti::rt::context::cookie()) ) {
             if ( auto* x = cookie->protocol )
@@ -238,7 +238,7 @@ void rt::raise_event(const EventHandlerPtr& handler, const hilti::rt::Vector<Val
 #endif
     auto _ = hilti::rt::profiler::start("zeek/rt/raise_event");
 
-    // Caller must have checked already that there's a handler available.
+
     assert(handler);
 
     const auto& zeek_args = const_cast<EventHandlerPtr&>(handler)->GetType()->ParamList()->GetTypes();
@@ -253,8 +253,8 @@ void rt::raise_event(const EventHandlerPtr& handler, const hilti::rt::Vector<Val
         if ( v )
             vl.emplace_back(v);
         else
-            // Shouldn't happen here, but we have to_vals() that
-            // (legitimately) return null in certain contexts.
+
+
             throw InvalidValue("null value encountered after conversion");
     }
 
@@ -280,7 +280,7 @@ zeek::analyzer::ID rt::current_analyzer_id() {
         if ( auto x = cookie->protocol ) {
             return x->analyzer->GetID();
         }
-        else if ( auto x = cookie->file ) { // NOLINT(bugprone-branch-clone)
+        else if ( auto x = cookie->file ) {
             return 0;
         }
         else if ( auto x = cookie->packet ) {
@@ -404,7 +404,7 @@ ValPtr rt::current_packet() {
     if ( auto cookie = static_cast<Cookie*>(hilti::rt::context::cookie()) ) {
         if ( auto c = cookie->packet ) {
             if ( ! c->packet_val )
-                // We cache the built value in case we need it multiple times.
+
                 c->packet_val = c->packet->ToRawPktHdrVal();
 
             return c->packet_val;
@@ -430,11 +430,11 @@ hilti::rt::String rt::uid() {
 
     if ( auto cookie = static_cast<Cookie*>(hilti::rt::context::cookie()) ) {
         if ( auto c = cookie->protocol ) {
-            // Retrieve the ConnVal() so that we ensure the UID has been set.
+
             c->analyzer->ConnVal();
 
-            // MSVC complains about an illegal conversion below, so silence the warning from clang-tidy
-            // NOLINTNEXTLINE(modernize-return-braced-init-list)
+
+
             return hilti::rt::String(c->analyzer->Conn()->GetUID().Base62("C"));
         }
     }
@@ -448,13 +448,13 @@ hilti::rt::Tuple<hilti::rt::Address, hilti::rt::Port, hilti::rt::Address, hilti:
     static auto convert_address = [](const IPAddr& zaddr) -> hilti::rt::Address {
         const uint32_t* bytes = nullptr;
         if ( auto n = zaddr.GetBytes(&bytes); n == 1 )
-            // IPv4
+
             return hilti::rt::Address(*reinterpret_cast<const struct in_addr*>(bytes));
         else if ( n == 4 )
-            // IPv6
+
             return hilti::rt::Address(*reinterpret_cast<const struct in6_addr*>(bytes));
         else
-            throw ValueUnavailable("unexpected IP address side from Zeek"); // shouldn't really be able to happen
+            throw ValueUnavailable("unexpected IP address side from Zeek");
     };
 
     static auto convert_port = [](uint32_t port, TransportProto proto) -> hilti::rt::Port {
@@ -530,9 +530,9 @@ void rt::reject_protocol(const hilti::rt::String& reason) {
     auto _ = hilti::rt::profiler::start("zeek/rt/reject_protocol");
     auto cookie = static_cast<Cookie*>(hilti::rt::context::cookie());
 
-    // We might be invoked during teardown when the cookie has already been
-    // cleared. These other code paths also take care of sending an analyzer
-    // violation to Zeek, so we can immediately return for such cases here.
+
+
+
     if ( ! cookie )
         return;
 
@@ -588,10 +588,10 @@ void rt::protocol_begin(const hilti::rt::Optional<hilti::rt::String>& analyzer, 
         return;
     }
 
-    // Instantiate a DPD analyzer. If a direct child of this type already
-    // exists, we abort silently because that makes usage nicer if either side
-    // of the connection might end up creating the analyzer; this way the user
-    // doesn't need to track what the other side already did.
+
+
+
+
 
     auto cookie = static_cast<Cookie*>(hilti::rt::context::cookie());
 
@@ -602,14 +602,14 @@ void rt::protocol_begin(const hilti::rt::Optional<hilti::rt::String>& analyzer, 
 
     switch ( proto.value() ) {
         case ::hilti::rt::Protocol::TCP: {
-            // Use a Zeek PIA stream (TCP) analyzer performing DPD.
+
             auto pia_tcp = std::make_unique<analyzer::pia::PIA_TCP>(c->analyzer->Conn());
             pia_tcp->FirstPacket(true, TransportProto::TRANSPORT_TCP);
             pia_tcp->FirstPacket(false, TransportProto::TRANSPORT_TCP);
 
             c->analyzer->CleanupChildren();
 
-            // If the child already exists, do not add it again so this function is idempotent.
+
             if ( auto child = c->analyzer->GetChildAnalyzer(pia_tcp->GetAnalyzerName()) )
                 return;
 
@@ -619,7 +619,7 @@ void rt::protocol_begin(const hilti::rt::Optional<hilti::rt::String>& analyzer, 
         }
 
         case ::hilti::rt::Protocol::UDP: {
-            // Use a Zeek PIA packet (UDP) analyzer performing DPD.
+
             auto pia_udp = std::make_unique<analyzer::pia::PIA_UDP>(c->analyzer->Conn());
             pia_udp->FirstPacket(true, TransportProto::TRANSPORT_UDP);
             pia_udp->FirstPacket(false, TransportProto::TRANSPORT_UDP);
@@ -654,7 +654,7 @@ rt::ProtocolHandle rt::protocol_handle_get_or_create(const hilti::rt::String& an
         case ::hilti::rt::Protocol::TCP: {
             c->analyzer->CleanupChildren();
 
-            // If the child already exists, do not add it again so this function is idempotent.
+
             if ( auto child = c->analyzer->GetChildAnalyzer(std::string(analyzer)) )
                 return rt::ProtocolHandle(child->GetID(), proto);
 
@@ -662,22 +662,22 @@ rt::ProtocolHandle rt::protocol_handle_get_or_create(const hilti::rt::String& an
             if ( ! child )
                 throw ZeekError(::hilti::rt::fmt("unknown analyzer '%s' requested", analyzer));
 
-            // If we had no such child before but cannot add it the analyzer was prevented.
-            //
-            // NOTE: We make this a hard error since returning e.g., an empty optional
-            // here would make it easy to incorrectly use the return value with e.g.,
-            // `protocol_data_in` or `protocol_gap`.
+
+
+
+
+
             if ( ! c->analyzer->AddChildAnalyzer(child) )
                 throw ZeekError(::hilti::rt::fmt("creation of child analyzer %s was prevented", analyzer));
 
             if ( c->analyzer->Conn()->ConnTransport() != TRANSPORT_TCP ) {
-                // Some TCP application analyzer may expect to have access to a TCP
-                // analyzer. To make that work, we'll create a fake TCP analyzer,
-                // just so that they have something to access. It won't
-                // semantically have any "TCP" to analyze obviously.
+
+
+
+
                 c->fake_tcp = std::make_shared<packet_analysis::TCP::TCPSessionAdapter>(c->analyzer->Conn());
                 static_cast<analyzer::Analyzer*>(c->fake_tcp.get())
-                    ->Done(); // will never see packets; cast to get around protected inheritance
+                    ->Done();
             }
 
             return rt::ProtocolHandle(child->GetID(), proto);
@@ -686,7 +686,7 @@ rt::ProtocolHandle rt::protocol_handle_get_or_create(const hilti::rt::String& an
         case ::hilti::rt::Protocol::UDP: {
             c->analyzer->CleanupChildren();
 
-            // If the child already exists, do not add it again so this function is idempotent.
+
             if ( auto child = c->analyzer->GetChildAnalyzer(std::string(analyzer)) )
                 return rt::ProtocolHandle(child->GetID(), proto);
 
@@ -694,11 +694,11 @@ rt::ProtocolHandle rt::protocol_handle_get_or_create(const hilti::rt::String& an
             if ( ! child )
                 throw ZeekError(::hilti::rt::fmt("unknown analyzer '%s' requested", analyzer));
 
-            // If we had no such child before but cannot add it the analyzer was prevented.
-            //
-            // NOTE: We make this a hard error since returning e.g., an empty optional
-            // here would make it easy to incorrectly use the return value with e.g.,
-            // `protocol_data_in` or `protocol_gap`.
+
+
+
+
+
             if ( ! c->analyzer->AddChildAnalyzer(child) )
                 throw ZeekError(::hilti::rt::fmt("creation of child analyzer %s was prevented", analyzer));
 
@@ -725,12 +725,12 @@ static void protocol_data_in(const hilti::rt::Bool& is_orig, const hilti::rt::By
 
     auto c = cookie->protocol;
 
-    // We need to copy the data here to be on the safe side: the streaming
-    // input methods expect the data to stay around until they return. At first
-    // sight, it might seem that that's guaranteed here, but because we'll
-    // usually be called from Spicy code, the data might be on the current
-    // fiber's stack, which could end up being swapped out if any of the
-    // streaming input methods end up going into Spicy land as well.
+
+
+
+
+
+
     const auto len = data.size();
     auto copy = std::make_unique<u_char[]>(len);
     memcpy(copy.get(), data.data(), len);
@@ -800,7 +800,7 @@ static void protocol_data_in(const hilti::rt::Bool& is_orig, const hilti::rt::By
         default: throw InvalidValue("protocol_data_in: unknown protocol");
     }
 }
-} // namespace zeek::spicy::rt
+}
 
 void rt::protocol_data_in(const hilti::rt::Bool& is_orig, const hilti::rt::Bytes& data,
                           const ::hilti::rt::Protocol& proto) {
@@ -890,8 +890,8 @@ void rt::protocol_handle_close(const ProtocolHandle& handle) {
             if ( ! tcp_child )
                 throw ValueUnavailable(hilti::rt::fmt("child analyzer %s is not a TCP application analyzer", handle));
 
-            tcp_child->EndpointEOF(true); // For Spicy analyzers, this will trigger Finish() ...
-            child->NextEndOfData(true);   // ... whereas this won't.
+            tcp_child->EndpointEOF(true);
+            child->NextEndOfData(true);
 
             tcp_child->EndpointEOF(false);
             child->NextEndOfData(false);
@@ -939,8 +939,8 @@ rt::cookie::FileState* rt::cookie::FileStateStack::push(hilti::rt::Optional<std:
         }
 
         if ( fid.empty() )
-            // If we can't get a FID from the file manager (e.g., because don't
-            // have a current protocol), we make one up.
+
+
             fid = file_mgr->HashHandle(hilti::rt::fmt("%s.%d", _analyzer_id, ++_id_counter));
     }
 
@@ -952,7 +952,7 @@ rt::cookie::FileState* rt::cookie::FileStateStack::push(hilti::rt::Optional<std:
 const rt::cookie::FileState* rt::cookie::FileStateStack::find(const std::string& fid) const {
     auto _ = hilti::rt::profiler::start("zeek/rt/file-stack-find");
 
-    // Reverse search as the default state would be on top of the stack.
+
     for ( const auto& i : std::ranges::reverse_view(_stack) ) {
         if ( i.fid == fid )
             return &i;
@@ -964,10 +964,10 @@ const rt::cookie::FileState* rt::cookie::FileStateStack::find(const std::string&
 void rt::cookie::FileStateStack::remove(const std::string& fid) {
     auto _ = hilti::rt::profiler::start("zeek/rt/file-stack-remove");
 
-    // Reverse search as the default state would be on top of the stack.
+
     for ( auto i = _stack.rbegin(); i != _stack.rend(); i++ ) {
         if ( i->fid == fid ) {
-            _stack.erase((i + 1).base()); // https://stackoverflow.com/a/1830240
+            _stack.erase((i + 1).base());
             return;
         }
     }
@@ -979,8 +979,8 @@ static void _data_in(const char* data, uint64_t len, const hilti::rt::Optional<u
     auto* fstate = _file_state(cookie, fid);
     auto mime_type = (fstate->mime_type ? *fstate->mime_type : std::string());
 
-    // We need to copy the data here to be on the safe side for the same reason
-    // as in `protocol_data_in`; see there for more.
+
+
     std::unique_ptr<u_char[]> copy(new u_char[len]);
     memcpy(copy.get(), data, len);
     auto* data_ = reinterpret_cast<const u_char*>(copy.get());
@@ -994,9 +994,9 @@ static void _data_in(const char* data, uint64_t len, const hilti::rt::Optional<u
             file_mgr->DataIn(data_, len, tag, c->analyzer->Conn(), c->is_orig, fstate->fid, mime_type);
     }
     else if ( auto f = cookie->file ) {
-        // If we didn't have a protocol analyzer but we do have a file analyzer, look up
-        // the component name from the tag in cookie and pass it to the version of DataIn()
-        // that takes a source name directly.
+
+
+
         auto source = file_mgr->GetComponentName(f->analyzer->Tag());
 
         if ( offset )
@@ -1044,8 +1044,8 @@ hilti::rt::String rt::fuid() {
     if ( auto cookie = static_cast<Cookie*>(hilti::rt::context::cookie()) ) {
         if ( auto f = cookie->file ) {
             if ( auto file = f->analyzer->GetFile() )
-                // MSVC complains about an illegal conversion below, so silence the warning from clang-tidy
-                // NOLINTNEXTLINE(modernize-return-braced-init-list)
+
+
                 return hilti::rt::String(file->GetID());
         }
     }
@@ -1062,48 +1062,48 @@ hilti::rt::String rt::file_begin(const hilti::rt::Optional<hilti::rt::String>& m
     fstate->mime_type =
         mime_type ? hilti::rt::Optional<std::string>(std::string(*mime_type)) : hilti::rt::Optional<std::string>();
 
-    // Feed an empty chunk into the analysis to force creating the file state inside Zeek.
+
     _data_in("", 0, {}, {});
 
     auto file = file_mgr->LookupFile(fstate->fid);
     if ( ! file ) {
-        // Only feed an empty chunk into file analysis to force creating
-        // the file state inside Zeek when the file does not yet exist.
-        //
-        // If the file already exists, calling DataIn() for it can cause side
-        // effects including RemoveFile().
+
+
+
+
+
         _data_in("", 0, {}, {});
         file = file_mgr->LookupFile(fstate->fid);
-        assert(file); // passing in empty data ensures that this is now available
+        assert(file);
     }
 
     if ( auto f = cookie->file ) {
-        // We need to initialize some fa_info fields ourselves that would
-        // normally be inferred from the connection.
 
-        // Set the source to the current file analyzer.
+
+
+
         file->SetSource(file_mgr->GetComponentName(f->analyzer->Tag()));
 
-        // There are some fields inside the new fa_info record that we want to
-        // set, but don't have a Zeek API for. Hence, we need to play some
-        // tricks: we can get to the fa_info value, but read-only; const_cast
-        // comes to our rescue. And then we just write directly into the
-        // record fields.
+
+
+
+
+
         auto rval = file->ToVal()->AsRecordVal();
         auto current = f->analyzer->GetFile()->ToVal()->AsRecordVal();
         rval->Assign(id::fa_file->FieldOffset("parent_id"),
-                     current->GetField("id")); // set to parent
+                     current->GetField("id"));
         rval->Assign(id::fa_file->FieldOffset("conns"),
-                     current->GetField("conns")); // copy from parent
+                     current->GetField("conns"));
         rval->Assign(id::fa_file->FieldOffset("is_orig"),
-                     current->GetField("is_orig")); // copy from parent
+                     current->GetField("is_orig"));
     }
 
-    // Double check everybody agrees on the file ID.
+
     assert(fstate->fid == file->GetID());
 
-    // MSVC complains about an illegal conversion below, so silence the warning from clang-tidy
-    // NOLINTNEXTLINE(modernize-return-braced-init-list)
+
+
     return hilti::rt::String(fstate->fid);
 }
 
@@ -1114,8 +1114,8 @@ void rt::file_set_size(const hilti::rt::integer::safe<uint64_t>& size,
     auto fid_std = fid ? hilti::rt::Optional<std::string>(std::string(*fid)) : hilti::rt::Optional<std::string>();
     auto* fstate = _file_state(cookie, std::move(fid_std));
 
-    // Look up the file directly rather than going through the Manager to avoid
-    // needing to provide tag/conn/is_orig parameters that may not be available.
+
+
     auto* file = file_mgr->LookupFile(fstate->fid);
     if ( ! file )
         throw spicy::rt::ValueUnavailable(
@@ -1149,8 +1149,8 @@ void rt::file_gap(const hilti::rt::integer::safe<uint64_t>& offset, const hilti:
     auto fid_std = fid ? hilti::rt::Optional<std::string>(std::string(*fid)) : hilti::rt::Optional<std::string>();
     auto* fstate = _file_state(cookie, std::move(fid_std));
 
-    // Look up the file directly rather than going through the Manager to avoid
-    // needing to provide tag/conn/is_orig parameters that may not be available.
+
+
     auto* file = file_mgr->LookupFile(fstate->fid);
     if ( ! file )
         throw spicy::rt::ValueUnavailable(
@@ -1266,13 +1266,13 @@ inline void setRecordField(RecordVal* rval, const IntrusivePtr<RecordType>& rtyp
         case TypeInfo::Struct:
         case TypeInfo::Tuple:
         case TypeInfo::Vector: {
-            // This may return a nullptr in cases where the field is to be left unset.
+
             ValPtr zval = rt::detail::to_val(v, rtype->GetFieldType(idx));
 
             if ( v )
                 rval->Assign(idx, zval);
             else {
-                // Field must be &optional or &default.
+
                 if ( auto attrs = rtype->FieldDecl(idx)->attrs;
                      ! attrs ||
                      ! (attrs->Find(zeek::detail::ATTR_DEFAULT) || attrs->Find(zeek::detail::ATTR_OPTIONAL)) )
@@ -1355,7 +1355,7 @@ ValPtr rt::detail::to_val(const hilti::rt::type_info::Value& value, const TypePt
                 auto i = type.enum_->get(value);
 
                 if ( target->GetName() == "transport_proto" ) {
-                    // Special case: map Spicy's `Protocol` to Zeek's `transport_proto`.
+
                     if ( auto ty = std::string_view(type.display); ty != "hilti::Protocol" && ty != "spicy::Protocol" )
                         throw ParameterMismatch(type.display, target);
 
@@ -1369,16 +1369,16 @@ ValPtr rt::detail::to_val(const hilti::rt::type_info::Value& value, const TypePt
                         case hilti::rt::Protocol::ICMP:
                             return id::transport_proto->GetEnumVal(::TransportProto::TRANSPORT_ICMP);
 
-                        case hilti::rt::Protocol::Undef: [[fallthrough]]; // just for readability, make Undef explicit
+                        case hilti::rt::Protocol::Undef: [[fallthrough]];
                         default: return id::transport_proto->GetEnumVal(::TransportProto::TRANSPORT_UNKNOWN);
                     }
 
                     hilti::rt::cannot_be_reached();
                 }
 
-                // Zeek's enum can't be negative, so we swap in max_int for our Undef (-1).
+
                 if ( i.value == std::numeric_limits<int64_t>::max() )
-                    // Can't allow this ...
+
                     throw InvalidValue("enum values with value max_int not supported by Zeek integration");
 
                 zeek_int_t zi = (i.value >= 0 ? i.value : std::numeric_limits<::zeek_int_t>::max());
@@ -1512,7 +1512,7 @@ ValPtr rt::detail::to_val(const hilti::rt::type_info::Value& value, const TypePt
                     if ( idx >= num_fields )
                         throw ParameterMismatch(hilti::rt::fmt("no matching record field for field '%s'", field.name));
 
-                    // Special-case: Lift up anonymous bitfields.
+
                     if ( field.name == "_anon" ) {
                         if ( field.type->tag == TypeInfo::Bitfield ) {
                             size_t j = 0;
@@ -1522,7 +1522,7 @@ ValPtr rt::detail::to_val(const hilti::rt::type_info::Value& value, const TypePt
                             continue;
                         }
 
-                        // There can't be any other anonymous fields.
+
                         auto msg = hilti::rt::fmt("unexpected anonymous field: %s", field.name);
                         reporter->InternalError("%s", msg.c_str());
                     }
@@ -1540,8 +1540,8 @@ ValPtr rt::detail::to_val(const hilti::rt::type_info::Value& value, const TypePt
                     }
                 }
 
-                // We already check above that all Spicy-side fields are mapped so we
-                // can only hit this if there are uninitialized Zeek-side fields left.
+
+
                 if ( idx != num_fields )
                     throw ParameterMismatch(
                         hilti::rt::fmt("missing initialization for field '%s'", rtype->FieldName(idx)));

@@ -1,5 +1,5 @@
-##! Implements Zeek process supervision API and default behavior for its
-##! associated (remote) control events.
+
+
 
 @load base/frameworks/cluster/pubsub
 
@@ -45,9 +45,9 @@ event zeek_init() &priority=10
 	{
 	if ( Supervisor::is_supervisor() && SupervisorControl::enable_listen )
 		{
-		# This may fail, possibly with scheduled retries. Any failures
-		# already get logged by the listen() implementation, so we don't
-		# report additionally.
+
+
+
 		Broker::listen();
 		}
 

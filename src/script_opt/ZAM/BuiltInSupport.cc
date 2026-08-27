@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/ZAM/BuiltInSupport.h"
 
@@ -15,12 +15,12 @@ FixedCatArg::FixedCatArg(TypePtr _t) : t(std::move(_t)) {
 
         case TYPE_INT:
         case TYPE_COUNT:
-            max_size = 20; // sufficient for 64 bits
+            max_size = 20;
             break;
 
         case TYPE_DOUBLE:
         case TYPE_TIME:
-            max_size = 32; // from modp_dtoa2 documentation
+            max_size = 32;
             break;
 
         case TYPE_ENUM: {
@@ -32,15 +32,15 @@ FixedCatArg::FixedCatArg(TypePtr _t) : t(std::move(_t)) {
         }
 
         case TYPE_PORT:
-            max_size = 5 + 1 + 7; // <number> + / + "unknown"
+            max_size = 5 + 1 + 7;
             break;
 
         case TYPE_ADDR:
-            max_size = 39; // for IPv6
+            max_size = 39;
             break;
 
         case TYPE_SUBNET:
-            max_size = 39 + 1 + 3; // for IPv6 + / + <3-digits>
+            max_size = 39 + 1 + 3;
             break;
 
         default: reporter->InternalError("bad type in FixedCatArg constructor");
@@ -77,7 +77,7 @@ void FixedCatArg::RenderInto(const ZVal& z, char*& res, char* res_end) {
             res += chars_output;
 
             if ( util::approx_equal(d, nearbyint(d), 1e-9) && std::isfinite(d) ) {
-                // disambiguate from integer
+
                 *(res++) = '.';
                 *(res++) = '0';
             }
@@ -149,4 +149,4 @@ size_t PatternCatArg::ComputeMaxSize(const ZVal& zv) {
     return n;
 }
 
-} // namespace zeek::detail
+}

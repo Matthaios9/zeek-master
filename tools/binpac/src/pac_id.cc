@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_id.h"
 
@@ -50,7 +50,7 @@ IDRecord::IDRecord(Env* arg_env, const ID* arg_id, IDType arg_id_type)
     : env(arg_env), id(arg_id), id_type(arg_id_type) {
     eval = nullptr;
     evaluated = in_evaluation = false;
-    setfunc = ""; // except for STATE_VAR
+    setfunc = "";
     switch ( id_type ) {
         case MEMBER_VAR:
             rvalue = strfmt("%s()", id->Name());
@@ -180,8 +180,8 @@ void Env::AddID(const ID* id, IDType id_type, Type* data_type) {
         throw ExceptionIDRedefinition(id);
     }
     id_map[id] = new IDRecord(this, id, id_type);
-    // TODO: figure out when data_type must be non-NULL
-    // ASSERT(data_type);
+
+
     SetDataType(id, data_type);
 }
 
@@ -190,7 +190,7 @@ void Env::AddConstID(const ID* id, const int c, Type* type) {
         type = extern_type_int;
     AddID(id, CONST, type);
     SetConstant(id, c);
-    SetEvaluated(id); // a constant is always evaluated
+    SetEvaluated(id);
 }
 
 void Env::AddMacro(const ID* id, Expr* macro) {
@@ -250,7 +250,7 @@ bool Env::Evaluated(const ID* id) const {
     if ( r )
         return r->Evaluated();
     else
-        // Assume undefined variables are already evaluated
+
         return true;
 }
 
@@ -302,7 +302,7 @@ void Env::SetConstant(const ID* id, int constant) { lookup(id, false, true)->Set
 
 bool Env::GetConstant(const ID* id, int* pc) const {
     ASSERT(pc);
-    // lookup without raising exception
+
     IDRecord* r = lookup(id, true, false);
     if ( r )
         return r->GetConstant(pc);
@@ -351,14 +351,14 @@ Env* global_env() {
     if ( ! the_global_env ) {
         the_global_env = new Env(nullptr, nullptr);
 
-        // These two are defined in binpac.h, so we do not need to
-        // generate code for them.
+
+
         the_global_env->AddConstID(bigendian_id, 0);
         the_global_env->AddConstID(littleendian_id, 1);
         the_global_env->AddConstID(unspecified_byteorder_id, -1);
         the_global_env->AddConstID(const_false_id, 0);
         the_global_env->AddConstID(const_true_id, 1);
-        // A hack for ID "this"
+
         the_global_env->AddConstID(this_id, 0);
         the_global_env->AddConstID(null_id, 0, extern_type_nullptr);
 

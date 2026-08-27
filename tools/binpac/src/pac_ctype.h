@@ -1,11 +1,11 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_ctype_h
 #define pac_ctype_h
 
 #include "pac_common.h"
 
-// Represents a C++ type
+
 class CType {
 public:
     CType(const string& name);
@@ -21,4 +21,4 @@ protected:
     string name_;
 };
 
-#endif // pac_ctype_h
+#endif

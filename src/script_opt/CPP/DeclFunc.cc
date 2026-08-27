@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/EventRegistry.h"
 #include "zeek/script_opt/CPP/Compile.h"
@@ -64,11 +64,11 @@ void CPPCompile::CreateFunction(const FuncTypePtr& ft, const ProfileFunc* pf, co
         cast += pt + ", ";
     cast += string("Frame*)");
 
-    // We need to distinguish between hooks and non-hooks that happen
-    // to have matching type signatures.  They'll be equivalent if they
-    // have identical cast's.  To keep them separate, we cheat and
-    // make hook casts different, string-wise, without altering their
-    // semantics.
+
+
+
+
+
     if ( in_hook )
         cast += ' ';
 
@@ -88,11 +88,11 @@ void CPPCompile::CreateFunction(const FuncTypePtr& ft, const ProfileFunc* pf, co
     else {
         Emit("static %s %s(%s);", yt_decl, fname, ParamDecl(ft, pf));
 
-        // Track this function as known to have been compiled.  We don't
-        // track lambda bodies as compiled because they can't be instantiated
-        // directly without also supplying the captures.  In principle we
-        // could make an exception for lambdas that don't take any arguments,
-        // but that seems potentially more confusing than beneficial.
+
+
+
+
+
         compiled_func_to_zeek_func[fname] = pf->ProfiledFunc()->GetName();
     }
 
@@ -136,8 +136,8 @@ void CPPCompile::DeclareSubclass(const FuncTypePtr& ft, const ProfileFunc* pf, c
 
     Emit("public:");
 
-    string addl_args; // captures passed in on construction
-    string inits;     // initializers for corresponding member vars
+    string addl_args;
+    string inits;
 
     if ( lambda_ids ) {
         for ( auto& id : *lambda_ids ) {
@@ -164,9 +164,9 @@ void CPPCompile::DeclareSubclass(const FuncTypePtr& ft, const ProfileFunc* pf, c
     auto loc_info = string("\"") + loc->FileName() + "\", " + Fmt(loc->FirstLine());
     Emit("%s_cl(const char* name%s) : CPPStmt(name, %s)%s { }", fname, addl_args, loc_info, inits);
 
-    // An additional constructor just used to generate place-holder
-    // instances, due to the misdesign that lambdas are identified
-    // by their Func objects rather than their FuncVal objects.
+
+
+
     if ( lambda_ids && ! lambda_ids->empty() )
         Emit("%s_cl(const char* name) : CPPStmt(name, %s) { }", fname, loc_info);
 
@@ -220,14 +220,14 @@ void CPPCompile::DeclareDynCPPStmt() {
 
 void CPPCompile::BuildLambda(const FuncTypePtr& ft, const ProfileFunc* pf, const string& fname, const StmtPtr& body,
                              const LambdaExpr* l) {
-    // Declare the member variables for holding the captures.
+
     for ( auto& id : *lambda_ids ) {
         const auto& name = lambda_names[id];
         auto tn = FullTypeName(id->GetType());
         Emit("%s %s;", tn, name);
     }
 
-    // Generate initialization to create and register the lambda.
+
     auto h = pf->HashVal();
     auto nl = lambda_ids->size();
     bool has_captures = nl > 0;
@@ -235,8 +235,8 @@ void CPPCompile::BuildLambda(const FuncTypePtr& ft, const ProfileFunc* pf, const
     auto gi = make_shared<LambdaRegistrationInfo>(this, l->Name(), ft, fname + "_cl", h, has_captures);
     lambda_reg_info->AddInstance(gi);
 
-    // Generate method to extract the lambda captures from a deserialized
-    // Frame object.
+
+
     Emit("void SetLambdaCaptures(Frame* f) override");
     StartBlock();
     for ( size_t i = 0; i < nl; ++i ) {
@@ -247,7 +247,7 @@ void CPPCompile::BuildLambda(const FuncTypePtr& ft, const ProfileFunc* pf, const
     }
     EndBlock();
 
-    // Generate the method for serializing the captures.
+
     Emit("std::vector<ValPtr> SerializeLambdaCaptures() const override");
     StartBlock();
     Emit("std::vector<ValPtr> vals;");
@@ -259,7 +259,7 @@ void CPPCompile::BuildLambda(const FuncTypePtr& ft, const ProfileFunc* pf, const
     Emit("return vals;");
     EndBlock();
 
-    // Generate the Clone() method.
+
     Emit("CPPStmtPtr Clone() override");
     StartBlock();
     auto arg_clones = GenLambdaClone(l, true);
@@ -291,7 +291,7 @@ string CPPCompile::BindArgs(const FuncTypePtr& ft) {
             res += lambda_names[id] + ", ";
     }
 
-    // Add the final frame argument.
+
     return res + "f";
 }
 
@@ -309,7 +309,7 @@ string CPPCompile::ParamDecl(const FuncTypePtr& ft, const ProfileFunc* pf) {
     for ( auto i = 0U; i < p_types.size(); ++i )
         decl += p_types[i] + " " + p_names[i] + ", ";
 
-    // Add in the declaration of the frame.
+
     return decl + "Frame* f__CPP";
 }
 
@@ -323,25 +323,25 @@ void CPPCompile::GatherParamTypes(vector<string>& p_types, const FuncTypePtr& ft
         auto param_id = FindParam(i, pf);
 
         if ( IsNativeType(t) )
-            // Native types are always pass-by-value.
+
             p_types.emplace_back(tn);
         else {
             if ( param_id && pf->Assignees().contains(param_id) )
-                // We modify the parameter.
+
                 p_types.emplace_back(tn);
             else
-                // Not modified, so pass by const reference.
+
                 p_types.emplace_back(string("const ") + tn + "&");
         }
     }
 
     if ( lambda_ids )
-        // Add the captures as additional parameters.
+
         for ( auto& id : *lambda_ids ) {
             const auto& t = id->GetType();
             auto tn = FullTypeName(t);
 
-            // Allow the captures to be modified.
+
             p_types.emplace_back(string(tn) + "&");
         }
 }
@@ -356,21 +356,21 @@ void CPPCompile::GatherParamNames(vector<string>& p_names, const FuncTypePtr& ft
 
         if ( param_id ) {
             if ( t->Tag() == TYPE_ANY && param_id->GetType()->Tag() != TYPE_ANY )
-                // We'll need to translate the parameter from its current
-                // representation to type "any".
+
+
                 p_names.emplace_back(string("any_param__CPP_") + Fmt(i));
             else
                 p_names.emplace_back(LocalName(param_id));
         }
         else
-            // Parameters that are unused don't wind up in the ProfileFunc.
-            // Rather than dig their name out of the function's declaration,
-            // we explicitly name them to reflect that they're unused.
+
+
+
             p_names.emplace_back(string("unused_param__CPP_") + Fmt(i));
     }
 
     if ( lambda_ids )
-        // Add the captures as additional parameters.
+
         for ( auto& id : *lambda_ids )
             p_names.emplace_back(lambda_names[id]);
 }
@@ -385,4 +385,4 @@ IDPtr CPPCompile::FindParam(int i, const ProfileFunc* pf) {
     return nullptr;
 }
 
-} // namespace zeek::detail
+}

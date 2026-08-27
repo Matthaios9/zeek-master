@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_param_h
 #define pac_param_h
@@ -30,18 +30,18 @@ public:
     void GenCleanUpCode(Output* out, Env* env) override;
 };
 
-// Returns the string with a list of param declarations separated by ','.
+
 string ParamDecls(ParamList* params);
 
 #if 0
-// Generate assignments to parameters, in the form of "%s_ = %s;" % (id, id).
+
 void GenParamAssignments(ParamList *params, Output *out_cc, Env *env);
 
-// Generate public access methods to parameter members.
+
 void GenParamPubDecls(ParamList *params, Output *out_h, Env *env);
 
-// Generate private definitions of parameter members.
+
 void GenParamPrivDecls(ParamList *params, Output *out_h, Env *env);
 #endif
 
-#endif // pac_param_h
+#endif

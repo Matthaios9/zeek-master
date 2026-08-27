@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/input/readers/binary/Binary.h"
 
@@ -90,15 +90,15 @@ bool Binary::DoInit(const ReaderInfo& info, int num_fields, const Field* const* 
         return false;
     }
 
-    // do initialization
+
     fname = info.source;
 
-    // Handle path-prefixing. See similar logic in Ascii::OpenFile().
+
     if ( ! is_absolute_path(fname) && ! path_prefix.empty() ) {
         std::size_t last = path_prefix.find_last_not_of('/');
 
         string path;
-        if ( last == string::npos ) // Nothing but slashes -- weird but ok...
+        if ( last == string::npos )
             path = "/";
         else
             path = path_prefix.substr(0, last + 1);
@@ -116,7 +116,7 @@ bool Binary::DoInit(const ReaderInfo& info, int num_fields, const Field* const* 
     Debug(DBG_INPUT, "Binary reader created, will perform first update");
 #endif
 
-    // after initialization - do update
+
     DoUpdate();
 
 #ifdef DEBUG
@@ -145,8 +145,8 @@ streamsize Binary::GetChunk(char** chunk) {
         return 0;
     }
 
-    // probably faster to just not resize if bytes_read < chunk_size, since
-    // length of valid data is known
+
+
 
     return bytes_read;
 }
@@ -160,7 +160,7 @@ int Binary::UpdateModificationTime() {
     }
 
     if ( sb.st_ino == ino && sb.st_mtime == mtime )
-        // no change
+
         return 0;
 
     mtime = sb.st_mtime;
@@ -168,7 +168,7 @@ int Binary::UpdateModificationTime() {
     return 1;
 }
 
-// read the entire file and send appropriate thingies back to InputMgr
+
 bool Binary::DoUpdate() {
     if ( firstrun )
         firstrun = false;
@@ -177,18 +177,18 @@ bool Binary::DoUpdate() {
         switch ( Info().mode ) {
             case MODE_REREAD: {
                 switch ( UpdateModificationTime() ) {
-                    case -1: return false; // error
-                    case 0: return true;   // no change
-                    case 1: break;         // file changed. reread.
+                    case -1: return false;
+                    case 0: return true;
+                    case 1: break;
                     default: assert(false);
                 }
-                // fallthrough
+
             }
 
             case MODE_MANUAL:
             case MODE_STREAM:
                 if ( Info().mode == MODE_STREAM && in ) {
-                    in->clear(); // remove end of file evil bits
+                    in->clear();
                     break;
                 }
 
@@ -210,7 +210,7 @@ bool Binary::DoUpdate() {
 
         Value** fields = new Value*[1];
 
-        // filter has exactly one text field. convert to it.
+
         Value* val = new Value(TYPE_STRING, true);
         val->val.string_val.data = chunk;
         val->val.string_val.length = size;
@@ -235,7 +235,7 @@ bool Binary::DoUpdate() {
 bool Binary::DoHeartbeat(double network_time, double current_time) {
     switch ( Info().mode ) {
         case MODE_MANUAL:
-            // yay, we do nothing :)
+
             break;
 
         case MODE_REREAD:
@@ -243,8 +243,8 @@ bool Binary::DoHeartbeat(double network_time, double current_time) {
 #ifdef DEBUG
             Debug(DBG_INPUT, "Starting Heartbeat update");
 #endif
-            Update(); // call update and not DoUpdate, because update
-                      // checks disabled.
+            Update();
+
 #ifdef DEBUG
             Debug(DBG_INPUT, "Finished with heartbeat update");
 #endif
@@ -255,4 +255,4 @@ bool Binary::DoHeartbeat(double network_time, double current_time) {
     return true;
 }
 
-} // namespace zeek::input::reader::detail
+}

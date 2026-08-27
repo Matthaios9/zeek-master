@@ -1,4 +1,4 @@
-##! Implements base functionality for SSH analysis. Generates the ssh.log file.
+
 
 @load base/utils/directions-and-hosts
 @load base/protocols/conn/removal-hooks
@@ -6,130 +6,130 @@
 module SSH;
 
 export {
-	## The SSH protocol logging stream identifier.
+
 	redef enum Log::ID += { LOG };
 
-	## Well-known ports for SSH.
+
 	const ports = { 22/tcp } &redef;
 
-	## A default logging policy hook for the stream.
+
 	global log_policy: Log::PolicyHook;
 
-	## The record type which contains the fields of the SSH log.
+
 	type Info: record {
-		## Time when the SSH connection began.
+
 		ts:              time         &log;
-		## Unique ID for the connection.
+
 		uid:             string       &log;
-		## The connection's 4-tuple of endpoint addresses/ports.
+
 		id:              conn_id      &log;
-		## SSH major version (1, 2, or unset). The version can be unset if the
-		## client and server version strings are unset, malformed or incompatible
-		## so no common version can be extracted. If no version can be extracted
-		## even though both client and server versions are set a weird
-		## will be generated.
+
+
+
+
+
 		version:         count        &log &optional;
-		## Authentication result (T=success, F=failure, unset=unknown)
+
 		auth_success:    bool         &log &optional;
-		## The number of authentication attempts we observed. There's always
-		## at least one, since some servers might support no authentication at all.
-		## It's important to note that not all of these are failures, since
-		## some servers require two-factor auth (e.g. password AND pubkey)
+
+
+
+
 		auth_attempts:   count        &log &default=0;
-		## Direction of the connection. If the client was a local host
-		## logging into an external host, this would be OUTBOUND. INBOUND
-		## would be set for the opposite situation.
-		# TODO - handle local-local and remote-remote better.
+
+
+
+
 		direction:       Direction    &log &optional;
-		## The client's version string
+
 		client:          string       &log &optional;
-		## The server's version string
+
 		server:          string       &log &optional;
-		## The encryption algorithm in use
+
 		cipher_alg:      string       &log &optional;
-		## The signing (MAC) algorithm in use
+
 		mac_alg:         string       &log &optional;
-		## The compression algorithm in use
+
 		compression_alg: string       &log &optional;
-		## The key exchange algorithm in use
+
 		kex_alg:         string       &log &optional;
-		## The server host key's algorithm
+
 		host_key_alg:    string       &log &optional;
-		## The server's key fingerprint, in the format that `ssh-keygen -l` would output.
-		## For example, a sha256 fingerprint will look like `SHA256:<fingerprint>`.
+
+
 		host_key_fingerprint: string       &log &optional;
 	};
 
-	## The set of compression algorithms. We can't accurately determine
-	## authentication success or failure when compression is enabled.
+
+
 	option compression_algorithms = set("zlib", "zlib@openssh.com");
 
-	## If true, after detection detach the SSH analyzer from the connection
-	## to prevent continuing to process encrypted traffic. Helps with performance
-	## (especially with large file transfers).
+
+
+
 	option disable_analyzer_after_detection = T;
 
-	## Event that can be handled to access the SSH record as it is sent on
-	## to the logging framework.
+
+
 	global log_ssh: event(rec: Info);
 
-	## SSH finalization hook.  Remaining SSH info may get logged when it's called.
+
 	global finalize_ssh: Conn::RemovalHook;
 }
 
 module GLOBAL;
 export {
-	## This event is generated when an :abbr:`SSH (Secure Shell)`
-	## connection was determined to have had a failed authentication. This
-	## determination is based on packet size analysis, and errs on the
-	## side of caution - that is, if there's any doubt about the
-	## authentication failure, this event is *not* raised.
-	##
-	## This event is only raised once per connection.
-	##
-	## c: The connection over which the :abbr:`SSH (Secure Shell)`
-	##    connection took place.
-	##
-	## .. zeek:see:: ssh_server_version ssh_client_version
-	##    ssh_auth_successful ssh_auth_result ssh_auth_attempted
-	##    ssh_capabilities ssh2_server_host_key ssh1_server_host_key
-	##    ssh_server_host_key ssh_encrypted_packet ssh2_dh_server_params
-	##    ssh2_gss_error ssh2_ecc_key
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	global ssh_auth_failed: event(c: connection);
 
-	## This event is generated when a determination has been made about
-	## the final authentication result of an :abbr:`SSH (Secure Shell)`
-	## connection. This determination is based on packet size analysis,
-	## and errs on the side of caution - that is, if there's any doubt
-	## about the result of the authentication, this event is *not* raised.
-	##
-	## This event is only raised once per connection.
-	##
-	## c: The connection over which the :abbr:`SSH (Secure Shell)`
-	##    connection took place.
-	##
-	## result: True if the authentication was successful, false if not.
-	##
-	## auth_attempts: The number of authentication attempts that were
-	##    observed.
-	##
-	## .. zeek:see:: ssh_server_version ssh_client_version
-	##    ssh_auth_successful ssh_auth_failed ssh_auth_attempted
-	##    ssh_capabilities ssh2_server_host_key ssh1_server_host_key
-	##    ssh_server_host_key ssh_encrypted_packet ssh2_dh_server_params
-	##    ssh2_gss_error ssh2_ecc_key
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	global ssh_auth_result: event(c: connection, result: bool, auth_attempts: count);
 }
 
 module SSH;
 
 redef record Info += {
-	# This connection has been logged (internal use)
+
 	logged:       bool         &default=F;
-	# Store capabilities from the first host for
-	# comparison with the second (internal use)
+
+
 	capabilities: Capabilities &optional;
-	## Analyzer ID
+
 	analyzer_id: count         &optional;
 };
 
@@ -147,12 +147,12 @@ function set_session(c: connection)
 	{
 	if ( ! c?$ssh )
 		{
-		local info: SSH::Info &is_assigned;	# needed for $version
+		local info: SSH::Info &is_assigned;
 		info$ts  = network_time();
 		info$uid = c$uid;
 		info$id  = c$id;
 
-		# If both hosts are local or non-local, we can't reliably set a direction.
+
 		if ( Site::is_local_addr(c$id$orig_h) != Site::is_local_addr(c$id$resp_h) )
 			info$direction = Site::is_local_addr(c$id$orig_h) ? OUTBOUND: INBOUND;
 		c$ssh = info;
@@ -162,12 +162,12 @@ function set_session(c: connection)
 
 function set_version(c: connection)
 	{
-	# We always either set the version field to a concrete value, or unset it.
+
 	delete c$ssh$version;
 
-	# If either the client or server string is unset we cannot compute a
-	# version and return early. We do not raise a weird in this case as we
-	# might arrive here while having only seen one side of the handshake.
+
+
+
 	const has_server = c$ssh?$server && |c$ssh$server| > 0;
 	const has_client = c$ssh?$client && |c$ssh$client| > 0;
 	if ( ! ( has_server && has_client ) )
@@ -177,30 +177,30 @@ function set_version(c: connection)
 		{
 		if ( c$ssh$client[4] == "1" && c$ssh$server[4] == "2" )
 			{
-			# SSH199 vs SSH2 -> 2
+
 			if ( ( |c$ssh$client| > 7 ) && ( c$ssh$client[6] == "9" ) && ( c$ssh$client[7] == "9" ) )
 				c$ssh$version = 2;
-			# SSH1 vs SSH2 -> Undefined
+
 			else
 				Reporter::conn_weird("SSH_version_mismatch", c, fmt("%s vs %s", c$ssh$server, c$ssh$client));
 				return;
 			}
 		else if ( c$ssh$client[4] == "2" && c$ssh$server[4] == "1" )
 			{
-			# SSH2 vs SSH199 -> 2
+
 			if ( ( |c$ssh$server| > 7 ) && ( c$ssh$server[6] == "9" ) && ( c$ssh$server[7] == "9" ) )
 				c$ssh$version = 2;
 			else
-				# SSH2 vs SSH1 -> Undefined
+
 				Reporter::conn_weird("SSH_version_mismatch", c, fmt("%s vs %s", c$ssh$server, c$ssh$client));
 				return;
 			}
 		else if ( c$ssh$client[4] == "1" && c$ssh$server[4] == "1" )
 			{
-			# SSH1 vs SSH199 -> 1
+
 			if ( ( |c$ssh$server| > 7 ) && ( c$ssh$server[6] == "9" ) && ( c$ssh$server[7] == "9" ) )
 				{
-				# SSH199 vs SSH199
+
 				if (( |c$ssh$client| > 7 ) && ( c$ssh$client[6] == "9" ) && ( c$ssh$client[7] == "9" ))
 					c$ssh$version = 2;
 				else
@@ -208,11 +208,11 @@ function set_version(c: connection)
 				}
 			else
 				{
-				# SSH1 vs SSH1 -> 1
+
 				c$ssh$version = 1;
 				}
 			}
-		# SSH2 vs SSH2
+
 		else if (c$ssh$client[4] == "2" && c$ssh$server[4] == "2" )
 			{
 			c$ssh$version = 2;
@@ -243,7 +243,7 @@ event ssh_auth_attempted(c: connection, authenticated: bool) &priority=5
 	if ( !c?$ssh || ( c$ssh?$auth_success && c$ssh$auth_success ) )
 		return;
 
-	# We can't accurately tell for compressed streams
+
 	if ( c$ssh?$compression_alg && ( c$ssh$compression_alg in compression_algorithms ) )
 		return;
 
@@ -264,7 +264,7 @@ event ssh_auth_attempted(c: connection, authenticated: bool) &priority=-5
 		}
 	}
 
-# Determine the negotiated algorithm
+
 function find_alg(client_algorithms: vector of string, server_algorithms: vector of string): string
 	{
 	for ( i in client_algorithms )
@@ -274,14 +274,14 @@ function find_alg(client_algorithms: vector of string, server_algorithms: vector
 	return "Algorithm negotiation failed";
 	}
 
-# This is a simple wrapper around find_alg for cases where client to server and server to client
-# negotiate different algorithms. This is rare, but provided for completeness.
+
+
 function find_bidirectional_alg(client_prefs: Algorithm_Prefs, server_prefs: Algorithm_Prefs): string
 	{
 	local c_to_s = find_alg(client_prefs$client_to_server, server_prefs$client_to_server);
 	local s_to_c = find_alg(client_prefs$server_to_client, server_prefs$server_to_client);
 
-	# Usually these are the same, but if they're not, return the details
+
 	return c_to_s == s_to_c ? c_to_s : fmt("To server: %s, to client: %s", c_to_s, s_to_c);
 	}
 
@@ -318,17 +318,17 @@ hook finalize_ssh(c: connection)
 	if ( c$ssh$logged )
 		return;
 
-	# Do we have enough information to make a determination about auth success?
+
 	if ( c$ssh?$client && c$ssh?$server && c$ssh?$auth_success )
 		{
-		# Successes get logged immediately. To protect against a race condition, we'll double check:
+
 		if ( c$ssh$auth_success )
 			return;
 
-		# Now that we know it's a failure, we'll raise the event.
+
 		event ssh_auth_failed(c);
 		}
-	# If not, we'll just log what we have
+
 	else
 		{
 		c$ssh$logged = T;
@@ -338,7 +338,7 @@ hook finalize_ssh(c: connection)
 
 event ssh_auth_failed(c: connection) &priority=-5
 	{
-	# This should not happen; prevent double-logging just in case
+
 	if ( ! c?$ssh || c$ssh$logged )
 		return;
 

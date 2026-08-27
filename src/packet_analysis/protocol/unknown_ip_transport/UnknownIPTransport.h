@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -27,4 +27,4 @@ protected:
     void DeliverPacket(Connection* c, double t, bool is_orig, int remaining, Packet* pkt) override;
 };
 
-} // namespace zeek::packet_analysis::UnknownIPTransport
+}

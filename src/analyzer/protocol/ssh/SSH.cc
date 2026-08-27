@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/ssh/SSH.h"
 
@@ -39,8 +39,8 @@ void SSH_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
         return;
 
     if ( had_gap )
-        // If only one side had a content gap, we could still try to
-        // deliver data to the other side if the script layer can handle this.
+
+
         return;
 
     if ( interp->get_state(orig) == binpac::SSH::ENCRYPTED ) {
@@ -59,9 +59,9 @@ void SSH_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
     auto encrypted_len = interp->get_encrypted_bytes_in_current_segment();
 
     if ( encrypted_len > 0 )
-        // We must have transitioned into the encrypted state during this
-        // delivery, but also had some portion of the segment be comprised
-        // of encrypted data, so process the encrypted segment length.
+
+
+
         ProcessEncryptedSegment(encrypted_len, orig);
 }
 
@@ -86,25 +86,25 @@ void SSH_Analyzer::ProcessEncrypted(int len, bool orig) {
     if ( orig )
         saw_encrypted_client_data = true;
     else {
-        // If the client hasn't sent any encrypted data yet, but the
-        // server is, just ignore it until seeing encrypted client data.
+
+
         if ( ! saw_encrypted_client_data )
             return;
 
-        // The first thing we see and want to know is the length of
-        // SSH_MSG_SERVICE_REQUEST, which has a fixed (decrypted) size
-        // of 24 bytes (17 for content pad-aligned to 8-byte
-        // boundaries)
+
+
+
+
         if ( ! service_accept_size ) {
             service_accept_size = len;
             return;
         }
 
-        // If our user can authenticate via the "none" method, this
-        // packet will be a SSH_MSG_USERAUTH_SUCCESS, which has a
-        // fixed (decrypted) size of 8 bytes (1 for content
-        // pad-aligned to 8-byte boundaries). relative_len would be
-        // -16.
+
+
+
+
+
         if ( ! userauth_failure_size && (len + 16 == service_accept_size) ) {
             auth_decision_made = true;
             if ( ssh_auth_attempted )
@@ -114,11 +114,11 @@ void SSH_Analyzer::ProcessEncrypted(int len, bool orig) {
             return;
         }
 
-        // Normally, this packet would be a SSH_MSG_USERAUTH_FAILURE
-        // message, with a variable length, depending on the
-        // authentication methods the server supports. If it's too
-        // big, it might contain a pre-auth MOTD/banner, so we'll just
-        // skip it.
+
+
+
+
+
         if ( ! userauth_failure_size ) {
             if ( ! skipped_banner && (len - service_accept_size) > 256 ) {
                 skipped_banner = true;
@@ -128,15 +128,15 @@ void SSH_Analyzer::ProcessEncrypted(int len, bool orig) {
             return;
         }
 
-        // If we've already seen a failure, let's see if this is
-        // another packet of the same size.
+
+
         if ( len == userauth_failure_size ) {
             if ( ssh_auth_attempted )
                 BifEvent::enqueue_ssh_auth_attempted(interp->zeek_analyzer(), interp->zeek_analyzer()->Conn(), false);
             return;
         }
 
-        // ...or a success packet.
+
         if ( len - service_accept_size == -16 ) {
             auth_decision_made = true;
             if ( ssh_auth_attempted )
@@ -148,4 +148,4 @@ void SSH_Analyzer::ProcessEncrypted(int len, bool orig) {
     }
 }
 
-} // namespace zeek::analyzer::ssh
+}

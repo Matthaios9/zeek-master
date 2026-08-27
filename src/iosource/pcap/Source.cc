@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/iosource/pcap/Source.h"
 
@@ -48,7 +48,7 @@ void PcapSource::Close() {
 void PcapSource::OpenLive() {
     char errbuf[PCAP_ERRBUF_SIZE];
 
-    // Determine interface if not specified.
+
     if ( props.path.empty() ) {
         pcap_if_t* devs;
 
@@ -72,20 +72,20 @@ void PcapSource::OpenLive() {
         }
     }
 
-    // Determine network and netmask.
+
     uint32_t net;
     if ( pcap_lookupnet(props.path.c_str(), &net, &props.netmask, errbuf) < 0 ) {
-        // ### The lookup can fail if no address is assigned to
-        // the interface; and libpcap doesn't have any useful notion
-        // of error codes, just error std::strings - how bogus - so we
-        // just kludge around the error :-(.
-        // sprintf(errbuf, "pcap_lookupnet %s", errbuf);
-        // return;
+
+
+
+
+
+
         props.netmask = 0xffffff00;
     }
 
 #ifdef PCAP_NETMASK_UNKNOWN
-    // Defined in libpcap >= 1.1.1
+
     if ( props.netmask == PCAP_NETMASK_UNKNOWN )
         props.netmask = PktSrc::NETMASK_UNKNOWN;
 #endif
@@ -107,14 +107,14 @@ void PcapSource::OpenLive() {
         return;
     }
 
-    // We use the smallest time-out possible to return almost immediately
-    // if no packets are available. (We can't use set_nonblocking() as
-    // it's broken on FreeBSD: even when select() indicates that we can
-    // read something, we may get nothing if the store buffer hasn't
-    // filled up yet.)
-    //
-    // TODO: The comment about FreeBSD is pretty old and may not apply
-    // anymore these days.
+
+
+
+
+
+
+
+
     if ( pcap_set_timeout(pd, 1) ) {
         PcapError("pcap_set_timeout");
         return;
@@ -164,8 +164,8 @@ void PcapSource::OpenOffline() {
             return;
         }
 
-        // Setup file IO buffering with a bufsize_offline_bytes sized
-        // buffer if set, otherwise use what fopen() took as the default.
+
+
         if ( BifConst::Pcap::bufsize_offline_bytes != 0 ) {
             iobuf.resize(BifConst::Pcap::bufsize_offline_bytes);
             if ( util::detail::setvbuf(f, iobuf.data(), _IOFBF, iobuf.size()) != 0 ) {
@@ -176,8 +176,8 @@ void PcapSource::OpenOffline() {
         }
     }
 
-    // pcap_fopen_offline() takes ownership of f on success and
-    // pcap_close() elsewhere should close it, too.
+
+
     pd = pcap_fopen_offline(f, errbuf);
 
     if ( ! pd ) {
@@ -188,10 +188,10 @@ void PcapSource::OpenOffline() {
         return;
     }
 
-    // We don't register the file descriptor if we're in offline mode,
-    // because libpcap's file descriptor for trace files isn't a reliable
-    // way to know whether we actually have data to read.
-    // See https://github.com/the-tcpdump-group/libpcap/issues/870
+
+
+
+
     props.selectable_fd = -1;
 
     props.link_type = pcap_datalink(pd);
@@ -210,26 +210,26 @@ bool PcapSource::ExtractNextPacket(Packet* pkt) {
     int res = pcap_next_ex(pd, &header, &data);
 
     switch ( res ) {
-        case PCAP_ERROR_BREAK: // -2
-            // Exhausted pcap file, no more packets to read.
+        case PCAP_ERROR_BREAK:
+
             assert(! props.is_live);
             Close();
             return false;
-        case PCAP_ERROR: // -1
-            // Error occurred while reading the packet.
+        case PCAP_ERROR:
+
             if ( props.is_live )
                 reporter->Error("failed to read a packet from %s: %s", props.path.data(), pcap_geterr(pd));
             else
                 reporter->FatalError("failed to read a packet from %s: %s", props.path.data(), pcap_geterr(pd));
             return false;
         case 0:
-            // Read from live interface timed out (ok).
+
             return false;
         case 1:
-            // Read a packet without problem.
-            // Although, some libpcaps may claim to have read a packet, but either did
-            // not really read a packet or at least provide no way to access its
-            // contents, so the following check for null-data helps handle those cases.
+
+
+
+
             if ( ! data ) {
                 reporter->Weird("pcap_null_data_packet");
                 return false;
@@ -248,11 +248,11 @@ bool PcapSource::ExtractNextPacket(Packet* pkt) {
     ++stats.received;
     stats.bytes_received += header->len;
 
-    // Some versions of libpcap (myricom) are somewhat broken and will return a duplicate
-    // packet if there are no more packets available. Namely, it returns the exact same
-    // packet structure (including the header) out of the library without reinitializing
-    // any of the values. If we set the header lengths to zero here, we can keep from
-    // processing it a second time.
+
+
+
+
+
     header->len = 0;
     header->caplen = 0;
 
@@ -260,7 +260,7 @@ bool PcapSource::ExtractNextPacket(Packet* pkt) {
 }
 
 void PcapSource::DoneWithPacket() {
-    // Nothing to do.
+
 }
 
 detail::BPF_Program* PcapSource::CompileFilter(const std::string& filter) {
@@ -281,7 +281,7 @@ detail::BPF_Program* PcapSource::CompileFilter(const std::string& filter) {
 
 bool PcapSource::SetFilter(int index) {
     if ( ! pd )
-        return true; // Prevent error message
+        return true;
 
     char errbuf[PCAP_ERRBUF_SIZE];
 
@@ -294,10 +294,10 @@ bool PcapSource::SetFilter(int index) {
     }
 
     if ( LinkType() == DLT_NFLOG ) {
-        // No-op, NFLOG does not support BPF filters.
-        // Raising a warning might be good, but it would also be noisy
-        // since the default scripts will always attempt to compile
-        // and install a default filter
+
+
+
+
     }
     else if ( auto program = code->GetProgram() ) {
         if ( pcap_setfilter(pd, program) < 0 ) {
@@ -309,21 +309,21 @@ bool PcapSource::SetFilter(int index) {
         return false;
 
 #ifndef HAVE_LINUX
-    // Linux doesn't clear counters when resetting filter.
+
     stats.received = stats.dropped = stats.link = stats.bytes_received = 0;
 #endif
 
     return true;
 }
 
-// Given two pcap_stat structures, compute the difference of linked and dropped
-// and add it to the given Stats object.
+
+
 static void update_pktsrc_stats(PktSrc::Stats* stats, const struct pcap_stat* now, const struct pcap_stat* prev) {
     decltype(now->ps_drop) ps_drop_diff = 0;
     decltype(now->ps_recv) ps_recv_diff = 0;
 
-    // This is subtraction of unsigned ints: It's not undefined
-    // and results in modulo arithmetic.
+
+
     ps_recv_diff = now->ps_recv - prev->ps_recv;
     ps_drop_diff = now->ps_drop - prev->ps_drop;
 
@@ -429,9 +429,9 @@ TEST_CASE("pcap source update_pktsrc_stats") {
         now.ps_drop = 3;
 
         update_pktsrc_stats(&stats, &now, &prev);
-        CHECK(stats.link == 4294967306);    // 2**32 - 1 + 11
-        CHECK(stats.dropped == 4294967299); // 2**32 - 2 + 5
+        CHECK(stats.link == 4294967306);
+        CHECK(stats.dropped == 4294967299);
     }
 }
 
-} // namespace zeek::iosource::pcap
+}

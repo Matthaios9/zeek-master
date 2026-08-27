@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/file_analysis/analyzer/hash/Hash.h"
 
@@ -53,4 +53,4 @@ void Hash::Finalize() {
     event_mgr.Enqueue(file_hash, GetFile()->ToVal(), kind, hash->Get());
 }
 
-} // namespace zeek::file_analysis::detail
+}

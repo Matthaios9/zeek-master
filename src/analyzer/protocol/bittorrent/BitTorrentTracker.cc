@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/bittorrent/BitTorrentTracker.h"
 
@@ -126,7 +126,7 @@ void BitTorrentTracker_Analyzer::ServerReply(int len, const u_char* data) {
         return;
 
     if ( res_state == detail::BTT_RES_DONE )
-        // We are done already, i.e. state != 200.
+
         return;
 
     if ( res_buf_len + len > sizeof(res_buf) - 1 ) {
@@ -257,7 +257,7 @@ bool BitTorrentTracker_Analyzer::ParseRequest(char* line) {
             }
 
             if ( auto version_len = re_version.MatchPrefix(url_end); version_len > 0 ) {
-                // For keep_alive, check the last char of the matched string for the HTTP version.
+
                 keep_alive = (url_end[version_len - 1] == '1');
                 *url_end = 0;
             }
@@ -281,7 +281,7 @@ bool BitTorrentTracker_Analyzer::ParseRequest(char* line) {
                 return false;
             }
 
-            *strchr(line, ':') = 0; // this cannot fail - see regex_hdr
+            *strchr(line, ':') = 0;
             RequestHeader(line, line + len_hdr);
         } break;
 
@@ -294,7 +294,7 @@ bool BitTorrentTracker_Analyzer::ParseRequest(char* line) {
             break;
 
         default:
-            // Make the compiler happy.
+
             break;
     }
 
@@ -332,9 +332,9 @@ bool BitTorrentTracker_Analyzer::ParseResponse(char* line) {
     switch ( res_state ) {
         case detail::BTT_RES_STATUS: {
             if ( res_allow_blank_line && ! *line ) {
-                // There may be an empty line after the bencoded
-                // directory, if this is a keep-alive connection.
-                // Ignore it.
+
+
+
                 res_allow_blank_line = false;
                 break;
             }
@@ -374,13 +374,13 @@ bool BitTorrentTracker_Analyzer::ParseResponse(char* line) {
                     return false;
                 }
 
-                *strchr(line, ':') = 0; // this cannot fail - see regex_hdr
+                *strchr(line, ':') = 0;
                 ResponseHeader(line, line + len_hdr);
             }
             break;
 
         default:
-            // Make the compiler happy.
+
             break;
     }
 
@@ -412,14 +412,14 @@ void BitTorrentTracker_Analyzer::ParseHeader(char* name, char* value, bool is_re
 void BitTorrentTracker_Analyzer::ResponseBenc(int name_len, char* name, detail::BTT_BencTypes type, int value_len,
                                               char* value) {
     if ( name_len == 5 && ! strncmp(name, "peers", 5) ) {
-        // The "peers" value is a compact list of 6-byte <IPv4,port>
-        // tuples. Require at least six bytes remaining to avoid an
-        // out-of-bounds read when value_len is not a multiple of six.
+
+
+
         for ( char* end = value + value_len; end - value >= 6; value += 6 ) {
-            // Note, weirdly/unfortunately AddrVal's take
-            // addresses in network order but PortVal's
-            // take ports in host order.  BitTorrent specifies
-            // that both are in network order here.
+
+
+
+
             uint32_t ad = extract_uint32(reinterpret_cast<u_char*>(value));
             uint16_t pt = ntohs((value[4] << 8) | value[5]);
 
@@ -452,13 +452,13 @@ void BitTorrentTracker_Analyzer::ResponseBody() {
             res_state = detail::BTT_RES_DONE;
             break;
 
-        case -1: // parsing failed
-        case -2: // need more data
+        case -1:
+        case -2:
             break;
     }
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+
 #define VIOLATION_IF(expr, msg)                                                                                        \
     {                                                                                                                  \
         if ( expr ) {                                                                                                  \
@@ -485,7 +485,7 @@ int BitTorrentTracker_Analyzer::ResponseParseBenc() {
                             case 1:
                                 benc_raw = res_buf_pos;
                                 benc_raw_type = detail::BENC_TYPE_DIR;
-                                /* fall through */
+
                             default:
                                 VIOLATION_IF(benc_stack.back() == 'd' && ! (benc_count.back() % 2),
                                              "BitTorrentTracker: directory key is not a string "
@@ -503,12 +503,12 @@ int BitTorrentTracker_Analyzer::ResponseParseBenc() {
                                 VIOLATION_IF(1,
                                              "BitTorrentTracker: not a bencoded directory "
                                              "(first char: l)")
-                                /* fall through */
+
 
                             case 1:
                                 benc_raw = res_buf_pos;
                                 benc_raw_type = detail::BENC_TYPE_LIST;
-                                /* fall through */
+
 
                             default:
                                 VIOLATION_IF(benc_stack.back() == 'd' && ! (benc_count.back() % 2),
@@ -540,7 +540,7 @@ int BitTorrentTracker_Analyzer::ResponseParseBenc() {
                         if ( benc_raw_type != detail::BENC_TYPE_NONE )
                             ++benc_raw_len;
 
-                        if ( benc_stack.size() == 2 ) { // coming back to level 1
+                        if ( benc_stack.size() == 2 ) {
                             ResponseBenc(benc_key_len, benc_key, benc_raw_type, benc_raw_len, benc_raw);
                             benc_key = nullptr;
                             benc_key_len = 0;
@@ -553,7 +553,7 @@ int BitTorrentTracker_Analyzer::ResponseParseBenc() {
                         benc_count.pop_back();
 
                         if ( benc_stack.empty() ) {
-                            // benc parsing successful
+
                             ++res_buf_pos;
                             return 0;
                         }
@@ -696,7 +696,7 @@ int BitTorrentTracker_Analyzer::ResponseParseBenc() {
         }
     }
 
-    return -2; // need more data
+    return -2;
 }
 
 void BitTorrentTracker_Analyzer::EmitResponse() {
@@ -712,4 +712,4 @@ void BitTorrentTracker_Analyzer::EmitResponse() {
     res_val_benc = nullptr;
 }
 
-} // namespace zeek::analyzer::bittorrent
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/finger/legacy/Finger.h"
 
@@ -25,7 +25,7 @@ void Finger_Analyzer::Done() {
         if ( (! did_deliver || content_line_orig->HasPartialLine()) &&
              (TCP()->OrigState() == analyzer::tcp::TCP_ENDPOINT_CLOSED ||
               TCP()->OrigPrevState() == analyzer::tcp::TCP_ENDPOINT_CLOSED) )
-            // ### should include the partial text
+
             Weird("partial_finger_request");
 }
 
@@ -42,13 +42,13 @@ void Finger_Analyzer::DeliverStream(int length, const u_char* data, bool is_orig
 
         line = util::skip_whitespace(line, end_of_line);
 
-        // Check for /W.
+
         int long_cnt = (line + 2 <= end_of_line && line[0] == '/' && toupper(line[1]) == 'W');
         if ( long_cnt )
             line = util::skip_whitespace(line + 2, end_of_line);
 
         assert(line <= end_of_line);
-        size_t n = end_of_line >= line ? end_of_line - line : 0; // just to be sure if assertions aren't on.
+        size_t n = end_of_line >= line ? end_of_line - line : 0;
         const char* at = reinterpret_cast<const char*>(memchr(line, '@', n));
         const char* host = nullptr;
         if ( ! at )
@@ -74,4 +74,4 @@ void Finger_Analyzer::DeliverStream(int length, const u_char* data, bool is_orig
     }
 }
 
-} // namespace zeek::analyzer::finger
+}

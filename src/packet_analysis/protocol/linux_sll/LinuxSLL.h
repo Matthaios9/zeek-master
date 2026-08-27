@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -16,8 +16,8 @@ public:
     static zeek::packet_analysis::AnalyzerPtr Instantiate() { return std::make_shared<LinuxSLLAnalyzer>(); }
 
 private:
-    // Structure layout is based on https://www.tcpdump.org/linktypes/LINKTYPE_LINUX_SLL.html
-    // Use #pragma pack for cross-compiler support (MSVC ignores __attribute__((packed))).
+
+
 #pragma pack(push, 1)
     struct SLLHeader {
         uint16_t packet_type;
@@ -29,4 +29,4 @@ private:
 #pragma pack(pop)
 };
 
-} // namespace zeek::packet_analysis::LinuxSLL
+}

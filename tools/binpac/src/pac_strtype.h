@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_strtype_h
 #define pac_strtype_h
@@ -7,7 +7,7 @@
 
 #include "pac_type.h"
 
-// TODO: question: shall we merge it with ArrayType?
+
 class StringType : public Type {
 public:
     enum StringTypeEnum : uint8_t { CSTR, REGEX, ANYSTR };
@@ -41,11 +41,11 @@ public:
 protected:
     void init_type();
 
-    // Generate computation of size of the string and returns the string
-    // representing a constant integer or name of the length variable.
+
+
     string GenStringSize(Output* out_cc, Env* env, const DataPtr& data);
 
-    // Generate a string mismatch exception
+
     void GenStringMismatch(Output* out_cc, Env* env, const DataPtr& data, const string& pattern);
 
     void DoGenParseCode(Output* out, Env* env, const DataPtr& data, int flags) override;
@@ -58,7 +58,7 @@ protected:
 
     Type* DoClone() const override;
 
-    // TODO: insensitive towards byte order till we support unicode
+
     bool ByteOrderSensitive() const override { return false; }
 
 protected:
@@ -81,4 +81,4 @@ private:
     static const char* kConstStringTypeName;
 };
 
-#endif // pac_strtype_h
+#endif

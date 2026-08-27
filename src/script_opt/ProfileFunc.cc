@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/ProfileFunc.h"
 
@@ -12,8 +12,8 @@
 
 namespace zeek::detail {
 
-// Computes the profiling hash of a Obj based on its (deterministic)
-// description.
+
+
 p_hash_type p_hash(const Obj* o) {
     ODesc d;
     d.SetDeterminism(true);
@@ -42,11 +42,11 @@ ProfileFunc::ProfileFunc(const Func* func, const StmtPtr& body) {
     TrackType(profiled_func_t);
     body->Traverse(this);
 
-    // Examine the locals and identify the parameters based on their offsets
-    // (being careful not to be fooled by captures that incidentally have low
-    // offsets). This approach allows us to accommodate function definitions
-    // that use different parameter names than appear in the original
-    // declaration.
+
+
+
+
+
     num_params = profiled_func_t->Params()->NumFields();
 
     for ( const auto& l : locals ) {
@@ -90,8 +90,8 @@ ProfileFunc::ProfileFunc(const Expr* e) {
     }
 
     else
-        // We don't have a function type, so do the traversal
-        // directly.
+
+
         e->Traverse(this);
 }
 
@@ -114,9 +114,9 @@ TraversalCode ProfileFunc::PreStmt(const Stmt* s) {
                     CheckRecordConstructor(t);
             }
 
-            // Don't traverse further into the statement, since we
-            // don't want to view the identifiers as locals unless
-            // they're also used elsewhere.
+
+
+
             return TC_ABORTSTMT;
 
         case STMT_WHEN: {
@@ -142,13 +142,13 @@ TraversalCode ProfileFunc::PreStmt(const Stmt* s) {
         } break;
 
         case STMT_SWITCH: {
-            // If this is a type-case switch statement, then find the
-            // identifiers created so we can add them to our list of
-            // locals.  Ideally this wouldn't be necessary since *surely*
-            // if one bothers to define such an identifier then it'll be
-            // subsequently used, and we'll pick up the local that way ...
-            // but if for some reason it's not, then we would have an
-            // incomplete list of locals that need to be tracked.
+
+
+
+
+
+
+
 
             auto sw = s->AsSwitchStmt();
             bool is_type_switch = false;
@@ -157,9 +157,9 @@ TraversalCode ProfileFunc::PreStmt(const Stmt* s) {
                 auto idl = c->TypeCases();
                 if ( idl ) {
                     for ( const auto& id : *idl )
-                        // Make sure it's not a placeholder
-                        // identifier, used when there's
-                        // no explicit one.
+
+
+
                         if ( id->Name() )
                             locals.insert(id);
 
@@ -193,9 +193,9 @@ TraversalCode ProfileFunc::PreExpr(const Expr* e) {
 
             TrackID(id);
 
-            // Turns out that NameExpr's can be constructed using a
-            // different Type* than that of the identifier itself,
-            // so be sure we track the latter too.
+
+
+
             TrackType(id->GetType());
 
             if ( id->IsGlobal() ) {
@@ -235,9 +235,9 @@ TraversalCode ProfileFunc::PreExpr(const Expr* e) {
             bool is_assign = e->Tag() == EXPR_ASSIGN;
 
             if ( is_assign ) {
-                // Check for this being an assignment to a function (as
-                // opposed to a call). If so, then the function can be
-                // used indirectly.
+
+
+
                 auto rhs = e->GetOp2();
                 if ( rhs->Tag() == EXPR_NAME ) {
                     auto& rhs_id = rhs->AsNameExpr()->IdPtr();
@@ -251,8 +251,8 @@ TraversalCode ProfileFunc::PreExpr(const Expr* e) {
                 lhs = lhs->GetOp1();
 
             else if ( is_assign )
-                // This isn't a direct assignment, but instead an overloaded
-                // use of "=" such as in a table constructor.
+
+
                 break;
 
             auto lhs_t = lhs->GetType();
@@ -266,8 +266,8 @@ TraversalCode ProfileFunc::PreExpr(const Expr* e) {
                         auto a_e = static_cast<const AssignExpr*>(e);
                         auto& av = a_e->AssignVal();
                         if ( av )
-                            // This is a funky "local" assignment
-                            // inside a when clause.
+
+
                             when_locals.insert(id);
                     }
                     else if ( IsAggr(lhs_t->Tag()) )
@@ -278,21 +278,21 @@ TraversalCode ProfileFunc::PreExpr(const Expr* e) {
                     auto lhs_aggr = lhs->GetOp1();
                     auto lhs_aggr_t = lhs_aggr->GetType();
 
-                    // Determine which aggregate is being modified.  For an
-                    // assignment "a[b] = aggr", it's not a[b]'s type but
-                    // rather a's type. However, for any of the others,
-                    // e.g. "a[b] -= aggr" it is a[b]'s type.
+
+
+
+
                     if ( is_assign )
                         aggr_mods.insert(lhs_aggr_t.get());
                     else
                         aggr_mods.insert(lhs_t.get());
 
                     if ( lhs_aggr_t->Tag() == TYPE_TABLE ) {
-                        // We don't want the default recursion into the
-                        // expression's LHS because that will treat this
-                        // table modification as a reference instead. So
-                        // do it manually. Given that, we need to do the
-                        // expression's RHS manually too.
+
+
+
+
+
                         lhs->GetOp1()->Traverse(this);
                         lhs->GetOp2()->Traverse(this);
 
@@ -345,9 +345,9 @@ TraversalCode ProfileFunc::PreExpr(const Expr* e) {
             else
                 does_indirect_calls = true;
 
-            // Check for whether any of the arguments is a bare function.
-            // If so, then note that that function may be used indirectly,
-            // unless the function being called is known to be idempotent.
+
+
+
             if ( does_indirect_calls || ! is_idempotent(func->Name()) ) {
                 for ( auto& arg : args->Exprs() )
                     if ( arg->Tag() == EXPR_NAME ) {
@@ -359,8 +359,8 @@ TraversalCode ProfileFunc::PreExpr(const Expr* e) {
             }
 
             if ( does_indirect_calls )
-                // We waited on doing this until after checking for
-                // indirect functions.
+
+
                 return TC_CONTINUE;
 
             all_globals.insert(func);
@@ -374,32 +374,32 @@ TraversalCode ProfileFunc::PreExpr(const Expr* e) {
                     script_calls.insert(sf);
                 }
 
-                else { // Track the BiF.
+                else {
                     BiF_globals.insert(func);
                     if ( obj_matches_opt_files(e) != AnalyzeDecision::SHOULD_NOT )
-                        // We're going to call it.
+
                         called_BiF_globals.insert(func);
                 }
             }
             else {
-                // We could complain, but for now we don't, because
-                // if we're invoked prior to full Zeek initialization,
-                // the value might indeed not there yet.
-                // printf("no function value for global %s\n", func->Name());
+
+
+
+
             }
 
-            // Recurse into the arguments.
+
             args->Traverse(this);
 
-            // Do the following explicitly, since we won't be recursing
-            // into the LHS global.
 
-            // Note that the type of the expression and the type of the
-            // function can actually be *different* due to the NameExpr
-            // being constructed based on a forward reference and then
-            // the global getting a different (constructed) type when
-            // the function is actually declared.  Geez.  So hedge our
-            // bets.
+
+
+
+
+
+
+
+
             TrackType(n->GetType());
             TrackType(func->GetType());
 
@@ -423,9 +423,9 @@ TraversalCode ProfileFunc::PreExpr(const Expr* e) {
                 TrackID(i);
             }
 
-            // In general, we don't want to recurse into the body.
-            // However, we still want to *profile* it so we can
-            // identify calls within it.
+
+
+
             auto pf = std::make_shared<ProfileFunc>(l->Ingredients()->Body().get());
             script_calls.insert(pf->ScriptCalls().begin(), pf->ScriptCalls().end());
 
@@ -452,14 +452,14 @@ TraversalCode ProfileFunc::PreExpr(const Expr* e) {
         } break;
 
         case EXPR_RECORD_COERCE:
-            // This effectively does a record construction of the target
-            // type, so check that.
+
+
             CheckRecordConstructor(e->GetType());
             break;
 
         case EXPR_TABLE_COERCE: {
-            // This is written without casting so it can work with other
-            // types if needed.
+
+
             auto res_type = e->GetType().get();
             auto orig_type = e->GetOp1()->GetType().get();
             if ( ! type_aliases.contains(res_type) )
@@ -489,14 +489,14 @@ TraversalCode ProfileFunc::PreID(const ID* id_raw) {
                 events.insert(id->Name());
     }
 
-    // There's no need for any further analysis of this ID.
+
     return TC_ABORTSTMT;
 }
 
 TraversalCode ProfileFunc::PreType(const Type* t) {
     TrackType(t);
 
-    // There's no need for any further analysis of this type.
+
     return TC_ABORTSTMT;
 }
 
@@ -507,7 +507,7 @@ void ProfileFunc::TrackType(const Type* t) {
     auto [it, inserted] = types.insert(t);
 
     if ( ! inserted )
-        // We've already tracked it.
+
         return;
 
     ordered_types.push_back(t);
@@ -520,7 +520,7 @@ void ProfileFunc::TrackID(const IDPtr id) {
     auto [it, inserted] = ids.insert(id);
 
     if ( ! inserted )
-        // Already tracked.
+
         return;
 
     if ( id->IsGlobal() ) {
@@ -547,11 +547,11 @@ void ProfileFunc::CheckRecordConstructor(TypePtr t) {
     for ( auto td : *rt->Types() ) {
         auto attrs = td->attrs.get();
         if ( attrs && ! attrs->GetAttrs().empty() ) {
-            // In principle we could figure out whether this particular
-            // constructor happens to explicitly specify &default fields, and
-            // not include those attributes if it does since they won't come
-            // into play. However that seems like added complexity for almost
-            // surely no ultimate gain.
+
+
+
+
+
             constructor_attrs[attrs] = rt;
 
             if ( ! rec_constructor_attrs.contains(rt.get()) )
@@ -573,11 +573,11 @@ ProfileFuncs::ProfileFuncs(std::vector<FuncInfo>& funcs, is_compilable_pred pred
         else if ( pred )
             f.SetSkip(true);
 
-        // Track the profile even if we're not compiling the function, since
-        // the AST optimizer will still need it to reason about function-call
-        // side effects.
 
-        // Propagate previous hash if requested.
+
+
+
+
         auto prev_pf = f.Profile();
         if ( ! compute_func_hashes && prev_pf && prev_pf->HasHashVal() )
             pf->SetHashVal(prev_pf->HashVal());
@@ -586,28 +586,28 @@ ProfileFuncs::ProfileFuncs(std::vector<FuncInfo>& funcs, is_compilable_pred pred
         func_profs[f.Func()] = f.ProfilePtr();
     }
 
-    // We now have the main (starting) types used by all of the
-    // functions.  Recursively compute their hashes.
+
+
     ComputeTypeHashes(main_types);
 
     do {
-        // Computing the hashes can have marked expressions (seen in
-        // record attributes) for further analysis.  Likewise, when
-        // doing the profile merges above we may have noted lambda
-        // expressions.  Analyze these, and iteratively any further
-        // expressions that the analysis uncovers.
+
+
+
+
+
         DrainPendingExprs();
 
-        // We now have all the information we need to form definitive,
-        // deterministic hashes.
+
+
         ComputeBodyHashes(funcs);
 
-        // Computing those hashes could have led to traversals that
-        // create more pending expressions to analyze.
+
+
     } while ( ! pending_exprs.empty() );
 
-    // Now that we have everything profiled, we can proceed to analyses
-    // that require full global information.
+
+
     ComputeSideEffects();
 }
 
@@ -636,10 +636,10 @@ void ProfileFuncs::ProfileLambda(const LambdaExpr* l) {
 bool ProfileFuncs::IsTableWithDefaultAggr(const Type* t) {
     auto analy = tbl_has_aggr_default.find(t);
     if ( analy != tbl_has_aggr_default.end() )
-        // We already have the answer.
+
         return analy->second;
 
-    // See whether an alias for the type has already been resolved.
+
     if ( t->AsTableType()->Yield() ) {
         for ( auto& at : tbl_has_aggr_default )
             if ( same_type(at.first, t) ) {
@@ -676,7 +676,7 @@ bool ProfileFuncs::GetCallSideEffects(const NameExpr* n, IDSet& non_local_ids, T
     auto fv = fid->GetVal();
 
     if ( ! fv || ! fid->IsConst() ) {
-        // The value is unavailable (likely a bug), or might change at run-time.
+
         is_unknown = true;
         return true;
     }
@@ -828,8 +828,8 @@ void ProfileFuncs::TraverseValue(const ValPtr& v) {
 
 void ProfileFuncs::DrainPendingExprs() {
     while ( ! pending_exprs.empty() ) {
-        // Copy the pending expressions so we can loop over them
-        // while accruing additions.
+
+
         auto pe = pending_exprs;
         pending_exprs.clear();
 
@@ -839,14 +839,14 @@ void ProfileFuncs::DrainPendingExprs() {
             expr_profs[e] = pf;
             MergeInProfile(pf.get());
 
-            // It's important to compute the hashes over the
-            // ordered types rather than the unordered.  If type
-            // T1 depends on a recursive type T2, then T1's hash
-            // will vary with depending on whether we arrive at
-            // T1 via an in-progress traversal of T2 (in which
-            // case T1 will see the "stub" in-progress hash for
-            // T2), or via a separate type T3 (in which case it
-            // will see the full hash).
+
+
+
+
+
+
+
+
             ComputeTypeHashes(pf->OrderedTypes());
         }
     }
@@ -887,10 +887,10 @@ void ProfileFuncs::AnalyzeLambdaProfile(const LambdaExpr* l) {
 void ProfileFuncs::ComputeProfileHash(const std::shared_ptr<ProfileFunc>& pf) {
     p_hash_type h = 0;
 
-    // We add markers between each class of hash component, to
-    // prevent collisions due to elements with simple hashes
-    // (such as Stmt's or Expr's that are only represented by
-    // the hash of their tag).
+
+
+
+
     h = merge_p_hashes(h, p_hash("params"));
     h = merge_p_hashes(h, HashType(pf->ProfiledFuncType()));
 
@@ -932,7 +932,7 @@ p_hash_type ProfileFuncs::HashType(const Type* t) {
     auto it = type_hashes.find(t);
 
     if ( it != type_hashes.end() )
-        // We've already done this Type*.
+
         return it->second;
 
     auto& tn = t->GetName();
@@ -940,8 +940,8 @@ p_hash_type ProfileFuncs::HashType(const Type* t) {
         auto seen_it = seen_type_names.find(tn);
 
         if ( seen_it != seen_type_names.end() ) {
-            // We've already done a type with the same name, even
-            // though with a different Type*.  Reuse its results.
+
+
             auto seen_t = seen_it->second;
             auto h = type_hashes[seen_t];
 
@@ -956,13 +956,13 @@ p_hash_type ProfileFuncs::HashType(const Type* t) {
     if ( ! tn.empty() )
         h = merge_p_hashes(h, p_hash(tn));
 
-    // Enter an initial value for this type's hash.  We'll update it
-    // at the end, but having it here first will prevent recursive
-    // records from leading to infinite recursion as we traverse them.
-    // It's okay that the initial value is degenerate, because if we access
-    // it during the traversal that will only happen due to a recursive
-    // type, in which case the other elements of that type will serve
-    // to differentiate its hash.
+
+
+
+
+
+
+
     type_hashes[t] = h;
 
     switch ( t->Tag() ) {
@@ -998,8 +998,8 @@ p_hash_type ProfileFuncs::HashType(const Type* t) {
                 h = merge_p_hashes(h, p_hash(f->id));
                 h = merge_p_hashes(h, type_h);
 
-                // We don't hash the field name, as in some contexts
-                // those are ignored.
+
+
 
                 if ( f->attrs ) {
                     h = merge_p_hashes(h, HashAttrs(f->attrs));
@@ -1057,7 +1057,7 @@ p_hash_type ProfileFuncs::HashType(const Type* t) {
 
     auto [rep_it, rep_inserted] = type_hash_reps.emplace(h, t);
 
-    if ( rep_inserted ) { // No previous rep, so use this Type* for that.
+    if ( rep_inserted ) {
         type_to_rep[t] = t;
         rep_types.push_back(t);
     }
@@ -1071,9 +1071,9 @@ p_hash_type ProfileFuncs::HashType(const Type* t) {
 }
 
 p_hash_type ProfileFuncs::HashAttrs(const AttributesPtr& Attrs) {
-    // It's tempting to just use p_hash, but that won't work
-    // if the attributes wind up with extensible records in their
-    // descriptions, if we're not doing full record hashes.
+
+
+
     auto attrs = Attrs->GetAttrs();
     p_hash_type h = 0;
 
@@ -1081,9 +1081,9 @@ p_hash_type ProfileFuncs::HashAttrs(const AttributesPtr& Attrs) {
         h = merge_p_hashes(h, p_hash(a->Tag()));
         auto e = a->GetExpr();
 
-        // We don't try to hash an associated expression, since those
-        // can vary in structure due to compilation of elements.  We
-        // do though enforce consistency for their types.
+
+
+
         if ( e ) {
             h = merge_p_hashes(h, HashType(e->GetType()));
             h = merge_p_hashes(h, p_hash(e.get()));
@@ -1106,9 +1106,9 @@ void ProfileFuncs::AnalyzeAttrs(const Attributes* attrs, const Type* t) {
         if ( prev_ea == expr_attrs.end() )
             expr_attrs[a.get()] = {t};
         else {
-            // Add it if new. This is rare, but can arise due to attributes
-            // being shared for example from initializers with a variable
-            // itself.
+
+
+
             bool found = false;
             for ( auto ea : prev_ea->second )
                 if ( ea == t ) {
@@ -1126,19 +1126,19 @@ void ProfileFuncs::AnalyzeAttrs(const Attributes* attrs, const Type* t) {
 }
 
 void ProfileFuncs::ComputeSideEffects() {
-    // Computing side effects is an iterative process, because whether
-    // a given expression has a side effect can depend on whether it
-    // includes accesses to types that themselves have side effects.
 
-    // Step one: assemble the candidate pool of attributes to assess.
+
+
+
+
     for ( auto& ea : expr_attrs ) {
-        // Is this an attribute that can be triggered by
-        // statement/expression execution?
+
+
         auto a = ea.first;
         auto at = a->Tag();
         if ( at == ATTR_DEFAULT || at == ATTR_DEFAULT_INSERT || at == ATTR_ON_CHANGE ) {
             if ( at == ATTR_DEFAULT ) {
-                // Look for tables with &default's returning aggregate values.
+
                 for ( auto t : ea.second ) {
                     if ( t->Tag() != TYPE_TABLE )
                         continue;
@@ -1153,19 +1153,19 @@ void ProfileFuncs::ComputeSideEffects() {
                 }
             }
 
-            // Weed out very-common-and-completely-safe expressions.
+
             if ( ! DefinitelyHasNoSideEffects(a->GetExpr()) )
                 candidates.insert(a);
         }
     }
 
-    // At this point, very often there are no candidates and we're done.
-    // However, if we have candidates then we need to process them in an
-    // iterative fashion because it's possible that the side effects of
-    // some of them depend on the side effects of other candidates.
+
+
+
+
 
     while ( ! candidates.empty() ) {
-        // For which attributes have we resolved their status.
+
         AttrSet made_decision;
 
         for ( auto c : candidates ) {
@@ -1173,34 +1173,34 @@ void ProfileFuncs::ComputeSideEffects() {
             TypeSet aggrs;
             bool is_unknown = false;
 
-            // Track the candidate we're currently analyzing, since sometimes
-            // it's self-referential and we need to identify that fact.
+
+
             curr_candidate = c;
 
             if ( ! AssessSideEffects(c->GetExpr(), non_local_ids, aggrs, is_unknown) )
-                // Can't make a decision yet.
+
                 continue;
 
-            // We've resolved this candidate.
+
             made_decision.insert(c);
             SetSideEffects(c, non_local_ids, aggrs, is_unknown);
         }
 
         if ( made_decision.empty() ) {
-            // We weren't able to make forward progress. This happens when
-            // the pending candidates are mutually dependent. While in
-            // principle we could scope the worst-case resolution of their
-            // side effects, this is such an unlikely situation that we just
-            // mark them all as unknown.
 
-            // We keep these empty.
+
+
+
+
+
+
             IDSet non_local_ids;
             TypeSet aggrs;
 
             for ( auto c : candidates )
                 SetSideEffects(c, non_local_ids, aggrs, true);
 
-            // We're now all done.
+
             break;
         }
 
@@ -1245,12 +1245,12 @@ void ProfileFuncs::SetSideEffects(const Attr* a, IDSet& non_local_ids, TypeSet& 
         at = SideEffectsOp::READ;
 
     if ( non_local_ids.empty() && aggrs.empty() && ! is_unknown )
-        // Definitely no side effects.
+
         seo_vec.push_back(std::make_shared<SideEffectsOp>());
     else {
         attrs_with_side_effects.insert(a);
 
-        // Set side effects for all of the types associated with this attribute.
+
         for ( auto ea_t : expr_attrs[a] ) {
             auto seo = std::make_shared<SideEffectsOp>(at, ea_t);
             seo->AddModNonGlobal(non_local_ids);
@@ -1273,9 +1273,9 @@ void ProfileFuncs::SetSideEffects(const Attr* a, IDSet& non_local_ids, TypeSet& 
 AttrVec ProfileFuncs::AssociatedAttrs(const Type* t) {
     AttrVec assoc_attrs;
 
-    // Search both the pending candidates and the ones already identified.
-    // You might think we'd just do the latter, but we want to include the
-    // pending ones, too, so we can identify not-yet-resolved dependencies.
+
+
+
     FindAssociatedAttrs(candidates, t, assoc_attrs);
     FindAssociatedAttrs(attrs_with_side_effects, t, assoc_attrs);
 
@@ -1301,8 +1301,8 @@ void ProfileFuncs::FindAssociatedAttrs(const AttrSet& attrs, const Type* t, Attr
 
 bool ProfileFuncs::AssessSideEffects(const ExprPtr& e, IDSet& non_local_ids, TypeSet& aggrs, bool& is_unknown) {
     if ( e->Tag() == EXPR_NAME && e->GetType()->Tag() == TYPE_FUNC )
-        // This occurs when the expression is itself a function name, and
-        // in an attribute context indicates an implicit call.
+
+
         return GetCallSideEffects(e->AsNameExpr(), non_local_ids, aggrs, is_unknown);
 
     ASSERT(expr_profs.contains(e.get()));
@@ -1330,7 +1330,7 @@ bool ProfileFuncs::AssessSideEffects(const ProfileFunc* pf, IDSet& non_local_ids
 
     for ( auto& r : pf->RecordConstructorAttrs() )
         if ( ! AssessAggrEffects(SideEffectsOp::CONSTRUCTION, r.first, nla, mod_aggrs, is_unknown) )
-            // Not enough information yet to know all of the side effects.
+
             return false;
 
     for ( auto& tr : pf->TableRefs() )
@@ -1346,20 +1346,20 @@ bool ProfileFuncs::AssessSideEffects(const ProfileFunc* pf, IDSet& non_local_ids
 
     for ( auto& f : pf->ScriptCalls() ) {
         if ( f->Flavor() != FUNC_FLAVOR_FUNCTION ) {
-            // A hook (since events can't be called) - not something
-            // to analyze further.
+
+
             is_unknown = true;
             return true;
         }
 
         auto pff = func_profs[f];
         if ( active_func_profiles.contains(pff) )
-            // We're already processing this function and arrived here via
-            // recursion. Skip further analysis here, we'll do it instead
-            // for the original instance.
+
+
+
             continue;
 
-        // Track this analysis so we can detect recursion.
+
         active_func_profiles.insert(pff);
         auto a = AssessSideEffects(pff.get(), nla, mod_aggrs, is_unknown);
         active_func_profiles.erase(pff);
@@ -1380,17 +1380,17 @@ bool ProfileFuncs::AssessAggrEffects(SideEffectsOp::AccessType access, const Typ
 
     for ( auto a : assoc_attrs ) {
         if ( a == curr_candidate )
-            // Self-reference - don't treat the absence of any determination
-            // for it as meaning we can't resolve the candidate.
+
+
             continue;
 
-        // See whether we've already determined the side affects associated
-        // with this attribute.
+
+
         auto ase = aggr_side_effects.find(a);
         if ( ase == aggr_side_effects.end() ) {
             ase = record_constr_with_side_effects.find(a);
             if ( ase == record_constr_with_side_effects.end() )
-                // Haven't resolved it yet, so can't resolve current candidate.
+
                 return false;
         }
 
@@ -1406,14 +1406,14 @@ bool ProfileFuncs::AssessAggrEffects(SideEffectsOp::AccessType access, const Typ
 
 bool ProfileFuncs::AssessSideEffects(const SideEffectsOp* se, SideEffectsOp::AccessType access, const Type* t,
                                      IDSet& non_local_ids, TypeSet& aggrs) const {
-    // First determine whether the SideEffectsOp applies.
+
     if ( se->GetAccessType() != access )
         return false;
 
     if ( ! same_type(se->GetType(), t) )
         return false;
 
-    // It applies, return its effects.
+
     if ( se->HasUnknownChanges() )
         return true;
 
@@ -1431,7 +1431,7 @@ std::shared_ptr<SideEffectsOp> ProfileFuncs::GetCallSideEffects(const ScriptFunc
 
     auto sf_se = func_side_effects.find(sf);
     if ( sf_se != func_side_effects.end() )
-        // Return cached result.
+
         return sf_se->second;
 
     bool is_unknown = false;
@@ -1441,7 +1441,7 @@ std::shared_ptr<SideEffectsOp> ProfileFuncs::GetCallSideEffects(const ScriptFunc
     ASSERT(func_profs.contains(sf));
     auto pf = func_profs[sf];
     if ( ! AssessSideEffects(pf.get(), nla, mod_aggrs, is_unknown) )
-        // Can't figure it out yet.
+
         return nullptr;
 
     auto seo = std::make_shared<SideEffectsOp>(SideEffectsOp::CALL);
@@ -1456,7 +1456,7 @@ std::shared_ptr<SideEffectsOp> ProfileFuncs::GetCallSideEffects(const ScriptFunc
     return seo;
 }
 
-// We associate modules with filenames, and take the first one we see.
+
 static std::unordered_map<std::string, std::string> filename_module;
 
 void switch_to_module(const char* module_name) {
@@ -1468,18 +1468,18 @@ void switch_to_module(const char* module_name) {
 std::string func_name_at_loc(std::string fname, const Location* loc) {
     auto find_module = filename_module.find(loc->FileName());
     if ( find_module == filename_module.end() )
-        // No associated module.
+
         return fname;
 
     auto& module = find_module->second;
     if ( module.empty() || module == "GLOBAL" )
-        // Trivial associated module.
+
         return fname;
 
     auto mod_prefix = module + "::";
 
     if ( fname.starts_with(mod_prefix) )
-        return fname; // it already has the module name
+        return fname;
 
     return mod_prefix + fname;
 }
@@ -1499,7 +1499,7 @@ TraversalCode SetBlockLineNumbers::PostStmt(const Stmt* s) {
     block_line_range.pop_back();
 
     if ( ! block_line_range.empty() ) {
-        // We may have widened our range, propagate that to our parent.
+
         auto& r_p = block_line_range.back();
         r_p.first = std::min(r_p.first, r.first);
         r_p.second = std::max(r_p.second, r.second);
@@ -1534,7 +1534,7 @@ ASTBlockAnalyzer::ASTBlockAnalyzer(std::vector<FuncInfo>& funcs) {
         auto fn = func->GetName();
         const auto& body = f.Body();
 
-        // First get the line numbers all sorted out.
+
         SetBlockLineNumbers sbln;
         body->Traverse(&sbln);
 
@@ -1547,7 +1547,7 @@ ASTBlockAnalyzer::ASTBlockAnalyzer(std::vector<FuncInfo>& funcs) {
         parents.pop_back();
     }
 
-    // This should never appear!
+
     func_name_prefix = "<MISSING>:";
 }
 
@@ -1599,4 +1599,4 @@ std::string ASTBlockAnalyzer::BuildExpandedDescription(const Location* loc) {
 
 std::unique_ptr<ASTBlockAnalyzer> AST_blocks;
 
-} // namespace zeek::detail
+}

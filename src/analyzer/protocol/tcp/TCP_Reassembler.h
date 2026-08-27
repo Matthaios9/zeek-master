@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -23,8 +23,8 @@ namespace tcp {
 class TCP_Reassembler final : public Reassembler {
 public:
     enum Type : uint8_t {
-        Direct,  // deliver to destination analyzer itself
-        Forward, // forward to destination analyzer's children
+        Direct,
+        Forward,
     };
 
     TCP_Reassembler(analyzer::Analyzer* arg_dst_analyzer, packet_analysis::TCP::TCPSessionAdapter* arg_tcp_analyzer,
@@ -37,21 +37,21 @@ public:
 
     packet_analysis::TCP::TCPSessionAdapter* GetTCPAnalyzer() { return tcp_analyzer; }
 
-    // Returns the volume of data buffered in the reassembler.
-    // First parameter returns data that is above a hole, and thus is
-    // waiting on the hole being filled.  Second parameter returns
-    // data that has been processed but is awaiting an ACK to free
-    // it up.
-    //
-    // If we're not processing contents, then naturally each of
-    // these is empty.
-    //
-    // WARNING: this is an O(n) operation and potentially very slow.
+
+
+
+
+
+
+
+
+
+
     void SizeBufferedData(uint64_t& waiting_on_hole, uint64_t& waiting_on_ack) const;
 
-    // How much data is pending delivery since it's not yet reassembled.
-    // Includes the data due to holes (so this value is a bit different
-    // from waiting_on_hole above; and is computed in a different fashion).
+
+
+
     uint64_t NumUndeliveredBytes() const;
 
     void SetContentsFile(FilePtr f);
@@ -59,17 +59,17 @@ public:
 
     void MatchUndelivered(uint64_t up_to_seq, bool use_last_upper);
 
-    // Skip up to seq, as if there's a content gap.
-    // Can be used to skip HTTP data for performance considerations.
+
+
     void SkipToSeq(uint64_t seq);
 
     bool DataSent(double t, uint64_t seq, int len, const u_char* data, analyzer::tcp::TCP_Flags flags,
                   bool replaying = true);
     void AckReceived(uint64_t seq);
 
-    // Checks if we have delivered all contents that we can possibly
-    // deliver for this endpoint.  Calls TCPSessionAdapter::EndpointEOF()
-    // when so.
+
+
+
     void CheckEOF();
 
     bool HasUndeliveredData() const { return HasBlocks(); }
@@ -110,7 +110,7 @@ private:
 
     uint64_t seq_to_skip;
 
-    FilePtr record_contents_file; // file on which to reassemble contents
+    FilePtr record_contents_file;
 
     analyzer::Analyzer* dst_analyzer;
     packet_analysis::TCP::TCPSessionAdapter* tcp_analyzer;
@@ -118,6 +118,6 @@ private:
     Type type;
 };
 
-} // namespace tcp
-} // namespace analyzer
-} // namespace zeek
+}
+}
+}

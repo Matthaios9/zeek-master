@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/ZAM/ZOp.h"
 
@@ -56,12 +56,12 @@ static const char* op_type_name(ZAMOpType ot) {
 
 ZAMOp1Flavor op1_flavor[] = {
 #include "zeek/ZAM-Op1FlavorsDefs.h"
-    OP1_INTERNAL, // OP_NOP
+    OP1_INTERNAL,
 };
 
 bool op_side_effects[] = {
 #include "zeek/ZAM-OpSideEffects.h"
-    false, // OP_NOP
+    false,
 };
 
 std::unordered_map<ZOp, std::unordered_map<TypeTag, ZOp>> assignment_flavor;
@@ -79,7 +79,7 @@ ZOp AssignmentFlavor(ZOp orig, TypeTag tag, bool strict) {
         did_init = true;
     }
 
-    // Map type tag to equivalent, as needed.
+
     switch ( tag ) {
         case TYPE_BOOL:
         case TYPE_ENUM: tag = TYPE_INT; break;
@@ -111,4 +111,4 @@ ZOp AssignmentFlavor(ZOp orig, TypeTag tag, bool strict) {
     return orig_map[tag];
 }
 
-} // namespace zeek::detail
+}

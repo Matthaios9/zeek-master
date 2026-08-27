@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/protocol/ip/conn_key/fivetuple/Factory.h"
 
@@ -24,7 +24,7 @@ zeek::expected<zeek::ConnKeyPtr, std::string> Factory::DoConnKeyFromVal(const ze
 
     auto vl = v.AsRecordVal();
 
-    // Indices into conn_id's record field value list:
+
     constexpr int orig_h = 0;
     constexpr int orig_p = 1;
     constexpr int resp_h = 2;
@@ -46,7 +46,7 @@ zeek::expected<zeek::ConnKeyPtr, std::string> Factory::DoConnKeyFromVal(const ze
 
     bool is_one_way = false;
 
-    // For ICMP connections, ensure we have a proper is_one_way flag.
+
     if ( proto16_t == IPPROTO_ICMP )
         packet_analysis::ICMP::ICMP4_counterpart(ntohs(orig_portv->Port()), ntohs(resp_portv->Port()), is_one_way);
     else if ( proto16_t == IPPROTO_ICMPV6 )
@@ -61,4 +61,4 @@ zeek::expected<zeek::ConnKeyPtr, std::string> Factory::DoConnKeyFromVal(const ze
     return ck;
 }
 
-} // namespace zeek::conn_key::fivetuple
+}

@@ -6,45 +6,45 @@ module DCE_RPC;
 export {
 	redef enum Log::ID += { LOG };
 
-	## Well-known ports for DCE/RPC.
+
 	const ports = { 135/tcp } &redef;
 
 	global log_policy: Log::PolicyHook;
 
 	type Info: record {
-		## Timestamp for when the event happened.
+
 		ts         : time     &log;
-		## Unique ID for the connection.
+
 		uid        : string   &log;
-		## The connection's 4-tuple of endpoint addresses/ports.
+
 		id         : conn_id  &log;
-		## Round trip time from the request to the response.
-		## If either the request or response wasn't seen,
-		## this will be null.
+
+
+
 		rtt        : interval &log &optional;
 
-		## Remote pipe name.
-		##
-		## Note that this value is from the "sec_addr" field in the
-		## protocol. Zeek uses the "named_pipe" name for historical reasons,
-		## but it may also contain local port numbers rather than named pipes.
-		##
-		## If you prefer to use the "secondary address" name, consider
-		## using :zeek:see:`Log::default_field_name_map`, a ``Log::Filter``'s
-		## :zeek:field:`Log::Filter$field_name_map` field, or removing
-		## the :zeek:attr:`&log` attribute from this field, adding a
-		## new :zeek:field:`sec_addr` field and populating it in a custom
-		## :zeek:see:`dce_rpc_bind_ack` event handler based on the
-		## :zeek:field:`named_pipe` value.
+
+
+
+
+
+
+
+
+
+
+
+
+
 		named_pipe : string   &log &optional;
-		## Endpoint name looked up from the uuid.
+
 		endpoint   : string   &log &optional;
-		## Operation seen in the call.
+
 		operation  : string   &log &optional;
 	};
 
-	## These are DCE-RPC operations that are ignored, typically due to
-	## the operations being noisy and low value on most networks.
+
+
 	option ignored_operations: table[string] of set[string] = {
 		["winreg"] = set("BaseRegCloseKey", "BaseRegGetVersion", "BaseRegOpenKey", "BaseRegQueryValue", "BaseRegDeleteKeyEx", "OpenLocalMachine", "BaseRegEnumKey", "OpenClassesRoot"),
 		["spoolss"] = set("RpcSplOpenPrinter", "RpcClosePrinter"),
@@ -57,14 +57,14 @@ export {
 		ctx_to_uuid: table[count] of string &optional;
 	};
 
-	# This is to store the log and state information
-	# for multiple DCE/RPC bindings over a single TCP connection (named pipes).
+
+
 	type BackingState: record {
 		info: Info;
 		state: State;
 	};
 
-	## DCE_RPC finalization hook.  Remaining DCE_RPC info may get logged when it's called.
+
 	global finalize_dce_rpc: Conn::RemovalHook;
 }
 
@@ -178,9 +178,9 @@ event dce_rpc_response(c: connection, fid: count, ctx_id: count, opnum: count, s
 	{
 	set_session(c, fid);
 
-	# In the event that the binding wasn't seen, but the pipe
-	# name is known, go ahead and see if we have a pipe name to
-	# uuid mapping...
+
+
+
 	if ( ! c$dce_rpc?$endpoint && c$dce_rpc?$named_pipe )
 		{
 		local npn = normalize_named_pipe_name(c$dce_rpc$named_pipe);
@@ -213,8 +213,8 @@ event dce_rpc_response(c: connection, fid: count, ctx_id: count, opnum: count, s
 	{
 	if ( c?$dce_rpc )
 		{
-		# If there is no endpoint, there isn't much reason to log.
-		# This can happen if the request isn't seen.
+
+
 		if ( ( c$dce_rpc?$endpoint && c$dce_rpc?$operation ) &&
 		     ( c$dce_rpc$endpoint !in ignored_operations
 		       ||
@@ -230,14 +230,14 @@ event dce_rpc_response(c: connection, fid: count, ctx_id: count, opnum: count, s
 
 event smb_discarded_dce_rpc_analyzers(c: connection)
 	{
-	# This event is raised when the DCE-RPC analyzers table
-	# grew too large. Assume things are broken and wipe
-	# the backing table.
+
+
+
 	delete c$dce_rpc_backing;
 	Reporter::conn_weird("SMB_discarded_dce_rpc_analyzers", c, "", "SMB");
 	}
 
-# If a fid representing a pipe was closed, remove it from dce_rpc_backing.
+
 event smb2_close_request(c: connection, hdr: SMB2::Header, file_id: SMB2::GUID) &priority=-5
 	{
 	local fid = file_id$persistent + file_id$volatile;
@@ -250,14 +250,14 @@ hook finalize_dce_rpc(c: connection)
 	if ( ! c?$dce_rpc )
 		return;
 
-	# TODO: Go through any remaining dce_rpc requests that haven't been processed with replies.
+
 	for ( _, x in c$dce_rpc_backing )
 		{
 		set_state(c, x);
 
-		# In the event that the binding wasn't seen, but the pipe
-		# name is known, go ahead and see if we have a pipe name to
-		# uuid mapping...
+
+
+
 		if ( ! c$dce_rpc?$endpoint && c$dce_rpc?$named_pipe )
 			{
 			local npn = normalize_named_pipe_name(c$dce_rpc$named_pipe);

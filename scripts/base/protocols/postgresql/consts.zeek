@@ -1,10 +1,10 @@
 module PostgreSQL;
 
 export {
-	# https://www.postgresql.org/docs/current/protocol-error-fields.html
+
 	global error_ids: table[string] of string = {
 		["S"] = "SeverityLocalized",
-		["V"] = "Severity",  # non-localized
+		["V"] = "Severity",
 		["C"] = "Code",
 		["M"] = "Message",
 		["D"] = "Detail",

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/plugin/Manager.h"
 
@@ -59,7 +59,7 @@ void Manager::SearchDynamicPlugins(const std::string& dir) {
         return;
 
     if ( dir.find(path_list_separator) != string::npos ) {
-        // Split at ":".
+
         std::stringstream s(dir);
         std::string d;
 
@@ -89,12 +89,12 @@ void Manager::SearchDynamicPlugins(const std::string& dir) {
 
     searched_dirs.emplace(canon_path);
 
-    // Check if it's a plugin directory.
+
 
     const std::string magic = dir + "/__zeek_plugin__";
 
     if ( util::is_file(magic) ) {
-        // It's a plugin, get it's name.
+
         std::ifstream in(magic.c_str());
 
         if ( in.fail() )
@@ -114,14 +114,14 @@ void Manager::SearchDynamicPlugins(const std::string& dir) {
             return;
         }
 
-        // Record it, so that we can later activate it.
+
         dynamic_plugins.insert(std::make_pair(lower_name, dir));
 
         DBG_LOG(DBG_PLUGINS, "Found plugin %s in %s", name.c_str(), dir.c_str());
         return;
     }
 
-    // No plugin here, traverse subdirectories.
+
 
     DIR* d = opendir(dir.c_str());
 
@@ -140,7 +140,7 @@ void Manager::SearchDynamicPlugins(const std::string& dir) {
         if ( strcmp(dp->d_name, "..") == 0 || strcmp(dp->d_name, ".") == 0 )
             continue;
 
-        // We do not search plugins in discovered dot directories.
+
         if ( (dp->d_name[0] == '.') && dp->d_type == DT_DIR )
             continue;
 
@@ -173,7 +173,7 @@ zeek::expected<Plugin*, std::string> Manager::LoadDynamicPlugin(const std::strin
         char buf[512] = {};
         FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, err_code, 0, buf,
                        sizeof(buf), nullptr);
-        // FormatMessageA appends \r\n — strip trailing whitespace.
+
         size_t len = strlen(buf);
         while ( len > 0 && (buf[len - 1] == '\r' || buf[len - 1] == '\n' || buf[len - 1] == ' ') )
             buf[--len] = '\0';
@@ -206,25 +206,25 @@ zeek::expected<Plugin*, std::string> Manager::LoadDynamicPlugin(const std::strin
     auto* plugin = current_plugin;
     current_plugin = nullptr;
 
-    // This is a bit quirky: If we go through ActivateDynamicPluginInternal(),
-    // its logic sets current_dir to a classic plugin's top-level directory,
-    // also called base_dir. Concretely, Plugin::Plugin() -> Manager::RegisterPlugin()
-    // -> Plugin::SetPluginPath() populates the plugin's base_dir and sopath members.
-    //
-    // If a plugin is loaded via @load ./plugin.so, there's no classic base_dir.
-    // Manager::RegisterPlugin() will skip setting the paths on the plugin. We
-    // recognize this here and set only the sopath. A plugin loaded via
-    // @load ./plugin.so can be identified by an empty PluginDirectory(), but
-    // having a populated PluginPath(), though hopefully this never matters.
+
+
+
+
+
+
+
+
+
+
     if ( plugin->PluginPath().empty() )
         plugin->SetPluginLocation("", path);
 
     plugin->SetDynamic(true);
     plugin->DoConfigure();
 
-    // After Configure(), we'll have a name. Do not allow plugins with duplicate names:
-    // Just consider that a conflict and hard-exit: All bets are off. Note that
-    // the just loaded plugin is already part of ActivePluginsInternal().
+
+
+
     std::string plugin_name = util::strtolower(plugin->Name());
     for ( const auto* p : *Manager::ActivePluginsInternal() ) {
         if ( util::strtolower(p->Name()) == plugin_name && p != plugin )
@@ -236,9 +236,9 @@ zeek::expected<Plugin*, std::string> Manager::LoadDynamicPlugin(const std::strin
     DBG_LOG(DBG_PLUGINS, "  InitializingComponents");
     plugin->InitializeComponents();
 
-    // We execute the pre-script initialization here; this in
-    // fact could be *during* script initialization if we got
-    // triggered via @load-plugin or @load.
+
+
+
     plugin->InitPreScript();
 
     DBG_LOG(DBG_PLUGINS, "  Loaded %s", path.c_str());
@@ -248,7 +248,7 @@ zeek::expected<Plugin*, std::string> Manager::LoadDynamicPlugin(const std::strin
 
 bool Manager::ActivateDynamicPluginInternal(const std::string& name, bool ok_if_not_found,
                                             std::vector<std::string>* errors) {
-    errors->clear(); // caller should pass it in empty, but just to be sure
+    errors->clear();
 
     dynamic_plugin_map::iterator m = dynamic_plugins.find(util::strtolower(name));
 
@@ -258,9 +258,9 @@ bool Manager::ActivateDynamicPluginInternal(const std::string& name, bool ok_if_
         if ( ok_if_not_found )
             return true;
 
-        // Check if it's a static built-in plugin; they are always
-        // active, so just ignore. Not the most efficient way, but
-        // this should be rare to begin with.
+
+
+
         for ( const auto& p : *all_plugins ) {
             if ( p->Name() == name )
                 return true;
@@ -271,8 +271,8 @@ bool Manager::ActivateDynamicPluginInternal(const std::string& name, bool ok_if_
     }
 
     if ( m->second.empty() ) {
-        // That's our marker that we have already activated this
-        // plugin. Silently ignore the new request.
+
+
         return true;
     }
 
@@ -280,8 +280,8 @@ bool Manager::ActivateDynamicPluginInternal(const std::string& name, bool ok_if_
 
     DBG_LOG(DBG_PLUGINS, "Activating plugin %s", name.c_str());
 
-    // If there's a plugin with the same name already, report an error and let
-    // the user do the conflict resolution.
+
+
     auto lower_name = util::strtolower(name);
     for ( const auto& p : *all_plugins ) {
         if ( util::strtolower(p->Name()) == lower_name ) {
@@ -294,15 +294,15 @@ bool Manager::ActivateDynamicPluginInternal(const std::string& name, bool ok_if_
         }
     }
 
-    // Load shared libraries.
+
 
     string dypattern = dir + "/lib/*." + HOST_ARCHITECTURE + DYNAMIC_PLUGIN_SUFFIX;
 
     DBG_LOG(DBG_PLUGINS, "  Searching for shared libraries %s", dypattern.c_str());
 
 #ifdef _MSC_VER
-    // On Windows, use std::filesystem to find matching plugin DLLs
-    // since glob() is not available.
+
+
     {
         std::string suffix = std::string(".") + HOST_ARCHITECTURE + DYNAMIC_PLUGIN_SUFFIX;
         std::string lib_dir = dir + "lib";
@@ -331,8 +331,8 @@ bool Manager::ActivateDynamicPluginInternal(const std::string& name, bool ok_if_
 
                     plugins_by_path.insert(std::make_pair(util::detail::normalize_path(dir), loaded_plugin));
 
-                    // Make sure the name the plugin reports is consistent with
-                    // what we expect from its magic file.
+
+
                     if ( util::strtolower(loaded_plugin->Name()) != util::strtolower(name) ) {
                         errors->emplace_back(util::fmt("inconsistent plugin name: %s vs %s",
                                                        loaded_plugin->Name().c_str(), name.c_str()));
@@ -367,8 +367,8 @@ bool Manager::ActivateDynamicPluginInternal(const std::string& name, bool ok_if_
 
             plugins_by_path.insert(std::make_pair(util::detail::normalize_path(dir), loaded_plugin));
 
-            // Make sure the name the plugin reports is consistent with
-            // what we expect from its magic file.
+
+
             if ( util::strtolower(loaded_plugin->Name()) != util::strtolower(name) ) {
                 errors->emplace_back(
                     util::fmt("inconsistent plugin name: %s vs %s", loaded_plugin->Name().c_str(), name.c_str()));
@@ -387,7 +387,7 @@ bool Manager::ActivateDynamicPluginInternal(const std::string& name, bool ok_if_
     }
 #endif
 
-    // Add the "scripts" and "bif" directories to ZEEKPATH.
+
     std::string scripts = dir + "scripts";
 
     if ( util::is_dir(scripts) ) {
@@ -397,7 +397,7 @@ bool Manager::ActivateDynamicPluginInternal(const std::string& name, bool ok_if_
 
     string init;
 
-    // First load {scripts}/__preload__.zeek automatically.
+
     init = dir + "scripts/__preload__.zeek";
 
     if ( util::is_file(init) ) {
@@ -405,7 +405,7 @@ bool Manager::ActivateDynamicPluginInternal(const std::string& name, bool ok_if_
         scripts_to_load.push_back(std::move(init));
     }
 
-    // Load {bif,scripts}/__load__.zeek automatically.
+
     init = dir + "lib/bif/__load__.zeek";
 
     if ( util::is_file(init) ) {
@@ -420,7 +420,7 @@ bool Manager::ActivateDynamicPluginInternal(const std::string& name, bool ok_if_
         scripts_to_load.push_back(std::move(init));
     }
 
-    // Mark this plugin as activated by clearing the path.
+
     m->second.clear();
 
     return true;
@@ -431,22 +431,22 @@ void Manager::ActivateDynamicPlugin(const std::string& name) {
     if ( ActivateDynamicPluginInternal(name, false, &errors) )
         UpdateInputFiles();
     else
-        // Reschedule for another attempt later.
+
         requested_plugins.insert(name);
 }
 
 void Manager::ActivateDynamicPlugins(bool all) {
-    // Tracks plugins we need to activate as pairs of their names and booleans
-    // indicating whether an activation failure is to be deemed a fatal error.
+
+
     std::set<std::pair<std::string, bool>> plugins_to_activate;
 
-    // Activate plugins that were specifically requested.
+
     for ( const auto& x : requested_plugins ) {
         if ( ! x.empty() )
             plugins_to_activate.emplace(x, false);
     }
 
-    // Activate plugins that our environment tells us to.
+
     vector<string> p;
     std::string plugin_activate = util::zeek_plugin_activate();
     if ( ! plugin_activate.empty() ) {
@@ -457,15 +457,15 @@ void Manager::ActivateDynamicPlugins(bool all) {
     }
 
     if ( all ) {
-        // Activate all other ones we discovered.
+
         for ( const auto& x : dynamic_plugins )
             plugins_to_activate.emplace(x.first, false);
     }
 
-    // Now we keep iterating over all the plugins, trying to load them, for as
-    // long as we're successful for at least one further of them each round.
-    // Doing so ensures that we can resolve (non-cyclic) load dependencies
-    // independent of any particular order.
+
+
+
+
     while ( ! plugins_to_activate.empty() ) {
         std::vector<std::string> errors;
         auto plugins_left = plugins_to_activate;
@@ -476,7 +476,7 @@ void Manager::ActivateDynamicPlugins(bool all) {
         }
 
         if ( plugins_left.size() == plugins_to_activate.size() ) {
-            // Could not load a single further plugin this round, that's fatal.
+
             for ( const auto& msg : errors )
                 reporter->Error("%s", msg.c_str());
 
@@ -504,7 +504,7 @@ void Manager::RegisterPlugin(Plugin* plugin) {
     Manager::ActivePluginsInternal()->push_back(plugin);
 
     if ( current_dir && current_sopath )
-        // A dynamic plugin, record its location.
+
         plugin->SetPluginLocation(util::detail::normalize_path(current_dir), current_sopath);
 
     current_plugin = plugin;
@@ -523,7 +523,7 @@ void Manager::RegisterBifFile(const char* plugin, bif_init_func c) {
 }
 
 void Manager::ExtendZeekPathForPlugins() {
-    // Extend the path outside of the loop to avoid looking through a longer path for each plugin
+
     vector<string> path_additions;
 
     for ( const auto& p : Manager::ActivePlugins() ) {
@@ -534,7 +534,7 @@ void Manager::ExtendZeekPathForPlugins() {
             string canon = std::regex_replace(p->Name(), std::regex("::"), "_");
             string dir = "builtin-plugins/" + canon;
 
-            // Use find_file to find the directory in the path.
+
             string script_dir = util::find_file(dir, util::zeek_path());
             if ( script_dir.empty() || ! util::is_dir(script_dir) )
                 continue;
@@ -542,8 +542,8 @@ void Manager::ExtendZeekPathForPlugins() {
             DBG_LOG(DBG_PLUGINS, "  Adding %s to ZEEKPATH", script_dir.c_str());
             path_additions.push_back(std::move(script_dir));
         } catch ( const std::regex_error& e ) {
-            // This really shouldn't ever happen, but we do need to catch the exception.
-            // Report a fatal error because something is wrong if this occurs.
+
+
             reporter->FatalError("Failed to replace colons in plugin name %s: %s", p->Name().c_str(), e.what());
         }
     }
@@ -559,11 +559,11 @@ void Manager::InitPreScript() {
         plugin->DoConfigure();
     }
 
-    // Sort plugins by name to make sure we have a deterministic order.
-    // We cannot do this before, because the plugin name (used for plugin_cmp) is only
-    // set in DoConfigure.
-    // We need things sorted to generate the tags (in InitializeComponents) in a deterministic
-    // order.
+
+
+
+
+
     ActivePluginsInternal()->sort(plugin_cmp);
 
     for ( Plugin* plugin : *Manager::ActivePluginsInternal() ) {
@@ -681,7 +681,7 @@ static bool hook_cmp(std::pair<int, Plugin*> a, std::pair<int, Plugin*> b) {
     if ( a.first == b.first )
         return util::strtolower(a.second->Name()) < util::strtolower(b.second->Name());
 
-    // Reverse sort.
+
     return a.first > b.first;
 }
 
@@ -705,7 +705,7 @@ void Manager::EnableHook(HookType hook, Plugin* plugin, int prio) {
     hook_list* l = hooks[hook];
 
     for ( const auto& [_, hook_plugin] : *l ) {
-        // Already enabled for this plugin.
+
         if ( hook_plugin == plugin )
             return;
     }
@@ -1093,4 +1093,4 @@ void Manager::MetaHookPost(HookType hook, const HookArgumentList& args, const Ho
             plugin->MetaHookPost(hook, args, result);
 }
 
-} // namespace zeek::plugin
+}

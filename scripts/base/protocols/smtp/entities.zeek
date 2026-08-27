@@ -1,4 +1,4 @@
-##! Analysis and logging for MIME entities found in SMTP sessions.
+
 
 @load base/frameworks/files
 @load base/frameworks/notice/weird
@@ -10,18 +10,18 @@ module SMTP;
 
 export {
 	type Entity: record {
-		## Filename for the entity if discovered from a header.
+
 		filename: string &optional;
 	};
 
 	redef record Info += {
-		## The current entity being seen.
+
 		entity: Entity &optional;
 	};
 
 	redef record State += {
-		## Track the number of MIME encoded files transferred
-		## during a session.
+
+
 		mime_depth: count &default=0;
 	};
 }

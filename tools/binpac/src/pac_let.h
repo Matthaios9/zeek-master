@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_let_h
 #define pac_let_h
@@ -45,4 +45,4 @@ private:
     Expr* expr_;
 };
 
-#endif // pac_let_h
+#endif

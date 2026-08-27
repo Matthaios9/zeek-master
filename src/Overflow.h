@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -23,5 +23,5 @@ inline bool count_to_int_would_overflow(zeek_uint_t v) { return v > INT64_MAX; }
 
 extern bool would_overflow(const zeek::Type* from_type, const zeek::Type* to_type, const Val* val);
 
-} // namespace detail
-} // namespace zeek
+}
+}

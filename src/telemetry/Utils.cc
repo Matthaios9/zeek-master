@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/telemetry/Utils.h"
 
@@ -26,14 +26,14 @@ std::string BuildFullPrometheusName(std::string_view prefix, std::string_view na
             c = '_';
     });
 
-    // Suffixes of full metric names of _total are reserved by Prometheus. Disallow their use here.
+
     if ( fn.ends_with("_total") )
         reporter->FatalError("Metric names cannot end with '_total'");
     else if ( unit == "total" || unit.ends_with("_total") )
         reporter->FatalError("Metric units cannot end with '_total'");
 
-    // We were previously using "1" to mean "no unit value" for whatever reason, so we have to handle that now
-    // to mean the same thing.
+
+
     if ( ! unit.empty() && unit != "1" )
         fn.append("_").append(unit);
 
@@ -65,4 +65,4 @@ prometheus::Labels BuildPrometheusLabels(std::span<const LabelView> labels) {
     return p_labels;
 }
 
-} // namespace zeek::telemetry::detail
+}

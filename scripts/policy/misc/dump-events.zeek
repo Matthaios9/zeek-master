@@ -1,23 +1,23 @@
-##! This script dumps the events that Zeek raises out to standard output in a
-##! readable form. This is for debugging only and allows to understand events and
-##! their parameters as Zeek processes input. Note that it will show only events
-##! for which a handler is defined.
+
+
+
+
 
 module DumpEvents;
 
 export {
-	## If true, include event arguments in output.
+
 	option include_args = T;
 
-	## By default, only events that are handled in a script are dumped. Setting this option to true
-	## will cause unhandled events to be dumped too.
+
+
 	const dump_all_events = F &redef;
 
-	## Only include events matching the given pattern into output. By default, the
-	## pattern matches all events.
+
+
 	option include = /.*/;
 
-	## Report in JSON format, with one event per line.
+
 	option use_json = F;
 }
 

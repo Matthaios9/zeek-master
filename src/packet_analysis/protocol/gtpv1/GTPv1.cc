@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/protocol/gtpv1/GTPv1.h"
 
@@ -10,9 +10,9 @@ namespace zeek::packet_analysis::gtpv1 {
 GTPv1_Analyzer::GTPv1_Analyzer() : zeek::packet_analysis::Analyzer("GTPV1") {}
 
 bool GTPv1_Analyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* packet) {
-    // GTPv1 always comes from a UDP connection, which means that session should always
-    // be valid and always be a connection. Return a weird if we didn't have a session
-    // stored.
+
+
+
     if ( ! packet->session ) {
         Analyzer::Weird("gtpv1_missing_connection");
         return false;
@@ -24,13 +24,13 @@ bool GTPv1_Analyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* pack
 
     auto cm_it = conn_map.find(sk);
     if ( cm_it == conn_map.end() ) {
-        sk.CopyData(); // Copy key data to store in map.
+        sk.CopyData();
         auto [it, inserted] = conn_map.emplace(std::move(sk), std::make_unique<binpac::GTPv1::GTPv1_Conn>(this));
         assert(inserted);
         cm_it = it;
 
-        // Let script land know about the state we created, so it will
-        // register a conn removal hook for cleanup.
+
+
         BifEvent::enqueue_new_gtpv1_state(nullptr, conn);
     }
 
@@ -42,8 +42,8 @@ bool GTPv1_Analyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* pack
         return false;
     }
 
-    // Inner packet offset not being set means we failed to process somewhere, and SetInnerInfo()
-    // was never called by the binpac code. Assume this is a failure and return false.
+
+
     if ( inner_packet_offset <= 0 )
         return false;
 
@@ -53,9 +53,9 @@ bool GTPv1_Analyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* pack
     len -= inner_packet_offset;
     inner_packet_offset = -1;
 
-    // TODO: i'm not sure about this. on the one hand, we do some error checking with the result
-    // but on the other hand we duplicate this work here. maybe this header could just be stored
-    // and reused in the IP analyzer somehow?
+
+
+
     std::shared_ptr<IP_Hdr> inner = nullptr;
     auto result = packet_analysis::IP::ParsePacket(len, data, next_header, inner);
 
@@ -94,4 +94,4 @@ bool GTPv1_Analyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* pack
     return ForwardPacket(len, data, inner_packet.get());
 }
 
-} // namespace zeek::packet_analysis::gtpv1
+}

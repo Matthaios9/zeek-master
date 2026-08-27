@@ -1,5 +1,5 @@
-//
-// See the file "COPYING" in the main distribution directory for copyright.
+
+
 
 #include "zeek/module_util.h"
 
@@ -26,7 +26,7 @@ TEST_CASE("module_util extract_module_name") {
     CHECK(extract_module_name("mod::var") == "mod");
 }
 
-// Returns it without trailing "::" var section.
+
 string extract_module_name(const char* name) {
     string module_name = name;
     string::size_type pos = module_name.rfind("::");
@@ -100,4 +100,4 @@ string make_full_var_name(const char* module_name, const char* var_name) {
     return full_name;
 }
 
-} // namespace zeek::detail
+}

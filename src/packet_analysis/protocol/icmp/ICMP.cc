@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/protocol/icmp/ICMP.h"
 
@@ -20,7 +20,7 @@
 using namespace zeek::packet_analysis::ICMP;
 using namespace zeek::packet_analysis::IP;
 
-// These constants exist on macOS but not some versions of Linux
+
 #ifndef MLD_LISTENER_DONE
 constexpr int MLD_LISTENER_DONE = 132;
 #endif
@@ -66,8 +66,8 @@ void ICMPAnalyzer::DeliverPacket(Connection* c, double t, bool is_orig, int rema
 
     const u_char* data = pkt->ip_hdr->Payload();
     int len = pkt->ip_hdr->PayloadLen();
-    // If segment offloading or similar is enabled, the payload len will return 0.
-    // Thus, let's ignore that case.
+
+
     if ( len == 0 )
         len = remaining;
 
@@ -99,14 +99,14 @@ void ICMPAnalyzer::DeliverPacket(Connection* c, double t, bool is_orig, int rema
     c->SetLastTime(run_state::current_timestamp);
     adapter->InitEndpointMatcher(ip.get(), len, is_orig);
 
-    // Move past common portion of ICMP header. BuildConnTuple() verified that
-    // the header is fully present.
+
+
     data += 8;
     remaining -= 8;
     len -= 8;
 
-    // The ICMP session adapter only uses len to signal endpoint activity, so
-    // caplen vs len does not matter.
+
+
     adapter->UpdateLength(is_orig, len);
 
     if ( ip->NextProto() == IPPROTO_ICMP )
@@ -118,11 +118,11 @@ void ICMPAnalyzer::DeliverPacket(Connection* c, double t, bool is_orig, int rema
         return;
     }
 
-    // Store the session in the packet in case we get an encapsulation here. We need it for
-    // handling those properly.
+
+
     pkt->session = c;
 
-    // Tap the packet before processing/forwarding.
+
     adapter->TapPacket(pkt);
 
     ForwardPacket(std::min(len, remaining), data, pkt);
@@ -149,18 +149,18 @@ void ICMPAnalyzer::NextICMP4(double t, const struct icmp* icmpp, int len, int ca
 void ICMPAnalyzer::NextICMP6(double t, const struct icmp* icmpp, int len, int caplen, const u_char*& data,
                              const IP_Hdr* ip_hdr, ICMPSessionAdapter* adapter) {
     switch ( icmpp->icmp_type ) {
-        // Echo types.
+
         case ICMP6_ECHO_REQUEST:
         case ICMP6_ECHO_REPLY: Echo(t, icmpp, len, caplen, data, ip_hdr, adapter); break;
 
-        // Error messages all have the same structure for their context,
-        // and are handled by the same function.
+
+
         case ICMP6_PARAM_PROB:
         case ICMP6_TIME_EXCEEDED:
         case ICMP6_PACKET_TOO_BIG:
         case ICMP6_DST_UNREACH: Context6(t, icmpp, len, caplen, data, ip_hdr, adapter); break;
 
-        // Router related messages.
+
         case ND_REDIRECT: Redirect(t, icmpp, len, caplen, data, ip_hdr, adapter); break;
         case ND_ROUTER_ADVERT: RouterAdvert(t, icmpp, len, caplen, data, ip_hdr, adapter); break;
         case ND_NEIGHBOR_ADVERT: NeighborAdvert(t, icmpp, len, caplen, data, ip_hdr, adapter); break;
@@ -172,13 +172,13 @@ void ICMPAnalyzer::NextICMP6(double t, const struct icmp* icmpp, int len, int ca
         case MLDV2_LISTENER_REPORT: MLDReportV2(t, icmpp, len, caplen, data, ip_hdr, adapter); break;
 
 #if 0
-		// Currently not specifically implemented.
+
 		case MLD_LISTENER_QUERY:
 #endif
         default:
-            // Error messages (i.e., ICMPv6 type < 128) all have
-            // the same structure for their context, and are
-            // handled by the same function.
+
+
+
             if ( icmpp->icmp_type < 128 )
                 Context6(t, icmpp, len, caplen, data, ip_hdr, adapter);
             else
@@ -234,7 +234,7 @@ TransportProto ICMPAnalyzer::GetContextProtocol(const IP_Hdr* ip_hdr, uint32_t* 
     switch ( proto ) {
         case TRANSPORT_ICMP: {
             const struct icmp* icmpp = reinterpret_cast<const icmp*>(transport_hdr);
-            bool is_one_way; // dummy
+            bool is_one_way;
             *src_port = ntohs(icmpp->icmp_type);
 
             if ( ip4 )
@@ -279,7 +279,7 @@ zeek::RecordValPtr ICMPAnalyzer::ExtractICMP4Context(int len, const u_char*& dat
     uint32_t dst_port;
 
     if ( len < static_cast<int>(sizeof(struct ip)) ) {
-        // We don't have an entire IP header.
+
         bad_hdr_len = true;
         bad_checksum = false;
         ip_len = frag_offset = 0;
@@ -312,8 +312,8 @@ zeek::RecordValPtr ICMPAnalyzer::ExtractICMP4Context(int len, const u_char*& dat
         if ( static_cast<uint32_t>(len) >= ip_hdr_len + 4 )
             proto = GetContextProtocol(ip_hdr, &src_port, &dst_port);
         else {
-            // 4 above is the magic number meaning that both
-            // port numbers are included in the ICMP.
+
+
             src_port = dst_port = 0;
             bad_hdr_len = true;
         }
@@ -373,8 +373,8 @@ zeek::RecordValPtr ICMPAnalyzer::ExtractICMP6Context(int len, const u_char*& dat
         if ( static_cast<uint32_t>(len) >= static_cast<uint32_t>(ip_hdr->HdrLen() + 4) )
             proto = GetContextProtocol(ip_hdr, &src_port, &dst_port);
         else {
-            // 4 above is the magic number meaning that both
-            // port numbers are included in the ICMP.
+
+
             src_port = dst_port = 0;
             bad_hdr_len = 1;
         }
@@ -395,7 +395,7 @@ zeek::RecordValPtr ICMPAnalyzer::ExtractICMP6Context(int len, const u_char*& dat
     iprec->Assign(2, val_mgr->Count(proto));
     iprec->Assign(3, val_mgr->Count(frag_offset));
     iprec->Assign(4, val_mgr->Bool(bad_hdr_len));
-    // bad_checksum is always false since IPv6 layer doesn't have a checksum.
+
     iprec->Assign(5, val_mgr->False());
     iprec->Assign(6, val_mgr->Bool(MF));
     iprec->Assign(7, val_mgr->Bool(DF));
@@ -405,7 +405,7 @@ zeek::RecordValPtr ICMPAnalyzer::ExtractICMP6Context(int len, const u_char*& dat
 
 void ICMPAnalyzer::Echo(double t, const struct icmp* icmpp, int len, int caplen, const u_char*& data,
                         const IP_Hdr* ip_hdr, ICMPSessionAdapter* adapter) {
-    // For handling all Echo related ICMP messages
+
     EventHandlerPtr f = nullptr;
 
     if ( ip_hdr->NextProto() == IPPROTO_ICMPV6 )
@@ -449,13 +449,13 @@ void ICMPAnalyzer::RouterAdvert(double t, const struct icmp* icmpp, int len, int
     }
 
     adapter->EnqueueConnEvent(f, adapter->ConnVal(), BuildInfo(icmpp, len, true, ip_hdr),
-                              val_mgr->Count(icmpp->icmp_num_addrs),         // Cur Hop Limit
-                              val_mgr->Bool(icmpp->icmp_wpa & 0x80),         // Managed
-                              val_mgr->Bool(icmpp->icmp_wpa & 0x40),         // Other
-                              val_mgr->Bool(icmpp->icmp_wpa & 0x20),         // Home Agent
-                              val_mgr->Count((icmpp->icmp_wpa & 0x18) >> 3), // Pref
-                              val_mgr->Bool(icmpp->icmp_wpa & 0x04),         // Proxy
-                              val_mgr->Count(icmpp->icmp_wpa & 0x02),        // Reserved
+                              val_mgr->Count(icmpp->icmp_num_addrs),
+                              val_mgr->Bool(icmpp->icmp_wpa & 0x80),
+                              val_mgr->Bool(icmpp->icmp_wpa & 0x40),
+                              val_mgr->Bool(icmpp->icmp_wpa & 0x20),
+                              val_mgr->Count((icmpp->icmp_wpa & 0x18) >> 3),
+                              val_mgr->Bool(icmpp->icmp_wpa & 0x04),
+                              val_mgr->Count(icmpp->icmp_wpa & 0x02),
                               make_intrusive<IntervalVal>(static_cast<double>(ntohs(icmpp->icmp_lifetime)), Seconds),
                               make_intrusive<IntervalVal>(static_cast<double>(ntohl(reachable)), Milliseconds),
                               make_intrusive<IntervalVal>(static_cast<double>(ntohl(retrans)), Milliseconds),
@@ -482,9 +482,9 @@ void ICMPAnalyzer::NeighborAdvert(double t, const struct icmp* icmpp, int len, i
     }
 
     adapter->EnqueueConnEvent(f, adapter->ConnVal(), BuildInfo(icmpp, len, true, ip_hdr),
-                              val_mgr->Bool(icmpp->icmp_num_addrs & 0x80), // Router
-                              val_mgr->Bool(icmpp->icmp_num_addrs & 0x40), // Solicited
-                              val_mgr->Bool(icmpp->icmp_num_addrs & 0x20), // Override
+                              val_mgr->Bool(icmpp->icmp_num_addrs & 0x80),
+                              val_mgr->Bool(icmpp->icmp_num_addrs & 0x40),
+                              val_mgr->Bool(icmpp->icmp_num_addrs & 0x20),
                               make_intrusive<AddrVal>(tgtaddr),
                               BuildNDOptionsVal(caplen - opt_offset, data + opt_offset, adapter));
 }
@@ -581,14 +581,14 @@ void ICMPAnalyzer::MLDReportV2(double t, const struct icmp* icmpp, int len, int 
     static auto icmp6_mld_mar_vec_type = id::find_type<VectorType>("icmp6_mldv2_mar_vec");
     static auto addr_vec_type = id::find_type<VectorType>("addr_vec");
 
-    // The ICMP header was already parsed and the data pointer starts at the beginning of
-    // the first record. We have to figure this counter out from the icmp header instead.
+
+
     const struct icmp6_hdr* i6_hdr = reinterpret_cast<const struct icmp6_hdr*>(icmpp);
     uint16_t num_multicast_records = ntohs(i6_hdr->icmp6_data16[1]);
 
-    // The minimum size of a Multicast Address Record is 20 if it doesn't include any
-    // sources. Check whether there's enough data to parse at least that size for each of
-    // the records above.
+
+
+
     if ( caplen < static_cast<int>(num_multicast_records) * 20 ) {
         adapter->Weird("truncated_ICMPv6_MLDv2");
         return;
@@ -613,8 +613,8 @@ void ICMPAnalyzer::MLDReportV2(double t, const struct icmp* icmpp, int len, int 
         record_ptr += 4;
         remaining -= 4;
 
-        // The remaining data should be at least the size of the multicast address plus
-        // the number of multicast sources plus the length of the aux data.
+
+
         if ( remaining < 16 + (num_sources * 16) + aux_len ) {
             adapter->Weird("truncated_ICMPv6_MLDv2_record");
             break;
@@ -698,7 +698,7 @@ zeek::VectorValPtr ICMPAnalyzer::BuildNDOptionsVal(int caplen, const u_char* dat
     auto vv = make_intrusive<zeek::VectorVal>(id::find_type<VectorType>("icmp6_nd_options"));
 
     while ( caplen > 0 ) {
-        // Must have at least type & length to continue parsing options.
+
         if ( caplen < 2 ) {
             adapter->Weird("truncated_ICMPv6_ND_options");
             break;
@@ -716,7 +716,7 @@ zeek::VectorValPtr ICMPAnalyzer::BuildNDOptionsVal(int caplen, const u_char* dat
         rv->Assign(0, val_mgr->Count(type));
         rv->Assign(1, val_mgr->Count(length));
 
-        // Adjust length to be in units of bytes, exclude type/length fields.
+
         length = length * 8 - 2;
 
         data += 2;
@@ -724,11 +724,11 @@ zeek::VectorValPtr ICMPAnalyzer::BuildNDOptionsVal(int caplen, const u_char* dat
 
         bool set_payload_field = false;
 
-        // Only parse out known options that are there in full.
+
         switch ( type ) {
             case 1:
             case 2:
-                // Source/Target Link-layer Address option
+
                 {
                     if ( caplen >= length ) {
                         String* link_addr = new String(data, length, false);
@@ -741,7 +741,7 @@ zeek::VectorValPtr ICMPAnalyzer::BuildNDOptionsVal(int caplen, const u_char* dat
                 }
 
             case 3:
-                // Prefix Information option
+
                 {
                     if ( caplen >= 30 ) {
                         auto info = make_intrusive<zeek::RecordVal>(icmp6_nd_prefix_info_type);
@@ -766,7 +766,7 @@ zeek::VectorValPtr ICMPAnalyzer::BuildNDOptionsVal(int caplen, const u_char* dat
                 }
 
             case 4:
-                // Redirected Header option
+
                 {
                     if ( caplen >= length ) {
                         const u_char* hdr = data + 6;
@@ -780,7 +780,7 @@ zeek::VectorValPtr ICMPAnalyzer::BuildNDOptionsVal(int caplen, const u_char* dat
                 }
 
             case 5:
-                // MTU option
+
                 {
                     if ( caplen >= 6 )
                         rv->Assign(5, val_mgr->Count(ntohl(*reinterpret_cast<const uint32_t*>(data + 2))));
@@ -815,10 +815,10 @@ namespace zeek::packet_analysis::ICMP {
 int ICMP4_counterpart(int icmp_type, int icmp_code, bool& is_one_way) {
     is_one_way = false;
 
-    // Return the counterpart type if one exists.  This allows us
-    // to track corresponding ICMP requests/replies.
-    // Note that for the two-way ICMP messages, icmp_code is
-    // always 0 (RFC 792).
+
+
+
+
     switch ( icmp_type ) {
         case ICMP_ECHO: return ICMP_ECHOREPLY;
         case ICMP_ECHOREPLY: return ICMP_ECHO;
@@ -855,20 +855,20 @@ int ICMP6_counterpart(int icmp_type, int icmp_code, bool& is_one_way) {
         case MLD_LISTENER_QUERY: return MLD_LISTENER_REPORT;
         case MLD_LISTENER_REPORT: return MLD_LISTENER_QUERY;
 
-        // ICMP node information query and response respectively (not defined in
-        // icmp6.h)
+
+
         case 139: return 140;
         case 140: return 139;
 
-        // Home Agent Address Discovery Request Message and reply
+
         case 144: return 145;
         case 145:
             return 144;
 
-            // TODO: Add further counterparts.
+
 
         default: is_one_way = true; return icmp_code;
     }
 }
 
-} // namespace zeek::packet_analysis::ICMP
+}

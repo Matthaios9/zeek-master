@@ -1,12 +1,12 @@
-# Additional Broker-specific metrics that use Zeek cluster-level node names.
+
 
 @load base/frameworks/telemetry
 
 module Cluster;
 
-## This gauge tracks the current number of locally queued messages in each
-## Broker peering's send buffer. The "peer" label identifies the remote side of
-## the peering, containing a Zeek cluster node name.
+
+
+
 global broker_peer_buffer_messages_gf = Telemetry::register_gauge_family(Telemetry::MetricOpts(
     $prefix="zeek",
     $name="broker-peer-buffer-messages",
@@ -15,14 +15,14 @@ global broker_peer_buffer_messages_gf = Telemetry::register_gauge_family(Telemet
     $help_text="Number of messages queued in Broker's send buffers",
 ));
 
-## This gauge tracks recent maximum queue lengths for each Broker peering's send
-## buffer. Most of the time the send buffers are nearly empty, so this gauge
-## helps understand recent bursts of messages.  "Recent" here means
-## :zeek:see:`Broker::buffer_stats_reset_interval`. The time window advances in
-## increments of at least the stats interval, not incrementally with every new
-## observed message. That is, Zeek keeps a timestamp of when the window started,
-## and once it notices that the interval has passed, it moves the start of the
-## window to current time.
+
+
+
+
+
+
+
+
 global broker_peer_buffer_recent_max_messages_gf = Telemetry::register_gauge_family(Telemetry::MetricOpts(
     $prefix="zeek",
     $name="broker-peer-buffer-recent-max-messages",
@@ -31,11 +31,11 @@ global broker_peer_buffer_recent_max_messages_gf = Telemetry::register_gauge_fam
     $help_text="Maximum number of messages recently queued in Broker's send buffers",
 ));
 
-## This counter tracks for each Broker peering the number of times its send
-## buffer has overflowed. For the "disconnect" policy this can at most be 1,
-## since Broker stops the peering at this time. For the "drop_oldest" and
-## "drop_newest" policies (see :zeek:see:`Broker:peer_overflow_policy`) the count
-## instead reflects the number of messages lost.
+
+
+
+
+
 global broker_peer_buffer_overflows_cf = Telemetry::register_counter_family(Telemetry::MetricOpts(
     $prefix="zeek",
     $name="broker-peer-buffer-overflows",
@@ -45,16 +45,16 @@ global broker_peer_buffer_overflows_cf = Telemetry::register_counter_family(Tele
 ));
 
 
-# A helper to track overflow counts over past peerings as well as the current
-# one.  The peer_id field allows us to identify when the counter has reset: a
-# Broker ID different from the one on file means it's a new peering.
+
+
+
 type EpochData: record {
 	peer_id: string;
 	num_overflows: count &default=0;
 	num_past_overflows: count &default=0;
 };
 
-# This maps from a cluster node name to its EpochData.
+
 global peering_epoch_data: table[string] of EpochData;
 
 hook Telemetry::sync()
@@ -66,9 +66,9 @@ hook Telemetry::sync()
 
 	for ( peer_id, stats in peers )
 		{
-		# Translate the Broker IDs to Zeek-level node names. We skip
-		# telemetry for peers where this mapping fails, i.e. ones for
-		# connections to external systems.
+
+
+
 		nn = nodeid_to_node(peer_id);
 
 		if ( |nn$name| == 0 )
@@ -88,10 +88,10 @@ hook Telemetry::sync()
 
 		if ( peer_id != ed$peer_id )
 			{
-			# A new peering. Ensure that we account for overflows in
-			# past ones. There is a risk here that we might have
-			# missed a peering altogether if we scrape infrequently,
-			# but re-peering should be a rare event.
+
+
+
+
 			ed$peer_id = peer_id;
 			ed$num_past_overflows += ed$num_overflows;
 			}

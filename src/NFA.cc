@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/NFA.h"
 
@@ -21,15 +21,15 @@ NFA_State::NFA_State(int arg_sym, EquivClass* ec) {
     epsclosure = nullptr;
     id = ++nfa_state_id;
 
-    // Fix up equivalence classes based on this transition.  Note that any
-    // character which has its own transition gets its own equivalence
-    // class.  Thus only characters which are only in character classes
-    // have a chance at being in the same equivalence class.  E.g. "a|b"
-    // puts 'a' and 'b' into two different equivalence classes.  "[ab]"
-    // puts them in the same equivalence class (barring other differences
-    // elsewhere in the input).
 
-    if ( ec && sym != SYM_EPSILON /* no associated symbol */ )
+
+
+
+
+
+
+
+    if ( ec && sym != SYM_EPSILON  )
         ec->UniqueChar(sym);
 }
 
@@ -107,15 +107,15 @@ NFA_state_list* NFA_State::EpsilonClosure() {
         }
 
         else
-            // Non-epsilon transition - keep it.
+
             epsclosure->push_back(ns);
     }
 
-    // Clear out markers.
+
     for ( i = 0; i < states.length(); ++i )
         states[i]->SetMark(nullptr);
 
-    // Make it fit.
+
     epsclosure->resize(0);
 
     return epsclosure;
@@ -154,10 +154,10 @@ void NFA_Machine::InsertEpsilon() {
 void NFA_Machine::AppendEpsilon() { AppendState(new EpsilonState()); }
 
 void NFA_Machine::AddAccept(int accept_val) {
-    // Hang the accepting number off an epsilon state.  If it is associated
-    // with a state that has a non-epsilon out-transition, then the state
-    // will accept BEFORE it makes that transition, i.e., one character
-    // too soon.
+
+
+
+
 
     if ( final_state->TransSym() != SYM_EPSILON )
         AppendState(new EpsilonState());
@@ -169,9 +169,9 @@ void NFA_Machine::LinkCopies(int n) {
     if ( n <= 0 )
         return;
 
-    // Make all the copies before doing any appending, otherwise
-    // subsequent DuplicateMachine()'s will include the extra
-    // copies!
+
+
+
     NFA_Machine** copies = new NFA_Machine*[n];
 
     int i;
@@ -202,7 +202,7 @@ void NFA_Machine::AppendMachine(NFA_Machine* m) {
     final_state->AddXtion(m->FirstState());
     final_state = m->FinalState();
 
-    Ref(m->FirstState()); // so states stay around after the following
+    Ref(m->FirstState());
     Unref(m);
 }
 
@@ -217,8 +217,8 @@ void NFA_Machine::MakePositiveClosure() {
     AppendEpsilon();
     final_state->AddXtion(first_state);
 
-    // Don't Ref the state the final epsilon points to, otherwise we'll
-    // have reference cycles that lead to leaks.
+
+
     final_state->SetFirstTransIsBackRef();
 }
 
@@ -238,7 +238,7 @@ void NFA_Machine::MakeRepl(int lower, int upper) {
     while ( upper > lower ) {
         NFA_Machine* dup2;
         if ( --upper == lower )
-            // Don't need "dup" for any further copies
+
             dup2 = dup;
         else
             dup2 = dup->DuplicateMachine();
@@ -271,7 +271,7 @@ NFA_Machine* make_alternate(NFA_Machine* m1, NFA_Machine* m2) {
     m2->AppendState(last);
     Ref(last);
 
-    // Keep these around.
+
     Ref(m1->FirstState());
     Ref(m2->FirstState());
 
@@ -298,10 +298,10 @@ NFA_state_list* epsilon_closure(NFA_state_list* states) {
         }
     }
 
-    // Sort all of the closures in the list by ID
+
     std::ranges::sort(*closure, NFA_state_cmp_neg);
 
-    // Make it fit.
+
     closure->resize(0);
 
     delete states;
@@ -316,4 +316,4 @@ bool NFA_state_cmp_neg(const NFA_State* v1, const NFA_State* v2) {
         return false;
 }
 
-} // namespace zeek::detail
+}

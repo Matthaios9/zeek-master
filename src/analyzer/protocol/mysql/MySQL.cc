@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/mysql/MySQL.h"
 
@@ -44,8 +44,8 @@ void MySQL_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
     analyzer::tcp::TCP_ApplicationAnalyzer::DeliverStream(len, data, orig);
 
     if ( tls_active ) {
-        // If TLS has been initiated, forward to child and
-        // short-circuit further processing
+
+
         ForwardStream(len, data, orig);
         return;
     }
@@ -54,9 +54,9 @@ void MySQL_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
         return;
 
     if ( had_gap )
-        // If only one side had a content gap, we could still try to
-        // deliver data to the other side if the script layer can
-        // handle this.
+
+
+
         return;
 
     try {
@@ -76,4 +76,4 @@ void MySQL_Analyzer::Undelivered(uint64_t seq, int len, bool orig) {
     interp->NewGap(orig, len);
 }
 
-} // namespace zeek::analyzer::mysql
+}

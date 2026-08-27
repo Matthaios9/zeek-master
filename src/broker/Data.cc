@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/broker/Data.h"
 
@@ -45,7 +45,7 @@ TEST_CASE("converting Zeek to Broker protocol constants") {
 
 namespace zeek::Broker::detail {
 
-// Returns true if the given Zeek type is serialized as a broker::vector
+
 static bool serialized_as_vector(TypeTag tag) {
     switch ( tag ) {
         case TYPE_VECTOR:
@@ -198,7 +198,7 @@ struct val_converter {
                     auto disambiguate = serialized_as_vector(expected_index_types[0]->Tag());
 
                     if ( disambiguate ) {
-                        // Disambiguate from composite key w/ multiple vals.
+
                         composite_key.emplace_back(item);
                         indices = &composite_key;
                     }
@@ -215,7 +215,7 @@ struct val_converter {
             auto list_val = make_intrusive<ListVal>(TYPE_ANY);
 
             for ( size_t i = 0; i < indices->size(); ++i ) {
-                auto val = (*indices)[i]; // Must copy, because std::set has only immutable access.
+                auto val = (*indices)[i];
                 auto index_val = data_to_val(val, expected_index_types[i].get());
 
                 if ( ! index_val )
@@ -247,7 +247,7 @@ struct val_converter {
                     auto disambiguate = serialized_as_vector(expected_index_types[0]->Tag());
 
                     if ( disambiguate ) {
-                        // Disambiguate from composite key w/ multiple vals.
+
                         composite_key.emplace_back(item.first);
                         indices = &composite_key;
                     }
@@ -264,7 +264,7 @@ struct val_converter {
             auto list_val = make_intrusive<ListVal>(TYPE_ANY);
 
             for ( size_t i = 0; i < indices->size(); ++i ) {
-                auto val = (*indices)[i]; // Must copy, because the key is immutable.
+                auto val = (*indices)[i];
                 auto index_val = data_to_val(val, expected_index_types[i].get());
 
                 if ( ! index_val )
@@ -301,7 +301,7 @@ struct val_converter {
             return rval;
         }
         else if ( type->Tag() == TYPE_LIST ) {
-            // lists are just treated as vectors on the broker side.
+
             auto lt = type->AsTypeList();
             auto pure = lt->IsPure();
             const auto& types = lt->GetTypes();
@@ -347,18 +347,18 @@ struct val_converter {
             if ( t->Tag() != TYPE_FUNC )
                 return nullptr;
 
-            if ( a.size() == 2 ) // we have a closure/capture frame
+            if ( a.size() == 2 )
             {
-                // Note, seems if we already have a separate
-                // instance of the same lambda, then unless
-                // we use a cloned value, we'll step on that
-                // one's captures, too.  This is because
-                // the capture mapping lives with the Func
-                // object rather than the FuncVal.  However,
-                // we can't readily Clone() here because
-                // rval is const (and, grrr, Clone() is not).
-                // -VP
-                // rval = rval->Clone();
+
+
+
+
+
+
+
+
+
+
 
                 auto frame = broker::get_if<broker::vector>(a[1]);
                 if ( ! frame )
@@ -526,7 +526,7 @@ struct type_checker {
                     auto disambiguate = serialized_as_vector(expected_index_types[0]->Tag());
 
                     if ( disambiguate )
-                        // Disambiguate from composite key w/ multiple vals.
+
                         indices_to_check.emplace_back(&item);
                     else {
                         indices_to_check.reserve(indices->size());
@@ -576,7 +576,7 @@ struct type_checker {
                     auto disambiguate = serialized_as_vector(expected_index_types[0]->Tag());
 
                     if ( disambiguate )
-                        // Disambiguate from composite key w/ multiple vals.
+
                         indices_to_check.emplace_back(&item.first);
                     else {
                         indices_to_check.reserve(indices->size());
@@ -693,8 +693,8 @@ struct type_checker {
             return true;
         }
         else if ( type->Tag() == TYPE_OPAQUE ) {
-            // TODO: Could avoid doing the full unserialization here
-            // and just check if the type is a correct match.
+
+
             auto ov = OpaqueVal::UnserializeData(BrokerListView{&a});
             return ov != nullptr;
         }
@@ -769,7 +769,7 @@ std::optional<broker::data> val_to_data(const Val* v, bool unwrap_broker_data) {
             rval.emplace_back(f->GetName());
 
             if ( f->GetName().starts_with("lambda_<") ) {
-                // Only ScriptFuncs have closures.
+
                 if ( auto b = dynamic_cast<const zeek::detail::ScriptFunc*>(f) ) {
                     auto bc = b->SerializeCaptures();
                     if ( ! bc )
@@ -858,8 +858,8 @@ std::optional<broker::data> val_to_data(const Val* v, bool unwrap_broker_data) {
             return {std::move(rval)};
         }
         case TYPE_LIST: {
-            // We don't really support lists on the broker side.
-            // So we just pretend that it is a vector instead.
+
+
             auto list = v->AsListVal();
             broker::vector rval;
             rval.reserve(list->Length());
@@ -885,11 +885,11 @@ std::optional<broker::data> val_to_data(const Val* v, bool unwrap_broker_data) {
         case TYPE_RECORD: {
             auto rec = v->AsRecordVal();
 
-            // If unwrap_broker_data is set and this record is a Broker::Data record,
-            // use the contained data field directly.
+
+
             if ( unwrap_broker_data && rec->GetType() == BifType::Record::Broker::Data ) {
                 const auto ov = rec->GetField<zeek::OpaqueVal>(0);
-                // Sanity.
+
                 if ( ov->GetType() != opaque_of_data_type ) {
                     reporter->Error("Broker::Data data field has wrong type: %s",
                                     obj_desc_short(ov->GetType()).c_str());
@@ -1009,9 +1009,9 @@ struct data_type_getter {
     }
 
     result_type operator()(const broker::vector&) {
-        // Note that Broker uses vectors to store record data, so there's
-        // no actual way to tell if this data was originally associated
-        // with a Zeek record.
+
+
+
         return BifType::Enum::Broker::DataType->GetEnumVal(BifEnum::Broker::VECTOR);
     }
 };
@@ -1026,8 +1026,8 @@ broker::data& opaque_field_to_data(RecordVal* v, zeek::detail::Frame* f) {
     if ( ! d )
         reporter->RuntimeError(f->GetCallLocation(), "Broker::Data's opaque field is not set");
 
-    // RuntimeError throws an exception which causes this line to never execute.
-    // NOLINTNEXTLINE(clang-analyzer-core.uninitialized.UndefReturn)
+
+
     return static_cast<DataVal*>(d.get())->data;
 }
 
@@ -1068,10 +1068,10 @@ bool SetIterator::DoUnserializeData(BrokerDataView data) {
 
     auto x = get_if<broker::set>(&(*v)[0]);
 
-    // We set the iterator by finding the element it used to point to.
-    // This is not perfect, as there's no guarantee that the restored
-    // container will list the elements in the same order. But it's as
-    // good as we can do, and it should generally work out.
+
+
+
+
     if ( ! x->contains((*v)[1]) )
         return false;
 
@@ -1093,10 +1093,10 @@ bool TableIterator::DoUnserializeData(BrokerDataView data) {
 
     auto x = get_if<broker::table>(&(*v)[0]);
 
-    // We set the iterator by finding the element it used to point to.
-    // This is not perfect, as there's no guarantee that the restored
-    // container will list the elements in the same order. But it's as
-    // good as we can do, and it should generally work out.
+
+
+
+
     if ( ! x->contains((*v)[1]) )
         return false;
 
@@ -1190,7 +1190,7 @@ threading::Field* data_to_threading_field(const broker::data& d) {
                                 static_cast<TypeTag>(*type), static_cast<TypeTag>(*subtype), *optional);
 }
 
-} // namespace zeek::Broker::detail
+}
 
 namespace zeek {
 
@@ -1237,4 +1237,4 @@ bool BrokerListBuilder::Add(const Val* value) {
     return false;
 }
 
-} // namespace zeek
+}

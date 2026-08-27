@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/WeirdState.h"
 
@@ -30,4 +30,4 @@ bool PermitWeird(WeirdStateMap& wsm, const char* name, uint64_t threshold, uint6
         return false;
 }
 
-} // namespace zeek::detail
+}

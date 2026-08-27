@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/RuleMatcher.h"
 
@@ -27,24 +27,24 @@
 
 using namespace std;
 
-// Functions exposed by rule-scan.l
+
 extern void rules_set_input_from_buffer(const char* data, size_t size);
 extern void rules_set_input_from_file(FILE* f);
 extern void rules_parse_input();
 
 namespace zeek::detail {
 
-// FIXME: Things that are not fully implemented/working yet:
-//
-//		  - "ip-options" always evaluates to false
-//		  - offsets for payload patterns are ignored
-//			(but simulated by snort2bro by leading dots)
-//		  - if a rule contains "PayloadSize" and application
-//			specific patterns (like HTTP), but no "payload" patterns,
-//			it may fail to match. Work-around: Insert an always
-//			matching "payload" pattern (not done in snort2bro yet)
-//		  - tcp-state always evaluates to true
-//			(implemented but deactivated for comparison to Snort)
+
+
+
+
+
+
+
+
+
+
+
 
 uint32_t RuleHdrTest::idcounter = 0;
 
@@ -112,8 +112,8 @@ RuleHdrTest::RuleHdrTest(RuleHdrTest& h) {
             for ( const auto& pattern : orig_set->patterns )
                 copied_set->patterns.push_back(util::copy_string(pattern));
             delete copied_set;
-            // TODO: Why do we create copied_set only to then
-            // never use it?
+
+
         }
     }
 
@@ -249,10 +249,10 @@ bool RuleMatcher::ReadFiles(const std::vector<SignatureFile>& files) {
         if ( ! f.full_path )
             f.full_path = util::find_file(f.file, util::zeek_path(), ".sig");
 
-        // We mimic previous Zeek versions by temporarily setting the current
-        // script location to the place where the loading happened. This
-        // behavior was never documented, but seems worth not breaking as some
-        // plugins ended up relying on it.
+
+
+
+
         Location orig_location = detail::GetCurrentLocation();
         detail::SetCurrentLocation(f.load_location);
 
@@ -265,12 +265,12 @@ bool RuleMatcher::ReadFiles(const std::vector<SignatureFile>& files) {
                                          HookLoadFileExtended(zeek::plugin::Plugin::SIGNATURES, f.file, *f.full_path),
                                          std::make_pair(-1, std::nullopt));
 
-        // Restore original location information.
+
         detail::SetCurrentLocation(orig_location);
 
         switch ( rc.first ) {
             case -1:
-                // No plugin in charge of this file.
+
                 if ( f.full_path->empty() ) {
                     zeek::reporter->Error("failed to find file associated with @load-sigs %s", f.file.c_str());
                     continue;
@@ -286,7 +286,7 @@ bool RuleMatcher::ReadFiles(const std::vector<SignatureFile>& files) {
 
             case 1:
                 if ( ! rc.second )
-                    // A plugin took care of it, just skip.
+
                     continue;
 
                 break;
@@ -297,12 +297,12 @@ bool RuleMatcher::ReadFiles(const std::vector<SignatureFile>& files) {
         FILE* rules_in = nullptr;
 
         if ( rc.first == 1 ) {
-            // Parse code provided by plugin.
+
             assert(rc.second);
             rules_set_input_from_buffer(rc.second->data(), rc.second->size());
         }
         else {
-            // Parse from file.
+
             rules_in = util::open_file(*f.full_path);
 
             if ( ! rules_in ) {
@@ -370,7 +370,7 @@ void RuleMatcher::BuildRulesTree() {
 }
 
 void RuleMatcher::InsertRuleIntoTree(Rule* r, int testnr, RuleHdrTest* dest, int level) {
-    // Initialize the preconditions
+
     for ( const auto& pc : r->preconds ) {
         auto entry = rules_by_id.find(pc->id);
         if ( entry == rules_by_id.end() ) {
@@ -382,8 +382,8 @@ void RuleMatcher::InsertRuleIntoTree(Rule* r, int testnr, RuleHdrTest* dest, int
         entry->second->dependents.push_back(r);
     }
 
-    // All tests in tree already?
-    if ( testnr >= r->hdr_tests.length() ) { // then insert it into the right list of the test
+
+    if ( testnr >= r->hdr_tests.length() ) {
         if ( r->patterns.empty() ) {
             r->next = dest->pure_rules;
             dest->pure_rules = r;
@@ -397,14 +397,14 @@ void RuleMatcher::InsertRuleIntoTree(Rule* r, int testnr, RuleHdrTest* dest, int
         return;
     }
 
-    // Look for matching child.
+
     for ( RuleHdrTest* h = dest->child; h; h = h->sibling )
         if ( *h == *r->hdr_tests[testnr] ) {
             InsertRuleIntoTree(r, testnr + 1, h, level + 1);
             return;
         }
 
-    // Insert new child.
+
     RuleHdrTest* newtest = new RuleHdrTest(*r->hdr_tests[testnr]);
     newtest->sibling = dest->child;
     newtest->level = level + 1;
@@ -414,7 +414,7 @@ void RuleMatcher::InsertRuleIntoTree(Rule* r, int testnr, RuleHdrTest* dest, int
 }
 
 void RuleMatcher::BuildRegEx(RuleHdrTest* hdr_test, string_list* exprs, int_list* ids) {
-    // For each type, get all patterns on this node.
+
     for ( Rule* r = hdr_test->pattern_rules; r; r = r->next ) {
         for ( const auto& p : r->patterns ) {
             exprs[p->type].push_back(p->pattern);
@@ -422,14 +422,14 @@ void RuleMatcher::BuildRegEx(RuleHdrTest* hdr_test, string_list* exprs, int_list
         }
     }
 
-    // If we're above the RE_level, these patterns will form the regexprs.
+
     if ( hdr_test->level < RE_level ) {
         for ( int i = 0; i < Rule::TYPES; ++i )
             if ( ! exprs[i].empty() )
                 BuildPatternSets(&hdr_test->psets[i], exprs[i], ids[i]);
     }
 
-    // Get the patterns on all of our children.
+
     for ( RuleHdrTest* h = hdr_test->child; h; h = h->sibling ) {
         string_list child_exprs[Rule::TYPES];
         int_list child_ids[Rule::TYPES];
@@ -444,26 +444,26 @@ void RuleMatcher::BuildRegEx(RuleHdrTest* hdr_test, string_list* exprs, int_list
         }
     }
 
-    // If we're on the RE_level, all patterns gathered now
-    // form the regexprs.
+
+
     if ( hdr_test->level == RE_level ) {
         for ( int i = 0; i < Rule::TYPES; ++i )
             if ( ! exprs[i].empty() )
                 BuildPatternSets(&hdr_test->psets[i], exprs[i], ids[i]);
     }
 
-    // If we're below the RE_level, the regexprs remains empty.
+
 }
 
 void RuleMatcher::BuildPatternSets(RuleHdrTest::pattern_set_list* dst, const string_list& exprs, const int_list& ids) {
     assert(static_cast<size_t>(exprs.length()) == ids.size());
 
-    // We build groups of at most sig_max_group_size regexps.
+
 
     string_list group_exprs;
     int_list group_ids;
 
-    for ( int i = 0; i < exprs.length() + 1 /* sic! */; i++ ) {
+    for ( int i = 0; i < exprs.length() + 1 ; i++ ) {
         if ( i < exprs.length() ) {
             group_exprs.push_back(exprs[i]);
             group_ids.push_back(ids[i]);
@@ -483,7 +483,7 @@ void RuleMatcher::BuildPatternSets(RuleHdrTest::pattern_set_list* dst, const str
     }
 }
 
-// Get a 8/16/32-bit value from the given position in the packet header
+
 static inline uint32_t getval(const u_char* data, int size) {
     switch ( size ) {
         case 1: return *reinterpret_cast<const uint8_t*>(data);
@@ -495,14 +495,14 @@ static inline uint32_t getval(const u_char* data, int size) {
         default: reporter->InternalError("illegal HdrTest size");
     }
 
-    // Should not be reached.
+
     return 0;
 }
 
-// Evaluate a value list (matches if at least one value matches).
+
 template<typename FuncT>
 static inline bool match_or(const maskedvalue_list& mvals, uint32_t v, FuncT comp) {
-    // TODO: this could be a find_if
+
     for ( const auto& val : mvals ) {
         if ( comp(v & val->mask, val->val) )
             return true;
@@ -510,7 +510,7 @@ static inline bool match_or(const maskedvalue_list& mvals, uint32_t v, FuncT com
     return false;
 }
 
-// Evaluate a prefix list (matches if at least one value matches).
+
 template<typename FuncT>
 static inline bool match_or(const vector<IPPrefix>& prefixes, const IPAddr& a, FuncT comp) {
     for ( const auto& pfx : prefixes ) {
@@ -522,10 +522,10 @@ static inline bool match_or(const vector<IPPrefix>& prefixes, const IPAddr& a, F
     return false;
 }
 
-// Evaluate a value list (doesn't match if any value matches).
+
 template<typename FuncT>
 static inline bool match_not_and(const maskedvalue_list& mvals, uint32_t v, FuncT comp) {
-    // TODO: this could be a find_if
+
     for ( const auto& val : mvals ) {
         if ( comp(v & val->mask, val->val) )
             return false;
@@ -533,7 +533,7 @@ static inline bool match_not_and(const maskedvalue_list& mvals, uint32_t v, Func
     return true;
 }
 
-// Evaluate a prefix list (doesn't match if any value matches).
+
 template<typename FuncT>
 static inline bool match_not_and(const vector<IPPrefix>& prefixes, const IPAddr& a, FuncT comp) {
     for ( const auto& pfx : prefixes ) {
@@ -593,7 +593,7 @@ RuleFileMagicState* RuleMatcher::InitFileMagic() const {
         state->matchers.push_back(m);
     }
 
-    // Save some memory.
+
     state->matchers.resize(0);
     return state;
 }
@@ -601,16 +601,16 @@ RuleFileMagicState* RuleMatcher::InitFileMagic() const {
 bool RuleMatcher::AllRulePatternsMatched(const Rule* r, MatchPos matchpos, const AcceptingMatchSet& ams) {
     DBG_LOG(DBG_RULES, "Checking rule: %s", r->id);
 
-    // Check whether all patterns of the rule have matched.
+
     for ( const auto& pattern : r->patterns ) {
         if ( ! ams.contains(pattern->id) )
             return false;
 
-        // See if depth is satisfied.
+
         if ( matchpos > pattern->offset + pattern->depth )
             return false;
 
-        // FIXME: How to check for offset ??? ###
+
     }
 
     DBG_LOG(DBG_RULES, "All patterns of rule satisfied");
@@ -655,7 +655,7 @@ RuleMatcher::MIME_Matches* RuleMatcher::Match(RuleFileMagicState* state, const u
         accepted_matches.insert(ams.begin(), ams.end());
     }
 
-    // Find rules for which patterns have matched.
+
     map<decltype(Rule::idx), Rule*> rule_matches;
 
     for ( AcceptingMatchSet::const_iterator it = accepted_matches.begin(); it != accepted_matches.end(); ++it ) {
@@ -697,19 +697,19 @@ RuleEndpointState* RuleMatcher::InitEndpoint(analyzer::Analyzer* analyzer, const
         DBG_LOG(DBG_RULES, "HdrTest %d matches (%s%s)", hdr_test->id, hdr_test->pattern_rules ? "+" : "-",
                 hdr_test->pure_rules ? "+" : "-");
 
-        // Current HdrTest node matches the packet, so remember it
-        // if we have any rules on it.
+
+
         if ( hdr_test->pattern_rules || hdr_test->pure_rules )
             state->hdr_tests.push_back(hdr_test);
 
-        // Evaluate all rules on this node which don't contain
-        // any patterns.
+
+
         for ( Rule* r = hdr_test->pure_rules; r; r = r->next )
             if ( EvalRuleConditions(r, state, nullptr, 0, false) )
                 ExecRuleActions(r, state, nullptr, 0, false);
 
-        // If we're on or above the RE_level, we may have some
-        // pattern matching to do.
+
+
         if ( hdr_test->level <= RE_level ) {
             for ( int i = Rule::PAYLOAD; i < Rule::TYPES; ++i ) {
                 for ( const auto& set : hdr_test->psets[i] ) {
@@ -724,11 +724,11 @@ RuleEndpointState* RuleMatcher::InitEndpoint(analyzer::Analyzer* analyzer, const
         }
 
         if ( ip ) {
-            // Descend the RuleHdrTest tree further.
+
             for ( RuleHdrTest* h = hdr_test->child; h; h = h->sibling ) {
                 bool match = false;
 
-                // Evaluate the header test.
+
                 switch ( h->prot ) {
                     case RuleHdrTest::NEXT: match = compare(*h->vals, ip->NextProto(), h->comp); break;
 
@@ -769,11 +769,11 @@ RuleEndpointState* RuleMatcher::InitEndpoint(analyzer::Analyzer* analyzer, const
             }
         }
     }
-    // Save some memory.
+
     state->hdr_tests.resize(0);
     state->matchers.resize(0);
 
-    // Send BOL to payload matchers.
+
     Match(state, Rule::PAYLOAD, reinterpret_cast<const u_char*>(""), 0, true, false, false);
 
     return state;
@@ -786,10 +786,10 @@ void RuleMatcher::Match(RuleEndpointState* state, Rule::PatternType type, const 
         return;
     }
 
-    // FIXME: There is probably some room for performance improvements
-    // in this method.  For example, it *may* help to use an IntSet
-    // for 'accepted' (that depends on the average number of matching
-    // patterns).
+
+
+
+
 
     bool newmatch = false;
 
@@ -802,7 +802,7 @@ void RuleMatcher::Match(RuleEndpointState* state, Rule::PatternType type, const 
     }
 #endif
 
-    // Remember size of first non-null data.
+
     if ( type == Rule::PAYLOAD ) {
         bol = state->payload_size < 0;
 
@@ -818,7 +818,7 @@ void RuleMatcher::Match(RuleEndpointState* state, Rule::PatternType type, const 
 
     size_t pre_match_pos = state->current_pos;
 
-    // Feed data into all relevant matchers.
+
     for ( const auto& m : state->matchers ) {
         if ( m->type == type && m->state->Match(data, data_len, bol, eol, clear) )
             newmatch = true;
@@ -826,7 +826,7 @@ void RuleMatcher::Match(RuleEndpointState* state, Rule::PatternType type, const 
 
     state->current_pos += data_len;
 
-    // If no new match found, we're already done.
+
     if ( ! newmatch )
         return;
 
@@ -839,11 +839,11 @@ void RuleMatcher::Match(RuleEndpointState* state, Rule::PatternType type, const 
         accepted_matches.insert(ams.begin(), ams.end());
     }
 
-    // Determine the rules for which all patterns have matched.
-    // This code should be fast enough as long as there are only very few
-    // matched patterns per connection (which is a plausible assumption).
 
-    // Find rules for which patterns have matched.
+
+
+
+
     map<decltype(Rule::idx), std::pair<Rule*, MatchPos>> rule_matches;
 
     for ( AcceptingMatchSet::const_iterator it = accepted_matches.begin(); it != accepted_matches.end(); ++it ) {
@@ -856,7 +856,7 @@ void RuleMatcher::Match(RuleEndpointState* state, Rule::PatternType type, const 
             rule_matches[r->Index()] = make_pair(r, mpos);
     }
 
-    // Check which of the matching rules really belong to any of our nodes.
+
     for ( const auto& entry : rule_matches ) {
         auto [r, match_end_pos] = entry.second;
 
@@ -865,40 +865,40 @@ void RuleMatcher::Match(RuleEndpointState* state, Rule::PatternType type, const 
         for ( const auto& h : state->hdr_tests ) {
             DBG_LOG(DBG_RULES, "Checking for accepted rule on HdrTest %d", h->id);
 
-            // Skip if rule does not belong to this node.
+
             if ( ! h->ruleset->Contains(r->Index()) )
                 continue;
 
             DBG_LOG(DBG_RULES, "On current node");
 
-            // Skip if rule already fired for this connection.
+
             if ( is_member_of(state->matched_rules, r->Index()) )
                 continue;
 
-            // Remember that all patterns have matched.
+
             if ( ! state->FindRulePatternMatch(r) ) {
                 MatchPos end_of_match = match_end_pos - pre_match_pos;
                 state->AddRulePatternMatch(r, data, data_len, end_of_match);
             }
 
             DBG_LOG(DBG_RULES, "And has not already fired");
-            // Eval additional conditions.
+
             if ( ! EvalRuleConditions(r, state, data, data_len, false) )
                 continue;
 
-            // Found a match.
+
             ExecRuleActions(r, state, data, data_len, false);
         }
     }
 }
 
 void RuleMatcher::FinishEndpoint(RuleEndpointState* state) {
-    // Send EOL to payload matchers.
+
     Match(state, Rule::PAYLOAD, reinterpret_cast<const u_char*>(""), 0, false, true, false);
 
-    // Some of the pure rules may match at the end of the connection,
-    // although they have not matched at the beginning. So, we have
-    // to test the candidates here.
+
+
+
 
     ExecPureRules(state, true);
 
@@ -936,13 +936,13 @@ bool RuleMatcher::ExecRulePurely(Rule* r, const String* s, RuleEndpointState* st
 bool RuleMatcher::EvalRuleConditions(Rule* r, RuleEndpointState* state, const u_char* data, int len, bool eos) {
     DBG_LOG(DBG_RULES, "Evaluating conditions for rule %s", r->ID());
 
-    // Check for other rules which have to match first.
+
     for ( const auto& pc : r->preconds ) {
         RuleEndpointState* pc_state = state;
 
         if ( pc->opposite_dir ) {
             if ( ! state->opposite )
-                // No rule matching for other direction yet.
+
                 return false;
 
             pc_state = state->opposite;
@@ -950,11 +950,11 @@ bool RuleMatcher::EvalRuleConditions(Rule* r, RuleEndpointState* state, const u_
 
         if ( ! pc->negate ) {
             if ( ! is_member_of(pc_state->matched_rules, pc->rule->Index()) )
-                // Precond rule has not matched yet.
+
                 return false;
         }
         else {
-            // Only at eos can we decide about negated conditions.
+
             if ( ! eos )
                 return false;
 
@@ -973,7 +973,7 @@ bool RuleMatcher::EvalRuleConditions(Rule* r, RuleEndpointState* state, const u_
 
 void RuleMatcher::ExecRuleActions(Rule* r, RuleEndpointState* state, const u_char* data, int len, bool eos) {
     if ( state->opposite && is_member_of(state->opposite->matched_rules, r->Index()) )
-        // We have already executed the actions.
+
         return;
 
     state->matched_rules.push_back(r->Index());
@@ -981,7 +981,7 @@ void RuleMatcher::ExecRuleActions(Rule* r, RuleEndpointState* state, const u_cha
     for ( const auto& action : r->actions )
         action->DoAction(r, state, data, len);
 
-    // This rule may trigger some other rules; check them.
+
     for ( const auto& dep : r->dependents ) {
         ExecRule(dep, state, eos);
         if ( state->opposite )
@@ -990,25 +990,25 @@ void RuleMatcher::ExecRuleActions(Rule* r, RuleEndpointState* state, const u_cha
 }
 
 void RuleMatcher::ExecRule(Rule* rule, RuleEndpointState* state, bool eos) {
-    // Nothing to do if it has already matched.
+
     if ( is_member_of(state->matched_rules, rule->Index()) )
         return;
 
     for ( const auto& h : state->hdr_tests ) {
-        // Is it on this HdrTest at all?
+
         if ( ! h->ruleset->Contains(rule->Index()) )
             continue;
 
-        // Is it a pure rule?
+
         for ( Rule* r = h->pure_rules; r; r = r->next )
-            if ( r == rule ) { // found, so let's evaluate it
+            if ( r == rule ) {
                 ExecRulePurely(rule, nullptr, state, eos);
                 return;
             }
 
-        // It must be a non-pure rule. It can only match right now if
-        // all its patterns are satisfied already.
-        if ( auto* match = state->FindRulePatternMatch(rule) ) { // they are, so let's evaluate it
+
+
+        if ( auto* match = state->FindRulePatternMatch(rule) ) {
             ExecRulePurely(rule, &match->text, state, eos);
             return;
         }
@@ -1153,9 +1153,9 @@ static Val* get_zeek_val(const char* label) {
     return id->GetVal().get();
 }
 
-// Converts an atomic Val and appends it to the list.  For subnet types,
-// if the prefix_vector param isn't null, appending to that is preferred
-// over appending to the masked val list.
+
+
+
 static bool val_to_maskedval(Val* v, maskedvalue_list* append_to, vector<IPPrefix>* prefix_vector) {
     MaskedValue* mval = new MaskedValue;
 
@@ -1185,8 +1185,8 @@ static bool val_to_maskedval(Val* v, maskedvalue_list* append_to, vector<IPPrefi
                 v->AsSubNet().Prefix().GetBytes(&n);
                 v->AsSubNetVal()->Mask().CopyIPv6(m);
 
-                // Intentionally leaving this as a normal loop because it's more descriptive.
-                // NOLINTNEXTLINE(modernize-loop-convert)
+
+
                 for ( unsigned int i = 0; i < 4; i++ )
                     m[i] = ntohl(m[i]);
 
@@ -1331,4 +1331,4 @@ void RuleMatcherState::ClearMatchState(bool orig) {
         rule_matcher->ClearEndpointState(resp_match_state);
 }
 
-} // namespace zeek::detail
+}

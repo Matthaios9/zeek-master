@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/tcp/TCP_Endpoint.h"
 
@@ -54,7 +54,7 @@ void TCP_Endpoint::Done() {
 void TCP_Endpoint::SetPeer(TCP_Endpoint* p) {
     peer = p;
     if ( IsOrig() ) {
-        // Only one Endpoint adds the initial state to the counter.
+
         packet_analysis::TCP::TCPAnalyzer::GetStats().StateEntered(state, peer->state);
     }
 }
@@ -111,8 +111,8 @@ static inline bool is_handshake(EndpointState state) {
 
 void TCP_Endpoint::SetState(EndpointState new_state) {
     if ( new_state != state ) {
-        // Activate inactivity timer if this transition finishes the
-        // handshake.
+
+
         if ( ! is_handshake(new_state) )
             if ( is_handshake(state) && is_handshake(peer->state) )
                 Conn()->SetInactivityTimeout(zeek::detail::tcp_inactivity_timeout);
@@ -130,33 +130,33 @@ void TCP_Endpoint::SetState(EndpointState new_state) {
 uint64_t TCP_Endpoint::Size() const {
     if ( prev_state == TCP_ENDPOINT_SYN_SENT && state == TCP_ENDPOINT_RESET && peer->state == TCP_ENDPOINT_INACTIVE &&
          ! NoDataAcked() )
-        // This looks like a half-open connection was discovered and aborted.
-        // Sequence numbers could be misleading if used in context of data size
-        // and there was never a chance for this endpoint to send data anyway.
+
+
+
         return 0;
 
     uint64_t size;
     uint64_t last_seq_64 = ToFullSeqSpace(LastSeq(), SeqWraps());
     uint64_t ack_seq_64 = ToFullSeqSpace(AckSeq(), AckWraps());
 
-    // Going straight to relative sequence numbers and comparing those might
-    // make more sense, but there's some cases (e.g. due to RSTs) where
-    // last_seq might not be initialized to a trustworthy value such that
-    // rel_seq > rel_ack, but last_seq_64 < start_seq, which is obviously wrong.
+
+
+
+
     if ( last_seq_64 > ack_seq_64 )
         size = last_seq_64 - StartSeqI64();
     else
         size = ack_seq_64 - StartSeqI64();
 
-    // Don't include SYN octet in sequence space.  For partial connections
-    // (no SYN seen), we're still careful to adjust start_seq as though
-    // there was an initial SYN octet, because if we don't then the
-    // packet reassembly code gets confused.
+
+
+
+
     if ( size != 0 )
         --size;
 
     if ( FIN_cnt > 0 && size != 0 )
-        --size; // don't include FIN octet.
+        --size;
 
     return size;
 }
@@ -183,8 +183,8 @@ bool TCP_Endpoint::DataSent(double t, uint64_t seq, int len, int caplen, const u
             len -= under_seq;
         }
 
-        // DEBUG_MSG("%d: seek %d, data=%02x len=%d\n", IsOrig(), seq - contents_start_seq, *data,
-        // len);
+
+
         FILE* f = contents_file->Seek(seq - contents_start_seq);
 
         if ( fwrite(data, 1, len, f) < static_cast<unsigned>(len) ) {
@@ -211,7 +211,7 @@ void TCP_Endpoint::SetContentsFile(FilePtr f) {
     contents_start_seq = ToRelativeSeqSpace(last_seq, seq_wraps);
 
     if ( contents_start_seq == 0 )
-        contents_start_seq = 1; // skip SYN
+        contents_start_seq = 1;
 
     if ( contents_processor )
         contents_processor->SetContentsFile(contents_file);
@@ -221,22 +221,22 @@ bool TCP_Endpoint::CheckHistory(uint32_t mask, char code) {
     auto conn = Conn();
 
     if ( (code == 'A' || code == 'D') && conn->GetHistory() == "H" ) {
-        // This is a connection that began with a SYN-ACK rather
-        // than a SYN.  Those don't get flipped (unless they have
-        // the right combination of likely-server ports) because
-        // they can arise from stealth scans, and for those the
-        // SYN-ACK sender *is* the originator.
-        //
-        // In addition, we're now seeing productive TCP traffic
-        // (either a pure ack or a data segment).  Regardless of
-        // whether it's coming from the nominal originator or the
-        // nominal responder, its presence makes it a lot less likely
-        // that the initial SYN-ACK represented a stealth scan,
-        // since if those elicit anything, it should be a RST.
-        //
-        // Thus, at this stage we go ahead and flip the connection.
-        // We then fix up the history (which will initially be "H^") and
-        // pretend we have actually seen that missing first packet.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         conn->FlipRoles();
         conn->ReplaceHistory("^h");
         tcp_analyzer->SetFirstPacketSeen(true);
@@ -281,4 +281,4 @@ void TCP_Endpoint::Gap(uint64_t seq, uint64_t len) {
         Conn()->HistoryThresholdEvent(tcp_multiple_gap, IsOrig(), t);
 }
 
-} // namespace zeek::analyzer::tcp
+}

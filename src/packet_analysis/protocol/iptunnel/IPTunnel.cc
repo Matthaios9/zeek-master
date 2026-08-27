@@ -1,8 +1,8 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/protocol/iptunnel/IPTunnel.h"
 
-#include <pcap.h> // For DLT_ constants
+#include <pcap.h>
 
 #include "zeek/Conn.h"
 #include "zeek/IP.h"
@@ -35,7 +35,7 @@ bool IPTunnelAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* pa
     std::shared_ptr<IP_Hdr> inner = nullptr;
 
     if ( gre_version != 0 ) {
-        // Check for a valid inner packet first.
+
         auto result = packet_analysis::IP::ParsePacket(len, data, proto, inner);
         if ( result == packet_analysis::IP::ParseResult::BAD_PROTOCOL )
             Weird("invalid_inner_IP_version", packet);
@@ -48,9 +48,9 @@ bool IPTunnelAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* pa
             return false;
     }
 
-    // Look up to see if we've already seen this IP tunnel, identified
-    // by the pair of IP addresses, so that we can always associate the
-    // same UID with it.
+
+
+
     IPPair tunnel_idx;
     if ( packet->ip_hdr->SrcAddr() < packet->ip_hdr->DstAddr() )
         tunnel_idx = IPPair(packet->ip_hdr->SrcAddr(), packet->ip_hdr->DstAddr());
@@ -76,9 +76,9 @@ bool IPTunnelAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* pa
                                          ip_tunnels[tunnel_idx].first);
 }
 
-/**
- * Handles a packet that contains an IP header directly after the tunnel header.
- */
+
+
+
 bool IPTunnelAnalyzer::ProcessEncapsulatedPacket(double t, Packet* pkt, const std::shared_ptr<IP_Hdr>& inner,
                                                  std::shared_ptr<EncapsulationStack> prev,
                                                  const EncapsulatingConn& ec) {
@@ -105,16 +105,16 @@ bool IPTunnelAnalyzer::ProcessEncapsulatedPacket(double t, Packet* pkt, const st
     auto outer = prev ? std::move(prev) : std::make_shared<EncapsulationStack>();
     outer->Add(ec);
 
-    // Construct fake packet containing the inner packet so it can be processed
-    // like a normal one.
+
+
     Packet p;
     p.Init(DLT_RAW, &ts, caplen, len, data, false, "");
     p.encap = std::move(outer);
 
-    // Forward the packet back to the IP analyzer.
+
     bool return_val = ForwardPacket(len, data, &p);
 
-    // Propagate the flags from fake inner packet to outer packet
+
     if ( pkt ) {
         pkt->processed = p.processed;
         pkt->dump_packet = p.dump_packet;
@@ -124,9 +124,9 @@ bool IPTunnelAnalyzer::ProcessEncapsulatedPacket(double t, Packet* pkt, const st
     return return_val;
 }
 
-/**
- * Handles a packet that contains a physical-layer header after the tunnel header.
- */
+
+
+
 bool IPTunnelAnalyzer::ProcessEncapsulatedPacket(double t, Packet* pkt, uint32_t caplen, uint32_t len,
                                                  const u_char* data, int link_type,
                                                  std::shared_ptr<EncapsulationStack> prev,
@@ -143,17 +143,17 @@ bool IPTunnelAnalyzer::ProcessEncapsulatedPacket(double t, Packet* pkt, uint32_t
     auto outer = prev ? std::move(prev) : std::make_shared<EncapsulationStack>();
     outer->Add(ec);
 
-    // Construct fake packet containing the inner packet so it can be processed
-    // like a normal one.
+
+
     Packet p;
     p.Init(link_type, &ts, caplen, len, data, false, "");
     p.encap = std::move(outer);
 
-    // Process the packet as if it was a brand new packet by passing it back
-    // to the packet manager.
+
+
     bool return_val = packet_mgr->ProcessInnerPacket(&p);
 
-    // Propagate the flags from fake inner packet to outer packet
+
     if ( pkt ) {
         pkt->processed = p.processed;
         pkt->dump_packet = p.dump_packet;
@@ -170,12 +170,12 @@ std::unique_ptr<Packet> build_inner_packet(Packet* outer_pkt, int* encap_index,
     assert(outer_pkt->cap_len >= inner_cap_len);
     assert(outer_pkt->len >= outer_pkt->cap_len - inner_cap_len);
 
-    // Compute the wire length of the inner packet based on the wire length of
-    // the outer and the difference in capture lengths. This ensures that for
-    // truncated packets the wire length of the inner packet stays intact. Wire
-    // length may be greater than data available for truncated packets. However,
-    // analyzers do validate lengths found in headers with the wire length
-    // of the packet and keeping it consistent avoids violations.
+
+
+
+
+
+
     uint32_t consumed_len = outer_pkt->cap_len - inner_cap_len;
     uint32_t inner_wire_len = outer_pkt->len - consumed_len;
 
@@ -213,14 +213,14 @@ void IPTunnelTimer::Dispatch(double t, bool is_expire) {
     double inactive_time = t > last_active ? t - last_active : 0;
 
     if ( inactive_time >= BifConst::Tunnel::ip_tunnel_timeout )
-        // tunnel activity timed out, delete it from map
+
         analyzer->ip_tunnels.erase(tunnel_idx);
 
     else if ( ! is_expire )
-        // tunnel activity didn't timeout, schedule another timer
+
         zeek::detail::timer_mgr->Add(new IPTunnelTimer(t, tunnel_idx, analyzer));
 }
 
-} // namespace detail
+}
 
-} // namespace zeek::packet_analysis::IPTunnel
+}

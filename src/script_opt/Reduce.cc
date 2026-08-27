@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/Reduce.h"
 
@@ -9,9 +9,9 @@
 
 namespace zeek::detail {
 
-// True if two Val's refer to the same underlying value.  We gauge this
-// conservatively (i.e., for complicated values we just return false, even
-// if with a lot of work we could establish that they are in fact equivalent.)
+
+
+
 
 static bool same_val(const Val* v1, const Val* v2) {
     if ( is_atomic_val(v1) )
@@ -22,9 +22,9 @@ static bool same_val(const Val* v1, const Val* v2) {
 
 static bool same_expr(const Expr* e1, const Expr* e2, bool check_defs);
 
-// Returns true if op1 and op2 represent the same operand. If check_defs
-// is true then this factors in the reaching definitions available at
-// their usages.
+
+
+
 
 static bool same_op(const Expr* op1, const Expr* op2, bool check_defs) {
     if ( op1 == op2 )
@@ -34,8 +34,8 @@ static bool same_op(const Expr* op1, const Expr* op2, bool check_defs) {
         return false;
 
     if ( op1->Tag() == EXPR_NAME ) {
-        // Needs to be both the same identifier and in contexts
-        // where the identifier has the same definitions.
+
+
         auto op1_n = op1->AsNameExpr();
         auto op2_n = op2->AsNameExpr();
 
@@ -81,7 +81,7 @@ static bool same_op(const Expr* op1, const Expr* op2, bool check_defs) {
         return true;
     }
 
-    // We only get here if dealing with non-reduced operands.
+
     auto subop1_1 = op1->GetOp1();
     auto subop1_2 = op2->GetOp1();
     ASSERT(subop1_1 && subop1_2);
@@ -127,7 +127,7 @@ static bool same_expr(const Expr* e1, const Expr* e2, bool check_defs) {
         case EXPR_VECTOR_CONSTRUCTOR:
         case EXPR_EVENT:
         case EXPR_SCHEDULE:
-            // These always generate a new value.
+
             return false;
 
         case EXPR_INCR:
@@ -137,8 +137,8 @@ static bool same_expr(const Expr* e1, const Expr* e2, bool check_defs) {
         case EXPR_ASSIGN:
         case EXPR_FIELD_ASSIGN:
         case EXPR_INDEX_SLICE_ASSIGN:
-            // All of these should have been translated into something
-            // else.
+
+
             reporter->InternalError("Unexpected tag in Reducer::same_expr");
 
         case EXPR_ANY_INDEX: {
@@ -244,14 +244,14 @@ Reducer::Reducer(const ScriptFuncPtr& func, std::shared_ptr<ProfileFunc> _pf, st
     : pf(std::move(_pf)), pfs(std::move(_pfs)) {
     auto& ft = func->GetType();
 
-    // Track the parameters so we don't remap them.
+
     int num_params = ft->Params()->NumFields();
     auto& scope_vars = current_scope()->OrderedVars();
 
     for ( auto i = 0; i < num_params; ++i )
         tracked_ids.insert(scope_vars[i]);
 
-    // Now include any captures.
+
     if ( ft->GetCaptures() )
         for ( auto& c : *ft->GetCaptures() )
             tracked_ids.insert(c.Id());
@@ -263,7 +263,7 @@ StmtPtr Reducer::Reduce(StmtPtr s) {
     try {
         return reduction_root->Reduce(this);
     } catch ( InterpreterException& e ) {
-        /* Already reported. */
+
         return reduction_root;
     }
 }
@@ -278,8 +278,8 @@ NameExprPtr Reducer::UpdateName(NameExprPtr n) {
 
     auto ne = make_intrusive<NameExpr>(FindNewLocal(n));
 
-    // This name can be used by follow-on optimization analysis,
-    // so need to associate it with its statement.
+
+
     BindExprToCurrStmt(ne);
 
     return ne;
@@ -341,21 +341,21 @@ StmtPtr Reducer::GenParam(const IDPtr& id, ExprPtr rhs, bool is_modified) {
     auto rhs_id = rhs->Tag() == EXPR_NAME ? rhs->AsNameExpr()->IdPtr() : nullptr;
 
     if ( rhs_id && ! pf->Locals().contains(rhs_id) && ! rhs_id->IsConst() )
-        // It's hard to guarantee the RHS won't change during
-        // the inline block's execution.
+
+
         is_modified = true;
 
     auto& id_t = id->GetType();
     if ( id_t->Tag() == TYPE_VECTOR && rhs->GetType()->Yield() != id_t->Yield() )
-        // Presumably either the identifier or the RHS is a vector-of-any.
-        // This means there will essentially be a modification of the RHS
-        // due to the need to use (or omit) operations coercing from such
-        // vectors.
+
+
+
+
         is_modified = true;
 
     if ( ! is_modified ) {
-        // Can use a temporary variable, which then supports
-        // optimization via alias propagation.
+
+
         auto param_id = GenTemporary(id->GetType(), rhs, param->IdPtr());
         auto& tv = ids_to_temps[param_id];
 
@@ -374,8 +374,8 @@ StmtPtr Reducer::GenParam(const IDPtr& id, ExprPtr rhs, bool is_modified) {
 }
 
 NameExprPtr Reducer::GenInlineBlockName(const IDPtr& id) {
-    // We do this during reduction, not optimization, so no need
-    // to associate with curr_stmt.
+
+
     return make_intrusive<NameExpr>(GenLocal(id));
 }
 
@@ -409,9 +409,9 @@ NameExprPtr Reducer::GetRetVar(TypePtr type) {
 
     ret_vars.insert(ret_id);
 
-    // Track this as a new local *if* we're in the outermost inlining
-    // block.  If we're recursively deeper into inlining, then this
-    // variable will get mapped to a local anyway, so no need.
+
+
+
     if ( inline_block_level == 1 )
         AddNewLocal(ret_id);
 
@@ -438,27 +438,27 @@ void Reducer::BindStmtToCurrStmt(const StmtPtr& s) {
 IDPtr Reducer::FindExprTmp(const Expr* rhs, const Expr* a, const std::shared_ptr<const TempVar>& lhs_tmp) {
     for ( const auto& et_i : expr_temps ) {
         if ( et_i->Alias() || ! et_i->IsActive() || et_i == lhs_tmp )
-            // This can happen due to re-reduction while
-            // optimizing.
+
+
             continue;
 
         auto et_i_expr = et_i->RHS();
 
         if ( same_expr(rhs, et_i_expr, true) ) {
-            // We have an apt candidate.  Make sure its value
-            // always makes it here.
+
+
             const auto& id = et_i->Id();
 
             auto stmt_num = a->GetOptInfo()->stmt_num;
             auto def = id->GetOptInfo()->DefinitionBefore(stmt_num);
 
             if ( def == NO_DEF )
-                // The temporary's value isn't guaranteed
-                // to make it here.
+
+
                 continue;
 
-            // Make sure there aren't ambiguities due to
-            // possible modifications to aggregates.
+
+
             if ( ! ExprValid(id, et_i_expr, a) )
                 continue;
 
@@ -470,16 +470,16 @@ IDPtr Reducer::FindExprTmp(const Expr* rhs, const Expr* a, const std::shared_ptr
 }
 
 bool Reducer::ExprValid(const IDPtr& id, const Expr* e1, const Expr* e2) const {
-    // First check for whether e1 is already known to itself have side effects.
-    // If so, then it's never safe to reuse its associated identifier in lieu
-    // of e2.
+
+
+
     std::optional<ExprSideEffects>& e1_se = e1->GetOptInfo()->SideEffects();
     if ( ! e1_se ) {
         bool has_side_effects = false;
         const auto& e1_t = e1->GetType();
 
         if ( e1_t->Tag() == TYPE_OPAQUE || e1_t->Tag() == TYPE_ANY )
-            // These have difficult-to-analyze semantics.
+
             has_side_effects = true;
 
         else if ( e1->Tag() == EXPR_INDEX ) {
@@ -499,38 +499,38 @@ bool Reducer::ExprValid(const IDPtr& id, const Expr* e1, const Expr* e2) const {
     }
 
     if ( e1_se->HasSideEffects() ) {
-        // We already know that e2 is structurally identical to e1.
+
         e2->GetOptInfo()->SideEffects() = ExprSideEffects(true);
         return false;
     }
 
-    // Here are the considerations for expression validity.
-    //
-    // * None of the operands used in the given expression can
-    //   have been assigned.
-    //
-    // * If the expression yields an aggregate, or one of the
-    //   operands in the expression is an aggregate, then there
-    //   must not be any assignments to aggregates of the same
-    //   type(s).  This is to deal with possible aliases.
-    //
-    // * Same goes to modifications of aggregates via "add" or "delete"
-    //   or "+=" append.
-    //
-    // * Assessment of any record constructors or coercions, or
-    //   table references or modifications, for possible invocation of
-    //   associated handlers that have side effects.
-    //
-    // * Assessment of function calls for potential side effects.
-    //
-    // These latter two are guided by the global profile of the full set
-    // of script functions.
 
-    // Tracks which ID's are germane for our analysis.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     std::vector<IDPtr> ids;
     ids.push_back(id);
 
-    // Identify variables involved in the expression.
+
     CheckIDs(e1->GetOp1(), ids);
     CheckIDs(e1->GetOp2(), ids);
     CheckIDs(e1->GetOp3(), ids);
@@ -565,18 +565,18 @@ void Reducer::CheckForCSE(const AssignExpr* a, const NameExpr* lhs, const Expr* 
 
     auto lhs_tmp = FindTemporary(lhs_id);
     if ( lhs_tmp->Const() || lhs_tmp->Alias() )
-        // We've already identified it as a CSE.
+
         return;
 
     auto rhs_tmp = FindExprTmp(rhs, a, lhs_tmp);
 
     ExprPtr new_rhs;
-    if ( rhs_tmp ) { // We already have a temporary
+    if ( rhs_tmp ) {
         new_rhs = NewVarUsage(rhs_tmp, rhs);
         rhs = new_rhs.get();
     }
 
-    if ( rhs->Tag() == EXPR_CONST ) { // mark temporary as just being a constant
+    if ( rhs->Tag() == EXPR_CONST ) {
         lhs_tmp->SetConst(rhs->AsConstExpr());
         return;
     }
@@ -587,7 +587,7 @@ void Reducer::CheckForCSE(const AssignExpr* a, const NameExpr* lhs, const Expr* 
 
         if ( rhs_tmp_var ) {
             if ( rhs_tmp_var->Const() )
-                // temporary can be replaced with constant
+
                 lhs_tmp->SetConst(rhs_tmp_var->Const());
             else
                 lhs_tmp->SetAlias(rhs_id);
@@ -600,14 +600,14 @@ void Reducer::CheckForCSE(const AssignExpr* a, const NameExpr* lhs, const Expr* 
 
 const ConstExpr* Reducer::CheckForConst(const IDPtr& id, int stmt_num) const {
     if ( id->GetType()->Tag() == TYPE_ANY )
-        // Don't propagate identifiers of type "any" as constants.
-        // This is because the identifier might be used in some
-        // context that's dynamically unreachable due to the type
-        // of its value (such as via a type-switch), but for which
-        // constant propagation of the constant value to that
-        // context can result in compile-time errors when folding
-        // expressions in which the identifier appears (and is
-        // in that context presumed to have a different type).
+
+
+
+
+
+
+
+
         return nullptr;
 
     auto oi = id->GetOptInfo();
@@ -625,14 +625,14 @@ const ConstExpr* Reducer::CheckForConst(const IDPtr& id, int stmt_num) const {
         if ( e->Tag() == EXPR_CONST )
             return e->AsConstExpr();
 
-        // Follow aliases.
+
         if ( e->Tag() != EXPR_NAME )
             return nullptr;
 
         auto stmt_num2 = e->GetOptInfo()->stmt_num;
 
         if ( stmt_num2 == stmt_num )
-            // Self-assignment - weird! - but avoid infinite recursion.
+
             return nullptr;
 
         return CheckForConst(e->AsNameExpr()->IdPtr(), stmt_num2);
@@ -683,11 +683,11 @@ ExprPtr Reducer::GetExprUpdate(ExprPtr e) {
         auto is_const = CheckForConst(id, stmt_num);
 
         if ( is_const ) {
-            // Remember this variable as one whose value
-            // we used for constant propagation.  That
-            // ensures we can subsequently not complain
-            // about it being assigned but not used (though
-            // we can still omit the assignment).
+
+
+
+
+
             constant_vars.insert(id);
             return with_location_of(make_intrusive<ConstExpr>(is_const->ValuePtr()), e);
         }
@@ -700,11 +700,11 @@ ExprPtr Reducer::GetExprUpdate(ExprPtr e) {
 
     auto alias = tmp_var->Alias();
     if ( alias ) {
-        // Make sure that the definitions for the alias here are
-        // the same as when the alias was created.
+
+
         auto alias_tmp = FindTemporary(alias);
 
-        // Resolve any alias chains.
+
         while ( alias_tmp && alias_tmp->Alias() ) {
             alias = alias_tmp->Alias();
             alias_tmp = FindTemporary(alias);
@@ -729,14 +729,14 @@ ExprPtr Reducer::UpdateExpr(ExprPtr e, const Expr* parent) {
 }
 
 StmtPtr Reducer::MergeStmts(const NameExpr* lhs, ExprPtr rhs, const StmtPtr& succ_stmt) {
-    // First check for tmp=rhs.
+
     const auto& lhs_id = lhs->IdPtr();
     auto lhs_tmp = FindTemporary(lhs_id);
 
     if ( ! lhs_tmp )
         return nullptr;
 
-    // We have tmp=rhs.  Now look for var=tmp.
+
     if ( succ_stmt->Tag() != STMT_EXPR )
         return nullptr;
 
@@ -749,43 +749,43 @@ StmtPtr Reducer::MergeStmts(const NameExpr* lhs, ExprPtr rhs, const StmtPtr& suc
     auto a_rhs = a->GetOp2();
 
     if ( a_lhs->Tag() != EXPR_REF || a_rhs->Tag() != EXPR_NAME )
-        // Complex 2nd-statement assignment, or RHS not a candidate.
+
         return nullptr;
 
     auto a_lhs_deref = a_lhs->AsRefExprPtr()->GetOp1();
     if ( a_lhs_deref->Tag() != EXPR_NAME )
-        // Complex 2nd-statement assignment.
+
         return nullptr;
 
     const auto& a_lhs_var = a_lhs_deref->AsNameExpr()->IdPtr();
     const auto& a_rhs_var = a_rhs->AsNameExpr()->IdPtr();
 
     if ( a_rhs_var != lhs_id )
-        // 2nd statement is var=something else.
+
         return nullptr;
 
     if ( a_lhs_var->GetType()->Tag() != a_rhs_var->GetType()->Tag() )
-        // This can happen when we generate an assignment
-        // specifically to convert to/from an "any" type.
+
+
         return nullptr;
 
     if ( FindTemporary(a_lhs_var) ) {
-        // "var" is itself a temporary.  Don't complain, as
-        // complex reductions can generate these.  We'll wind
-        // up folding the chain once it hits a regular variable.
+
+
+
         return nullptr;
     }
 
-    // Got it.  Mark the original temporary as no longer relevant.
+
     lhs_tmp->Deactivate();
     auto merge_e = with_location_of(make_intrusive<AssignExpr>(a_lhs_deref, rhs, false, nullptr, nullptr, false), lhs);
     auto merge_e_stmt = make_intrusive<ExprStmt>(merge_e);
 
-    // Update the associated stmt_num's.  For strict correctness, we
-    // want both of these bound to the earlier of the two statements
-    // we're merging (though in practice, either will work, since
-    // we're eliding the only difference between the two).  Our
-    // caller ensures this.
+
+
+
+
+
     BindExprToCurrStmt(merge_e);
     BindStmtToCurrStmt(merge_e_stmt);
 
@@ -839,7 +839,7 @@ IDPtr Reducer::GenLocal(const IDPtr& orig) {
     if ( ! omitted_stmts.empty() )
         reporter->InternalError("Generating a new local while pruning statements");
 
-    // Make sure the identifier is not being re-re-mapped.
+
     ASSERT(strchr(orig->Name(), '.') == nullptr);
 
     char buf[8192];
@@ -890,4 +890,4 @@ bool NonReduced(const Expr* perp) {
     return false;
 }
 
-} // namespace zeek::detail
+}

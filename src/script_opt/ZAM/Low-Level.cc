@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Methods relating to low-level ZAM instruction manipulation.
+
+
 
 #include "zeek/Desc.h"
 #include "zeek/Reporter.h"
@@ -10,10 +10,10 @@ namespace zeek::detail {
 
 ZAMStmt ZAMCompiler::StartingBlock() { return {static_cast<int>(insts1.size())}; }
 
-ZAMStmt ZAMCompiler::FinishBlock(ZAMStmt /* start */) { return {static_cast<int>(insts1.size() - 1)}; }
+ZAMStmt ZAMCompiler::FinishBlock(ZAMStmt ) { return {static_cast<int>(insts1.size() - 1)}; }
 
 bool ZAMCompiler::NullStmtOK() const {
-    // They're okay iff they're the entire statement body.
+
     return insts1.empty();
 }
 
@@ -49,7 +49,7 @@ ZInstAux* ZAMCompiler::InternalBuildVals(const ListExpr* l, int stride) {
 
     auto aux = new ZInstAux(n * stride);
 
-    int offset = 0; // offset into aux info
+    int offset = 0;
     for ( int i = 0; i < n; ++i ) {
         auto& e = exprs[i];
         int num_vals = InternalAddVal(aux, offset, e);
@@ -61,7 +61,7 @@ ZInstAux* ZAMCompiler::InternalBuildVals(const ListExpr* l, int stride) {
 }
 
 int ZAMCompiler::InternalAddVal(ZInstAux* zi, int i, Expr* e) {
-    if ( e->Tag() == EXPR_ASSIGN ) { // We're building up a table constructor
+    if ( e->Tag() == EXPR_ASSIGN ) {
         auto& indices = e->GetOp1()->AsListExpr()->Exprs();
         auto val = e->GetOp2();
         int width = indices.length();
@@ -78,7 +78,7 @@ int ZAMCompiler::InternalAddVal(ZInstAux* zi, int i, Expr* e) {
         return width + 1;
     }
 
-    if ( e->Tag() == EXPR_LIST ) { // We're building up a set constructor
+    if ( e->Tag() == EXPR_LIST ) {
         auto& indices = e->AsListExpr()->Exprs();
         int width = indices.length();
 
@@ -91,20 +91,20 @@ int ZAMCompiler::InternalAddVal(ZInstAux* zi, int i, Expr* e) {
     }
 
     if ( e->Tag() == EXPR_FIELD_ASSIGN ) {
-        // These can appear when we're processing the expression
-        // list for a record constructor.
+
+
         auto fa = e->AsFieldAssignExpr();
         e = fa->GetOp1().get();
 
         if ( e->GetType()->Tag() == TYPE_TYPE ) {
-            // Ugh - we actually need a "type" constant.
+
             auto v = eval_in_isolation(e);
             ASSERT(v);
             zi->Add(i, v);
             return 1;
         }
 
-        // Now that we've adjusted, fall through.
+
     }
 
     if ( e->Tag() == EXPR_NAME )
@@ -136,7 +136,7 @@ ZAMStmt ZAMCompiler::AddInst(const ZInstI& inst, bool suppress_non_local) {
     if ( suppress_non_local )
         return {top_main_inst};
 
-    // Ensure we haven't confused ourselves about any pending stores.
+
     ASSERT(pending_global_store == -1 || pending_capture_store == -1);
 
     if ( pending_global_store >= 0 ) {
@@ -184,4 +184,4 @@ const Stmt* ZAMCompiler::LastStmt(const Stmt* s) const {
         return s;
 }
 
-} // namespace zeek::detail
+}

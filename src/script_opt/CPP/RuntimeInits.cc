@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/CPP/RuntimeInits.h"
 
@@ -182,8 +182,8 @@ void CPP_IndexedInits<T>::Generate(InitsManager* im, std::vector<TableValPtr>& i
 template<class T>
 void CPP_IndexedInits<T>::Generate(InitsManager* im, std::vector<FileValPtr>& ivec, int offset,
                                    ValElemVec& init_vals) const {
-    // Note, in the following we use element 1, not 0, because we
-    // don't need the "type" value in element 0.
+
+
     auto fn = im->Strings(init_vals[1]);
     auto fv = make_intrusive<FileVal>(make_intrusive<File>(fn, "w"));
 
@@ -230,7 +230,7 @@ void CPP_IndexedInits<T>::Generate(InitsManager* im, std::vector<AttrPtr>& ivec,
 
     switch ( ae_tag ) {
         case AE_NONE:
-            // Shouldn't happen, per test above.
+
             ASSERT(0);
             break;
 
@@ -270,7 +270,7 @@ void CPP_IndexedInits<T>::Generate(InitsManager* im, std::vector<AttributesPtr>&
     ivec[offset] = make_intrusive<Attributes>(a_list, nullptr, false, false);
 }
 
-// Instantiate the templates we'll need.
+
 
 template class CPP_IndexedInits<EnumValPtr>;
 template class CPP_IndexedInits<StringValPtr>;
@@ -312,7 +312,7 @@ void CPP_TypeInits::PreInit(InitsManager* im, int offset, ValElemVec& init_vals)
     else if ( tag == TYPE_TABLE && init_vals[1] != NAMED_TYPE_MARKER )
         inits_vec[offset] = make_intrusive<CPPTableType>();
 
-    // else no pre-initialization needed
+
 }
 
 void CPP_TypeInits::Generate(InitsManager* im, vector<TypePtr>& ivec, int offset, ValElemVec& init_vals) const {
@@ -377,7 +377,7 @@ void CPP_TypeInits::CheckBuiltType(InitsManager* im, TypeTag t, int offset) cons
 TypePtr CPP_TypeInits::BuildEnumType(InitsManager* im, ValElemVec& init_vals) const {
     auto iv_it = init_vals.begin();
     auto iv_end = init_vals.end();
-    auto name = im->Strings(*++iv_it); // skip element [0]
+    auto name = im->Strings(*++iv_it);
     auto et = get_enum_type__CPP(name);
 
     if ( et->Names().empty() ) {
@@ -462,8 +462,8 @@ TypePtr CPP_TypeInits::BuildRecordType(InitsManager* im, ValElemVec& init_vals, 
     auto addl_fields = init_vals[2];
 
     if ( addl_fields > 0 || r->NumFields() == 0 ) {
-        // We shouldn't be adding fields if the record doesn't have any
-        // existing fields - that would reflect an initialization botch.
+
+
         if ( addl_fields > 0 && r->NumFields() == 0 )
             reporter->InternalError("record unexpectedly empty when adding fields");
 
@@ -495,7 +495,7 @@ zeek_int_t CPP_FieldMapping::ComputeOffset(InitsManager* im) const {
     auto r = im->Types(rec)->AsRecordType();
     auto fm_offset = r->FieldOffset(field_name.c_str());
 
-    if ( fm_offset < 0 ) { // field does not exist, create it
+    if ( fm_offset < 0 ) {
         if ( field_type == DO_NOT_CONSTRUCT_VALUE_MARKER ) {
             reporter->CPPRuntimeError("record field \"%s\" missing in %s", field_name.c_str(), obj_desc(r).c_str());
             exit(1);
@@ -523,7 +523,7 @@ zeek_int_t CPP_EnumMapping::ComputeOffset(InitsManager* im) const {
     auto e = im->Types(e_type)->AsEnumType();
 
     auto em_offset = e->Lookup(e_name);
-    if ( em_offset < 0 ) { // enum constant does not exist, create it
+    if ( em_offset < 0 ) {
         if ( ! construct_if_missing ) {
             reporter->CPPRuntimeError("enum element \"%s\" missing in %s", e_name.c_str(), obj_desc(e).c_str());
             exit(1);
@@ -538,26 +538,26 @@ zeek_int_t CPP_EnumMapping::ComputeOffset(InitsManager* im) const {
     return em_offset;
 }
 
-void CPP_GlobalLookupInit::Generate(InitsManager* im, std::vector<void*>& /* inits_vec */, int /* offset */) const {
+void CPP_GlobalLookupInit::Generate(InitsManager* im, std::vector<void*>& , int ) const {
     global = find_global__CPP(name);
     if ( val >= 0 )
-        // Have explicit initialization value.
+
         global->SetVal(im->ConstVals(val));
 }
 
-void CPP_GlobalInit::Generate(InitsManager* im, std::vector<void*>& /* inits_vec */, int /* offset */) const {
+void CPP_GlobalInit::Generate(InitsManager* im, std::vector<void*>& , int ) const {
     auto& t = im->Types(type);
     global = lookup_global__CPP(name, t, gc);
 
     if ( ! global->HasVal() ) {
         if ( val >= 0 )
-            // Have explicit initialization value.
+
             global->SetVal(im->ConstVals(val));
 
         else if ( t->Tag() == TYPE_FUNC && ! func_with_no_val ) {
-            // Create a matching value so that this global can
-            // be used in other initializations.  The code here
-            // mirrors that in activate_bodies__CPP().
+
+
+
             auto fn = global->Name();
             auto ft = cast_intrusive<FuncType>(t);
 
@@ -579,14 +579,14 @@ void CPP_GlobalInit::Generate(InitsManager* im, std::vector<void*>& /* inits_vec
 }
 
 size_t generate_indices_set(int* inits, std::vector<std::vector<int>>& indices_set) {
-    // First figure out how many groups of indices there are, so we
-    // can pre-allocate the outer vector.
+
+
     auto i_ptr = inits;
     int num_inits = 0;
     while ( *i_ptr != END_OF_VEC_VEC && *i_ptr != END_OF_VEC_VEC_VEC ) {
         ++num_inits;
         int n = *i_ptr;
-        i_ptr += n + 1; // skip over vector elements
+        i_ptr += n + 1;
     }
 
     indices_set.reserve(num_inits);
@@ -619,4 +619,4 @@ std::vector<std::vector<std::vector<int>>> generate_indices_set(int* inits) {
     return indices_set;
 }
 
-} // namespace zeek::detail
+}

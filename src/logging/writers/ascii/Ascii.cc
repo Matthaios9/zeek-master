@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/logging/writers/ascii/Ascii.h"
 
@@ -38,73 +38,73 @@ static constexpr auto shadow_file_prefix = ".shadow.";
 
 namespace zeek::logging::writer::detail {
 
-/**
- * Information about an leftover log file: that is, one that a previous
- * process was in the middle of writing, but never completed a rotation
- * for whatever reason (prematurely crashed/killed).
- */
+
+
+
+
+
 struct LeftoverLog {
-    /*
-     * Name of leftover log.
-     */
+
+
+
     std::string filename;
 
-    /*
-     * File extension of the leftover log (e.g. ".log").
-     */
+
+
+
     std::string extension;
 
-    /*
-     * Name of shadow file associated with the log.
-     * The shadow file's existence is what indicates the presence of
-     * an "leftover log" and may contain the name of a postprocessing
-     * function that's supposed to be called after rotating (only
-     * named if that function differs from the default).  Upon
-     * completing a rotation, the shadow file can be deleted.
-     */
+
+
+
+
+
+
+
+
     std::string shadow_filename;
 
-    /**
-     * Name of a function to call to postprocess the log file after
-     * rotating.
-     */
+
+
+
+
     std::string post_proc_func;
 
-    /**
-     * The time at which the shadow file was created.  This is used
-     * as the log file's "opening time" for rotation purposes.
-     */
+
+
+
+
     time_t open_time = 0;
 
-    /**
-     * Time of the log file's last modification.  This is used
-     * as the log file's "closing time" for rotation purposes.
-     */
+
+
+
+
     time_t close_time = 0;
 
-    /**
-     * Set the an error message explaining any error that happened while
-     * trying to parse the shadow file and construct an object.
-     */
+
+
+
+
     std::string error;
 
-    /**
-     * Return the "path" (logging framework parlance) of the log without the
-     * directory or file extension. E.g. the "path" of "logs/conn.log" is just "conn".
-     */
+
+
+
+
     std::string Path() const { return std::filesystem::path(filename).stem().string(); }
 
-    /**
-     * Deletes the shadow file and returns whether it succeeded.
-     */
+
+
+
     bool DeleteShadow() const { return unlink(shadow_filename.data()) == 0; }
 };
 
-/**
- * Prefix the basename part of the given path with prefix.
- *
- * prefix_basename_with("logs/conn.log", ".shadow") -> logs/.shadow.conn.log"
- */
+
+
+
+
+
 static std::string prefix_basename_with(const std::string& path, const std::string& prefix) {
     auto fspath = std::filesystem::path(path);
     auto new_filename = prefix + fspath.filename().string();
@@ -113,7 +113,7 @@ static std::string prefix_basename_with(const std::string& path, const std::stri
 
 TEST_CASE("writers.ascii prefix_basename_with") {
 #ifdef _MSC_VER
-    // TODO: adapt this test to Windows paths
+
 #else
     CHECK(prefix_basename_with("a/conn.log", ".shadow.") == "a/.shadow.conn.log");
     CHECK(prefix_basename_with("/a/conn.log", ".shadow.") == "/a/.shadow.conn.log");
@@ -189,7 +189,7 @@ static std::optional<LeftoverLog> parse_shadow_log(const std::string& fname) {
 
     struct stat st;
 
-    // Use shadow file's modification time as creation time.
+
     if ( stat(rval.shadow_filename.data(), &st) != 0 ) {
         rval.error = util::fmt("Failed to stat %s: %s", rval.shadow_filename.data(), strerror(errno));
         return rval;
@@ -197,7 +197,7 @@ static std::optional<LeftoverLog> parse_shadow_log(const std::string& fname) {
 
     rval.open_time = st.st_ctime;
 
-    // Use log file's modification time for closing time.
+
     if ( stat(rval.filename.data(), &st) != 0 ) {
         rval.error = util::fmt("Failed to stat %s: %s", rval.filename.data(), strerror(errno));
         return rval;
@@ -208,7 +208,7 @@ static std::optional<LeftoverLog> parse_shadow_log(const std::string& fname) {
     return rval;
 }
 
-Ascii::Ascii(WriterFrontend* frontend) : WriterBackend(frontend, /*send_heartbeats=*/false) {
+Ascii::Ascii(WriterFrontend* frontend) : WriterBackend(frontend, false) {
     fd = 0;
     ascii_done = false;
     output_to_stdout = false;
@@ -260,7 +260,7 @@ void Ascii::InitConfigOptions() {
 bool Ascii::InitFilterOptions() {
     const WriterInfo& info = Info();
 
-    // Set per-filter configuration options.
+
     for ( const auto& [key, value] : info.config ) {
         if ( strcmp(key, "tsv") == 0 ) {
             if ( strcmp(value, "T") == 0 )
@@ -367,7 +367,7 @@ bool Ascii::InitFormatter() {
     if ( use_json ) {
         threading::formatter::JSON::TimeFormat tf = threading::formatter::JSON::TS_EPOCH;
 
-        // Write out JSON formatted logs.
+
         if ( strcmp(json_timestamps.c_str(), "JSON::TS_EPOCH") == 0 )
             tf = threading::formatter::JSON::TS_EPOCH;
         else if ( strcmp(json_timestamps.c_str(), "JSON::TS_MILLIS") == 0 )
@@ -381,7 +381,7 @@ bool Ascii::InitFormatter() {
             return false;
         }
 
-        // Same pattern as for the timestamps above.
+
         auto string_escape_policy = threading::formatter::JSON::STRING_ESCAPE_POLICY_HEX;
 
         if ( strcmp(json_string_escape_policy.c_str(), "JSON::STRING_ESCAPE_POLICY_HEX") == 0 )
@@ -396,15 +396,15 @@ bool Ascii::InitFormatter() {
         }
 
         formatter = new threading::formatter::JSON(this, tf, json_include_unset_fields, string_escape_policy);
-        // Using JSON implicitly turns off the header meta fields.
+
         include_meta = false;
     }
     else {
-        // Enable utf-8 if needed
+
         if ( enable_utf_8 )
             desc.EnableUTF8();
 
-        // Use the default "Zeek logs" format.
+
         desc.EnableEscaping();
         desc.AddEscapeSequence(separator);
         threading::formatter::Ascii::SeparatorInfo sep_info(separator, set_separator, unset_field, empty_field);
@@ -416,8 +416,8 @@ bool Ascii::InitFormatter() {
 
 Ascii::~Ascii() {
     if ( ! ascii_done )
-        // In case of errors aborting the logging altogether,
-        // DoFinish() may not have been called.
+
+
         CloseFile(run_state::network_time);
 
     delete formatter;
@@ -503,12 +503,12 @@ bool Ascii::DoInit(const WriterInfo& info, int num_fields, const threading::Fiel
 
     int open_flags = O_WRONLY | O_CREAT | O_TRUNC;
 #ifdef _MSC_VER
-    // Gzip output is binary data; without O_BINARY Windows translates \n to \r\n, corrupting the stream.
+
     if ( gzip_level > 0 )
         open_flags |= O_BINARY;
 
-    // /dev/stdout and /dev/stderr don't exist on Windows; duplicate the
-    // corresponding standard FD so writers can close it normally.
+
+
     if ( fname == "/dev/stdout" )
         fd = _dup(_fileno(stdout));
     else if ( fname == "/dev/stderr" )
@@ -531,7 +531,7 @@ bool Ascii::DoInit(const WriterInfo& info, int num_fields, const threading::Fiel
 
         char mode[4];
         snprintf(mode, sizeof(mode), "wb%d", gzip_level);
-        errno = 0; // errno will only be set under certain circumstances by gzdopen.
+        errno = 0;
         gzfile = gzdopen(fd, mode);
 
         if ( gzfile == nullptr ) {
@@ -569,7 +569,7 @@ bool Ascii::WriteHeader(const string& path) {
     }
 
     if ( tsv ) {
-        // A single TSV-style line is all we need.
+
         string str = names + "\n";
         if ( ! InternalWrite(fd, str.c_str(), str.length()) )
             return false;
@@ -577,7 +577,7 @@ bool Ascii::WriteHeader(const string& path) {
         return true;
     }
 
-    string str = meta_prefix + "separator " // Always use space as separator here.
+    string str = meta_prefix + "separator "
                  + util::get_escaped_string(separator, false) + "\n";
 
     if ( ! InternalWrite(fd, str.c_str(), str.length()) )
@@ -630,7 +630,7 @@ bool Ascii::DoWrite(int num_fields, const threading::Field* const* fields, threa
     size_t len = desc.Size();
 
     if ( strncmp(bytes, meta_prefix.data(), meta_prefix.size()) == 0 ) {
-        // It would so escape the first character.
+
         char hex[4] = {'\\', 'x', '0', '0'};
         util::bytetohex(bytes[0], hex + 2);
 
@@ -655,7 +655,7 @@ write_error:
 }
 
 bool Ascii::DoRotate(const char* rotated_path, double open, double close, bool terminating) {
-    // Don't rotate special files or if there's not one currently open.
+
     if ( ! fd || IsSpecial(Info().path) ) {
         FinishedRotation();
         return true;
@@ -699,7 +699,7 @@ bool Ascii::DoRotate(const char* rotated_path, double open, double close, bool t
 }
 
 bool Ascii::DoSetBuf(bool enabled) {
-    // Nothing to do.
+
     return true;
 }
 
@@ -709,8 +709,8 @@ static std::vector<LeftoverLog> find_leftover_logs() {
     auto prefix_len = strlen(shadow_file_prefix);
     auto default_logdir = zeek::id::find_const<StringVal>("Log::default_logdir")->ToStdString();
 
-    // Find any .shadow files within Log::default_logdir or otherwise search in
-    // the current working directory.
+
+
     auto logdir = std::filesystem::current_path();
 
     if ( ! default_logdir.empty() )
@@ -741,7 +741,7 @@ static std::vector<LeftoverLog> find_leftover_logs() {
             }
         }
         else
-            // There was a log here.  It's gone now.
+
             stale_shadow_files.emplace_back(shadow_fname);
     }
 
@@ -757,17 +757,17 @@ void Ascii::RotateLeftoverLogs() {
     if ( ! BifConst::LogAscii::enable_leftover_log_rotation )
         return;
 
-    // Log file crash recovery: if there's still leftover shadow files from the
-    // ASCII log writer, attempt to rotate their associated log file.  Ideally
-    // may be better if the ASCII writer itself could implement the entire
-    // crash recovery logic itself without being called from external, but (1)
-    // this does need to get called from a particular point in the
-    // initialization process (after zeek_init()) and (2) the nature of writers
-    // being instantiated lazily means that trying to rotate a leftover log
-    // only upon seeing that an open() will clobber something means they'll
-    // possibly not be rotated in a timely manner (e.g. a log files that are
-    // rarely written to).  So the logic below drives the entire leftover log
-    // crash recovery process for a supervised node upon startup.
+
+
+
+
+
+
+
+
+
+
+
     auto leftover_logs = find_leftover_logs();
 
     for ( const auto& ll : leftover_logs ) {
@@ -812,7 +812,7 @@ void Ascii::RotateLeftoverLogs() {
                 ll.filename.data(), strerror(errno));
 
         if ( ! ll.DeleteShadow() )
-            // Unusual failure to report, but not strictly fatal.
+
             reporter->Warning("Failed to unlink %s: %s", ll.shadow_filename.data(), strerror(errno));
 
         try {
@@ -898,4 +898,4 @@ bool Ascii::InternalClose(int fd) {
     return false;
 }
 
-} // namespace zeek::logging::writer::detail
+}

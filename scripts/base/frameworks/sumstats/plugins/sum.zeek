@@ -1,4 +1,4 @@
-##! Calculate the sum.
+
 
 @load ../main
 
@@ -6,29 +6,29 @@ module SumStats;
 
 export {
 	redef enum Calculation += {
-		## Calculate the sum of the values.  For string values,
-		## this will be the number of strings.
+
+
 		SUM
 	};
 
 	redef record ResultVal += {
-		## For numeric data, this tracks the sum of all values.
+
 		sum: double &default=0.0;
 	};
 
-	#type threshold_function: function(key: SumStats::Key, result: SumStats::Result): count;
-	#global sum_threshold: function(data_id: string): threshold_function;
+
+
 }
 
-#function sum_threshold(data_id: string): threshold_function
-#	{
-#	return function(key: SumStats::Key, result: SumStats::Result): count
-#		{
-#		print fmt("data_id: %s", data_id);
-#		print result;
-#		return double_to_count(result[data_id]$sum);
-#		};
-#	}
+
+
+
+
+
+
+
+
+
 
 hook init_resultval_hook(r: Reducer, rv: ResultVal)
 	{

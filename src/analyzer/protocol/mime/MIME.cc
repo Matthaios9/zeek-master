@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/mime/MIME.h"
 
@@ -13,15 +13,15 @@
 #include "zeek/digest.h"
 #include "zeek/file_analysis/Manager.h"
 
-// Here are a few things to do:
-//
-// 1. Add a Zeek internal function 'stop_deliver_data_of_entity' so
-// that the engine does not decode and deliver further data for the
-// entity (which may speed up the engine by avoiding copying).
-//
-// 2. Better support for structured header fields, in particular,
-// headers of form: <name>=<value>; <param_1>=<param_val_1>;
-// <param_2>=<param_val_2>; ... (so that
+
+
+
+
+
+
+
+
+
 
 namespace zeek::analyzer::mime {
 
@@ -38,15 +38,15 @@ enum MIME_HEADER_FIELDS : uint8_t {
 };
 
 enum MIME_CONTENT_SUBTYPE : uint8_t {
-    CONTENT_SUBTYPE_MIXED,       // for multipart
-    CONTENT_SUBTYPE_ALTERNATIVE, // for multipart
-    CONTENT_SUBTYPE_DIGEST,      // for multipart
+    CONTENT_SUBTYPE_MIXED,
+    CONTENT_SUBTYPE_ALTERNATIVE,
+    CONTENT_SUBTYPE_DIGEST,
 
-    CONTENT_SUBTYPE_RFC822,        // for message
-    CONTENT_SUBTYPE_PARTIAL,       // for message
-    CONTENT_SUBTYPE_EXTERNAL_BODY, // for message
+    CONTENT_SUBTYPE_RFC822,
+    CONTENT_SUBTYPE_PARTIAL,
+    CONTENT_SUBTYPE_EXTERNAL_BODY,
 
-    CONTENT_SUBTYPE_PLAIN, // for text
+    CONTENT_SUBTYPE_PLAIN,
 
     CONTENT_SUBTYPE_OTHER,
 };
@@ -80,17 +80,17 @@ static const char* MIMEContentTypeName[] = {
 };
 
 static const char* MIMEContentSubtypeName[] = {
-    "MIXED",       // for multipart
-    "ALTERNATIVE", // for multipart
-    "DIGEST",      // for multipart
+    "MIXED",
+    "ALTERNATIVE",
+    "DIGEST",
 
-    "RFC822",        // for message
-    "PARTIAL",       // for message
-    "EXTERNAL-BODY", // for message
+    "RFC822",
+    "PARTIAL",
+    "EXTERNAL-BODY",
 
-    "PLAIN", // for text
+    "PLAIN",
 
-    nullptr, // other
+    nullptr,
 };
 
 static const char* MIMEContentEncodingName[] = {
@@ -153,7 +153,7 @@ int MIME_count_trailing_lws(int len, const char* data) {
     return i;
 }
 
-// See RFC 2822, page 11
+
 int MIME_skip_comments(int len, const char* data) {
     if ( len == 0 || data[0] != '(' )
         return 0;
@@ -176,8 +176,8 @@ int MIME_skip_comments(int len, const char* data) {
     return len;
 }
 
-// Skip over lws and comments, but not tspecials. Do not use this
-// function in quoted-string or comments.
+
+
 int MIME_skip_lws_comments(int len, const char* data) {
     int i = 0;
     while ( i < len ) {
@@ -216,7 +216,7 @@ int MIME_get_field_name(int len, const char* data, data_chunk_t* name) {
     return -1;
 }
 
-// See RFC 2045, page 12.
+
 static bool MIME_is_tspecial(char ch, bool is_boundary = false) {
     if ( is_boundary )
         return ch == '"';
@@ -231,8 +231,8 @@ static bool MIME_is_token_char(char ch, bool is_boundary = false) {
     return ch >= 33 && ch <= 126 && ! MIME_is_tspecial(ch, is_boundary);
 }
 
-// See RFC 2045, page 12.
-// A token is composed of characters that are not SPACE, CTLs or tspecials
+
+
 int MIME_get_token(int len, const char* data, data_chunk_t* token, bool is_boundary) {
     int i = 0;
 
@@ -266,7 +266,7 @@ int MIME_get_slash_token_pair(int len, const char* data, data_chunk_t* first, da
 
     offset = MIME_get_token(len, data, first);
     if ( offset < 0 ) {
-        // DEBUG_MSG("first token missing in slash token pair");
+
         return -1;
     }
 
@@ -275,7 +275,7 @@ int MIME_get_slash_token_pair(int len, const char* data, data_chunk_t* first, da
 
     offset = MIME_skip_lws_comments(len, data);
     if ( offset < 0 || offset >= len || data[offset] != '/' ) {
-        // DEBUG_MSG("/ not found in slash token pair");
+
         return -1;
     }
 
@@ -285,7 +285,7 @@ int MIME_get_slash_token_pair(int len, const char* data, data_chunk_t* first, da
 
     offset = MIME_get_token(len, data, second);
     if ( offset < 0 ) {
-        // DEBUG_MSG("second token missing in slash token pair");
+
         return -1;
     }
 
@@ -295,7 +295,7 @@ int MIME_get_slash_token_pair(int len, const char* data, data_chunk_t* first, da
     return data - data_start;
 }
 
-// See RFC 2822, page 13.
+
 int MIME_get_quoted_string(int len, const char* data, data_chunk_t* str) {
     int offset = MIME_skip_lws_comments(len, data);
 
@@ -322,7 +322,7 @@ int MIME_get_quoted_string(int len, const char* data, data_chunk_t* str) {
 int MIME_get_value(int len, const char* data, String*& buf, bool is_boundary) {
     int offset = 0;
 
-    if ( ! is_boundary ) // For boundaries, simply accept everything.
+    if ( ! is_boundary )
         offset = MIME_skip_lws_comments(len, data);
 
     len -= offset;
@@ -349,8 +349,8 @@ int MIME_get_value(int len, const char* data, String*& buf, bool is_boundary) {
     }
 }
 
-// Decode each quoted-pair: a '\' followed by a character by the
-// quoted character. The decoded string is returned.
+
+
 
 String* MIME_decode_quoted_pairs(data_chunk_t buf) {
     const char* data = buf.data;
@@ -361,8 +361,8 @@ String* MIME_decode_quoted_pairs(data_chunk_t buf) {
             if ( ++i < buf.length )
                 dest[j++] = data[i];
             else {
-                // a trailing '\' -- don't know what
-                // to do with it -- ignore it.
+
+
             }
         }
         else
@@ -422,7 +422,7 @@ MIME_Header::MIME_Header(MIME_Multiline* hl) {
         }
     }
     else
-        // malformed header line
+
         name = null_data_chunk;
 }
 
@@ -517,23 +517,23 @@ MIME_Entity::~MIME_Entity() {
 
 void MIME_Entity::Deliver(int len, const char* data, bool trailing_CRLF) {
     if ( in_header ) {
-        if ( len == 0 || *data == '\0' ) { // an empty line at the end of header fields
+        if ( len == 0 || *data == '\0' ) {
             FinishHeader();
             in_header = 0;
             SubmitAllHeaders();
 
-            // Note: it's possible that we are in the
-            // trailer of a chunked transfer (see HTTP.cc).
-            // In this case, end_of_data will be set in
-            // HTTP_Entity::SubmitAllHeaders(), and we
-            // should not begin a new body.
+
+
+
+
+
 
             if ( ! end_of_data )
                 BeginBody();
         }
 
         else if ( is_lws(*data) )
-            // linear whitespace - a continuing header line
+
             ContHeader(len, data);
         else
             NewHeader(len, data);
@@ -600,13 +600,13 @@ void MIME_Entity::NewDataLine(int len, const char* data, bool trailing_CRLF) {
     }
 
     if ( content_type == CONTENT_TYPE_MULTIPART || content_type == CONTENT_TYPE_MESSAGE ) {
-        // Here we ignore the difference among 7bit, 8bit and
-        // binary encoding, and thus do not need to decode
-        // before passing the data to child.
+
+
+
 
         if ( current_child_entity != nullptr )
-            // Data before the first or after the last
-            // boundary delimiter are ignored
+
+
             current_child_entity->Deliver(len, data, trailing_CRLF);
     }
     else {
@@ -631,7 +631,7 @@ void MIME_Entity::ContHeader(int len, const char* data) {
     if ( current_header_line == nullptr ) {
         IllegalFormat("first header line starts with linear whitespace");
 
-        // shall we try it as a new header or simply ignore this line?
+
         int ws = MIME_count_leading_lws(len, data);
         NewHeader(len - ws, data + ws);
         return;
@@ -670,8 +670,8 @@ void MIME_Entity::FinishHeader() {
 }
 
 int MIME_Entity::LookupMIMEHeaderName(data_chunk_t name) {
-    // A linear lookup should be fine for now.
-    // header names are case-insensitive (RFC 822, 2822, 2045).
+
+
 
     for ( int i = 0; MIMEHeaderName[i] != nullptr; ++i )
         if ( istrequal(name, MIMEHeaderName[i]) )
@@ -715,7 +715,7 @@ bool MIME_Entity::ParseContentTypeField(MIME_Header* h) {
 
     ParseContentType(ty, subty);
 
-    // Proceed to parameters.
+
     if ( need_to_parse_parameters )
         ParseFieldParameters(len, data);
 
@@ -787,8 +787,8 @@ bool MIME_Entity::ParseFieldParameters(int len, const char* data) {
 
         if ( current_field_type == MIME_CONTENT_TYPE && content_type == CONTENT_TYPE_MULTIPART &&
              istrequal(attr, "boundary") ) {
-            // token or quoted-string (and some lenience for characters
-            // not explicitly allowed by the RFC, but encountered in the wild)
+
+
             offset = MIME_get_value(len, data, val, true);
 
             if ( ! val ) {
@@ -801,7 +801,7 @@ bool MIME_Entity::ParseFieldParameters(int len, const char* data) {
             multipart_boundary = new String(reinterpret_cast<const u_char*>(vd.data), vd.length, true);
         }
         else
-            // token or quoted-string
+
             offset = MIME_get_value(len, data, val);
 
         if ( offset < 0 ) {
@@ -883,8 +883,8 @@ int MIME_Entity::CheckBoundaryDelimiter(int len, const char* data) {
     return NOT_MULTIPART_BOUNDARY;
 }
 
-// trailing_CRLF indicates whether an implicit CRLF sequence follows data
-// (the CRLF sequence is not included in data).
+
+
 
 void MIME_Entity::DecodeDataLine(int len, const char* data, bool trailing_CRLF) {
     if ( ! mime_submit_data )
@@ -914,12 +914,12 @@ void MIME_Entity::DecodeBinary(int len, const char* data, bool trailing_CRLF) {
 
     if ( trailing_CRLF ) {
         if ( Parent() && Parent()->MIMEContentType() == mime::CONTENT_TYPE_MULTIPART ) {
-            // For multipart body content, we want to keep all implicit CRLFs
-            // except for the last because that one belongs to the multipart
-            // boundary delimiter, not the content.  Simply delaying the
-            // addition of implicit CRLFs until another chunk of content
-            // data comes in is a way to prevent the CRLF before the final
-            // message boundary from being accidentally added to the content.
+
+
+
+
+
+
             delay_adding_implicit_CRLF = true;
         }
         else {
@@ -930,7 +930,7 @@ void MIME_Entity::DecodeBinary(int len, const char* data, bool trailing_CRLF) {
 }
 
 void MIME_Entity::DecodeQuotedPrintable(int len, const char* data) {
-    // Ignore trailing HT and SP.
+
     int i;
     for ( i = len - 1; i >= 0; --i )
         if ( data[i] != HT && data[i] != SP )
@@ -957,8 +957,8 @@ void MIME_Entity::DecodeQuotedPrintable(int len, const char* data) {
                 }
 
                 if ( ! legal ) {
-                    // Follows suggestions for a robust
-                    // decoder. See RFC 2045 page 22.
+
+
                     IllegalEncoding("= is not followed by two hexadecimal digits in quoted-printable encoding");
                     DataOctet(data[i]);
                 }
@@ -966,7 +966,7 @@ void MIME_Entity::DecodeQuotedPrintable(int len, const char* data) {
         }
 
         else if ( (data[i] >= 33 && data[i] <= 60) ||
-                  // except controls, whitespace and '='
+
                   (data[i] >= 62 && data[i] <= 126) || (data[i] == HT || data[i] == SP) )
             DataOctet(data[i]);
 
@@ -1021,7 +1021,7 @@ void MIME_Entity::FinishDecodeBase64() {
     char rbuf[128];
     char* prbuf = rbuf;
 
-    if ( base64_decoder->Done(&rlen, &prbuf) ) { // some remaining data
+    if ( base64_decoder->Done(&rlen, &prbuf) ) {
         if ( rlen > 0 )
             DataOctets(rlen, rbuf);
     }
@@ -1033,7 +1033,7 @@ void MIME_Entity::FinishDecodeBase64() {
 bool MIME_Entity::GetDataBuffer() {
     int ret = message->RequestBuffer(&data_buf_length, &data_buf_data);
     if ( ! ret || data_buf_length == 0 || data_buf_data == nullptr ) {
-        // reporter->InternalError("cannot get data buffer from MIME_Message", "");
+
         return false;
     }
 
@@ -1088,9 +1088,9 @@ void MIME_Entity::SubmitAllHeaders() { message->SubmitAllHeaders(headers); }
 void MIME_Entity::BeginChildEntity() {
     ASSERT(current_child_entity == nullptr);
 
-    // If the maximum depth for analysis is reached, don't create a new
-    // child entity. Instead, its header/body will be delivered to the
-    // current entity.
+
+
+
     if ( zeek::BifConst::MIME::max_depth > 0 && Depth() >= zeek::BifConst::MIME::max_depth ) {
         if ( message->GetAnalyzer() )
             message->GetAnalyzer()->LimitReachedWeird("exceeded_mime_max_depth", Depth());
@@ -1145,7 +1145,7 @@ TableValPtr MIME_Message::ToHeaderTable(MIME_HeaderList& hlist) {
     auto t = make_intrusive<TableVal>(mime_header_list);
 
     for ( size_t i = 0; i < hlist.size(); ++i ) {
-        auto index = val_mgr->Count(i + 1); // index starting from 1
+        auto index = val_mgr->Count(i + 1);
         MIME_Header* h = hlist[i];
         t->Assign(std::move(index), ToHeaderVal(h));
     }
@@ -1186,7 +1186,7 @@ MIME_Mail::MIME_Mail(analyzer::Analyzer* mail_analyzer, bool orig, int buf_size)
 
     content_hash_length = 0;
 
-    top_level = new MIME_Entity(this, nullptr); // to be changed to MIME_Mail
+    top_level = new MIME_Entity(this, nullptr);
     BeginEntity(top_level);
 }
 
@@ -1229,7 +1229,7 @@ MIME_Mail::~MIME_Mail() {
     delete top_level;
 }
 
-void MIME_Mail::BeginEntity(MIME_Entity* /* entity */) {
+void MIME_Mail::BeginEntity(MIME_Entity* ) {
     cur_entity_len = 0;
     cur_entity_id.clear();
 
@@ -1240,7 +1240,7 @@ void MIME_Mail::BeginEntity(MIME_Entity* /* entity */) {
     ASSERT(entity_content.empty());
 }
 
-void MIME_Mail::EndEntity(MIME_Entity* /* entity */) {
+void MIME_Mail::EndEntity(MIME_Entity* ) {
     if ( mime_entity_data ) {
         String* s = concatenate(entity_content);
 
@@ -1320,8 +1320,8 @@ bool MIME_Mail::RequestBuffer(int* plen, char** pbuf) {
     int overlap = buffer_start - data_start;
     int buffer_end = data_start + max_chunk_length;
     if ( buffer_end > data_buffer->Len() ) {
-        // Copy every thing in [data_start, buffer_start) to
-        // [0, overlap).
+
+
         if ( buffer_start > data_start )
             memcpy(data_buffer->Bytes(), data_buffer->Bytes() + data_start, overlap);
         data_start = 0;
@@ -1360,4 +1360,4 @@ void MIME_Mail::SubmitEvent(int event_type, const char* detail) {
                                    make_intrusive<StringVal>(detail));
 }
 
-} // namespace zeek::analyzer::mime
+}

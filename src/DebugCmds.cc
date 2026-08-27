@@ -1,7 +1,7 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Support routines to help deal with Zeek debugging commands and
-// implementation of most commands.
+
+
+
 
 #include "zeek/DebugCmds.h"
 
@@ -16,7 +16,7 @@
 
 #include "zeek/DbgBreakpoint.h"
 #include "zeek/Debug.h"
-#include "zeek/DebugCmdInfoConstants.cc" // NOLINT(bugprone-suspicious-include)
+#include "zeek/DebugCmdInfoConstants.cc"
 #include "zeek/Desc.h"
 #include "zeek/Frame.h"
 #include "zeek/Func.h"
@@ -33,9 +33,9 @@ namespace zeek::detail {
 
 DebugCmdInfoQueue g_DebugCmdInfos;
 
-//
-// Helper routines
-//
+
+
+
 static bool string_is_regex(const string& s) { return strpbrk(s.data(), "?*\\+"); }
 
 static void lookup_global_symbols_regex(const string& orig_regex, vector<ID*>& matches, bool func_only = false) {
@@ -111,9 +111,9 @@ static void choose_global_symbols_regex(const string& regex, vector<ID*>& choice
     }
 }
 
-//
-// DebugCmdInfo implementation
-//
+
+
+
 
 DebugCmdInfo::DebugCmdInfo(const DebugCmdInfo& info) : cmd(info.cmd), helpstring(nullptr) {
     num_names = info.num_names;
@@ -141,7 +141,7 @@ const DebugCmdInfo* get_debug_cmd_info(DebugCmd cmd) {
 }
 
 int find_all_matching_cmds(const string& prefix, const char* array_of_matches[]) {
-    // Trivial implementation for now (### use hashing later).
+
 
     unsigned int arglen = prefix.length();
     int matches = 0;
@@ -154,7 +154,7 @@ int find_all_matching_cmds(const string& prefix, const char* array_of_matches[])
             if ( strncmp(curr_name, prefix.c_str(), arglen) != 0 )
                 continue;
 
-            // If exact match, then only return that one.
+
             if ( ! prefix.compare(curr_name) ) {
                 for ( int k = 0; k < num_debug_cmds(); ++k )
                     array_of_matches[k] = nullptr;
@@ -171,11 +171,11 @@ int find_all_matching_cmds(const string& prefix, const char* array_of_matches[])
     return matches;
 }
 
-//
-// ------------------------------------------------------------
-// Implementation of some debugger commands
 
-// Start, end bounds of which frame numbers to print
+
+
+
+
 static int dbg_backtrace_internal(int start, int end) {
     if ( start < 0 || end < 0 || static_cast<unsigned>(start) >= call_stack.size() ||
          static_cast<unsigned>(end) >= call_stack.size() )
@@ -198,7 +198,7 @@ static int dbg_backtrace_internal(int start, int end) {
     return 1;
 }
 
-// Returns 0 for illegal arguments, or 1 on success.
+
 int dbg_cmd_backtrace(DebugCmd cmd, const vector<string>& args) {
     assert(cmd == dcBacktrace);
     assert(! call_stack.empty());
@@ -207,20 +207,20 @@ int dbg_cmd_backtrace(DebugCmd cmd, const vector<string>& args) {
     int end_iter;
 
     if ( ! args.empty() ) {
-        int how_many; // determines how we traverse the frames
+        int how_many;
         int valid_arg = sscanf(args[0].c_str(), "%i", &how_many);
         if ( ! valid_arg ) {
             debug_msg("Argument to backtrace '%s' invalid: must be an integer\n", args[0].c_str());
             return 0;
         }
 
-        if ( how_many > 0 ) { // innermost N frames
+        if ( how_many > 0 ) {
             start_iter = call_stack.size() - 1;
             end_iter = start_iter - how_many + 1;
             if ( end_iter < 0 )
                 end_iter = 0;
         }
-        else { // outermost N frames
+        else {
             start_iter = how_many - 1;
             if ( start_iter + 1 > call_stack.size() )
                 start_iter = call_stack.size() - 1;
@@ -235,7 +235,7 @@ int dbg_cmd_backtrace(DebugCmd cmd, const vector<string>& args) {
     return dbg_backtrace_internal(start_iter, end_iter);
 }
 
-// Returns 0 if invalid args, else 1.
+
 int dbg_cmd_frame(DebugCmd cmd, const vector<string>& args) {
     assert(cmd == dcFrame || cmd == dcUp || cmd == dcDown);
 
@@ -282,8 +282,8 @@ int dbg_cmd_frame(DebugCmd cmd, const vector<string>& args) {
 
     int user_frame_number = call_stack.size() - 1 - g_debugger_state.curr_frame_idx;
 
-    // Set the current location to the new frame being looked at
-    // for 'list', 'break', etc.
+
+
     const Stmt* stmt = call_stack[user_frame_number].frame->GetNextStmt();
     if ( ! stmt )
         reporter->InternalError("Assertion failed: stmt is null");
@@ -312,9 +312,9 @@ int dbg_cmd_break(DebugCmd cmd, const vector<string>& args) {
 
     vector<DbgBreakpoint*> bps;
 
-    int cond_index = -1; // at which argument pos. does bp condition start?
+    int cond_index = -1;
 
-    if ( args.empty() || args[0] == "if" ) { // break on next stmt
+    if ( args.empty() || args[0] == "if" ) {
         int user_frame_number = call_stack.size() - 1 - g_debugger_state.curr_frame_idx;
 
         Stmt* stmt = call_stack[user_frame_number].frame->GetNextStmt();
@@ -366,9 +366,9 @@ int dbg_cmd_break(DebugCmd cmd, const vector<string>& args) {
             cond_index = 2;
     }
 
-    // Is there a condition specified?
+
     if ( cond_index >= 0 && ! bps.empty() ) {
-        // ### Implement conditions
+
         string cond;
         for ( const auto& arg : args ) {
             cond += arg;
@@ -385,7 +385,7 @@ int dbg_cmd_break(DebugCmd cmd, const vector<string>& args) {
     return 0;
 }
 
-// Set a condition on an existing breakpoint.
+
 int dbg_cmd_break_condition(DebugCmd cmd, const vector<string>& args) {
     assert(cmd == dcBreakCondition);
 
@@ -407,7 +407,7 @@ int dbg_cmd_break_condition(DebugCmd cmd, const vector<string>& args) {
     return 1;
 }
 
-// Change the state of a breakpoint.
+
 int dbg_cmd_break_set_state(DebugCmd cmd, const vector<string>& args) {
     assert(cmd == dcDeleteBreak || cmd == dcClearBreak || cmd == dcDisableBreak || cmd == dcEnableBreak ||
            cmd == dcIgnoreBreak);
@@ -467,13 +467,13 @@ int dbg_cmd_break_set_state(DebugCmd cmd, const vector<string>& args) {
     return -1;
 }
 
-// Evaluate an expression and print the result.
+
 int dbg_cmd_print(DebugCmd cmd, const vector<string>& args) {
     assert(cmd == dcPrint);
 
-    // ### TODO: add support for formats
 
-    // Just concatenate all the 'args' into one expression.
+
+
     string expr;
     for ( size_t i = 0; i < args.size(); ++i ) {
         expr += args[i];
@@ -495,8 +495,8 @@ int dbg_cmd_print(DebugCmd cmd, const vector<string>& args) {
     return 1;
 }
 
-// Get the debugger's state.
-// Allowed arguments are: break (breakpoints), watch, display, source.
+
+
 int dbg_cmd_info(DebugCmd cmd, const vector<string>& args) {
     assert(cmd == dcInfo);
 
@@ -528,8 +528,8 @@ int dbg_cmd_info(DebugCmd cmd, const vector<string>& args) {
 int dbg_cmd_list(DebugCmd cmd, const vector<string>& args) {
     assert(cmd == dcList);
 
-    // The constant 4 is to match the GDB behavior.
-    const unsigned int CENTER_IDX = 4; // 5th line is the 'interesting' one
+
+    const unsigned int CENTER_IDX = 4;
 
     int pre_offset = 0;
     if ( args.size() > 1 ) {
@@ -538,14 +538,14 @@ int dbg_cmd_list(DebugCmd cmd, const vector<string>& args) {
     }
 
     if ( args.empty() ) {
-        // Special case: if we just hit a breakpoint, then show
-        // that line without advancing first.
+
+
         if ( g_debugger_state.already_did_list )
             pre_offset = 10;
     }
 
     else if ( args[0] == "-" )
-        // Why -10 ?  Because that's what GDB does.
+
         pre_offset = -10;
 
     else if ( args[0][0] == '-' || args[0][0] == '+' ) {
@@ -612,4 +612,4 @@ int dbg_cmd_trace(DebugCmd cmd, const vector<string>& args) {
 
 int num_debug_cmds() { return static_cast<int>(g_DebugCmdInfos.size()); }
 
-} // namespace zeek::detail
+}

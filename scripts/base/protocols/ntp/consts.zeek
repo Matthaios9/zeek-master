@@ -1,8 +1,8 @@
 module NTP;
 
 export {
-	## The descriptions of the NTP mode value, as described
-	## in :rfc:`5905`, Figure 1
+
+
 	const modes: table[count] of string = {
 		[1] = "symmetric active",
 		[2] = "symmetric passive",

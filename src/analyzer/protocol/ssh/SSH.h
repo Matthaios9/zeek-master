@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -12,12 +12,12 @@ public:
     explicit SSH_Analyzer(Connection* conn);
     ~SSH_Analyzer() override;
 
-    // Overridden from Analyzer.
+
     void Done() override;
     void DeliverStream(int len, const u_char* data, bool orig) override;
     void Undelivered(uint64_t seq, int len, bool orig) override;
 
-    // Overridden from analyzer::tcp::TCP_ApplicationAnalyzer.
+
     void EndpointEOF(bool is_orig) override;
 
     static analyzer::Analyzer* Instantiate(Connection* conn) { return new SSH_Analyzer(conn); }
@@ -30,7 +30,7 @@ protected:
 
     bool had_gap;
 
-    // Packet analysis stuff
+
     bool auth_decision_made;
     bool skipped_banner;
     bool saw_encrypted_client_data;
@@ -39,4 +39,4 @@ protected:
     int userauth_failure_size;
 };
 
-} // namespace zeek::analyzer::ssh
+}

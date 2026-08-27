@@ -1,6 +1,6 @@
 @load test-all-policy.zeek
 
-# Scripts which are commented out in test-all-policy.zeek.
+
 @load frameworks/conn_key/vlan_fivetuple.zeek
 
 @load protocols/ssl/decryption.zeek
@@ -25,8 +25,8 @@
 @load policy/protocols/dns/disable-opcode-log-fields.zeek
 
 @if ( have_spicy() )
-# Loading this messes up documentation of some elements defined elsewhere.
-# @load frameworks/spicy/record-spicy-batch.zeek
+
+
 @load frameworks/spicy/resource-usage.zeek
 @endif
 

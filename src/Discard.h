@@ -1,8 +1,8 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
-#include <sys/types.h> // for u_char
+#include <sys/types.h>
 #include <memory>
 
 #include "zeek/IntrusivePtr.h"
@@ -33,9 +33,9 @@ protected:
     FuncPtr check_udp;
     FuncPtr check_icmp;
 
-    // Maximum amount of application data passed to filtering functions.
+
     int discarder_maxlen;
 };
 
-} // namespace detail
-} // namespace zeek
+}
+}

@@ -1,5 +1,5 @@
-# Logs hosts known to take part in multicast conversations based on IGMP data. This is not
-# all multicast connections, but just the ones for which Zeek knows active recipients.
+
+
 
 @load base/protocols/conn
 @load base/packet-protocols/igmp/types
@@ -9,31 +9,31 @@ module Conn;
 export {
 	redef enum Log::ID += { MULTICAST_PARTICIPANTS_LOG };
 
-	## A default logging policy hook for the stream.
+
 	global log_policy_multicast: Log::PolicyHook;
 
-	# The record type which contains the column fields of the multicast participants
-	# log.
+
+
 	type MulticastParticipantsInfo: record {
-		## The timestamp of the connection.
+
 		ts: time &log;
-		## The UID string for the connection. This is the uid field from the
-		## original connection record.
+
+
 		cid: string &log;
-		## The address of the host origintating the connection to the multicast
-		## group address.
+
+
 		orig_h: addr &log;
-		## The multicast group address for the connection.
+
 		group_addr: addr &log;
-		## The port used in the multicast connection.
+
 		group_p: port &log;
-		## The set of multicast participants collected from IGMP for the group
-		## address.
+
+
 		participants: set[addr] &log;
 	};
 
-	## Event that can be handled to access the :zeek:type:`Conn::Info`
-	## record as it is sent on to the logging framework.
+
+
 	global log_multicast: event(rec: MulticastParticipantsInfo);
 }
 
@@ -41,12 +41,12 @@ redef record connection += {
 	multicast_srcs: set[addr] &optional;
 };
 
-# Map connections to multicast group address and port number, but separately.  Multiple
-# ports can be used on the same multicast group address.
+
+
 global multicast_conns: table[addr] of set[conn_id];
 
-# Map multicast group addresses to the addresses of the members.
-# TODO: This feels like it should be in the main IGMP script instead of here.
+
+
 global igmp_sources: table[addr] of set[addr];
 
 event zeek_init() &priority=5
@@ -58,7 +58,7 @@ event zeek_init() &priority=5
 
 hook multicast_removal_hook(c: connection)
 	{
-	# Multicast addresses only show up in the resp fields.
+
 	if ( c$id$resp_h in 224.0.0.0/4 )
 		{
 		if ( c?$multicast_srcs && |c$multicast_srcs| > 0 )
@@ -74,8 +74,8 @@ hook multicast_removal_hook(c: connection)
 
 event new_connection(c: connection)
 	{
-	# Multicast addresses only show up in the resp fields. Note that this doesn't
-	# support ipv6 multicast because IGMP doesn't.
+
+
 	if ( c$id$resp_h in 224.0.0.0/4 )
 		{
 		if ( c$id$resp_h !in multicast_conns )

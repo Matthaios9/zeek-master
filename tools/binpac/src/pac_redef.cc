@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_redef.h"
 
@@ -21,7 +21,7 @@ Decl* find_decl(const ID* id) {
     return decl;
 }
 
-} // namespace
+}
 
 Decl* ProcessTypeRedef(const ID* id, FieldList* fieldlist) {
     Decl* decl = find_decl(id);
@@ -37,8 +37,8 @@ Decl* ProcessTypeRedef(const ID* id, FieldList* fieldlist) {
     foreach (i, FieldList, fieldlist) {
         Field* f = *i;
 
-        // One cannot change data layout in 'redef'.
-        // Only 'let' or 'action' can be added
+
+
         if ( f->tof() == LET_FIELD || f->tof() == WITHINPUT_FIELD ) {
             type->AddField(f);
         }

@@ -1,4 +1,4 @@
-##! A module for executing external command line programs.
+
 
 @load base/frameworks/input
 
@@ -6,45 +6,45 @@ module Exec;
 
 export {
 	type Command: record {
-		## The command line to execute. Use care to avoid injection
-		## attacks (i.e., if the command uses untrusted/variable data,
-		## sanitize it with :zeek:see:`safe_shell_quote`).
+
+
+
 		cmd:         string;
-		## Provide standard input to the program as a string.
+
 		stdin:       string      &default="";
-		## If additional files are required to be read in as part of the
-		## output of the command they can be defined here.
+
+
 		read_files:  set[string] &optional;
-		## The unique id for tracking executors.
+
 		uid: string &default=unique_id("");
 	};
 
 	type Result: record {
-		## Exit code from the program.
+
 		exit_code:    count            &default=0;
-		## True if the command was terminated with a signal.
+
 		signal_exit:  bool             &default=F;
-		## Each line of standard output.
+
 		stdout:       vector of string &optional;
-		## Each line of standard error.
+
 		stderr:       vector of string &optional;
-		## If additional files were requested to be read in
-		## the content of the files will be available here.
+
+
 		files:        table[string] of string_vec &optional;
 	};
 
-	## Function for running command line programs and getting
-	## output. This is an asynchronous function which is meant
-	## to be run with the ``when`` statement.
-	##
-	## cmd: The command to run. Use care to avoid injection attacks!
-	##
-	## Returns: A record representing the full results from the
-	##          external program execution.
+
+
+
+
+
+
+
+
 	global run: function(cmd: Command): Result;
 }
 
-# Indexed by command uid.
+
 global results: table[string] of Result;
 global pending_commands: set[string];
 global pending_files: table[string] of set[string];
@@ -104,8 +104,8 @@ event Input::end_of_data(orig_name: string, source:string)
 
 	local track_file = parts[1];
 
-	# If the file is empty, still add it to the result$files table. This is needed
-	# because it is expected that the file was read even if it was empty.
+
+
 	local result = results[name];
 	if ( ! result?$files )
 		result$files = table();
@@ -131,14 +131,14 @@ event InputRaw::process_finished(name: string, source:string, exit_code:count, s
 	if ( name !in pending_commands )
 		return;
 
-	# Upon the process exiting, the internal Raw reader code should take
-	# care of signalling that the stream needs to be disabled/removed.
-	#Input::remove(name);
+
+
+
 	results[name]$exit_code = exit_code;
 	results[name]$signal_exit = signal_exit;
 
 	if ( name !in pending_files || |pending_files[name]| == 0 )
-		# No extra files to read, command is done.
+
 		delete pending_commands[name];
 	else
 		for ( read_file in pending_files[name] )
@@ -188,7 +188,7 @@ function run(cmd: Command): Result
 
 event zeek_done()
 	{
-	# We are punting here and just deleting any unprocessed files.
+
 	for ( uid in pending_files )
 		for ( fname in pending_files[uid] )
 			system(fmt("rm %s", safe_shell_quote(fname)));

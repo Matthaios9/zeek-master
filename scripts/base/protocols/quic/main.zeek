@@ -1,4 +1,4 @@
-##! Implements base functionality for QUIC analysis. Generates quic.log.
+
 
 @load base/frameworks/notice/weird
 @load base/protocols/conn/removal-hooks
@@ -10,84 +10,84 @@ module QUIC;
 export {
 	redef enum Log::ID += { LOG };
 
-	## Well-known ports for QUIC.
+
 	const quic_ports = {
-		443/udp, # HTTP3-over-QUIC
+		443/udp,
 	} &redef;
 
-	## Well-known ports for DNS-over-QUIC.
-	##
-	## Currently not added to likely_server_ports to avoid spurious
-	## originator/responder changes in the private testing baseline.
-	##
-	## You can always add these to likely_server_ports in your local.zeek
-	## file for your environment if needed:
-	##
-	##	redef likely_server_ports += { 853/udp, 784/udp };
-	##
+
+
+
+
+
+
+
+
+
+
 	const doq_ports = {
-		853/udp, # DNS-over-QUIC
-		784/udp, # DNS-over-QUIC early
+		853/udp,
+		784/udp,
 	} &redef;
 
 	type Info: record {
-		## Timestamp of first QUIC packet for this entry.
+
 		ts:          time    &log;
-		## Unique ID for the connection.
+
 		uid:         string  &log;
-		## The connection's 4-tuple of endpoint addresses/ports.
+
 		id:          conn_id &log;
 
-		## QUIC version as found in the first INITIAL packet from
-		## the client. This will often be "1" or "quicv2", but see
-		## the :zeek:see:`QUIC::version_strings` table for details.
+
+
+
 		version:     string  &log;
 
-		## First Destination Connection ID used by client. This is
-		## random and unpredictable, but used for packet protection
-		## by client and server.
+
+
+
 		client_initial_dcid: string  &log &optional;
 
-		## Client's Source Connection ID from the first INITIAL packet.
+
 		client_scid:         string  &log &optional;
 
-		## Server chosen Connection ID usually from server's first
-		## INITIAL packet. This is to be used by the client in
-		## subsequent packets.
+
+
+
 		server_scid:         string  &log &optional;
 
-		## Server name extracted from SNI extension in ClientHello
-		## packet if available.
+
+
 		server_name: string  &log &optional;
 
-		## First protocol extracted from ALPN extension in ClientHello
-		## packet if available.
+
+
 		client_protocol: string &log &optional;
 
-		## QUIC history.
-		##
-		## Letters have the following meaning with client-sent
-		## letters being capitalized:
-		##
-		## ======  ====================================================
-		## Letter  Meaning
-		## ======  ====================================================
-		## I       INIT packet
-		## H       HANDSHAKE packet
-		## Z       0RTT packet
-		## R       RETRY packet
-		## C       CONNECTION_CLOSE packet
-		## S       SSL Client/Server Hello
-		## U       Unfamiliar QUIC version
-		## X       Discarded packet after successful decryption of INITIAL packets
-		## O       Short header packets in binary logarithmic fashion
-		## ======  ====================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 		history: string &log &default="";
 
-		# Internal state for the history field.
+
 		history_state: vector of string;
 
-		# Internal state if this record has already been logged.
+
 		logged: bool &default=F;
 	};
 
@@ -97,21 +97,21 @@ export {
 
 	global finalize_quic: Conn::RemovalHook;
 
-	## The maximum length of the history field.
+
 	option max_history_length = 100;
 
-	## Maximum number of QUIC::discarded packet() events to generate.
-	## Set to 0 for unlimited, -1 for disabled.
+
+
 	const max_discarded_packet_events: int = 100 &redef;
 }
 
 redef record connection += {
-	# XXX: We may have multiple QUIC connections with different
-	#      Connection ID over the same UDP connection.
+
+
 	quic: Info &optional;
 };
 
-# Faster to modify here than re-compiling .evt files.
+
 
 function add_to_history(c: connection, is_orig: bool, what: string)
 	{
@@ -172,7 +172,7 @@ event QUIC::zero_rtt_packet(c: connection, is_orig: bool, version: count, dcid: 
 	add_to_history(c, is_orig, "ZeroRTT");
 	}
 
-# RETRY packets trigger a log entry and state reset.
+
 event QUIC::retry_packet(c: connection, is_orig: bool, version: count, dcid: string, scid: string, retry_token: string, integrity_tag: string)
 	{
 	if ( ! c?$quic )
@@ -189,8 +189,8 @@ event QUIC::short_header_packet_threshold_crossed(c: connection, is_orig: bool, 
 	{
 	if ( ! c?$quic )
 		{
-		# This happens sometimes when we didn't see INITIAL packets
-		# but manage to parse the beginning somehow.
+
+
 		Reporter::conn_weird("QUIC_spurious_short_header_packet_threshold_crossed",
 		                     c, cat(threshold));
 		return;
@@ -203,7 +203,7 @@ event QUIC::discarded_packet(c: connection, is_orig: bool, total_decrypted: coun
 	{
 	if ( ! c?$quic )
 		{
-		# This should not happen.
+
 		Reporter::conn_weird("QUIC_spurious_discarded_packet", c);
 		return;
 		}
@@ -211,7 +211,7 @@ event QUIC::discarded_packet(c: connection, is_orig: bool, total_decrypted: coun
 	add_to_history(c, is_orig, "Xdiscarded");
 	}
 
-# If we couldn't handle a version, log it as a single record.
+
 event QUIC::unhandled_version(c: connection, is_orig: bool, version: count, dcid: string, scid: string)
 	{
 	if ( ! c?$quic )
@@ -224,8 +224,8 @@ event QUIC::unhandled_version(c: connection, is_orig: bool, version: count, dcid
 	delete c$quic;
 	}
 
-# Upon a connection_close_frame(), if any c$quic state is pending to be logged, do so
-# now and prepare for a new entry.
+
+
 event QUIC::connection_close_frame(c: connection, is_orig: bool, version: count, dcid: string, scid: string, error_code: count, reason_phrase: string)
 	{
 	if ( ! c?$quic )
@@ -250,9 +250,9 @@ event ssl_extension_application_layer_protocol_negotiation(c: connection, is_cli
 		{
 		c$quic$client_protocol = protocols[0];
 		if ( |protocols| > 1 )
-			# Probably not overly weird, but the quic.log only
-			# works with the first one in the hope to avoid
-			# vector or concatenation.
+
+
+
 			Reporter::conn_weird("QUIC_many_protocols", c, cat(protocols));
 		}
 	}

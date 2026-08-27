@@ -1,4 +1,4 @@
-##! Log weird statistics.
+
 
 @load base/frameworks/sumstats
 @load base/frameworks/cluster
@@ -10,15 +10,15 @@ export {
 
 	global log_policy: Log::PolicyHook;
 
-	## How often stats are reported.
+
 	const weird_stat_interval = 15min &redef;
 
 	type Info: record {
-		## Timestamp for the measurement.
+
 		ts: time &log;
-		## Name of the weird.
+
 		name: string &log;
-		## Number of times weird was seen since the last stats interval.
+
 		num_seen: count &log;
 	};
 
@@ -79,11 +79,11 @@ function observe_weird_stats()
 
 @if ( Cluster::is_enabled() )
 
-# I'm not sure if this is a hack or not: the manager will generate this
-# event at the end of its epoch so workers can handle it just in time to
-# generate the necessary stats.  Alternative may be workers generating the
-# stats individually/proactively in their own finish_epoch, but that may be
-# less synchronized?
+
+
+
+
+
 event SumStats::cluster_ss_request(uid: string, ss_name: string, cleanup: bool) &priority=10
 	{
 	if ( ss_name != "weirds.statistics" )

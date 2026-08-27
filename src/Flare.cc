@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Flare.h"
 
@@ -44,7 +44,7 @@ Flare::Flare()
     if ( sendfd == (int)INVALID_SOCKET )
         fatalError("WSASocket failure: %d", WSAGetLastError());
 
-    // Set recvfd to non-blocking so Extinguish() doesn't hang.
+
     u_long nonblocking = 1;
     if ( ioctlsocket(recvfd, FIONBIO, &nonblocking) == SOCKET_ERROR )
         fatalError("ioctlsocket failure: %d", WSAGetLastError());
@@ -89,7 +89,7 @@ void Flare::Fire(bool signal_safe) {
         int n = send(sendfd, &tmp, 1, 0);
 #endif
         if ( n > 0 )
-            // Success -- wrote a byte to pipe.
+
             break;
 
         if ( n < 0 ) {
@@ -98,17 +98,17 @@ void Flare::Fire(bool signal_safe) {
             bad_pipe_op("send", signal_safe);
 #endif
             if ( errno == EAGAIN )
-                // Success: pipe is full and just need at least one byte in it.
+
                 break;
 
             if ( errno == EINTR )
-                // Interrupted: try again.
+
                 continue;
 
             bad_pipe_op("write", signal_safe);
         }
 
-        // No error, but didn't write a byte: try again.
+
     }
 }
 
@@ -124,7 +124,7 @@ int Flare::Extinguish(bool signal_safe) {
 #endif
         if ( n >= 0 ) {
             rval += n;
-            // Pipe may not be empty yet: try again.
+
             continue;
         }
 #ifdef _MSC_VER
@@ -134,11 +134,11 @@ int Flare::Extinguish(bool signal_safe) {
         bad_pipe_op("recv", signal_safe);
 #endif
         if ( errno == EAGAIN )
-            // Success: pipe is now empty.
+
             break;
 
         if ( errno == EINTR )
-            // Interrupted: try again.
+
             continue;
 
         bad_pipe_op("read", signal_safe);
@@ -147,4 +147,4 @@ int Flare::Extinguish(bool signal_safe) {
     return rval;
 }
 
-} // namespace zeek::detail
+}

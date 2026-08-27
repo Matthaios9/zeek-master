@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_array.h"
 
@@ -108,14 +108,14 @@ void ArrayType::ProcessAttr(Attr* a) {
                                 " to arrays with specified length");
             }
             attr_restofdata_ = true;
-            // As the array automatically extends to the end of
-            // data, we do not have to check boundary.
+
+
             SetBoundaryChecked();
         } break;
 
         case ATTR_RESTOFFLOW:
             attr_restofflow_ = true;
-            // TODO: handle &restofflow
+
             break;
 
         case ATTR_UNTIL: {
@@ -174,12 +174,12 @@ void ArrayType::Prepare(Env* env, int flags) {
             arraylength_var_field_->Prepare(env);
             elem_it_var_field_->Prepare(env);
 
-            // Add elem_dataptr_var only when not parsing incrementally
+
             ID* elem_dataptr_var = new ID(strfmt("%s__dataptr", elem_var->Name()));
             elem_dataptr_var_field_ = new TempVarField(elem_dataptr_var, extern_type_const_byteptr->Clone());
             elem_dataptr_var_field_->Prepare(env);
 
-            // until(dataptr >= end_of_data)
+
             elem_dataptr_until_expr_ =
                 new Expr(Expr::EXPR_GE, new Expr(elem_dataptr_var->clone()), new Expr(end_of_data->clone()));
         }
@@ -200,7 +200,7 @@ void ArrayType::GenArrayLength(Output* out_cc, Env* env, const DataPtr& data) {
 
     if ( ! incremental_parsing() ) {
         arraylength_var_field_->GenTempDecls(out_cc, env);
-        // This is about to get initialized below, don't initialize it twice.
+
         if ( ! length_ && ! attr_restofdata_ )
             arraylength_var_field_->GenInitCode(out_cc, env);
     }
@@ -210,7 +210,7 @@ void ArrayType::GenArrayLength(Output* out_cc, Env* env, const DataPtr& data) {
 
         env->SetEvaluated(arraylength_var());
 
-        // Check negative array length
+
         out_cc->println("if ( %s < 0 ) {", env->LValue(arraylength_var()));
         out_cc->inc_indent();
         out_cc->println("throw binpac::ExceptionOutOfBound(\"%s\",", data_id_str_.c_str());
@@ -222,31 +222,31 @@ void ArrayType::GenArrayLength(Output* out_cc, Env* env, const DataPtr& data) {
         int element_size;
 
         if ( elemtype_->StaticSize(env) == -1 ) {
-            // Check for overlong array quantity.  We cap it at the maximum
-            // array size (assume 1-byte elements * array length) as we can't
-            // possibly store more elements.  e.g. this helps prevent
-            // user-controlled length fields from causing an excessive
-            // iteration and/or memory-allocation (for the array we'll be
-            // parsing into) unless they actually sent enough data to go along
-            // with it.  Note that this check is *not* looking for whether the
-            // contents of the array will extend past the end of the data
-            // buffer.
+
+
+
+
+
+
+
+
+
             out_cc->println("// Check array element quantity: %s", data_id_str_.c_str());
             element_size = 1;
         }
         else {
-            // Boundary check the entire array if elements have static size.
+
             out_cc->println("// Check bounds for static-size array: %s", data_id_str_.c_str());
             elemtype_->SetBoundaryChecked();
             element_size = elemtype_->StaticSize(env);
 
             if ( element_size == 0 ) {
-                // If we know we have an array of empty elements, probably
-                // better to structure the parser as just a single empty
-                // field to avoid DoS vulnerability of allocating
-                // arbitrary number of empty records (i.e. cheap for them,
-                // but costly for us unless we have special optimization
-                // for this scenario to forgo the usual allocation).
+
+
+
+
+
+
                 throw Exception(this, "using an array of known-to-be-empty elements is possibly a bad idea");
             }
         }
@@ -290,8 +290,8 @@ void ArrayType::GenPrivDecls(Output* out_h, Env* env) {
 }
 
 void ArrayType::GenInitCode(Output* out_cc, Env* env) {
-    // Do not initiate the array here
-    // out_cc->println("%s = new %s;", lvalue(), vector_str_.c_str());
+
+
     out_cc->println("%s = nullptr;", lvalue());
 
     Type::GenInitCode(out_cc, env);
@@ -351,12 +351,12 @@ string ArrayType::GenArrayInit(Output* out_cc, Env* env, bool known_array_length
 
 void ArrayType::GenElementAssignment(Output* out_cc, Env* env, string const& array_str, bool use_vector) {
     if ( attr_transient_ ) {
-        // Just discard.
+
         out_cc->println("delete %s;", env->LValue(elem_var()));
         return;
     }
 
-    // Assign the element
+
     if ( ! use_vector ) {
         out_cc->println("%s[%s] = %s;", array_str.c_str(), env->LValue(elem_it_var()), env->LValue(elem_var()));
     }
@@ -368,30 +368,30 @@ void ArrayType::GenElementAssignment(Output* out_cc, Env* env, string const& arr
 void ArrayType::DoGenParseCode(Output* out_cc, Env* env, const DataPtr& data, int flags) {
     GenArrayLength(out_cc, env, data);
 
-    // Otherwise these variables are declared as member variables
+
     if ( ! incremental_parsing() ) {
-        // Declare and initialize temporary variables
+
         elem_var_field_->GenInitCode(out_cc, env);
         elem_it_var_field_->GenTempDecls(out_cc, env);
         out_cc->println("%s = 0;", env->LValue(elem_it_var()));
         env->SetEvaluated(elem_it_var());
     }
 
-    /*
-    If the input length can be determined without parsing
-    individual elements, generate the boundary checking before
-    parsing (unless in the case of incremental parsing).
 
-    There are two cases when the input length can be determined:
-    1. The array has a static size;
-    2. The array length can be computed before parsing and
-    each element is of constant size.
-    */
+
+
+
+
+
+
+
+
+
 
     bool compute_size_var = false;
 
     if ( incremental_input() ) {
-        // Do not compute size_var on incremental input
+
         compute_size_var = false;
 
         if ( ! incremental_parsing() &&
@@ -431,13 +431,13 @@ void ArrayType::DoGenParseCode(Output* out_cc, Env* env, const DataPtr& data, in
 
     if ( elem_dataptr_var() ) {
         if ( length_ ) {
-            // Array has a known-length expression like uint16[4] vs. uint16[].
-            // Here, arriving at the end of the data buffer should not be a
-            // valid loop-termination condition (which is what the
-            // GenUntilCheck() call produces).  Instead, rely on the loop
-            // counter to terminate iteration or else the parsing code
-            // generated for each element should throw an OOB exception if
-            // there's insufficient data in the buffer.
+
+
+
+
+
+
+
         }
         else {
             GenUntilCheck(out_cc, env, elem_dataptr_until_expr_, false);
@@ -476,7 +476,7 @@ void ArrayType::DoGenParseCode(Output* out_cc, Env* env, const DataPtr& data, in
     out_cc->inc_indent();
 
     if ( compute_size_var && elem_dataptr_var() && ! env->Evaluated(size_var()) ) {
-        // Compute the data size
+
         out_cc->println("%s = %s - (%s);", env->LValue(size_var()), env->RValue(elem_dataptr_var()), data.ptr_expr());
         env->SetEvaluated(size_var());
     }
@@ -528,8 +528,8 @@ void ArrayType::GenDynamicSize(Output* out_cc, Env* env, const DataPtr& data) {
 
     int elem_w = elemtype_->StaticSize(env);
     if ( elem_w >= 0 && ! attr_until_element_expr_ && ! attr_until_input_expr_ && (length_ || attr_restofdata_) ) {
-        // If the elements have a fixed size,
-        // we only need to compute the number of elements
+
+
         bool compute_size_var = AddSizeVar(out_cc, env);
         ASSERT(compute_size_var);
         GenArrayLength(out_cc, env, data);
@@ -538,7 +538,7 @@ void ArrayType::GenDynamicSize(Output* out_cc, Env* env, const DataPtr& data) {
         env->SetEvaluated(size_var());
     }
     else {
-        // Otherwise we need parse the array dynamically
+
         GenParseCode(out_cc, env, data, 0);
     }
 }
@@ -562,8 +562,8 @@ void ArrayType::SetBoundaryChecked() {
     Type::SetBoundaryChecked();
 
     if ( attr_length_expr_ ) {
-        // When using &length on an array, only treat its elements as
-        // already-bounds-checked if they are a single byte in length.
+
+
         if ( elemtype_->StaticSize(env()) == 1 )
             elemtype_->SetBoundaryChecked();
 

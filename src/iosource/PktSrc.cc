@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/iosource/PktSrc.h"
 
@@ -23,7 +23,7 @@ PktSrc::Properties::Properties() {
 
 PktSrc::PktSrc() {
     have_packet = false;
-    // Small lie to make a new PktSrc look like the previous ExtractNextPacket() was successful.
+
     had_packet = true;
     errbuf = "";
     SetClosed(true);
@@ -78,8 +78,8 @@ void PktSrc::Closed() {
 }
 
 void PktSrc::Error(const std::string& msg) {
-    // We don't report this immediately, Zeek will ask us for the error
-    // once it notices we aren't open.
+
+
     errbuf = msg;
     DBG_LOG(DBG_PKTIO, "Error with source %s: %s", IsOpen() ? props.path.c_str() : "<not open>", msg.c_str());
 }
@@ -101,7 +101,7 @@ bool PktSrc::HasBeenIdleFor(double interval) const {
     if ( have_packet || had_packet )
         return false;
 
-    // Take the hit of a current_time() call now.
+
     double now = zeek::util::current_time(true);
     return idle_at_wallclock < now - interval;
 };
@@ -127,7 +127,7 @@ bool PktSrc::ExtractNextPacketInternal() {
 
     have_packet = false;
 
-    // Don't return any packets if processing is suspended.
+
     if ( run_state::is_processing_suspended() )
         return false;
 
@@ -143,12 +143,12 @@ bool PktSrc::ExtractNextPacketInternal() {
         return true;
     }
     else {
-        // Update the idle_at timestamp the first time we've failed
-        // to extract a packet. This assumes ExtractNextPacket() is
-        // called regularly which is true for non-selectable PktSrc
-        // instances, but even for selectable ones with an FD the
-        // main-loop will call Process() on the interface regularly
-        // and detect it as idle.
+
+
+
+
+
+
         if ( had_packet ) {
             DBG_LOG(DBG_PKTIO, "source %s is idle now", props.path.c_str());
             idle_at_wallclock = zeek::util::current_time(true);
@@ -180,11 +180,11 @@ bool PktSrc::PrecompileBPFFilter(int index, const std::string& filter) {
     if ( index < 0 )
         return false;
 
-    // Compile filter. This will always return a pointer, but may have stored an error
-    // internally.
+
+
     auto code = CompileFilter(filter);
 
-    // Store it in vector.
+
     if ( index >= static_cast<int>(filters.size()) )
         filters.resize(index + 1);
 
@@ -230,26 +230,26 @@ double PktSrc::GetNextTimeout() {
     if ( run_state::is_processing_suspended() )
         return -1;
 
-    // If we're in pseudo-realtime mode, find the next time that a packet is ready
-    // and have poll block until then.
+
+
     if ( run_state::pseudo_realtime ) {
         ExtractNextPacketInternal();
 
-        // This duplicates the calculation used in run_state::check_pseudo_time().
+
         double pseudo_time = current_packet.time - run_state::detail::first_timestamp;
         double ct = (util::current_time(true) - run_state::detail::first_wallclock) * run_state::pseudo_realtime;
         return std::max(0.0, pseudo_time - ct);
     }
 
-    // If there's no file descriptor for the source, which is the case for some interfaces
-    // like myricom, we can't rely on the polling mechanism to wait for data to be
-    // available. As gross as it is, just spin with a short timeout here so that it will
-    // continually poll the interface. The old IOSource code had a 20 microsecond timeout
-    // between calls to select() so just use that.
 
-    // A heuristic to avoid short sleeps when a non-selectable packet source has more
-    // packets queued is to return 0.0 if the source has yielded a packet on the
-    // last call to ExtractNextPacket().
+
+
+
+
+
+
+
+
     if ( props.selectable_fd == -1 ) {
         if ( have_packet || had_packet )
             return 0.0;
@@ -257,8 +257,8 @@ double PktSrc::GetNextTimeout() {
         return BifConst::Pcap::non_fd_timeout;
     }
 
-    // If there's an FD (offline or live) we want poll to do what it has to with it.
+
     return -1.0;
 }
 
-} // namespace zeek::iosource
+}

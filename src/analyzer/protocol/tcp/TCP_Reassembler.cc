@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/tcp/TCP_Reassembler.h"
 
@@ -17,7 +17,7 @@
 
 namespace zeek::analyzer::tcp {
 
-// Note, sequence numbers are relative. I.e., they start with 1.
+
 
 constexpr bool DEBUG_tcp_contents = false;
 constexpr bool DEBUG_tcp_connection_close = false;
@@ -57,7 +57,7 @@ TCP_Reassembler::TCP_Reassembler(analyzer::Analyzer* arg_dst_analyzer,
 void TCP_Reassembler::Done() {
     MatchUndelivered(-1, true);
 
-    if ( record_contents_file ) { // Record any undelivered data.
+    if ( record_contents_file ) {
         if ( ! block_list.Empty() ) {
             const auto& last_block = block_list.LastBlock();
 
@@ -89,7 +89,7 @@ void TCP_Reassembler::SetContentsFile(FilePtr f) {
     }
 
     if ( record_contents_file ) {
-        // We were already recording, no need to catch up.
+
         record_contents_file = nullptr;
     }
     else {
@@ -114,11 +114,11 @@ static inline bool report_gap(const TCP_Endpoint* a, const TCP_Endpoint* b) {
 }
 
 void TCP_Reassembler::Gap(uint64_t seq, uint64_t len) {
-    // Only report on content gaps for connections that
-    // are in a cleanly established or closing  state. In
-    // other states, these can arise falsely due to things
-    // like sequence number mismatches in RSTs, or
-    // unseen previous packets in partial connections.
+
+
+
+
+
 
     if ( established_or_cleanly_closing(endp, endp->peer) )
         endp->Gap(seq, len);
@@ -140,24 +140,24 @@ void TCP_Reassembler::Undelivered(uint64_t up_to_seq) {
     TCP_Endpoint* peer = endpoint->peer;
 
     if ( up_to_seq <= 2 && tcp_analyzer->IsPartial() ) {
-        // Since it was a partial connection, we faked up its
-        // initial sequence numbers as though we'd seen a SYN.
-        // We've now received the first ack and are getting a
-        // complaint that either that data is missing (if
-        // up_to_seq is 1), or one octet beyond it is missing
-        // (if up_to_seq is 2).  The latter can occur when the
-        // first packet we saw instantiating the partial connection
-        // was a keep-alive.  So, in either case, just ignore it.
 
-        // TODO: Don't we need to update last_reassem_seq ????
+
+
+
+
+
+
+
+
+
         return;
     }
 
 #if 0
 	if ( endpoint->FIN_cnt > 0 )
 		{
-		// Make sure we're not worrying about undelivered
-		// FIN control octets!
+
+
 		if ( up_to_seq >= endpoint->FIN_seq )
 			up_to_seq = endpoint->FIN_seq - 1;
 		}
@@ -173,22 +173,22 @@ void TCP_Reassembler::Undelivered(uint64_t up_to_seq) {
     }
 
     if ( up_to_seq <= last_reassem_seq )
-        // This should never happen. (Reassembler::TrimToSeq has the only call
-        // to this method and only if this condition is not true).
+
+
         reporter->InternalError(
             "Calling Undelivered for data that has already been delivered (or "
             "has already been marked as undelivered");
 
     if ( BifConst::detect_filtered_trace && last_reassem_seq == 1 &&
          (endpoint->FIN_cnt > 0 || endpoint->RST_cnt > 0 || peer->FIN_cnt > 0 || peer->RST_cnt > 0) ) {
-        // We could be running on a SYN/FIN/RST-filtered trace - don't
-        // complain about data missing at the end of the connection.
-        //
-        // ### However, note that the preceding test is not a precise
-        // one for filtered traces, and may fail, for example, when
-        // the SYN packet carries data.
-        //
-        // Skip the undelivered part without reporting to the endpoint.
+
+
+
+
+
+
+
+
         skip_deliveries = true;
     }
     else {
@@ -201,20 +201,20 @@ void TCP_Reassembler::Undelivered(uint64_t up_to_seq) {
         }
 
         if ( ! skip_deliveries ) {
-            // If we have blocks that begin below up_to_seq, deliver them.
+
             auto it = block_list.Begin();
 
             while ( it != block_list.End() ) {
                 const auto& b = it->second;
 
                 if ( b.seq < last_reassem_seq ) {
-                    // Already delivered this block.
+
                     ++it;
                     continue;
                 }
 
                 if ( b.seq >= up_to_seq )
-                    // Block is beyond what we need to process at this point.
+
                     break;
 
                 uint64_t gap_at_seq = last_reassem_seq;
@@ -223,8 +223,8 @@ void TCP_Reassembler::Undelivered(uint64_t up_to_seq) {
                 Gap(gap_at_seq, gap_len);
                 last_reassem_seq += gap_len;
                 BlockInserted(it);
-                // Inserting a block may cause trimming of what's buffered,
-                // so have to assume 'b' is invalid, hence re-assign to start.
+
+
                 it = block_list.Begin();
             }
 
@@ -233,18 +233,18 @@ void TCP_Reassembler::Undelivered(uint64_t up_to_seq) {
         }
     }
 
-    // We should record and match undelivered even if we are skipping
-    // content gaps between SYN and FIN, because FIN may carry some data.
-    //
+
+
+
     if ( record_contents_file )
         RecordToSeq(last_reassem_seq, up_to_seq, record_contents_file);
 
     if ( zeek::detail::tcp_match_undelivered )
         MatchUndelivered(up_to_seq, false);
 
-    // But we need to re-adjust last_reassem_seq in either case.
+
     if ( up_to_seq > last_reassem_seq )
-        last_reassem_seq = up_to_seq; // we've done our best ...
+        last_reassem_seq = up_to_seq;
 }
 
 void TCP_Reassembler::MatchUndelivered(uint64_t up_to_seq, bool use_last_upper) {
@@ -256,19 +256,19 @@ void TCP_Reassembler::MatchUndelivered(uint64_t up_to_seq, bool use_last_upper) 
     if ( use_last_upper )
         up_to_seq = last_block.upper;
 
-    // ### Note: the original code did not check whether blocks have
-    // already been delivered, but not ACK'ed, and therefore still
-    // must be kept in the reassembler.
 
-    // We are to match any undelivered data, from last_reassem_seq to
-    // min(last_block->upper, up_to_seq).
-    // Is there such data?
+
+
+
+
+
+
     if ( up_to_seq <= last_reassem_seq || last_block.upper <= last_reassem_seq )
         return;
 
-    // Skip blocks that are already delivered (but not ACK'ed).
-    // Question: shall we instead keep a pointer to the first undelivered
-    // block?
+
+
+
 
     for ( auto it = block_list.Begin(); it != block_list.End(); ++it ) {
         const auto& b = it->second;
@@ -276,11 +276,11 @@ void TCP_Reassembler::MatchUndelivered(uint64_t up_to_seq, bool use_last_upper) 
         if ( b.upper > last_reassem_seq )
             break;
 
-        // Note: Even though this passes bol=false, at the point where
-        // this code runs, the matcher is re-initialized resulting in
-        // undelivered data implicitly being bol-anchored. It's unclear
-        // if that was intended, but there's hardly a right way here,
-        // so that seems ok.
+
+
+
+
+
         tcp_analyzer->Conn()->Match(zeek::detail::Rule::PAYLOAD, b.block, b.Size(), IsOrig(), false, false, false);
     }
 }
@@ -288,7 +288,7 @@ void TCP_Reassembler::MatchUndelivered(uint64_t up_to_seq, bool use_last_upper) 
 void TCP_Reassembler::RecordToSeq(uint64_t start_seq, uint64_t stop_seq, const FilePtr& f) {
     auto it = block_list.Begin();
 
-    // Skip over blocks up to the start seq.
+
     while ( it != block_list.End() && it->second.upper <= start_seq )
         ++it;
 
@@ -309,7 +309,7 @@ void TCP_Reassembler::RecordToSeq(uint64_t start_seq, uint64_t stop_seq, const F
     }
 
     if ( it != block_list.End() )
-        // Check for final gap.
+
         if ( last_seq < stop_seq )
             RecordGap(last_seq, stop_seq, f);
 }
@@ -345,19 +345,19 @@ void TCP_Reassembler::BlockInserted(DataBlockMap::const_iterator it) {
     if ( start_block.seq > last_reassem_seq || start_block.upper <= last_reassem_seq )
         return;
 
-    // We've filled a leading hole.  Deliver as much as possible.
-    // Note that the new block may include both some old stuff
-    // and some new stuff.  AddAndCheck() will have split the
-    // new stuff off into its own block(s), but in the following
-    // loop we have to take care not to deliver already-delivered
-    // data.
+
+
+
+
+
+
     while ( it != block_list.End() ) {
         const auto& b = it->second;
 
         if ( b.seq > last_reassem_seq )
             break;
 
-        if ( b.seq == last_reassem_seq ) { // New stuff.
+        if ( b.seq == last_reassem_seq ) {
             uint64_t len = b.Size();
             uint64_t seq = last_reassem_seq;
             last_reassem_seq += len;
@@ -374,24 +374,24 @@ void TCP_Reassembler::BlockInserted(DataBlockMap::const_iterator it) {
     TCP_Endpoint* e = endp;
 
     if ( ! e->peer->HasContents() )
-        // Our endpoint's peer doesn't do reassembly and so
-        // (presumably) isn't processing acks.  So don't hold
-        // the now-delivered data.
-        TrimToSeq(last_reassem_seq); // NOLINT(bugprone-branch-clone)
+
+
+
+        TrimToSeq(last_reassem_seq);
 
     else if ( e->NoDataAcked() && zeek::detail::tcp_max_initial_window &&
               e->Size() > static_cast<uint64_t>(zeek::detail::tcp_max_initial_window) )
-        // We've sent quite a bit of data, yet none of it has
-        // been acked.  Presume that we're not seeing the peer's
-        // acks (perhaps due to filtering or split routing) and
-        // don't hang onto the data further, as we may wind up
-        // carrying it all the way until this connection ends.
+
+
+
+
+
         TrimToSeq(last_reassem_seq);
 
-    // Note: don't make an EOF check here, because then we'd miss it
-    // for FIN packets that don't carry any payload (and thus
-    // endpoint->DataSent is not called).  Instead, do the check in
-    // TCP_Connection::NextPacket.
+
+
+
+
 }
 
 void TCP_Reassembler::Overlap(const u_char* b1, const u_char* b2, uint64_t n) {
@@ -399,8 +399,8 @@ void TCP_Reassembler::Overlap(const u_char* b1, const u_char* b2, uint64_t n) {
         DEBUG_MSG("%.6f TCP contents overlap: %" PRIu64 " IsOrig()=%d\n", run_state::network_time, n, IsOrig());
 
     if ( rexmit_inconsistency && (memcmp(b1, b2, n) != 0) &&
-         // The following weeds out keep-alives for which that's all
-         // we've ever seen for the connection.
+
+
          (n > 1 || endp->peer->HasDoneSomething()) ) {
         String* b1_s = new String(b1, n, false);
         String* b2_s = new String(b2, n, false);
@@ -432,14 +432,14 @@ bool TCP_Reassembler::DataSent(double t, uint64_t seq, int len, const u_char* da
 
     if ( seq < ack && ! replaying ) {
         if ( upper_seq <= ack )
-            // We've already delivered this and it's been acked.
+
             return false;
 
-        // We've seen an ack for part of this packet, but not the
-        // whole thing.  This can happen when, for example, a previous
-        // packet held [a, a+b) and this packet holds [a, a+c) for c>b
-        // (which some TCP's will do when retransmitting).  Trim the
-        // packet to just the unacked data.
+
+
+
+
+
         uint64_t amount_acked = ack - seq;
         seq += amount_acked;
         data += amount_acked;
@@ -472,7 +472,7 @@ void TCP_Reassembler::AckReceived(uint64_t seq) {
         seq = endp->FIN_seq - 1;
 
     if ( seq <= trim_seq )
-        // Nothing to do.
+
         return;
 
     bool test_active = ! skip_deliveries && ! tcp_analyzer->Skipping() &&
@@ -491,28 +491,28 @@ void TCP_Reassembler::AckReceived(uint64_t seq) {
         }
     }
 
-    // Check EOF here because t_reassem->LastReassemSeq() may have
-    // changed after calling TrimToSeq().
+
+
     CheckEOF();
 }
 
 void TCP_Reassembler::CheckEOF() {
-    // It is important that the check on whether we have pending data here
-    // is consistent with the check in TCP_Connection::ConnectionClosed().
-    //
-    // If we choose to call EndpointEOF here because, for example, we
-    // are already skipping deliveries, ConnectionClosed() might decide
-    // that there is still DataPending, because it does not check
-    // SkipDeliveries(), and the connection will not be closed until
-    // timeout, since the did_EOF flag makes sure that EndpointEOF will
-    // be called only once.
-    //
-    // Now both places call TCP_Reassembler::DataPending(), which checks
-    // whether we are skipping deliveries.
+
+
+
+
+
+
+
+
+
+
+
+
 
     if ( ! did_EOF && (endp->FIN_cnt > 0 || endp->state == TCP_ENDPOINT_CLOSED || endp->state == TCP_ENDPOINT_RESET) &&
          ! DataPending() ) {
-        // We've now delivered all of the data.
+
         if ( DEBUG_tcp_connection_close ) {
             DEBUG_MSG("%.6f EOF for %d\n", run_state::network_time, endp->IsOrig());
         }
@@ -522,9 +522,9 @@ void TCP_Reassembler::CheckEOF() {
     }
 }
 
-// DeliverBlock is basically a relay to function Deliver. But unlike
-// Deliver, DeliverBlock is not virtual, and this allows us to insert
-// operations that apply to all connections using TCP_Contents.
+
+
+
 
 void TCP_Reassembler::DeliverBlock(uint64_t seq, int len, const u_char* data) {
     if ( seq + len <= seq_to_skip )
@@ -542,11 +542,11 @@ void TCP_Reassembler::DeliverBlock(uint64_t seq, int len, const u_char* data) {
                                        val_mgr->Count(seq),
                                        make_intrusive<StringVal>(len, reinterpret_cast<const char*>(data)));
 
-    // Q. Can we say this because it is already checked in DataSent()?
-    // ASSERT(!Conn()->Skipping() && !SkipDeliveries());
-    //
-    // A. No, because TrimToSeq() can deliver some blocks after
-    // skipping the undelivered.
+
+
+
+
+
 
     if ( skip_deliveries )
         return;
@@ -568,8 +568,8 @@ void TCP_Reassembler::SkipToSeq(uint64_t seq) {
 }
 
 bool TCP_Reassembler::DataPending() const {
-    // If we are skipping deliveries, the reassembler will not get called
-    // in DataSent(), and DataSeq() will not be updated.
+
+
     if ( skip_deliveries )
         return false;
 
@@ -579,27 +579,27 @@ bool TCP_Reassembler::DataPending() const {
     if ( last_seq < delivered_seq )
         return false;
 
-    // Q. Can we say that?
-    // ASSERT(delivered_seq <= last_seq);
-    //
-    // A. That should be true if endpoints are always initialized w/
-    //    trustworthy sequence numbers, though it seems that may not currently
-    //    be the case.  e.g. a RST packet may end up initializing the endpoint.
-    //    In that case, maybe there's not any "right" way to initialize it, so
-    //    the check for last_seq < delivered_seq sort of serves as a check for
-    //    endpoints that weren't initialized w/ meaningful sequence numbers.
 
-    // We've delivered everything if we're up to the penultimate
-    // sequence number (since a FIN consumes an octet in the
-    // sequence space), or right at it (because a RST does not).
+
+
+
+
+
+
+
+
+
+
+
+
     if ( delivered_seq != last_seq - 1 && delivered_seq != last_seq )
         return true;
 
-    // If we've sent RST, then we can't send ACKs any more.
+
     if ( Endpoint()->state != TCP_ENDPOINT_RESET && Endpoint()->peer->HasUndeliveredData() )
         return true;
 
     return false;
 }
 
-} // namespace zeek::analyzer::tcp
+}

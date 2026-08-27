@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_exception_h
 #define pac_exception_h
@@ -106,4 +106,4 @@ private:
     const Expr* expr;
 };
 
-#endif /* pac_exception_h */
+#endif

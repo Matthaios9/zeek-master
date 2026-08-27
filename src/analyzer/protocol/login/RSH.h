@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -10,16 +10,16 @@ namespace zeek::analyzer::login {
 class Rsh_Analyzer;
 
 enum rsh_state : uint8_t {
-    RSH_FIRST_NULL,       // waiting to see first NUL
-    RSH_CLIENT_USER_NAME, // scanning client user name up to NUL
-    RSH_SERVER_USER_NAME, // scanning server user name up to NUL
-    RSH_INITIAL_CMD,      // scanning initial command up to NUL
+    RSH_FIRST_NULL,
+    RSH_CLIENT_USER_NAME,
+    RSH_SERVER_USER_NAME,
+    RSH_INITIAL_CMD,
 
-    RSH_LINE_MODE, // switch to line-oriented processing
+    RSH_LINE_MODE,
 
-    RSH_PRESUMED_REJECTED, // apparently server said No Way
+    RSH_PRESUMED_REJECTED,
 
-    RSH_UNKNOWN, // we don't know what state we're in
+    RSH_UNKNOWN,
 };
 
 class Contents_Rsh_Analyzer final : public analyzer::tcp::ContentLine_Analyzer {
@@ -53,4 +53,4 @@ public:
     Contents_Rsh_Analyzer* contents_resp;
 };
 
-} // namespace zeek::analyzer::login
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/krb/KRB.h"
 
@@ -29,7 +29,7 @@ static void warn_krb(const char* msg, krb5_context ctx, krb5_error_code code) {
 
 void KRB_Analyzer::Initialize_Krb() {
     if ( BifConst::KRB::keytab->Len() == 0 )
-        return; // no keytab set
+        return;
 
     const char* keytab_filename = BifConst::KRB::keytab->CheckString();
     if ( access(keytab_filename, R_OK) != 0 ) {
@@ -133,4 +133,4 @@ StringValPtr KRB_Analyzer::GetAuthenticationInfo(const String* realm, const Stri
 #endif
 }
 
-} // namespace zeek::analyzer::krb
+}

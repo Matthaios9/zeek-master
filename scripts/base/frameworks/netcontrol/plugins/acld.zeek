@@ -1,4 +1,4 @@
-##! Acld plugin for the netcontrol framework.
+
 
 @load ../main
 @load ../plugin
@@ -15,53 +15,53 @@ export {
 	};
 
 	type AcldConfig: record {
-		## The acld topic to send events to.
+
 		acld_topic: string;
-		## Broker host to connect to.
+
 		acld_host: addr;
-		## Broker port to connect to.
+
 		acld_port: port;
-		## Do we accept rules for the monitor path? Default false.
+
 		monitor: bool &default=F;
-		## Do we accept rules for the forward path? Default true.
+
 		forward: bool &default=T;
 
-		## Predicate that is called on rule insertion or removal.
-		##
-		## p: Current plugin state.
-		##
-		## r: The rule to be inserted or removed.
-		##
-		## Returns: T if the rule can be handled by the current backend, F otherwise.
+
+
+
+
+
+
+
 		check_pred: function(p: PluginState, r: Rule): bool &optional;
 	};
 
-	## Instantiates the acld plugin.
+
 	global create_acld: function(config: AcldConfig) : PluginState;
 
 	redef record PluginState += {
 		acld_config: AcldConfig &optional;
-		## The ID of this acld instance - for the mapping to PluginStates.
+
 		acld_id: count &optional;
 	};
 
-	## Hook that is called after a rule is converted to an acld rule.
-	## The hook may modify the rule before it is sent to acld.
-	## Setting the acld command to F will cause the rule to be rejected
-	## by the plugin.
-	##
-	## p: Current plugin state.
-	##
-	## r: The rule to be inserted or removed.
-	##
-	## ar: The acld rule to be inserted or removed.
+
+
+
+
+
+
+
+
+
+
 	global NetControl::acld_rule_policy: hook(p: PluginState, r: Rule, ar: AclRule);
 
-	## Events that are sent from us to Broker.
+
 	global acld_add_rule: event(id: count, r: Rule, ar: AclRule);
 	global acld_remove_rule: event(id: count, r: Rule, ar: AclRule);
 
-	## Events that are sent from Broker to us.
+
 	global acld_rule_added: event(id: count, r: Rule, msg: string);
 	global acld_rule_removed: event(id: count, r: Rule, msg: string);
 	global acld_rule_exists: event(id: count, r: Rule, msg: string);
@@ -144,7 +144,7 @@ function acld_name(p: PluginState) : string
 	return fmt("Acld-%s", p$acld_config$acld_topic);
 	}
 
-# check that subnet specifies an addr
+
 function check_sn(sn: subnet) : bool
 	{
 	if ( is_v4_subnet(sn) && subnet_width(sn) == 32 )
@@ -177,7 +177,7 @@ function rule_to_acl_rule(p: PluginState, r: Rule) : AclRule
 		if ( ( ! f?$src_h ) && ( ! f?$src_p ) && f?$dst_h && f?$dst_p && ( ! f?$src_m ) && ( ! f?$dst_m ) )
 			{
 			if ( !check_sn(f$dst_h) )
-				command = ""; # invalid addr, do nothing
+				command = "";
 			else if ( is_tcp_port(f$dst_p) && r$ty == DROP )
 				command = "droptcpdsthostport";
 			else if ( is_tcp_port(f$dst_p) && r$ty == WHITELIST )
@@ -280,7 +280,7 @@ event Broker::peer_added(endpoint: Broker::EndpointInfo, msg: string)
 	local peer_address = cat(endpoint$network$address);
 	local peer_port = endpoint$network$bound_port;
 	if ( [peer_port, peer_address] !in netcontrol_acld_peers )
-		# ok, this one was none of ours...
+
 		return;
 
 	local p = netcontrol_acld_peers[peer_port, peer_address];

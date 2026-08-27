@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Frame.h"
 
@@ -20,11 +20,11 @@ Frame::Frame(int arg_size, const Func* func, const zeek::Args* fn_args) {
     function = func;
     func_args = fn_args;
 
-    // We could Ref()/Unref() the captures frame, but there's really
-    // no need because by definition this current frame exists to
-    // enable execution of the function, and its captures frame won't
-    // go away until the function itself goes away, which can only be
-    // after this frame does.
+
+
+
+
+
     if ( function && function->GetKind() == Func::SCRIPT_FUNC ) {
         auto* sf = static_cast<const ScriptFunc*>(function);
         captures = sf->GetCapturesFrame();
@@ -96,8 +96,8 @@ Frame* Frame::Clone() const {
         if ( frame[i] )
             other->frame[i] = frame[i]->Clone();
 
-    // Note, there's no need to clone "captures" or "captures_offset_map"
-    // since those get created fresh when constructing "other".
+
+
 
     return other;
 }
@@ -177,8 +177,8 @@ std::pair<bool, FramePtr> Frame::Unserialize(BrokerListView data) {
 }
 
 const detail::Location* Frame::GetCallLocation() const {
-    // This is currently trivial, but we keep it as an explicit
-    // method because it can provide flexibility for compiled code.
+
+
     return call->GetLocationInfo();
 }
 
@@ -186,4 +186,4 @@ void Frame::SetTrigger(trigger::TriggerPtr arg_trigger) { trigger = std::move(ar
 
 void Frame::ClearTrigger() { trigger = nullptr; }
 
-} // namespace zeek::detail
+}

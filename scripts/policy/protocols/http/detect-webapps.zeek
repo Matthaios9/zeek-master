@@ -1,4 +1,4 @@
-##! Detect and log web applications through the software framework.
+
 
 @load base/frameworks/signatures
 @load base/frameworks/software
@@ -8,17 +8,17 @@
 
 module HTTP;
 
-# Ignore the signatures used to match webapps
+
 redef Signatures::ignored_ids += /^webapp-/;
 
 export {
 	redef enum Software::Type += {
-		## Identifier for web applications in the software framework.
+
 		WEB_APPLICATION,
 	};
 
 	redef record Software::Info += {
-		## Most root URL where the software was discovered.
+
 		url:   string &optional &log;
 	};
 }
@@ -52,9 +52,9 @@ event Software::register(info: Software::Info) &priority=5
 	if ( ! info?$url )
 		return;
 
-	# If the new url is a substring of an existing, known url then let's
-	# use that as the new url for the software.
-	# PROBLEM: different version of the same software on the same server with a shared root path
+
+
+
 	local is_substring = 0;
 
 	if ( |info$url| <= |old_info$url| )
@@ -64,7 +64,7 @@ event Software::register(info: Software::Info) &priority=5
 		return;
 
 	old_info$url = info$url;
-	# Force the software to be logged because it indicates a URL
-	# closer to the root of the site.
+
+
 	info$force_log = T;
 	}

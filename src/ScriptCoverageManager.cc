@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/ScriptCoverageManager.h"
 
@@ -92,8 +92,8 @@ bool ScriptCoverageManager::WriteStats() {
     util::SafeDirname dirname{pf};
 
 #ifdef _MSC_VER
-    // On Windows, dirname() may return an empty string for a bare filename
-    // instead of "." as POSIX specifies. Fall back to "." in that case.
+
+
     const auto& dir = dirname.result.empty() ? "." : dirname.result;
 #else
     const auto& dir = dirname.result;
@@ -177,4 +177,4 @@ void ScriptCoverageManager::Report(FILE* f, uint64_t cnt, std::string_view loc, 
             static_cast<int>(desc.size()), desc.data());
 }
 
-} // namespace zeek::detail
+}

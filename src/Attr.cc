@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Attr.h"
 
@@ -13,8 +13,8 @@
 namespace zeek::detail {
 
 const char* attr_name(AttrTag t) {
-    // Do not collapse the list.
-    // clang-format off
+
+
 	static const char* attr_names[NUM_ATTRS] = {
 		"&optional",
 		"&default",
@@ -45,7 +45,7 @@ const char* attr_name(AttrTag t) {
 		"&no_ZAM_opt",
 		"&no_CPP_opt",
 	};
-    // clang-format on
+
 
     if ( t >= 0 && t < NUM_ATTRS )
         return attr_names[t];
@@ -93,7 +93,7 @@ void Attr::DescribeReST(ODesc* d, bool shorten) const {
             if ( shorten )
                 d->Add(shortened_expr);
             else {
-                // Long inline-literals likely won't wrap well in HTML render
+
                 d->Add("*");
                 d->Add(s);
                 d->Add("*");
@@ -181,9 +181,9 @@ Attributes::Attributes(std::vector<AttrPtr> a, TypePtr t, bool in_record, bool i
 
     SetLocationInfo(&start_location, &end_location);
 
-    // We loop through 'a' and add each attribute individually,
-    // rather than just taking over 'a' for ourselves, so that
-    // the necessary checking gets done.
+
+
+
 
     for ( auto& attr : a )
         AddAttr(std::move(attr));
@@ -218,39 +218,39 @@ void Attributes::AddAttr(AttrPtr attr, bool is_redef) {
         return acceptable.contains(new_tag);
     };
 
-    // A `redef` is allowed to overwrite an existing attribute instead of
-    // flagging it as ambiguous.
+
+
     if ( ! is_redef ) {
         auto existing = Find(attr->Tag());
         if ( existing && ! acceptable_duplicate_attr(attr, existing) )
             reporter->Error("Duplicate %s attribute is ambiguous", attr_name(attr->Tag()));
     }
 
-    // We overwrite old attributes by deleting them first.
+
     RemoveAttr(attr->Tag());
     attrs.emplace_back(attr);
 
-    // We only check the attribute after we've added it, to facilitate
-    // generating error messages via Attributes::Describe.  If the
-    // instantiator of the object specified a null type, however, then
-    // that's a signal to skip the checking. If the type is error,
-    // there's no point checking attributes either.
+
+
+
+
+
     if ( type && ! IsErrorType(type->Tag()) ) {
         if ( ! CheckAttr(attr.get(), type) ) {
-            // Get rid of it, so we don't get error cascades down the line.
+
             RemoveAttr(attr->Tag());
             return;
         }
     }
 
-    // For ADD_FUNC or DEL_FUNC, add in an implicit REDEF, since
-    // those attributes only have meaning for a redefinable value.
+
+
     if ( (attr->Tag() == ATTR_ADD_FUNC || attr->Tag() == ATTR_DEL_FUNC) && ! Find(ATTR_REDEF) ) {
         auto a = make_intrusive<Attr>(ATTR_REDEF);
         attrs.emplace_back(std::move(a));
     }
 
-    // For DEFAULT, add an implicit OPTIONAL if it's not a global.
+
     if ( ! global_var && attr->Tag() == ATTR_DEFAULT && ! Find(ATTR_OPTIONAL) ) {
         auto a = make_intrusive<Attr>(ATTR_OPTIONAL);
         attrs.emplace_back(std::move(a));
@@ -371,7 +371,7 @@ bool Attributes::CheckAttr(Attr* a, const TypePtr& attrs_t) {
             if ( Find(ATTR_BACKEND) )
                 return AttrError("&backend and &read_expire cannot be used simultaneously");
         }
-            // fallthrough
+
 
         case ATTR_EXPIRE_WRITE:
         case ATTR_EXPIRE_CREATE: {
@@ -393,7 +393,7 @@ bool Attributes::CheckAttr(Attr* a, const TypePtr& attrs_t) {
         }
 
 #if 0
-		//### not easy to test this w/o knowing the ID.
+
 		if ( ! global_var )
 			return AttrError("expiration not supported for local variables");
 #endif
@@ -440,9 +440,9 @@ bool Attributes::CheckAttr(Attr* a, const TypePtr& attrs_t) {
 
             if ( args.size() == 1 && args[0]->Tag() == TYPE_ANY &&
                  c_ft->Params()->FieldName(0) == std::string_view("va_args") ) {
-                // va_args functions get a free pass for &on_change: This allows
-                // to implement generic builtin functions that can work with
-                // tables or sets of any size and type.
+
+
+
             }
             else {
                 if ( args.size() != (type->IsSet() ? 2 : 3) + t_indexes.size() )
@@ -451,7 +451,7 @@ bool Attributes::CheckAttr(Attr* a, const TypePtr& attrs_t) {
                 if ( ! same_type(args[0], the_table->AsTableType()) )
                     return AttrError("&on_change: first argument must be of same type as table");
 
-                // can't check exact type here yet - the data structures don't exist yet.
+
                 if ( args[1]->Tag() != TYPE_ENUM )
                     return AttrError("&on_change: second argument must be a TableChange enum");
 
@@ -480,14 +480,14 @@ bool Attributes::CheckAttr(Attr* a, const TypePtr& attrs_t) {
             if ( ! global_var || type->Tag() != TYPE_TABLE )
                 return AttrError("&backend only applicable to global sets/tables");
 
-            // cannot do better equality check - the Broker types are not
-            // actually existing yet when we are here. We will do that
-            // later - before actually attaching to a broker store
+
+
+
             if ( a->GetExpr()->GetType()->Tag() != TYPE_ENUM )
                 return AttrError("&backend must take an enum argument");
 
-            // Only support atomic types for the moment, unless
-            // explicitly overridden
+
+
             if ( ! type->AsTableType()->IsSet() &&
                  ! input::Manager::IsCompatibleType(type->AsTableType()->Yield().get(), true) &&
                  ! Find(ATTR_BROKER_STORE_ALLOW_COMPLEX) )
@@ -517,8 +517,8 @@ bool Attributes::CheckAttr(Attr* a, const TypePtr& attrs_t) {
             if ( a->GetExpr()->GetType()->Tag() != TYPE_STRING )
                 return AttrError("&broker_store must take a string argument");
 
-            // Only support atomic types for the moment, unless
-            // explicitly overridden
+
+
             if ( ! type->AsTableType()->IsSet() &&
                  ! input::Manager::IsCompatibleType(type->AsTableType()->Yield().get(), true) &&
                  ! Find(ATTR_BROKER_STORE_ALLOW_COMPLEX) )
@@ -542,7 +542,7 @@ bool Attributes::CheckAttr(Attr* a, const TypePtr& attrs_t) {
             break;
 
         case ATTR_TRACKED:
-            // FIXME: Check here for global ID?
+
             break;
 
         case ATTR_RAW_OUTPUT:
@@ -637,8 +637,8 @@ bool Attributes::operator==(const Attributes& other) const {
 bool check_default_attr(Attr* a, const TypePtr& type, bool global_var, bool record_like, std::string& err_msg) {
     ASSERT(a->Tag() == ATTR_DEFAULT || a->Tag() == ATTR_DEFAULT_INSERT);
     std::string aname = attr_name(a->Tag());
-    // &default is allowed for global tables, since it's used in
-    // initialization of table fields. It's not allowed otherwise.
+
+
     if ( global_var && ! type->IsTable() ) {
         err_msg = aname + " is not valid for global variables except for tables";
         return false;
@@ -648,24 +648,24 @@ bool check_default_attr(Attr* a, const TypePtr& type, bool global_var, bool reco
 
     if ( type->Tag() != TYPE_TABLE || (type->IsSet() && ! record_like) ) {
         if ( same_type(atype, type) )
-            // Ok.
+
             return true;
 
-        // Record defaults may be promotable.
+
         if ( (type->Tag() == TYPE_RECORD && atype->Tag() == TYPE_RECORD &&
               record_promotion_compatible(atype->AsRecordType(), type->AsRecordType())) )
-            // Ok.
+
             return true;
 
         if ( type->Tag() == TYPE_TABLE && type->AsTableType()->IsUnspecifiedTable() )
-            // Ok.
+
             return true;
 
         auto e = check_and_promote_expr(a->GetExpr(), type);
 
         if ( e ) {
             a->SetAttrExpr(std::move(e));
-            // Ok.
+
             return true;
         }
 
@@ -676,11 +676,11 @@ bool check_default_attr(Attr* a, const TypePtr& type, bool global_var, bool reco
     TableType* tt = type->AsTableType();
     const auto& ytype = tt->Yield();
 
-    if ( ! record_like ) { // &default applies to the type itself.
+    if ( ! record_like ) {
         if ( same_type(atype, ytype) )
             return true;
 
-        // It can still be a default function.
+
         if ( atype->Tag() == TYPE_FUNC ) {
             FuncType* f = atype->AsFuncType();
             if ( ! f->CheckArgs(tt->GetIndexTypes()) || ! same_type(f->Yield(), ytype) ) {
@@ -688,21 +688,21 @@ bool check_default_attr(Attr* a, const TypePtr& type, bool global_var, bool reco
                 return false;
             }
 
-            // Ok.
+
             return true;
         }
 
-        // Table defaults may be promotable.
+
         if ( (ytype->Tag() == TYPE_RECORD && atype->Tag() == TYPE_RECORD &&
               record_promotion_compatible(atype->AsRecordType(), ytype->AsRecordType())) )
-            // Ok.
+
             return true;
 
         auto e = check_and_promote_expr(a->GetExpr(), ytype);
 
         if ( e ) {
             a->SetAttrExpr(std::move(e));
-            // Ok.
+
             return true;
         }
 
@@ -710,7 +710,7 @@ bool check_default_attr(Attr* a, const TypePtr& type, bool global_var, bool reco
         return false;
     }
 
-    // &default applies to record field.
+
 
     if ( same_type(atype, type) )
         return true;
@@ -724,10 +724,10 @@ bool check_default_attr(Attr* a, const TypePtr& type, bool global_var, bool reco
         }
     }
 
-    // Table defaults may be promotable.
+
     if ( ytype && ytype->Tag() == TYPE_RECORD && atype->Tag() == TYPE_RECORD &&
          record_promotion_compatible(atype->AsRecordType(), ytype->AsRecordType()) )
-        // Ok.
+
         return true;
 
     err_msg = "&default value has inconsistent type";
@@ -747,4 +747,4 @@ detail::TraversalCode Attributes::Traverse(detail::TraversalCallback* cb) const 
     HANDLE_TC_ATTRS_POST(tc);
 }
 
-} // namespace zeek::detail
+}

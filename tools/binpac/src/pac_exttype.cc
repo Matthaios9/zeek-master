@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_exttype.h"
 
@@ -45,7 +45,7 @@ void ExternType::GenDynamicSize(Output* out, Env* env, const DataPtr& data) { AS
 
 Type* ExternType::DoClone() const { return new ExternType(id_->clone(), ext_type_); }
 
-// Definitions of pre-defined external types
+
 
 #define EXTERNTYPE(name, ctype, exttype) ExternType* extern_type_##name = 0;
 #include "pac_externtype.def"
@@ -53,8 +53,8 @@ Type* ExternType::DoClone() const { return new ExternType(id_->clone(), ext_type
 
 void ExternType::static_init() {
     ID* id;
-    // TypeDecl *decl;
-    // decl = new TypeDecl(id, 0, extern_type_##name);
+
+
 
 #define EXTERNTYPE(name, ctype, exttype)                                                                               \
     id = new ID(#ctype);                                                                                               \

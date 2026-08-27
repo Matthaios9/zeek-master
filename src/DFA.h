@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -9,15 +9,15 @@
 
 #include "zeek/NFA.h"
 #include "zeek/Obj.h"
-#include "zeek/RE.h" // for typedef AcceptingSet
+#include "zeek/RE.h"
 
 namespace zeek::detail {
 
 class DFA_State;
 class DFA_Machine;
 
-// Transitions to the uncomputed state indicate that we haven't yet
-// computed the state to go to.
+
+
 #define DFA_UNCOMPUTED_STATE (-2)
 #define DFA_UNCOMPUTED_STATE_PTR (reinterpret_cast<DFA_State*>(DFA_UNCOMPUTED_STATE))
 
@@ -34,22 +34,22 @@ public:
 
     const AcceptingSet* Accept() const { return accept; }
 
-    // True when no byte-driven out-transition leaves this state: the only
-    // surviving transitions (if any) are on SYM_BOL / SYM_EOL. Once a
-    // stream matcher is in this state, no further input byte can extend
-    // or resurrect the match, allowing immediate recognition of being done.
+
+
+
+
     bool IsTerminal() const { return ! has_byte_xtion; }
 
     void SymPartition(const EquivClass* ec);
 
-    // ec_sym is an equivalence class, not a character.
+
     NFA_state_list* SymFollowSet(int ec_sym, const EquivClass* ec);
 
     void SetMark(DFA_State* m) { mark = m; }
     DFA_State* Mark() const { return mark; }
     void ClearMarks();
 
-    // Returns the equivalence classes of ec's corresponding to this state.
+
     const EquivClass* MetaECs() const { return meta_ec; }
 
     void Describe(ODesc* d) const override;
@@ -70,18 +70,18 @@ protected:
 
     AcceptingSet* accept;
     NFA_state_list* nfa_states;
-    EquivClass* meta_ec; // which ec's make same transition
+    EquivClass* meta_ec;
     DFA_State* mark;
 
-    // True if the state has a transition that's not on an anchor
-    // (i.e., not SYM_BOL/SYM_EOL);
+
+
     bool has_byte_xtion = false;
 };
 
 using DigestStr = std::string;
 
 struct DFA_State_Cache_Stats {
-    // Sum of all NFA states
+
     unsigned int nfa_states;
     unsigned int dfa_states;
     unsigned int computed;
@@ -96,10 +96,10 @@ public:
     DFA_State_Cache();
     ~DFA_State_Cache();
 
-    // If the caller stores the handle, it has to call Ref() on it.
+
     DFA_State* Lookup(const NFA_state_list& nfa_states, DigestStr* digest);
 
-    // Takes ownership of state; digest is the one returned by Lookup().
+
     DFA_State* Insert(DFA_State* state, DigestStr digest);
 
     int NumEntries() const { return states.size(); }
@@ -108,10 +108,10 @@ public:
     void GetStats(Stats* s);
 
 private:
-    int hits; // Statistics
+    int hits;
     int misses;
 
-    // Hash indexed by NFA states (MD5s of them, actually).
+
     std::map<DigestStr, DFA_State*> states;
 };
 
@@ -132,16 +132,16 @@ public:
     void Dump(FILE* f);
 
 protected:
-    friend class DFA_State; // for DFA_State::ComputeXtion
+    friend class DFA_State;
     friend class DFA_State_Cache;
 
     int state_count;
 
-    // The state list has to be sorted according to IDs.
+
     bool StateSetToDFA_State(NFA_state_list* state_set, DFA_State*& d, const EquivClass* ec);
     const EquivClass* EC() const { return ec; }
 
-    EquivClass* ec; // equivalence classes corresponding to NFAs
+    EquivClass* ec;
     DFA_State* start_state;
     DFA_State_Cache* dfa_state_cache;
 
@@ -155,4 +155,4 @@ inline DFA_State* DFA_State::Xtion(int sym, DFA_Machine* machine) {
         return xtions[sym];
 }
 
-} // namespace zeek::detail
+}

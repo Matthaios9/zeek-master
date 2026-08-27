@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/DebugLogger.h"
 
@@ -13,7 +13,7 @@ zeek::detail::DebugLogger& debug_logger = zeek::detail::debug_logger;
 
 namespace zeek::detail {
 
-// Same order here as in DebugStream.
+
 DebugLogger::Stream DebugLogger::streams[NUM_DBGS] =
     {{"serial", 0, false},    {"rules", 0, false},      {"string", 0, false},          {"notifiers", 0, false},
      {"main-loop", 0, false}, {"dpd", 0, false},        {"packet-analysis", 0, false}, {"file-analysis", 0, false},
@@ -33,7 +33,7 @@ void DebugLogger::OpenDebugLog(const char* filename) {
 
         file = fopen(filename, "w");
         if ( ! file ) {
-            // The reporter may not be initialized here yet.
+
             if ( reporter )
                 reporter->FatalError("can't open '%s' for debugging output", filename);
             else {
@@ -82,9 +82,9 @@ void DebugLogger::EnableStreams(const char* s) {
     char* tok = strtok(tmp, ",");
 
     while ( tok ) {
-        // This maps "_" to "-" for backward compatibility and ease of use: we
-        // used to have underscores in some stream names, and several plugins
-        // do as well.
+
+
+
         std::string ltok{util::strreplace(util::strtolower(tok), "_", "-")};
 
         if ( strcasecmp("all", tok) == 0 ) {
@@ -109,8 +109,8 @@ void DebugLogger::EnableStreams(const char* s) {
         }
 
         if ( std::string_view{ltok}.starts_with("plugin-") ) {
-            // Cannot verify this at this time, plugins may not
-            // have been loaded.
+
+
             enabled_streams.insert(std::move(ltok));
             goto next;
         }
@@ -199,4 +199,4 @@ std::string DebugLogger::PluginStreamName(const std::string& plugin_name) const 
     return "plugin-" + util::strtolower(res);
 }
 
-} // namespace zeek::detail
+}

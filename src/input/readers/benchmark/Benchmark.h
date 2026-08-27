@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -7,9 +7,9 @@
 
 namespace zeek::input::reader::detail {
 
-/**
- * A benchmark reader to measure performance of the input framework.
- */
+
+
+
 class Benchmark : public ReaderBackend {
 public:
     explicit Benchmark(ReaderFrontend* frontend);
@@ -42,4 +42,4 @@ private:
     threading::formatter::Ascii* ascii;
 };
 
-} // namespace zeek::input::reader::detail
+}

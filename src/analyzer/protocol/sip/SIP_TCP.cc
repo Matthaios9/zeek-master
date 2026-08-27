@@ -1,7 +1,7 @@
-// See the file "COPYING" in the main distribution directory for copyright.
-//
-// TODO: This is preliminary code that's not yet functional and not
-// activated. We don't yet support SIP-over-TCP.
+
+
+
+
 
 #include "zeek/analyzer/protocol/sip/SIP_TCP.h"
 
@@ -35,9 +35,9 @@ void SIP_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
         return;
 
     if ( had_gap )
-        // If only one side had a content gap, we could still try to
-        // deliver data to the other side if the script layer can
-        // handle this.
+
+
+
         return;
 
     try {
@@ -53,4 +53,4 @@ void SIP_Analyzer::Undelivered(uint64_t seq, int len, bool orig) {
     interp->NewGap(orig, len);
 }
 
-} // namespace zeek::analyzer::sip_tcp
+}

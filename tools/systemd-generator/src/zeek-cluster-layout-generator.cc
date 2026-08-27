@@ -1,38 +1,38 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// A zero-dependency cluster-layout.zeek generator for single and multi-host
-// Zeek deployments. Workers do not get ports allocated. Supports the multi-host
-// use-case via -C /etc/zeek/cluster and will assemble a cluster layout based
-// on per-host <hostname>.zeek.conf files in the given directory.
-//
-// For the single host use-case, expects the individual process counts as
-// individual arguments, or passing it a <PREFIX>/etc/zeek/zeek.conf file
-// via the -C flag.
-//
-// The cluster-layout.zeek content is produced on stdout or written to the
-// path given to the -o flag.
-//
-// Usage Examples:
-//
-//     $ zeek-cluster-layout-generator -L <loggers> -P <proxies> -W <workers> -M <manager>
-//         -a <listen_address> -p <listen_port>
-//         -m <metrics_port> -b <metrics_address>
-//         -x <cluster_node_prefix>
-//         [-o outfile]
-//
-//     The -W flag also accepts a named form like -W 'eth0:2 eth1:4' that
-//     will include the eth0 and eth1 interface names in the cluster node name.
-//     The number following the colon is the number of workers.
-//
-//     Passing -m 0 will use metrics port 0/tcp for each node. This is useful
-//     to disable metrics exposition via Prometheus.
-//
-//     # Create layout from a single host zeek.conf file
-//     $ zeek-cluster-layout-generator -C /etc/zeek/zeek.conf [-o outfile]
-//
-//     # Create cluster layout from a multi-host cluster configuration directory
-//     $ zeek-cluster-layout-generator -C /etc/zeek/cluster [-o outfile]
-//
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #include <unistd.h>
 #include <algorithm>
 #include <cctype>
@@ -66,9 +66,9 @@ int checked_stoi(int opt, const char* v) {
     return result;
 }
 
-/**
- * Default is a small cluster for quick testing.
- */
+
+
+
 struct ClusterLayoutOptions {
     bool manager = true;
     int loggers = 1;
@@ -89,7 +89,7 @@ struct ClusterLayoutOptions {
 
     std::string NextMetricsPort() {
         auto result = std::to_string(metrics_port) + "/tcp";
-        // Only increment if not zero: 0/tcp means disabled!
+
         if ( metrics_port != 0 )
             ++metrics_port;
         return result;
@@ -115,21 +115,21 @@ public:
         cluster_nodes_lines.emplace_back("};");
         cluster_nodes_lines.emplace_back("");
 
-        // Multi-host cluster?
+
         if ( ! cluster_hosts.empty() ) {
-            // If this is a multi-host cluster, introduce a Cluster::host variable
-            // that contains Cluster::Host records. Do this here for now instead
-            // of putting it into the base scripts, because it's a bit of a detail
-            // how static clusters work with this generator.
-            //
-            //  We render something like:
-            //
-            //    redef Cluster::hosts += {
-            //        ["host"] = [$ip=(blocking_lookup_hostname("host") as vector of addr)[0]],
-            //    }
-            //
-            // So that IP addresses of other hosts are resolved during cluster-layout.zeek
-            // loading time (ZeekControl instead does that during deploy time in Python).
+
+
+
+
+
+
+
+
+
+
+
+
+
             cluster_host_lines.emplace_back("module Cluster;");
             cluster_host_lines.emplace_back("");
             cluster_host_lines.emplace_back("type Host: record {");
@@ -195,7 +195,7 @@ public:
         s += "],";
         cluster_nodes_lines.push_back(std::move(s));
 
-        // Slight hack for the manager_is_logger redef.
+
         if ( type == "LOGGER" )
             ++total_loggers;
 
@@ -203,26 +203,26 @@ public:
             ++total_managers;
     }
 
-    /**
-     * Helper to add workers using the ClusterLayoutOptions.
-     *
-     * Workers is either just the number of workers, or a "name1:worker1 name2:workers2 name3:workers3"
-     * that allows to have worker-{name}-{index} style names.
-     */
+
+
+
+
+
+
     void AddWorkers(ClusterLayoutOptions& opts) {
         if ( std::ranges::all_of(opts.workers, [](auto c) { return std::isdigit(c); }) ) {
             int workers = checked_stoi('W', opts.workers.c_str());
             for ( int i = 1; i <= workers; i++ )
                 AddNode(opts.PrefixedClusterNode("worker-" + std::to_string(i)), "WORKER", opts.address,
-                        opts.NextMetricsPort(), /*port=*/"", /*has_manager=*/opts.manager);
+                        opts.NextMetricsPort(), "", opts.manager);
         }
         else {
-            // Iterate through the eth1:8,eth2:32,eth3:4 range
-            // of interface name followed by number of workers
-            // and add workers for each of them.
+
+
+
             std::string workers_optarg = opts.workers;
 
-            // Allow comma or space separated list.
+
             std::replace(workers_optarg.begin(), workers_optarg.end(), ',', ' ');
 
             std::cmatch cmatch;
@@ -232,12 +232,12 @@ public:
             while ( std::regex_search(p, cmatch, re_named_workers) ) {
                 std::string name = cmatch[1].str();
                 std::string nstr = cmatch[2].str();
-                tail = cmatch[3].str(); // remember for error checking
+                tail = cmatch[3].str();
                 int n = checked_stoi('W', nstr.c_str());
 
                 for ( int i = 1; i <= n; i++ )
                     AddNode(opts.PrefixedClusterNode("worker-" + name + "-" + std::to_string(i)), "WORKER",
-                            opts.address, opts.NextMetricsPort(), /*port=*/"", /*has_manager=*/opts.manager);
+                            opts.address, opts.NextMetricsPort(), "", opts.manager);
 
                 p += cmatch.length();
             }
@@ -292,7 +292,7 @@ void usage(const char* prog) {
             prog, prog, prog);
 }
 
-} // namespace
+}
 
 int main(int argc, char* argv[]) {
     ClusterLayoutOptions opts;
@@ -339,32 +339,32 @@ int main(int argc, char* argv[]) {
 
         for ( int i = 1; i <= opts.loggers; i++ ) {
             layout.AddNode(opts.PrefixedClusterNode("logger-" + std::to_string(i)), "LOGGER", opts.address,
-                           opts.NextMetricsPort(), opts.NextPort(), /*has_manager=*/opts.manager);
+                           opts.NextMetricsPort(), opts.NextPort(), opts.manager);
         }
 
         for ( int i = 1; i <= opts.proxies; i++ )
             layout.AddNode(opts.PrefixedClusterNode("proxy-" + std::to_string(i)), "PROXY", opts.address,
-                           opts.NextMetricsPort(), opts.NextPort(), /*has_manager=*/opts.manager);
+                           opts.NextMetricsPort(), opts.NextPort(), opts.manager);
 
         layout.AddWorkers(opts);
     }
     else {
-        // -C was used to select either a configuration file, or a cluster directory.
+
         std::vector<std::filesystem::path> fnames;
 
         if ( std::filesystem::is_directory(config_file_or_cluster_dir) ) {
-            // If the -C argument is a directory, parse all configuration files from it and
-            // assemble a cluster layout. Configs need to strictly match <hostname>.zeek.conf
-            // within the directory.
-            //
-            // We could validate a few things here, like IP address an name conflicts,
-            // but for now this should do, and technically overlapping IPs are okay
-            // if the ports differ, so there's that. But IP/port overlap among processes
-            // would be problematic.
+
+
+
+
+
+
+
+
             std::regex re_conf("[a-z0-9][-a-z0-9_]*\\.zeek\\.conf$");
 
             auto dir = std::filesystem::path(config_file_or_cluster_dir);
-            if ( dir.filename().empty() ) // strip trailing slash, can only be one.
+            if ( dir.filename().empty() )
                 dir = dir.parent_path();
 
 
@@ -379,7 +379,7 @@ int main(int argc, char* argv[]) {
             }
         }
         else if ( std::filesystem::is_regular_file(config_file_or_cluster_dir) ) {
-            // If it's just a file, do the same.
+
             fnames.emplace_back(config_file_or_cluster_dir);
         }
         else {
@@ -388,14 +388,14 @@ int main(int argc, char* argv[]) {
         }
 
 
-        // Make processing order predictable.
+
         std::sort(fnames.begin(), fnames.end());
 
         for ( const auto& fname : fnames ) {
             const auto absfname = std::filesystem::absolute(fname);
             auto config = zeek::detail::parse_config("/dev/null", absfname);
 
-            // Failed to load the config file? Strange. Just exit.
+
             if ( ! config.Exists() || ! config.IsValid() ) {
                 std::fprintf(stderr, "invalid config %s\n", absfname.string().c_str());
                 for ( const auto& err : config.Errors() )
@@ -415,19 +415,19 @@ int main(int argc, char* argv[]) {
                 return port_str;
             };
 
-            // If there is no cluster address available, introduce
-            // the Cluster::hosts table to look it up dynamically.
+
+
             std::string addr;
             if ( config.HasFilenameHost() ) {
                 layout.AddClusterHost(config.FilenameHost(), config.ClusterAddress());
                 addr = "hosts[\"" + config.FilenameHost() + "\"]$ip";
             }
             else {
-                // This should default to 127.0.0.1 if -C /path/to/zeek.conf was used.
+
                 addr = config.ClusterAddress();
             }
 
-            // The manager in a cluster is always named manager, no prefix here.
+
             if ( config.Manager() )
                 layout.AddNode("manager", "MANAGER", addr, next_metrics_port(), next_port());
 
@@ -440,7 +440,7 @@ int main(int argc, char* argv[]) {
                 layout.AddNode(config.PrefixedClusterNode("proxy-" + std::to_string(i)), "PROXY", addr,
                                next_metrics_port(), next_port());
 
-            // Go through all interface configurations and add the required workers.
+
             for ( const auto& iwc : config.InterfaceWorkerConfigs() ) {
                 for ( int i = 1; i <= iwc.Workers(); i++ ) {
                     layout.AddNode(config.PrefixedClusterNode(iwc.FullWorkerName(i)), "WORKER", addr,
@@ -458,7 +458,7 @@ int main(int argc, char* argv[]) {
 
     layout.Done();
 
-    // stdout print?
+
     if ( out == "-" ) {
         layout.Print(std::cout);
         return 0;

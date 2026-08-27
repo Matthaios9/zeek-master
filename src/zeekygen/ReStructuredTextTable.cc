@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/zeekygen/ReStructuredTextTable.h"
 
@@ -68,7 +68,7 @@ string ReStructuredTextTable::AsString(char border) const {
             row_str += row[col];
         }
 
-        // Pop off trailing spaces
+
         auto notspace = [](unsigned char c) { return ! std::isspace(c); };
         row_str.erase(std::ranges::find_if(std::ranges::reverse_view(row_str), notspace).base(), row_str.end());
 
@@ -80,4 +80,4 @@ string ReStructuredTextTable::AsString(char border) const {
     return rval;
 }
 
-} // namespace zeek::zeekygen::detail
+}

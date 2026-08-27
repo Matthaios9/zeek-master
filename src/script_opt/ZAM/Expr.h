@@ -1,8 +1,8 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Methods for ZAM compilation of expression AST nodes (Expr's).
-//
-// This file is included by Compile.h to insert into the ZAMCompiler class.
+
+
+
+
 
 ZAMStmt CompileExpr(const ExprPtr& e) { return CompileExpr(e.get()); }
 ZAMStmt CompileExpr(const Expr* body);
@@ -34,7 +34,7 @@ ZAMStmt CompileInExpr(const NameExpr* n1, const ConstExpr* c, const NameExpr* n3
     return CompileInExpr(n1, nullptr, c, n3, nullptr);
 }
 
-// In the following, one of n2 or c2 (likewise, n3/c3) will be nil.
+
 ZAMStmt CompileInExpr(const NameExpr* n1, const NameExpr* n2, const ConstExpr* c2, const NameExpr* n3,
                       const ConstExpr* c3);
 

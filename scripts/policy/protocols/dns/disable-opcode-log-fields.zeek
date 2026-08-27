@@ -1,4 +1,4 @@
-##! This script filters the opcode and opcode_name fields from dns.log.
+
 
 @load base/protocols/dns
 

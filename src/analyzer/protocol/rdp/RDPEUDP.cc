@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/rdp/RDPEUDP.h"
 
@@ -25,4 +25,4 @@ void RDP_Analyzer::DeliverPacket(int len, const u_char* data, bool orig, uint64_
     }
 }
 
-} // namespace zeek::analyzer::rdpeudp
+}

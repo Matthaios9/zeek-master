@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -15,4 +15,4 @@ extern const u_char* extract_XDR_opaque(const u_char*& buf, int& len, int& n, in
 extern const u_char* extract_XDR_opaque_fixed(const u_char*& buf, int& len, int n);
 extern uint32_t skip_XDR_opaque_auth(const u_char*& buf, int& len);
 
-} // namespace zeek::analyzer::rpc
+}

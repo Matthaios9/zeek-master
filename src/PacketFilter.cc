@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/PacketFilter.h"
 
@@ -87,24 +87,24 @@ bool PacketFilter::Match(const std::shared_ptr<IP_Hdr>& ip, int len, int caplen)
 
 bool PacketFilter::MatchFilter(const Filter& f, const IP_Hdr& ip, int len, int caplen) {
     if ( ip.NextProto() == IPPROTO_TCP && f.tcp_flags ) {
-        // Caution! The packet sanity checks have not been performed yet
+
         int ip_hdr_len = ip.HdrLen();
-        len -= ip_hdr_len; // remove IP header
+        len -= ip_hdr_len;
         caplen -= ip_hdr_len;
 
         if ( static_cast<unsigned int>(len) < sizeof(struct tcphdr) ||
              static_cast<unsigned int>(caplen) < sizeof(struct tcphdr) )
-            // Packet too short, will be dropped anyway.
+
             return false;
 
         const struct tcphdr* tp = reinterpret_cast<const tcphdr*>(ip.Payload());
 
         if ( tp->th_flags & f.tcp_flags )
-            // At least one of the flags is set, so don't drop
+
             return false;
     }
 
     return util::detail::random_number() < f.probability;
 }
 
-} // namespace zeek::detail
+}

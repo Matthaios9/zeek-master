@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Event.h"
 
@@ -70,7 +70,7 @@ zeek::VectorValPtr Event::MetadataValues(const EnumValPtr& id) const {
         if ( entry.Id() != uintid )
             continue;
 
-        // Sanity check the type.
+
         if ( ! same_type(desc->Type(), entry.Val()->GetType()) ) {
             zeek::reporter->InternalWarning("metadata has unexpected type %s, wanted %s",
                                             obj_desc_short(entry.Val()->GetType().get()).c_str(),
@@ -91,7 +91,7 @@ double Event::Time() const {
     for ( const auto& m : *meta )
         if ( m.Id() == static_cast<zeek_uint_t>(detail::MetadataType::NetworkTimestamp) ) {
             if ( m.Val()->GetType()->Tag() != TYPE_TIME ) {
-                // This should've been caught during parsing.
+
                 zeek::reporter->InternalError("event metadata timestamp has wrong type: %s",
                                               obj_desc_short(m.Val()->GetType().get()).c_str());
             }
@@ -123,10 +123,10 @@ void Event::Dispatch() {
     try {
         handler->Call(&args);
     } catch ( InterpreterException& e ) {
-        // Already reported.
+
     }
 
-    // Unref obj
+
     obj.reset();
 
     if ( handler->ErrorHandler() )
@@ -144,12 +144,12 @@ EventMgr::~EventMgr() {
 void EventMgr::Enqueue(const EventHandlerPtr& h, Args vl, util::detail::SourceID src, analyzer::ID aid, Obj* obj) {
     detail::EventMetadataVectorPtr meta;
 
-    // If this is a local event and EventMetadata::add_network_timestamp is
-    // enabled, automatically set the network timestamp for this event to the
-    // current network time.
-    //
-    // See the other Enqueue() implementation for the local vs broker/remote
-    // motivation of want_network_timestamp.
+
+
+
+
+
+
     bool want_network_timestamp =
         BifConst::EventMetadata::add_network_timestamp &&
         ((src == util::detail::SOURCE_LOCAL) ||
@@ -163,17 +163,17 @@ void EventMgr::Enqueue(const EventHandlerPtr& h, Args vl, util::detail::SourceID
 
 void EventMgr::Enqueue(detail::EventMetadataVectorPtr meta, const EventHandlerPtr& h, Args vl,
                        util::detail::SourceID src, analyzer::ID aid, Obj* obj) {
-    // Attach network timestamps to all events if EventMetadata::add_network_timestamp is T and
-    //
-    //   1) this event is locally generated
-    //   or
-    //   2) this is a remote event and EventMetadata::add_missing_remote_network_timestamp is T
-    //
-    // Why so complicated? It seems less surprising behavior to keep network timestamp metadata unset
-    // if a remote event didn't have any attached. It should help to more easily figure out what's
-    // actually going on compared to setting it to the local network time. If all nodes are required to
-    // send *their* network timestamp, filling it with this node's network time seems more confusing
-    // and error prone compared to just leaving it unset and having the consumer deal with the situation.
+
+
+
+
+
+
+
+
+
+
+
     bool want_network_timestamp =
         BifConst::EventMetadata::add_network_timestamp &&
         ((src == util::detail::SOURCE_LOCAL) ||
@@ -183,17 +183,17 @@ void EventMgr::Enqueue(detail::EventMetadataVectorPtr meta, const EventHandlerPt
         bool has_time = false;
 
         if ( ! meta ) {
-            // No metadata vector at all, make one with a timestamp.
+
             meta = detail::MakeEventMetadataVector(run_state::network_time);
         }
         else {
-            // Check all entries for a network timestamp
+
             for ( const auto& m : *meta ) {
                 if ( m.Id() == static_cast<zeek_uint_t>(detail::MetadataType::NetworkTimestamp) ) {
                     has_time = true;
 
                     if ( m.Val()->GetType()->Tag() != TYPE_TIME ) {
-                        // This should've been caught during parsing.
+
                         zeek::reporter->InternalError("event metadata timestamp has wrong type: %s",
                                                       obj_desc_short(m.Val()->GetType().get()).c_str());
                     }
@@ -230,14 +230,14 @@ void EventMgr::QueueEvent(Event* event) {
 void EventMgr::Dispatch(const EventHandlerPtr& h, zeek::Args vl) {
     detail::EventMetadataVectorPtr meta;
 
-    // If all events should have network timestamps, create the vector holding one.
+
     if ( BifConst::EventMetadata::add_network_timestamp )
         meta = detail::MakeEventMetadataVector(run_state::network_time);
 
     auto* ev = new Event(std::move(meta), h, std::move(vl), util::detail::SOURCE_LOCAL, 0, nullptr);
 
-    // Technically this isn't queued, but still give plugins a chance to
-    // intercept the event and cancel or modify it if really wanted.
+
+
     bool done = PLUGIN_HOOK_WITH_RESULT(HOOK_QUEUE_EVENT, HookQueueEvent(ev), false);
     if ( done )
         return;
@@ -255,12 +255,12 @@ void EventMgr::Drain() {
 
     PLUGIN_HOOK_VOID(HOOK_DRAIN_EVENTS, HookDrainEvents());
 
-    // Past Zeek versions drained as long as there events, including when
-    // a handler queued new events during its execution. This could lead
-    // to endless loops in case a handler kept triggering its own event.
-    // We now limit this to just a couple of rounds. We do more than
-    // just one round to make it less likely to break existing scripts
-    // that expect the old behavior to trigger something quickly.
+
+
+
+
+
+
 
     for ( int round = 0; head && round < 2; round++ ) {
         Event* event = head;
@@ -279,12 +279,12 @@ void EventMgr::Drain() {
         }
     }
 
-    // Note: we might eventually need a general way to specify things to
-    // do after draining events.
+
+
     current = nullptr;
 
-    // Make sure all of the triggers get processed every time the events
-    // drain.
+
+
     detail::trigger_mgr->Process();
 }
 
@@ -303,14 +303,14 @@ void EventMgr::Describe(ODesc* d) const {
 }
 
 void EventMgr::Process() {
-    // While it semes like the most logical thing to do, we dont want
-    // to call Drain() as part of this method. It will get called at
-    // the end of run_loop after all of the sources have been processed
-    // and had the opportunity to spawn new events.
+
+
+
+
 }
 
 void EventMgr::InitPostScript() {
-    // Check if expected types and identifiers are available.
+
     const auto& et = zeek::id::find_type<zeek::EnumType>("EventMetadata::ID");
     if ( ! et )
         zeek::reporter->FatalError("Failed to find EventMetadata::ID");
@@ -322,7 +322,7 @@ void EventMgr::InitPostScript() {
     if ( ! zeek::event_registry->RegisterMetadata(net_ts_val, zeek::base_type(zeek::TYPE_TIME)) )
         zeek::reporter->FatalError("Failed to register NETWORK_TIMESTAMP metadata");
 
-    // Remove this if there's ever a use-case to not use them together.
+
     if ( BifConst::EventMetadata::add_missing_remote_network_timestamp &&
          ! BifConst::EventMetadata::add_network_timestamp )
         zeek::reporter->FatalError(
@@ -332,4 +332,4 @@ void EventMgr::InitPostScript() {
 
     iosource_mgr->Register(this, true, false);
 }
-} // namespace zeek
+}

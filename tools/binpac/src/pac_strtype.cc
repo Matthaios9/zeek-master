@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_strtype.h"
 
@@ -35,11 +35,11 @@ void StringType::init_type() {
 }
 
 StringType::~StringType() {
-    // TODO: Unref for Objects
-    // Question: why Unref?
-    //
-    // Unref(str_);
-    // Unref(regex_);
+
+
+
+
+
 
     delete string_length_var_field_;
     delete elem_datatype_;
@@ -85,8 +85,8 @@ void StringType::ProcessAttr(Attr* a) {
                                 " to only type bytestring");
             }
             attr_restofdata_ = true;
-            // As the string automatically extends to the end of
-            // data, we do not have to check boundary.
+
+
             SetBoundaryChecked();
         } break;
 
@@ -97,8 +97,8 @@ void StringType::ProcessAttr(Attr* a) {
                                 " to only type bytestring");
             }
             attr_restofflow_ = true;
-            // As the string automatically extends to the end of
-            // flow, we do not have to check boundary.
+
+
             SetBoundaryChecked();
         } break;
 
@@ -129,7 +129,7 @@ void StringType::GenCleanUpCode(Output* out_cc, Env* env) {
 
 void StringType::DoMarkIncrementalInput() {
     if ( attr_restofflow_ ) {
-        // Do nothing
+
         ASSERT(type_ == ANYSTR);
     }
     else {
@@ -140,10 +140,10 @@ void StringType::DoMarkIncrementalInput() {
 int StringType::StaticSize(Env* env) const {
     switch ( type_ ) {
         case CSTR:
-            // Use length of the unescaped string
+
             return str_->unescaped().length();
         case REGEX:
-            // TODO: static size for a regular expression?
+
         case ANYSTR: return -1;
 
         default: ASSERT(0); return -1;
@@ -167,7 +167,7 @@ void StringType::GenDynamicSize(Output* out_cc, Env* env, const DataPtr& data) {
         case ANYSTR: GenDynamicSizeAnyStr(out_cc, env, data); break;
         case CSTR: ASSERT(0); break;
         case REGEX:
-            // TODO: static size for a regular expression?
+
             GenDynamicSizeRegEx(out_cc, env, data);
             break;
     }
@@ -189,7 +189,7 @@ string StringType::GenStringSize(Output* out_cc, Env* env, const DataPtr& data) 
 void StringType::DoGenParseCode(Output* out_cc, Env* env, const DataPtr& data, int flags) {
     string str_size = GenStringSize(out_cc, env, data);
 
-    // Generate additional checking
+
     switch ( type_ ) {
         case CSTR: GenCheckingCStr(out_cc, env, data, str_size); break;
         case REGEX:
@@ -197,12 +197,12 @@ void StringType::DoGenParseCode(Output* out_cc, Env* env, const DataPtr& data, i
     }
 
     if ( ! anonymous_value_var() ) {
-        // Set the value variable
+
 
         int len;
 
         if ( type_ == ANYSTR && attr_length_expr_ && attr_length_expr_->ConstFold(env, &len) ) {
-            // can check for a negative length now
+
             if ( len < 0 )
                 throw Exception(this, "negative &length on string");
         }
@@ -227,14 +227,14 @@ void StringType::GenStringMismatch(Output* out_cc, Env* env, const DataPtr& data
 }
 
 void StringType::GenCheckingCStr(Output* out_cc, Env* env, const DataPtr& data, const string& str_size) {
-    // TODO: extend it for dynamic strings
+
     ASSERT(type_ == CSTR);
 
     GenBoundaryCheck(out_cc, env, data);
 
     string str_val = str_->str();
 
-    // Compare the string and report error on mismatch
+
     out_cc->println("if ( memcmp(%s, %s, %s) != 0 ) {", data.ptr_expr(), str_val.c_str(), str_size.c_str());
     out_cc->inc_indent();
     GenStringMismatch(out_cc, env, data, str_val);
@@ -243,10 +243,10 @@ void StringType::GenCheckingCStr(Output* out_cc, Env* env, const DataPtr& data, 
 }
 
 void StringType::GenDynamicSizeRegEx(Output* out_cc, Env* env, const DataPtr& data) {
-    // string_length_var =
-    // 	matcher.match_prefix(
-    // 		begin,
-    //		end);
+
+
+
+
 
     out_cc->println("%s = ", env->LValue(string_length_var()));
     out_cc->inc_indent();

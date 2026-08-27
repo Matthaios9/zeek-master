@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -6,10 +6,10 @@
 
 namespace zeek::packet_analysis::TCP {
 
-/**
- * A TCPStateStats object tracks the distribution of TCP states for
- * the currently active connections.
- */
+
+
+
+
 class TCPStateStats {
 public:
     TCPStateStats();
@@ -32,7 +32,7 @@ public:
     }
 
     unsigned int NumStateEstablished() const { return Cnt(analyzer::tcp::TCP_ENDPOINT_ESTABLISHED); }
-    unsigned int NumStateHalfClose() const { // corresponds to S2,S3
+    unsigned int NumStateHalfClose() const {
         return Cnt(analyzer::tcp::TCP_ENDPOINT_ESTABLISHED, analyzer::tcp::TCP_ENDPOINT_CLOSED) +
                Cnt(analyzer::tcp::TCP_ENDPOINT_CLOSED, analyzer::tcp::TCP_ENDPOINT_ESTABLISHED);
     }
@@ -62,4 +62,4 @@ private:
     unsigned int state_cnt[analyzer::tcp::TCP_ENDPOINT_RESET + 1][analyzer::tcp::TCP_ENDPOINT_RESET + 1];
 };
 
-} // namespace zeek::packet_analysis::TCP
+}

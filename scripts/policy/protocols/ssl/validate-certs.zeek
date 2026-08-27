@@ -1,7 +1,7 @@
-##! Perform full certificate chain validation for SSL certificates.
-#
-# Also caches all intermediate certificates encountered so far and use them
-# for future validations.
+
+
+
+
 
 @load base/frameworks/cluster
 @load base/frameworks/notice
@@ -11,51 +11,51 @@ module SSL;
 
 export {
 	redef enum Notice::Type += {
-		## This notice indicates that the result of validating the
-		## certificate along with its full certificate chain was
-		## invalid.
+
+
+
 		Invalid_Server_Cert
 	};
 
 	redef record Info += {
-		## Result of certificate validation for this connection.
+
 		validation_status: string &log &optional;
-		## Result of certificate validation for this connection, given
-		## as OpenSSL validation code.
+
+
 		validation_code: int &optional;
-		## Ordered chain of validated certificate, if validation succeeded.
+
 		valid_chain: vector of opaque of x509 &optional;
 	};
 
-	## Result values for recently validated chains along with the
-	## validation status are kept in this table to avoid constant
-	## validation every time the same certificate chain is seen.
+
+
+
 	global recently_validated_certs: table[string] of X509::Result = table()
 		&read_expire=5mins &redef;
 
-	## Use intermediate CA certificate caching when trying to validate
-	## certificates. When this is enabled, Zeek keeps track of all valid
-	## intermediate CA certificates that it has seen in the past. When
-	## encountering a host certificate that cannot be validated because
-	## of missing intermediate CA certificate, the cached list is used
-	## to try to validate the cert. This is similar to how Firefox is
-	## doing certificate validation.
-	##
-	## Disabling this will usually greatly increase the number of validation warnings
-	## that you encounter. Only disable if you want to find misconfigured servers.
+
+
+
+
+
+
+
+
+
+
 	global ssl_cache_intermediate_ca: bool = T &redef;
 
-	## Store the valid chain in c$ssl$valid_chain if validation succeeds.
-	## This has a potentially high memory impact, depending on the local environment
-	## and is thus disabled by default.
+
+
+
 	global ssl_store_valid_chain: bool = F &redef;
 
-	## Event from a manager to workers when encountering a new, valid
-	## intermediate.
+
+
 	global intermediate_add: event(key: string, value: vector of opaque of x509);
 
-	## Event from workers to the manager when a new intermediate chain
-	## is to be added.
+
+
 	global new_intermediate: event(key: string, value: vector of opaque of x509);
 }
 
@@ -92,7 +92,7 @@ function cache_validate(chain: vector of opaque of x509): X509::Result
 
 	local chain_id = join_string_vec(chain_hash, ".");
 
-	# If we tried this certificate recently, just return the cached result.
+
 	if ( chain_id in recently_validated_certs )
 		return recently_validated_certs[chain_id];
 
@@ -102,15 +102,15 @@ function cache_validate(chain: vector of opaque of x509): X509::Result
 	else
 		recently_validated_certs[chain_id] = result;
 
-	# if we have a working chain where we did not store the intermediate certs
-	# in our cache yet - do so
+
+
 	if ( ssl_cache_intermediate_ca &&
 	     result$result_string == "ok" &&
 		   result?$chain_certs &&
 		   |result$chain_certs| > 2 )
 		{
 		local result_chain = result$chain_certs;
-		local isnh = x509_subject_name_hash(result_chain[1], 4); # SHA256
+		local isnh = x509_subject_name_hash(result_chain[1], 4);
 		if ( isnh !in intermediate_cache )
 			{
 			local cachechain: vector of opaque of x509;
@@ -128,19 +128,19 @@ function cache_validate(chain: vector of opaque of x509): X509::Result
 
 hook ssl_finishing(c: connection) &priority=20
 	{
-	# If there aren't any certs we can't very well do certificate validation.
+
 	if ( ! c$ssl?$cert_chain || |c$ssl$cert_chain| == 0 ||
 	     ! c$ssl$cert_chain[0]?$x509 )
 		return;
 
 	local intermediate_chain: vector of opaque of x509 = vector();
-	local issuer_name_hash = x509_issuer_name_hash(c$ssl$cert_chain[0]$x509$handle, 4); # SHA256
+	local issuer_name_hash = x509_issuer_name_hash(c$ssl$cert_chain[0]$x509$handle, 4);
 	local hash = c$ssl$cert_chain[0]$sha1;
 	local result: X509::Result;
 
-	# Look if we already have a working chain for the issuer of this cert.
-	# If yes, try this chain first instead of using the chain supplied from
-	# the server.
+
+
+
 	if ( ssl_cache_intermediate_ca && issuer_name_hash in intermediate_cache )
 		{
 		intermediate_chain[0] = c$ssl$cert_chain[0]$x509$handle;
@@ -158,9 +158,9 @@ hook ssl_finishing(c: connection) &priority=20
 			}
 		}
 
-	# Validation with known chains failed or there was no fitting intermediate
-	# in our store.
-	# Fall back to validating the certificate with the server-supplied chain.
+
+
+
 	local chain: vector of opaque of x509 = vector();
 	for ( i in c$ssl$cert_chain )
 		{

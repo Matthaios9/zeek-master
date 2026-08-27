@@ -1,19 +1,19 @@
-# This file loads ALL policy scripts that are part of the Zeek distribution.
-#
-# This is rarely makes sense, and is for testing only.
-#
-# Note that we have a unit test that makes sure that all policy files shipped are
-# actually loaded here. If we have files that are part of the distribution yet
-# can't be loaded here,  these must still be listed here with their load command
-# commented out.
 
-# The base/ scripts are all loaded by default and not included here.
+
+
+
+
+
+
+
+
+
 
 @load frameworks/analyzer/debug-logging.zeek
 @load frameworks/analyzer/detect-protocols.zeek
 @load frameworks/analyzer/packet-segment-logging.zeek
-# @load frameworks/control/controllee.zeek
-# @load frameworks/control/controller.zeek
+
+
 @load frameworks/cluster/backend/broker/__load__.zeek
 @load frameworks/cluster/backend/broker/backpressure.zeek
 @load frameworks/cluster/backend/broker/main.zeek
@@ -25,29 +25,29 @@
 @load frameworks/cluster/backend/zeromq/main.zeek
 @endif
 @load frameworks/cluster/experimental.zeek
-# Loaded via the above through test-all-policy-cluster.test
-# when running as a manager, creates cluster.log entries
-# even in non-cluster mode if loaded like the below.
-# @load frameworks/cluster/nodes-experimental/manager.zeek
-# @load frameworks/cluster/websocket/server.zeek
+
+
+
+
+
 @load frameworks/management/agent/__load__.zeek
 @load frameworks/management/agent/api.zeek
 @load frameworks/management/agent/boot.zeek
 @load frameworks/management/agent/config.zeek
-# @load frameworks/management/agent/main.zeek
+
 @load frameworks/management/controller/__load__.zeek
 @load frameworks/management/controller/api.zeek
 @load frameworks/management/controller/boot.zeek
 @load frameworks/management/controller/config.zeek
-# @load frameworks/management/controller/main.zeek
+
 @load frameworks/management/__load__.zeek
 @load frameworks/management/config.zeek
 @load frameworks/management/log.zeek
 @load frameworks/management/persistence.zeek
-# @load frameworks/management/node/__load__.zeek
+
 @load frameworks/management/node/api.zeek
 @load frameworks/management/node/config.zeek
-# @load frameworks/management/node/main.zeek
+
 @load frameworks/management/supervisor/__load__.zeek
 @load frameworks/management/supervisor/api.zeek
 @load frameworks/management/supervisor/config.zeek
@@ -77,7 +77,7 @@
 @load frameworks/netcontrol/catch-and-release.zeek
 @load frameworks/files/detect-MHR.zeek
 @load frameworks/files/entropy-test-all-files.zeek
-#@load frameworks/files/extract-all-files.zeek
+
 @load frameworks/files/hash-all-files.zeek
 @load frameworks/notice/__load__.zeek
 @load frameworks/notice/actions/drop.zeek
@@ -86,11 +86,11 @@
 @load files/x509/disable-certificate-events-known-certs.zeek
 @load files/zip/register.zeek
 @load frameworks/packet-filter/shunt.zeek
-# @load frameworks/signatures/iso-9660.zeek
+
 @load frameworks/software/version-changes.zeek
 @load frameworks/software/vulnerable.zeek
-# @load frameworks/spicy/record-spicy-batch.zeek
-# @load frameworks/spicy/resource-usage.zeek
+
+
 @load frameworks/software/windows-version-detection.zeek
 @load frameworks/storage/backend/redis/__load__.zeek
 @load frameworks/storage/backend/redis/main.zeek
@@ -102,14 +102,14 @@
 @load misc/capture-loss.zeek
 @load misc/detect-traceroute/__load__.zeek
 @load misc/detect-traceroute/main.zeek
-# @load misc/dump-events.zeek
+
 @load misc/loaded-scripts.zeek
 @load misc/profiling.zeek
 @load misc/stats.zeek
 @load misc/weird-stats.zeek
 @load misc/trim-trace-file.zeek
 @load misc/unknown-protocols.zeek
-# @load misc/systemd-generator.zeek
+
 @load misc/zeromq-multi-host-auto-setup.zeek
 @load protocols/conn/community-id-logging.zeek
 @load protocols/conn/disable-unknown-ip-proto-support.zeek
@@ -122,14 +122,14 @@
 @load protocols/conn/vlan-logging.zeek
 @load protocols/conn/pppoe-session-id-logging.zeek
 @load protocols/conn/weirds.zeek
-#@load frameworks/conn_key/vlan_fivetuple.zeek
-#@load protocols/conn/speculative-service.zeek
+
+
 @load protocols/dhcp/msg-orig.zeek
 @load protocols/dhcp/software.zeek
 @load protocols/dhcp/sub-opts.zeek
 @load protocols/dns/auth-addl.zeek
 @load protocols/dns/detect-external-names.zeek
-#@load protocols/dns/disable-opcode-log-fields.zeek
+
 @load protocols/dns/log-original-query-case.zeek
 @load protocols/ftp/detect-bruteforcing.zeek
 @load protocols/ftp/detect.zeek
@@ -173,9 +173,9 @@
 @load tuning/track-all-assets.zeek
 
 
-# Disable cluster backend by switching to the none backend after loading
-# all the scripts in order to skip initialization of cluster backend that
-# ended up being selected. Cluster backends may keep the IO loop alive once
-# registered due to registering IO sources and loading test-all-policy should
-# not result in such behavior.
+
+
+
+
+
 redef Cluster::backend = Cluster::CLUSTER_BACKEND_NONE;

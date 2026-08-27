@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/file_analysis/FileTimer.h"
 
@@ -27,7 +27,7 @@ void FileTimer::Dispatch(double t, bool is_expire) {
             file_id.c_str(), last_active, inactive_time);
 
     if ( last_active == 0.0 ) {
-        // was created when network_time was zero, so re-schedule w/ valid time
+
         file->UpdateLastActivityTime();
         file->ScheduleInactivityTimer();
         return;
@@ -39,4 +39,4 @@ void FileTimer::Dispatch(double t, bool is_expire) {
         file->ScheduleInactivityTimer();
 }
 
-} // namespace zeek::file_analysis::detail
+}

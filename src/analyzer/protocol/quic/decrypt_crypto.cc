@@ -1,43 +1,43 @@
-// See the file "COPYING" in the main distribution directory for copyright.
-// Copyright (c) 2023, NCC Group / Fox-IT. See COPYING for details.
 
-/*
-WARNING: THIS CODE IS NOT SAFE IN MULTI-THREADED ENVIRONMENTS:
 
-* Initializations of static OpenSSL contexts without locking
-* Use of SSL contexts is not protected by locks
 
-The involved contexts are EVP_CIPHER_CTX and EVP_PKEY_CTX. These are allocated
-lazily and re-used for performance reasons. Previously, every decrypt operation
-allocated, initialized and freed these individually, resulting in a significant
-performance hit. Given Zeek's single threaded nature, this is fine.
-*/
 
-/*
-WORK-IN-PROGRESS
-Initial working version of decrypting the INITIAL packets from
-both client & server to be used by the Spicy parser. Might need a few more
-refactors as C++ development is not our main profession.
-*/
 
-// Default imports
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #include <array>
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
 #include <vector>
 
-// OpenSSL imports
+
 #include <openssl/evp.h>
 #include <openssl/kdf.h>
 #include <openssl/sha.h>
 
-// Import HILTI
+
 #include <hilti/rt/libhilti.h>
 
 namespace {
 
-// Struct to store decryption info for this specific connection
+
 struct DecryptionInformation {
     std::vector<uint8_t> unprotected_header;
     uint64_t packet_number;
@@ -45,14 +45,14 @@ struct DecryptionInformation {
     uint8_t packet_number_length;
 };
 
-// Return rt::hilti::Bytes::data() value as const uint8_t*
-//
-// This should be alright: https://stackoverflow.com/a/15172304
+
+
+
 inline const uint8_t* data_as_uint8(const hilti::rt::Bytes& b) { return reinterpret_cast<const uint8_t*>(b.data()); }
 
-/*
-Constants used by the different functions
-*/
+
+
+
 const size_t INITIAL_SECRET_LEN = 32;
 const size_t AEAD_KEY_LEN = 16;
 const size_t AEAD_IV_LEN = 12;
@@ -81,17 +81,17 @@ EVP_CIPHER_CTX* get_aes_128_gcm() {
     return ctx;
 }
 
-/*
-Removes the header protection from the INITIAL packet and returns a DecryptionInformation struct
-that is partially filled
-*/
+
+
+
+
 DecryptionInformation remove_header_protection(const std::vector<uint8_t>& client_hp, uint64_t encrypted_offset,
                                                const hilti::rt::Bytes& data) {
     DecryptionInformation decryptInfo;
     int outlen;
     auto* ctx = get_aes_128_ecb();
     EVP_CIPHER_CTX_set_key_length(ctx, client_hp.size());
-    // Passing an 1 means ENCRYPT
+
     EVP_CipherInit_ex(ctx, NULL, NULL, client_hp.data(), NULL, 1);
 
     static_assert(AEAD_SAMPLE_LENGTH > 0);
@@ -102,8 +102,8 @@ DecryptionInformation remove_header_protection(const std::vector<uint8_t>& clien
     std::array<uint8_t, AEAD_SAMPLE_LENGTH> mask;
     EVP_CipherUpdate(ctx, mask.data(), &outlen, sample, AEAD_SAMPLE_LENGTH);
 
-    // To determine the actual packet number length,
-    // we have to remove the mask from the first byte
+
+
     uint8_t first_byte = data_as_uint8(data)[0];
 
     if ( first_byte & 0x80 ) {
@@ -113,10 +113,10 @@ DecryptionInformation remove_header_protection(const std::vector<uint8_t>& clien
         first_byte ^= first_byte & 0x1F;
     }
 
-    // And now we can fully recover the correct packet number length...
+
     int recovered_packet_number_length = (first_byte & 0x03) + 1;
 
-    // .. and use this to reconstruct the (partially) unprotected header
+
     std::vector<uint8_t> unprotected_header(data_as_uint8(data),
                                             data_as_uint8(data) + encrypted_offset + recovered_packet_number_length);
 
@@ -128,17 +128,17 @@ DecryptionInformation remove_header_protection(const std::vector<uint8_t>& clien
         decoded_packet_number = unprotected_header[encrypted_offset + i] | (decoded_packet_number << 8);
     }
 
-    // Store the information back in the struct
+
     decryptInfo.packet_number = decoded_packet_number;
     decryptInfo.packet_number_length = recovered_packet_number_length;
     decryptInfo.unprotected_header = std::move(unprotected_header);
     return decryptInfo;
 }
 
-/*
-Calculate the nonce for the AEAD by XOR'ing the CLIENT_IV and the
-decoded packet number, and returns the nonce
-*/
+
+
+
+
 std::vector<uint8_t> calculate_nonce(std::vector<uint8_t> client_iv, uint64_t packet_number) {
     for ( int i = 0; i < 8; ++i )
         client_iv[AEAD_IV_LEN - 1 - i] ^= (uint8_t)(packet_number >> 8 * i);
@@ -146,9 +146,9 @@ std::vector<uint8_t> calculate_nonce(std::vector<uint8_t> client_iv, uint64_t pa
     return client_iv;
 }
 
-/*
-Function that calls the AEAD decryption routine, and returns the decrypted data.
-*/
+
+
+
 hilti::rt::Bytes decrypt(const std::vector<uint8_t>& client_key, const hilti::rt::Bytes& data, uint64_t payload_length,
                          const DecryptionInformation& decryptInfo) {
     int out = 0;
@@ -158,8 +158,8 @@ hilti::rt::Bytes decrypt(const std::vector<uint8_t>& client_key, const hilti::rt
         throw hilti::rt::RuntimeError(hilti::rt::fmt("payload too small %ld < %ld", payload_length,
                                                      decryptInfo.packet_number_length + AEAD_TAG_LENGTH));
 
-    // Bail on large payloads, somewhat arbitrarily. 10k allows for Jumbo frames
-    // and sometimes the fuzzer produces packets up to that size as well.
+
+
     if ( payload_length > 10000 )
         throw hilti::rt::RuntimeError(hilti::rt::fmt("payload_length too large %ld", payload_length));
 
@@ -177,41 +177,41 @@ hilti::rt::Bytes decrypt(const std::vector<uint8_t>& client_key, const hilti::rt
     const void* tag_to_check = data.data() + decryptInfo.unprotected_header.size() + encrypted_payload_size;
     int tag_to_check_length = AEAD_TAG_LENGTH;
 
-    // Allocate memory for decryption.
+
     std::vector<uint8_t> decrypt_buffer(encrypted_payload_size);
 
-    // Setup context
+
     auto* ctx = get_aes_128_gcm();
 
-    // Set the sizes for the IV and KEY
+
     EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, decryptInfo.nonce.size(), NULL);
 
     EVP_CIPHER_CTX_set_key_length(ctx, client_key.size());
 
-    // Set the KEY and IV
+
     EVP_CipherInit_ex(ctx, NULL, NULL, client_key.data(), decryptInfo.nonce.data(), 0);
 
-    // Set the tag to be validated after decryption
+
     EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_TAG, tag_to_check_length, const_cast<void*>(tag_to_check));
 
-    // Setting the second parameter to NULL will pass it as Associated Data
+
     EVP_CipherUpdate(ctx, NULL, &out, decryptInfo.unprotected_header.data(), decryptInfo.unprotected_header.size());
 
-    // Set the actual data to decrypt data into the decrypt_buffer. The amount of
-    // byte decrypted is stored into `out`
+
+
     EVP_CipherUpdate(ctx, decrypt_buffer.data(), &out, encrypted_payload, encrypted_payload_size);
 
-    // Validate whether the decryption was successful or not
+
     if ( EVP_CipherFinal_ex(ctx, NULL, &out2) == 0 )
         throw hilti::rt::RuntimeError("decryption failed");
 
-    // Copy the decrypted data from the decrypted buffer into a Bytes instance.
+
     return hilti::rt::Bytes(decrypt_buffer.data(), decrypt_buffer.data() + out);
 }
 
 
-// Pre-initialized SSL contexts for re-use. Not thread-safe. These are only used in expand-only mode
-// and have a fixed HKDF info set.
+
+
 struct HkdfCtx {
     EVP_PKEY_CTX* client_in_ctx = nullptr;
     EVP_PKEY_CTX* server_in_ctx = nullptr;
@@ -225,9 +225,9 @@ struct HkdfCtxParam {
     std::vector<uint8_t> info;
 };
 
-/*
-HKDF-Extract as described in https://www.rfc-editor.org/rfc/rfc8446.html#section-7.1
-*/
+
+
+
 std::vector<uint8_t> hkdf_extract(const std::vector<uint8_t>& salt, const hilti::rt::Bytes& connection_id) {
     std::vector<uint8_t> out_temp(INITIAL_SECRET_LEN);
     size_t initial_secret_len = out_temp.size();
@@ -282,7 +282,7 @@ public:
 
     virtual ~QuicPacketProtection() = default;
 
-    // Helper to initialize HKDF expand only contexts.
+
     static void Initialize(std::vector<HkdfCtxParam>& params) {
         for ( const auto& p : params ) {
             *p.ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
@@ -294,21 +294,21 @@ public:
     }
 };
 
-// QUIC v1
-//
-// https://datatracker.ietf.org/doc/html/rfc9001
+
+
+
 class QuicPacketProtectionV1 : public QuicPacketProtection {
 public:
     virtual bool Supports(uint32_t version) const override {
-        // Quic V1
+
         if ( version == 0x00000001 )
             return true;
 
-        // Draft 22 through 34
+
         if ( version >= 0xff000016 && version <= 0xff000022 )
             return true;
 
-        // mvfst from facebook
+
         if ( version == 0xfaceb001 || (version >= 0xfaceb002 && version <= 0xfaceb013) )
             return true;
 
@@ -319,7 +319,7 @@ public:
         static std::vector<uint8_t> INITIAL_SALT_V1 = {0x38, 0x76, 0x2c, 0xf7, 0xf5, 0x59, 0x34, 0xb3, 0x4d, 0x17,
                                                        0x9a, 0xe6, 0xa4, 0xc8, 0x0c, 0xad, 0xcc, 0xbb, 0x7f, 0x0a};
 
-        // https://insights.sei.cmu.edu/documents/4499/2023_017_001_890985.pdf
+
         static std::vector<uint8_t> INITIAL_SALT_D22 = {0x7f, 0xbc, 0xdb, 0x0e, 0x7c, 0x66, 0xbb, 0xe9, 0x19, 0x3a,
                                                         0x96, 0xcd, 0x21, 0x51, 0x9e, 0xbd, 0x7a, 0x02, 0x64, 0x4a};
 
@@ -348,7 +348,7 @@ public:
 
     virtual HkdfCtx& GetHkdfCtxs() override { return hkdf_ctxs; }
 
-    // Pre-initialize SSL context for reuse with HKDF info set to version specific values.
+
     static void Initialize() {
         std::vector<uint8_t> CLIENT_INITIAL_INFO = {0x00, 0x20, 0x0f, 0x74, 0x6c, 0x73, 0x31, 0x33, 0x20, 0x63,
                                                     0x6c, 0x69, 0x65, 0x6e, 0x74, 0x20, 0x69, 0x6e, 0x00};
@@ -386,9 +386,9 @@ HkdfCtx QuicPacketProtectionV1::hkdf_ctxs = {0};
 std::unique_ptr<QuicPacketProtectionV1> QuicPacketProtectionV1::instance = nullptr;
 
 
-// QUIC v2
-//
-// https://datatracker.ietf.org/doc/rfc9369/
+
+
+
 class QuicPacketProtectionV2 : public QuicPacketProtection {
 public:
     virtual bool Supports(uint32_t version) const override { return version == 0x6b3343cf; }
@@ -437,12 +437,12 @@ public:
 HkdfCtx QuicPacketProtectionV2::hkdf_ctxs = {0};
 std::unique_ptr<QuicPacketProtectionV2> QuicPacketProtectionV2::instance = nullptr;
 
-} // namespace
+}
 
-/*
-Function that is called from Spicy, decrypting an INITIAL packet and returning
-the decrypted payload back to the analyzer.
-*/
+
+
+
+
 hilti::rt::Bytes QUIC_decrypt_crypto_payload(const hilti::rt::integer::safe<uint32_t>& version,
                                              const hilti::rt::Bytes& data, const hilti::rt::Bytes& connection_id,
                                              const hilti::rt::integer::safe<uint64_t>& encrypted_offset,
@@ -482,7 +482,7 @@ hilti::rt::Bytes QUIC_decrypt_crypto_payload(const hilti::rt::integer::safe<uint
 
     DecryptionInformation decryptInfo = remove_header_protection(hp, encrypted_offset, data);
 
-    // Calculate the correct nonce for the decryption
+
     decryptInfo.nonce = calculate_nonce(std::move(iv), decryptInfo.packet_number);
 
     return decrypt(key, data, payload_length, decryptInfo);

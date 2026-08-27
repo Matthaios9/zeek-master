@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -8,7 +8,7 @@
 #include "zeek/iosource/IOSource.h"
 #include "zeek/storage/Backend.h"
 
-// Forward declare some types from hiredis to avoid including the header
+
 struct redisAsyncContext;
 struct redisReply;
 struct redisPollEvents;
@@ -20,20 +20,20 @@ public:
 
     static BackendPtr Instantiate();
 
-    /**
-     * Returns a descriptive tag representing the source for debugging.
-     * This has to be overloaded for Redis because IOSource requires it.
-     *
-     * @return The debugging name.
-     */
+
+
+
+
+
+
     const char* Tag() override { return Backend::Tag(); }
 
-    // IOSource interface
+
     double GetNextTimeout() override { return -1; }
     void Process() override {}
     void ProcessFd(int fd, int flags) override;
 
-    // Hiredis async interface
+
     void OnConnect(int status);
     void OnDisconnect(int status);
 
@@ -44,9 +44,9 @@ public:
     void HandleInfoResult(redisReply* reply);
     void HandleAuthResult(redisReply* reply);
 
-    /**
-     * Returns whether the backend is opened.
-     */
+
+
+
     bool IsOpen() override { return connected; }
 
     bool ExpireRunning() const { return expire_running.load(); }
@@ -69,9 +69,9 @@ private:
 
     redisAsyncContext* async_ctx = nullptr;
 
-    // When running in sync mode, this is used to keep a queue of replies as
-    // responses come in from the remote calls until we run out of data to
-    // poll.
+
+
+
     std::deque<redisReply*> reply_queue;
 
     OpenResultCallback* open_cb = nullptr;
@@ -89,4 +89,4 @@ private:
     std::atomic<int> active_ops = 0;
 };
 
-} // namespace zeek::storage::backend::redis
+}

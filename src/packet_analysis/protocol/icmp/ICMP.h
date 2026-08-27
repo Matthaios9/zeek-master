@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -73,16 +73,16 @@ private:
     void Context6(double t, const struct icmp* icmpp, int len, int caplen, const u_char*& data, const IP_Hdr* ip_hdr,
                   ICMPSessionAdapter* adapter);
 
-    // RFC 4861 Neighbor Discover message options
+
     VectorValPtr BuildNDOptionsVal(int caplen, const u_char* data, ICMPSessionAdapter* adapter);
 
     void UpdateEndpointVal(const ValPtr& endp, bool is_orig);
 };
 
-// Returns the counterpart type to the given type (e.g., the counterpart
-// to ICMP_ECHOREPLY is ICMP_ECHO).
+
+
 extern int ICMP4_counterpart(int icmp_type, int icmp_code, bool& is_one_way);
 extern int ICMP6_counterpart(int icmp_type, int icmp_code, bool& is_one_way);
 
-} // namespace packet_analysis::ICMP
-} // namespace zeek
+}
+}

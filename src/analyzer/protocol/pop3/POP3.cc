@@ -1,7 +1,7 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// This code contributed to Zeek/Bro by Florian Schimandl, Hugh Dollman and
-// Robin Sommer.
+
+
+
 
 #include "zeek/analyzer/protocol/pop3/POP3.h"
 
@@ -83,10 +83,10 @@ static std::string trim_whitespace(const char* in) {
     in = util::skip_whitespace(in);
 
     while ( *in ) {
-        // It might be better to use isspace() here, but the
-        // original code just compared with ' '.
+
+
         if ( *in == ' ' ) {
-            // See if there is any following character.
+
             ++in;
             while ( *in && *in == ' ' )
                 ++in;
@@ -94,14 +94,14 @@ static std::string trim_whitespace(const char* in) {
             if ( ! *in )
                 break;
 
-            // There's a following character, so put in a
-            // single blank to represent the ones we
-            // compressed out.
+
+
+
             *(out_p++) = ' ';
         }
 
-        // If we get this far, then we have a non-blank
-        // character to copy.
+
+
         *(out_p++) = *(in++);
     }
 
@@ -129,8 +129,8 @@ void POP3_Analyzer::ProcessRequest(int length, const char* line) {
 
         switch ( state ) {
             case detail::AUTH_LOGIN:
-                // Format: Line 1 - User
-                //         Line 2 - Password
+
+
                 if ( authLines == 1 )
                     user = decoded->CheckString();
 
@@ -140,8 +140,8 @@ void POP3_Analyzer::ProcessRequest(int length, const char* line) {
                 break;
 
             case detail::AUTH_PLAIN: {
-                // Format: "authorization identity<NUL>authentication
-                //		identity<NUL>password"
+
+
                 char* str = reinterpret_cast<char*>(decoded->Bytes());
                 int len = decoded->Len();
                 char* end = str + len;
@@ -175,7 +175,7 @@ void POP3_Analyzer::ProcessRequest(int length, const char* line) {
                 break;
             }
 
-            case detail::AUTH_CRAM_MD5: { // Format: "user<space>password-hash"
+            case detail::AUTH_CRAM_MD5: {
                 const char* s;
                 const char* str = reinterpret_cast<const char*>(decoded->CheckString());
 
@@ -200,16 +200,16 @@ void POP3_Analyzer::ProcessRequest(int length, const char* line) {
     }
 
     else {
-        // Some clients pipeline their commands (i.e., keep sending
-        // without waiting for a server's responses). Therefore we
-        // keep a list of pending commands.
+
+
+
         cmds.emplace_back(line);
 
-        // Prevent unbounded state growth of cmds if there are no matching
-        // server replies by simply dropping the oldest command.
-        //
-        // This may be caused by packet drops of the server side, one-sided
-        // traffic, or analyzing the wrong protocol (Redis), etc.
+
+
+
+
+
         if ( zeek::BifConst::POP3::max_pending_commands > 0 ) {
             if ( cmds.size() > zeek::BifConst::POP3::max_pending_commands ) {
                 Weird("pop3_client_too_many_pending_commands");
@@ -219,8 +219,8 @@ void POP3_Analyzer::ProcessRequest(int length, const char* line) {
         }
 
         if ( cmds.size() == 1 )
-            // Not waiting for another server response,
-            // so we can process it immediately.
+
+
             ProcessClientCmd();
     }
 }
@@ -321,7 +321,7 @@ void POP3_Analyzer::ProcessClientCmd() {
             if ( masterState == detail::POP3_AUTHORIZATION ) {
                 POP3Event(pop3_request, true, cmd, message);
                 if ( ! *message ) {
-                    // This is the client requesting a list of AUTH mechanisms available.
+
                     requestForMultiLine = true;
                     state = detail::AUTH;
                     subState = detail::POP3_WOK;
@@ -558,9 +558,9 @@ void POP3_Analyzer::ProcessReply(int length, const char* line) {
                 ProcessData(data_len, line);
             }
 
-            // ### It can be quite costly doing this per-line
-            // as opposed to amortized over large packets that
-            // contain many lines.
+
+
+
             POP3Event(pop3_data, false, str.c_str());
         }
         return;
@@ -639,7 +639,7 @@ void POP3_Analyzer::ProcessReply(int length, const char* line) {
                 case detail::RETR: {
                     int data_len = end_of_line - line;
                     if ( ! mail )
-                        // ProcessReply is only called if orig == false
+
                         BeginData(false);
                     ProcessData(data_len, line);
                     if ( requestForMultiLine == true )
@@ -649,7 +649,7 @@ void POP3_Analyzer::ProcessReply(int length, const char* line) {
 
                 case detail::CAPA:
                     AnalyzerConfirmation();
-                    // Fall-through.
+
 
                 case detail::UIDL:
                 case detail::LIST:
@@ -675,7 +675,7 @@ void POP3_Analyzer::ProcessReply(int length, const char* line) {
             }
 
             POP3Event(pop3_reply, false, cmd, message);
-            // no else part, ignoring multiple OKs
+
 
             if ( ! multiLine )
                 FinishClientCmd();
@@ -740,8 +740,8 @@ void POP3_Analyzer::ProcessReply(int length, const char* line) {
 }
 
 void POP3_Analyzer::StartTLS() {
-    // STARTTLS was successful. Remove support analyzers, add SSL
-    // analyzer, and throw event signifying the change.
+
+
     RemoveSupportAnalyzer(cl_orig);
     RemoveSupportAnalyzer(cl_resp);
 
@@ -838,4 +838,4 @@ void POP3_Analyzer::POP3Event(const EventHandlerPtr& event, bool is_orig, const 
     EnqueueConnEvent(event, std::move(vl));
 }
 
-} // namespace zeek::analyzer::pop3
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/zeekygen/Target.h"
 
@@ -25,9 +25,9 @@ using namespace std;
 namespace zeek::zeekygen::detail {
 
 static void write_plugin_section_heading(FILE* f, const string& name, const string& description) {
-    // A label-safe version of the plugin name: replace _ and : with -, turn
-    // sequences of - into single ones, and make lower-case. Example:
-    // "Zeek::IEEE802_11" -> "zeek-ieee802-11".
+
+
+
     auto flags = std::regex_constants::match_any;
     string label_name = std::regex_replace(name, std::regex("[_:]"), "-", flags);
     label_name = std::regex_replace(label_name, std::regex("-+"), "-", flags);
@@ -230,9 +230,9 @@ bool Target::MatchesPattern(Info* info) const {
 }
 
 void AnalyzerTarget::DoFindDependencies(const std::vector<Info*>& infos) {
-    // TODO: really should add to dependency list the tag type's ID and
-    // all bif items for matching analyzer plugins, but that's all dependent
-    // on the Zeek binary itself, so I'm cheating.
+
+
+
 }
 
 void AnalyzerTarget::DoGenerate() const {
@@ -249,8 +249,8 @@ void AnalyzerTarget::DoGenerate() const {
 }
 
 void AnalyzerTarget::WriteAnalyzerElements(FILE* f, plugin::component::Type type, bool match_empty) const {
-    // Create a union of the joint sets of all names provided by plugins and
-    // Spicy analyzers.
+
+
 
     struct IgnoreCase {
         bool operator()(const std::string& a, const std::string& b) const {
@@ -274,18 +274,18 @@ void AnalyzerTarget::WriteAnalyzerElements(FILE* f, plugin::component::Type type
             names.insert(name);
     }
 
-    // Now output the information associated with each name in sorted order.
+
     for ( const auto& name : names ) {
         plugin::Plugin::bif_item_list bif_items;
 
-        if ( auto i = plugins.find(name); i != plugins.end() ) // prefer built-in plugins over Spicy
-                                                               // analyzer in case of name collision
+        if ( auto i = plugins.find(name); i != plugins.end() )
+
         {
             auto plugin = i->second;
             write_plugin_section_heading(f, plugin->Name(), plugin->Description());
 
-            if ( name != "Zeek::Spicy" ) // skip components (which are the available Spicy analyzers
-                                         // documented separately).
+            if ( name != "Zeek::Spicy" )
+
                 write_plugin_components(f, plugin->Components());
 
             bif_items = plugin->BifItems();
@@ -471,8 +471,8 @@ vector<string> dir_contents_recursive(string dir) {
 
 void ScriptTarget::DoGenerate() const {
     if ( IsDir() ) {
-        // Target name is a dir, matching scripts are written within that dir
-        // with a dir tree that parallels the script's ZEEKPATH location.
+
+
 
         set<string> targets;
         vector<string> dir_contents = dir_contents_recursive(Name());
@@ -509,7 +509,7 @@ void ScriptTarget::DoGenerate() const {
         return;
     }
 
-    // Target is a single file, all matching scripts get written there.
+
 
     if ( zeek::detail::zeekygen_mgr->IsUpToDate(Name(), script_deps) )
         return;
@@ -576,4 +576,4 @@ void IdentifierTarget::DoGenerate() const {
         fprintf(file.f, "%s\n\n", info->ReStructuredText().c_str());
 }
 
-} // namespace zeek::zeekygen::detail
+}

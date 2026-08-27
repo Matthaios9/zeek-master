@@ -36,7 +36,7 @@ else ()
 endif ()
 
 if (ZEEK_ROOT_DIR)
-    # Installed in binpac subdir just for organization purposes.
+
     install(FILES ${binpac_headers} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/binpac)
 else ()
     install(FILES ${binpac_headers} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

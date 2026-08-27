@@ -50,7 +50,7 @@ def _parse_symbols(dumpbin, lib_path):
         parts = line.split("|", 1)
         if len(parts) < 2:
             continue
-        # Check if this is a function ("notype ()") or data ("notype" only).
+
         is_function = "notype ()" in parts[0]
         sym = parts[1].strip()
         if not sym:
@@ -79,7 +79,7 @@ def extract_defined_externals(dumpbin, lib_path):
     return defined
 
 
-# Regex matching CMakeFiles directories for Zeek build targets.
+
 _TARGET_DIR_RE = re.compile(r"(zeek_[\w-]+|plugin-[\w-]+)\.dir$")
 
 
@@ -91,7 +91,7 @@ def _scan_obj_files(scan_dir):
     """
     result = []
     for dirpath, dirnames, filenames in os.walk(scan_dir, followlinks=False):
-        # Check if any path component matches a target dir pattern.
+
         parts = os.path.normpath(dirpath).split(os.sep)
         if any(_TARGET_DIR_RE.match(p) for p in parts):
             for fn in filenames:
@@ -106,21 +106,21 @@ def _should_export(sym):
     Uses a whitelist approach: only export symbols in namespaces that
     plugins actually use, plus a few special categories.
     """
-    # Always exclude MSVC string literals.
+
     if sym.startswith("??_C@"):
         return False
 
-    # Exclude main() entry points.
+
     if sym.startswith("?main@@") or sym.startswith("?main@hilti@@"):
         return False
 
-    # Exclude scalar/vector deleting destructors (compiler-generated, LNK4102).
+
     if sym.startswith("??_G") or sym.startswith("??_E"):
         return False
 
-    # Whitelist: export symbols in Zeek-related namespaces.
-    # MSVC mangles namespace::symbol as ?symbol@namespace@@...
-    # We check for @zeek@@, @plugin@@, @hilti@@, @spicy@@, @doctest@@ etc.
+
+
+
     whitelisted_ns = [
         "@zeek@@",
         "@plugin@@",
@@ -130,7 +130,7 @@ def _should_export(sym):
         "@binpac@@",
     ]
 
-    # Also whitelist unmangled C symbols (zeek_version_*, spicy_version_*, etc.)
+
     if (
         sym.startswith("zeek_")
         or sym.startswith("version")
@@ -139,9 +139,9 @@ def _should_export(sym):
     ):
         return True
 
-    # Check if the symbol belongs to a whitelisted namespace.
+
     if any(ns in sym for ns in whitelisted_ns):
-        # Exclude ZAM/compiler internals even in zeek namespace.
+
         if (
             "ZInst" in sym
             or "ZBody" in sym
@@ -149,8 +149,8 @@ def _should_export(sym):
             or "CPPCompile" in sym
         ):
             return False
-        # Exclude protocol analyzer internals that external plugins never need.
-        # These are built-in analyzer implementations, not public API.
+
+
         if any(
             ns in sym
             for ns in [
@@ -195,19 +195,19 @@ def _should_export(sym):
             ]
         ):
             return False
-        # Exclude std:: template instantiations (??$) - these are
-        # compiler-generated and each DLL gets its own copies. Only keep
-        # non-template zeek symbols.
+
+
+
         if sym.startswith("??$"):
             return False
         return True
 
-    # RTTI (??_R) and vtables (??_7) for whitelisted namespaces are
-    # already handled above. Exclude all others.
+
+
     if sym.startswith("??_R") or sym.startswith("??_7"):
         return False
 
-    # Exclude everything else (third-party libs, std:: internals, etc.)
+
     return False
 
 
@@ -224,7 +224,7 @@ def main():
     output_def = sys.argv[2]
     rest = sys.argv[3:]
 
-    # Parse --scan-dir options.
+
     scan_dirs = []
     filtered_rest = []
     i = 0
@@ -237,7 +237,7 @@ def main():
             i += 1
     rest = filtered_rest
 
-    # Expand scan directories into obj file lists.
+
     extra_files = []
     if scan_dirs:
         for scan_dir in scan_dirs:
@@ -247,7 +247,7 @@ def main():
             file=sys.stderr,
         )
 
-    # Split on '--' separator.
+
     if "--" in rest:
         sep = rest.index("--")
         primary_files = rest[:sep] + extra_files
@@ -256,7 +256,7 @@ def main():
         primary_files = rest + extra_files
         backing_files = []
 
-    # Phase 1: collect all defined + undefined symbols from primary libs.
+
     all_symbols = set()
     all_undefs = set()
     all_data_syms = set()
@@ -270,10 +270,10 @@ def main():
         all_undefs.update(undefined)
         all_data_syms.update(data_syms)
 
-    # Remove symbols that are already satisfied by the primary set.
+
     unresolved = all_undefs - all_symbols
 
-    # Phase 2: from backing libs, export only symbols needed by primary libs.
+
     if backing_files and unresolved:
         backing_exported = 0
         for lib in backing_files:
@@ -283,7 +283,7 @@ def main():
                 all_symbols.update(resolved)
                 all_data_syms.update(data_syms & resolved)
                 unresolved -= resolved
-                # Also pull in the backing libs' own undefined deps (one more level).
+
                 all_undefs.update(undefined)
                 backing_exported += len(resolved)
         print(
@@ -291,21 +291,21 @@ def main():
             file=sys.stderr,
         )
 
-    # Apply whitelist filter.
+
     exported = {sym for sym in all_symbols if _should_export(sym)}
     exported_data = all_data_syms & exported
 
-    # Force-add CRT allocation functions. With static CRT (/MT), each
-    # module gets its own heap. By exporting these from zeek.exe and
-    # forcing plugins to import them (via /INCLUDE linker directives),
-    # all new/delete operations use the same heap.
+
+
+
+
     crt_alloc_symbols = [
-        "??2@YAPEAX_K@Z",  # operator new(size_t)
-        "??_U@YAPEAX_K@Z",  # operator new[](size_t)
-        "??3@YAXPEAX@Z",  # operator delete(void*)
-        "??3@YAXPEAX_K@Z",  # operator delete(void*, size_t)
-        "??_V@YAXPEAX@Z",  # operator delete[](void*)
-        "??_V@YAXPEAX_K@Z",  # operator delete[](void*, size_t)
+        "??2@YAPEAX_K@Z",
+        "??_U@YAPEAX_K@Z",
+        "??3@YAXPEAX@Z",
+        "??3@YAXPEAX_K@Z",
+        "??_V@YAXPEAX@Z",
+        "??_V@YAXPEAX_K@Z",
     ]
     exported.update(crt_alloc_symbols)
 

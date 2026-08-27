@@ -1,5 +1,5 @@
-// See the file "COPYING" in the main distribution directory for copyright.
-//
+
+
 #include "zeek/cluster/PublishOnChangeState.h"
 
 #include <cstdio>
@@ -22,12 +22,12 @@
 #include "zeek/Type.h"
 #include "zeek/Val.h"
 #include "zeek/ZeekString.h"
-#include "zeek/broker/Data.h" // for data_to_val()
+#include "zeek/broker/Data.h"
 #include "zeek/cluster/Backend.h"
 
 namespace {
 
-// Receives the set[TableChange] value and returns it as a bitmask.
+
 uint8_t changes_to_bitmask(const zeek::TableVal& changes) {
     uint8_t result = 0;
 
@@ -46,7 +46,7 @@ uint8_t changes_to_bitmask(const zeek::TableVal& changes) {
     return result;
 }
 
-// Convert a key in ListVal form (from a TableVal) to a anyvec
+
 zeek::VectorValPtr listval_to_anyvec(const zeek::ListVal& lv) {
     static const auto& any_vec_type = zeek::id::find_type<zeek::VectorType>("any_vec");
 
@@ -59,10 +59,10 @@ zeek::VectorValPtr listval_to_anyvec(const zeek::ListVal& lv) {
     return index_vec;
 }
 
-// Helper to convert a received any value (which might be wrapped by Broker::Data) to a ValPtr
-//
-// Broker unserialization wraps any values into the opaque Broker::Data type. This helper
-// unwraps that and converts to the correct type t.
+
+
+
+
 zeek::ValPtr maybe_unwrap_broker_data(zeek::Type& t, zeek::Val* any) {
     if ( any->GetType() == zeek::Broker::detail::DataVal::ScriptDataType() ) {
         auto ov = any->AsRecordVal()->GetField<zeek::OpaqueVal>(0);
@@ -86,7 +86,7 @@ zeek::ValPtr maybe_unwrap_broker_data(zeek::Type& t, zeek::Val* any) {
     return zeek::IntrusivePtr(zeek::NewRef{}, any);
 }
 
-// Convert a VectorVal raw vector holding ZVals to a ListValPtr for TableVal operations.
+
 zeek::ListValPtr raw_vec_to_listval(zeek::TypeListPtr tl, const std::vector<std::optional<zeek::ZVal>>& raw_vec) {
     std::vector<zeek::ValPtr> index_vals;
 
@@ -96,13 +96,13 @@ zeek::ListValPtr raw_vec_to_listval(zeek::TypeListPtr tl, const std::vector<std:
     for ( size_t i = 0; i < raw_vec.size(); i++ ) {
         const auto& typ = tl->IsPure() ? tl->GetPureType() : types[i];
 
-        // This shouldn't happen and will likely only cause trouble downstream.
+
         if ( ! raw_vec[i].has_value() ) {
             zeek::reporter->InternalWarning("PublishOnChange::raw_vec_to_listval: Unset raw_vec %zu", i);
             return nullptr;
         }
 
-        // The index is a vector of any and right now that means the Broker::DataVal type is used :-(
+
         zeek::Val* index_any_i = raw_vec[i]->AsAny();
         zeek::ValPtr index_i = maybe_unwrap_broker_data(*typ, index_any_i);
         if ( ! index_i ) {
@@ -116,7 +116,7 @@ zeek::ListValPtr raw_vec_to_listval(zeek::TypeListPtr tl, const std::vector<std:
     return zeek::make_intrusive<zeek::ListVal>(std::move(tl), std::move(index_vals));
 }
 
-// Check if the index of tv matches the arguments of ft.
+
 bool topic_func_is_ok(const zeek::TableVal& tv, const zeek::Func& f) {
     const auto& index_types = tv.GetType<zeek::TableType>()->GetIndexTypes();
     const auto& arg_types = f.GetType()->ParamList()->GetTypes();
@@ -146,7 +146,7 @@ zeek::StringValPtr invoke_cluster_node_id() {
     return zeek::cast_intrusive<zeek::StringVal>(r);
 }
 
-// Crash when the field does not exist.
+
 int field_offset_or_fatal(const zeek::RecordTypePtr& rt, const char* name) {
     int offset = rt->FieldOffset(name);
 
@@ -156,8 +156,8 @@ int field_offset_or_fatal(const zeek::RecordTypePtr& rt, const char* name) {
     return offset;
 }
 
-// Just a helper struct for encapsulating record value creation and making some
-// field offsets easily accessible.
+
+
 class RecordBuilderHelper final {
 public:
     RecordBuilderHelper() {
@@ -198,9 +198,9 @@ public:
         tcheader->AssignTime(tch_ts_offset, now);
         tcheader->Assign(tch_node_id_offset, node_id.get());
 
-        // Above Assign() calls adopted the references of the StringValPtrs
-        // passed (efficient direct ZVal assignment), so we aren't supposed
-        // to unref upon leaving the scope.
+
+
+
         id.release();
         node_id.release();
 
@@ -210,18 +210,18 @@ public:
 
     zeek::RecordValPtr BuildChangeInfo(zeek_int_t change, double now, const zeek::ListVal& index,
                                        const zeek::ValPtr& value, const zeek::ValPtr& previous_value) const {
-        // Build the TableChangeInfo record to be queued.
+
         auto tci = make_intrusive<zeek::RecordVal>(table_change_info);
 
-        // change is zeek_int_t representing the value of TableChange,
-        // so we can efficiently assign as zeek_int_t.
+
+
         tci->Assign(tci_change_offset, change);
         tci->AssignTime(tci_ts_offset, now);
         tci->Assign(tci_index_offset, listval_to_anyvec(index));
 
         if ( value ) {
             if ( is_atomic_type(value->GetType()) )
-                // No need to clone a value if it's atomic, it won't be changed under us.
+
                 tci->Assign(tci_value_offset, value);
             else
                 tci->Assign(tci_value_offset, value->Clone());
@@ -229,7 +229,7 @@ public:
 
         if ( previous_value ) {
             if ( zeek::is_atomic_type(previous_value->GetType()) )
-                // No need to clone a value if it's atomic, it won't be changed under us.
+
                 tci->Assign(tci_previous_value_offset, previous_value);
             else
                 tci->Assign(tci_previous_value_offset, previous_value->Clone());
@@ -238,14 +238,14 @@ public:
         return tci;
     }
 
-    // PublishOnChangeAttr field offsets.
+
     zeek::RecordTypePtr poc_attr;
     int poc_attr_changes_offset = -1;
     int poc_attr_topic_offset = -1;
     int poc_attr_max_batch_size_offset = -1;
     int poc_attr_max_batch_delay_offset = -1;
 
-    // TableChangeHeader field offsets.
+
     zeek::RecordTypePtr table_change_header;
     int tch_id_offset = -1;
     int tch_ts_offset = -1;
@@ -253,7 +253,7 @@ public:
 
     zeek::RecordTypePtr table_change_info;
 
-    // TableChangeInfo field offsets.
+
     int tci_change_offset = -1;
     int tci_ts_offset = -1;
     int tci_index_offset = -1;
@@ -263,22 +263,22 @@ public:
     zeek::VectorTypePtr table_change_infos;
 };
 
-} // namespace
+}
 
-// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+
 
 #define debug(fmt, ...)                                                                                                \
     do {                                                                                                               \
         DBG_LOG(DBG_CLUSTER, fmt, __VA_ARGS__);                                                                        \
     } while ( 0 )
 
-// NOLINTEND(cppcoreguidelines-macro-usage)
+
 
 namespace zeek::detail {
-/**
- * Per table timer for any queued changes to be published. Timer is owned by
- * an PublishOnChangeState instance.
- */
+
+
+
+
 class PublishQueuedChangesTimer : public Timer {
 public:
     PublishQueuedChangesTimer(double t, PublishOnChangeState* state)
@@ -293,7 +293,7 @@ private:
     PublishOnChangeState* state;
 };
 
-// Storage for static variables.
+
 std::optional<std::string> PublishOnChangeState::forward_topic;
 EventHandlerPtr PublishOnChangeState::eh_table_change_infos;
 EventHandlerPtr PublishOnChangeState::eh_forward_table_change_infos;
@@ -312,23 +312,23 @@ PublishOnChangeState::PublishOnChangeState(StringValPtr identifier, TableVal* ta
 
 
 PublishOnChangeState::~PublishOnChangeState() {
-    // Ensure any timer is canceled.
+
     CancelPublishTimer();
 }
 
 
 void PublishOnChangeState::QueueChange(BifEnum::TableChange change, const Val& index, const ValPtr& value,
                                        const ValPtr& previous_value) {
-    // Static type and field offsets.
+
     static const auto helper = RecordBuilderHelper();
 
-    // Enum values.
+
     static const auto change_new = id::find("TABLE_ELEMENT_NEW")->GetVal()->AsEnum();
     static const auto change_changed = id::find("TABLE_ELEMENT_CHANGED")->GetVal()->AsEnum();
     static const auto change_removed = id::find("TABLE_ELEMENT_REMOVED")->GetVal()->AsEnum();
     static const auto change_expired = id::find("TABLE_ELEMENT_EXPIRED")->GetVal()->AsEnum();
 
-    // Initialize the topic once, unless there's a topic_func given.
+
     if ( ! topic_func && ! topic.has_value() ) {
         const auto* loc = table_val->GetLocationInfo();
         std::string loc_str = util::fmt("%s:%d", loc->FileName(), loc->FirstLine());
@@ -342,7 +342,7 @@ void PublishOnChangeState::QueueChange(BifEnum::TableChange change, const Val& i
     debug("queue %d index=%s value=%p %s tcinfo refs=%d", change, obj_desc_short(&index).c_str(), value.get(),
           value ? obj_desc_short(value).c_str() : "<no value>", tcinfo->RefCnt());
 
-    // If topic and changes field is in use, that's easy, just use changes.
+
     if ( topic.has_value() ) {
         assert(! topic_func);
         assert(topic_changes.empty());
@@ -354,7 +354,7 @@ void PublishOnChangeState::QueueChange(BifEnum::TableChange change, const Val& i
             reporter->InternalError("failed to append rv to changes");
     }
     else if ( topic_func ) {
-        // topic_func is set - compute the topic dynamically for this change.
+
         const auto* lv = index.AsListVal();
         Args args;
         args.reserve(lv->Length());
@@ -369,10 +369,10 @@ void PublishOnChangeState::QueueChange(BifEnum::TableChange change, const Val& i
             return;
         }
 
-        // The computed topic as std::string
+
         auto topic_sv = result->AsStringVal()->ToStdStringView();
 
-        // Find the queue for the topic, or create a new one if there's none.
+
         auto it = topic_changes.find(topic_sv);
         if ( it == topic_changes.end() ) {
             VectorValPtr topic_changes_value = helper.BuildTableChangeInfos();
@@ -381,7 +381,7 @@ void PublishOnChangeState::QueueChange(BifEnum::TableChange change, const Val& i
             it = inserted_it;
         }
 
-        // Append the TableChangeInfo record to the queue.
+
         if ( ! it->second->Append(std::move(tcinfo)) )
             reporter->InternalError("failed to append rv to topic_changes");
     }
@@ -391,16 +391,16 @@ void PublishOnChangeState::QueueChange(BifEnum::TableChange change, const Val& i
 
     queued_changes++;
 
-    // Figure out if we should publish immediately:
-    //
-    // 1) Batching or delaying is disabled
-    // 2) The last publish operation was longer than max_batch_delay ago.
-    // 3) The max_batch_size has been reached.
-    //
-    // Otherwise, arm the timer for delayed publishing based
-    // on the last_publish_ts.
-    //
-    // NOLINTBEGIN(bugprone-branch-clone)
+
+
+
+
+
+
+
+
+
+
     if ( max_batch_delay == 0.0 || max_batch_size == 0 ) {
         PublishQueuedChanges(now);
     }
@@ -410,9 +410,9 @@ void PublishOnChangeState::QueueChange(BifEnum::TableChange change, const Val& i
     else if ( queued_changes >= max_batch_size ) {
         PublishQueuedChanges(now);
     }
-    // NOLINTEND(bugprone-branch-clone)
+
     else {
-        // If we get here, we're actually queueing the change.
+
         if ( ! timer )
             timer = ArmPublishTimer(last_publish_ts);
     }
@@ -420,27 +420,27 @@ void PublishOnChangeState::QueueChange(BifEnum::TableChange change, const Val& i
 
 void PublishOnChangeState::PublishQueuedChanges(double now, const std::string& topic, RecordValPtr tcheader,
                                                 VectorValPtr tcinfos) const {
-    // If network timestamp metadata is enabled. Add it as metadata vector to the event.
+
     detail::EventMetadataVectorPtr meta;
     if ( BifConst::EventMetadata::add_network_timestamp )
         meta = detail::MakeEventMetadataVector(now);
 
-    // If the forward_topic has a value, publish to the forward_topic instead of topic using the
-    // forwarding event handler. The receiver will re-publish to the intended topic. This is needed
-    // for cluster backends that do not offer full publish/subscribe visibility, but &publish_on_change
-    // should also work for these. The forward_topic is usually Cluster::manager_topic and the manager
-    // will re-publish to the intended topic.
+
+
+
+
+
     const auto& eh_effective = forward_topic.has_value() ? eh_forward_table_change_infos : eh_table_change_infos;
     const auto& topic_effective = forward_topic.has_value() ? forward_topic.value() : topic;
 
     debug("publish event=%s topic=%s topic_effective=%s table_change_infos=%u", eh_effective->Name(), topic.c_str(),
           topic_effective.c_str(), tcinfos->Size());
 
-    // The arguments for the Cluster::table_change_infos() event.
+
     Args args{std::move(tcheader), std::move(tcinfos)};
 
-    // By convention, the forwarding event has the topic as the last parameter,
-    // so we can just append it here as a new StringVal.
+
+
     if ( forward_topic.has_value() ) {
         args.emplace_back(make_intrusive<StringVal>(topic));
         debug("publish event - forwarding via %s", forward_topic.value().c_str());
@@ -456,7 +456,7 @@ void PublishOnChangeState::PublishQueuedChanges(double now, const std::string& t
 void PublishOnChangeState::PublishQueuedChanges(double now) {
     static const auto helper = RecordBuilderHelper();
 
-    // Unconditionally cancel the timer if it is set.
+
     CancelPublishTimer();
 
     auto tcheader = helper.BuildTableChangeHeader(identifier, now, GetLocalNodeId());
@@ -487,15 +487,15 @@ void PublishOnChangeState::PublishQueuedChanges(double now) {
 void PublishOnChangeState::ApplyChanges(const RecordVal& tcheader, const VectorVal& tcinfos) {
     static const auto helper = RecordBuilderHelper();
 
-    // Set the in_apply_changes member to true such that nested OnChange()
-    // calls short-circuit while processing incoming changes. Resets to false
-    // when leaving the scope.
+
+
+
     InApplyChangesScope scope(this);
 
     const auto& raw_vec = tcinfos.RawVec();
 
     for ( size_t i = 0; i < tcinfos.Size(); i++ ) {
-        // tci is a TableChangeInfo record value.
+
         const auto& tci = raw_vec[i]->AsRecord();
 
         auto change = tci->GetFieldAs<EnumVal>(helper.tci_change_offset);
@@ -511,7 +511,7 @@ void PublishOnChangeState::ApplyChanges(const RecordVal& tcheader, const VectorV
 
         ValPtr value;
         if ( tci->HasField(helper.tci_value_offset) ) {
-            // Don't expect values for sets.
+
             value = tci->GetField(helper.tci_value_offset);
 
             if ( table_val->GetType()->IsSet() ) {
@@ -527,11 +527,11 @@ void PublishOnChangeState::ApplyChanges(const RecordVal& tcheader, const VectorV
                 maybe_unwrap_broker_data(*table_val->GetType()->Yield(), tci->GetField(helper.tci_value_offset).get());
         }
 
-        // We don't use previous_value at this point. It's mostly for users that want to do fancy
-        // stuff with the apply_table_change_infos_policy hook, but we can still verify and warn
-        // if it is unexpected.
+
+
+
         if ( tci->HasField(helper.tci_previous_value_offset) ) {
-            // Don't expect previous values when the element is new, removed or expired.
+
             if ( change == BifEnum::TABLE_ELEMENT_NEW || change == BifEnum::TABLE_ELEMENT_REMOVED ||
                  change == BifEnum::TABLE_ELEMENT_EXPIRED ) {
                 reporter
@@ -544,21 +544,21 @@ void PublishOnChangeState::ApplyChanges(const RecordVal& tcheader, const VectorV
             }
         }
 
-        // Now apply the change to the table using the TableVal API.
+
         switch ( static_cast<BifEnum::TableChange>(change) ) {
             case BifEnum::TABLE_ELEMENT_NEW:
             case BifEnum::TABLE_ELEMENT_CHANGED:
                 debug("assigning %s %s (change=%" PRId64 ")", obj_desc_short(index).c_str(),
                       value ? obj_desc_short(value).c_str() : "<no value>", change);
 
-                table_val->Assign(index, value, /*broker_forward=*/false, /*iterators_invalidated=*/nullptr);
+                table_val->Assign(index, value, false, nullptr);
 
                 break;
 
-            case BifEnum::TABLE_ELEMENT_EXPIRED: // treat expired elements from remote nodes like a delete
+            case BifEnum::TABLE_ELEMENT_EXPIRED:
             case BifEnum::TABLE_ELEMENT_REMOVED:
                 debug("removing %s (change=%" PRId64 ")", obj_desc_short(index).c_str(), change);
-                table_val->Remove(*index, /*broker_forward=*/false, /*iterators_invalidated=*/nullptr);
+                table_val->Remove(*index, false, nullptr);
                 break;
 
             default:
@@ -587,7 +587,7 @@ void PublishOnChangeState::CancelPublishTimer() {
 
 std::unique_ptr<PublishOnChangeState> PublishOnChangeState::Instantiate(const std::string& id, TableVal* table_val,
                                                                         const RecordVal& rec) {
-    // Static type and field offsets.
+
     static const auto helper = RecordBuilderHelper();
 
     static const auto poc_attr_type = id::find_type<RecordType>("Cluster::PublishOnChangeAttr");
@@ -615,7 +615,7 @@ std::unique_ptr<PublishOnChangeState> PublishOnChangeState::Instantiate(const st
     FuncPtr topic_func;
 
     if ( rec.HasField(topic_offset) ) {
-        // Topic is an any. We support either TYPE_FUNC, or TYPE_STRING.
+
         auto topic_val = rec.GetField(topic_offset);
         const auto& topic_val_type = topic_val->GetType();
 
@@ -640,8 +640,8 @@ std::unique_ptr<PublishOnChangeState> PublishOnChangeState::Instantiate(const st
         }
     }
     else {
-        // Compute a topic automatically. I wonder if this should be a script-level
-        // callback, or minimally for the topic separator.
+
+
         const char* topic_sep = "/";
         topic = util::fmt("zeek%stable%s%s%s", topic_sep, topic_sep, id.c_str(), topic_sep);
         debug("using topic '%s' for table %s", topic->c_str(), id.c_str());
@@ -664,7 +664,7 @@ const StringValPtr& PublishOnChangeState::GetLocalNodeId() {
 }
 
 void PublishOnChangeState::InitPostScript() {
-    // The event handler that's used for publishing.
+
     eh_table_change_infos = event_registry->Register("Cluster::table_change_infos");
     if ( ! eh_table_change_infos.Ptr() )
         reporter->InternalError("could not find Cluster::table_change_infos event for &publish_on_change");
@@ -675,12 +675,12 @@ void PublishOnChangeState::InitPostScript() {
 
     const auto poc_attr_rt = id::find_type<RecordType>("Cluster::PublishOnChangeAttr");
 
-    // Find all top-level global tables with the &publish_on_change attribute, create a record constructor
-    // expression from the attached expression and evaluate it.
-    //
-    // This is a bit different from other attributes: We want to at least have redef's of default values
-    // be in effect for the publish_on_change attribute. Something that doesn't work always with attributes,
-    // so here we special case it as it seems important enough.
+
+
+
+
+
+
     for ( const auto& [name, id] : global_scope()->Vars() ) {
         auto poc_attr = id->GetAttr(detail::ATTR_PUBLISH_ON_CHANGE);
         if ( ! poc_attr )
@@ -692,11 +692,11 @@ void PublishOnChangeState::InitPostScript() {
 
         auto expr = poc_attr->GetExpr();
 
-        // If the expression is an anonymous record constructor expression
-        // with its own type (identified by not having a name), replace it
-        // with a record constructor using the PublishOnChangeAttr type.
-        // This produces better errors than using coercion and allows to
-        // enforce concrete PublishOnChangeAttr instances after Eval().
+
+
+
+
+
         if ( expr->Tag() == EXPR_RECORD_CONSTRUCTOR && expr->GetType()->GetName().empty() ) {
             auto rce = cast_intrusive<RecordConstructorExpr>(expr);
             expr = zeek::make_intrusive<RecordConstructorExpr>(poc_attr_rt, rce->Op());
@@ -706,12 +706,12 @@ void PublishOnChangeState::InitPostScript() {
         try {
             val = expr->Eval(nullptr);
         } catch ( InterpreterException& ) {
-            // Should have reported the error in Eval()
+
             continue;
         }
 
         if ( ! val || ! val->GetType() )
-            // Should have reported the error in Eval()
+
             continue;
 
         if ( val->GetType()->Tag() != TYPE_RECORD || val->GetType() != poc_attr_rt ) {
@@ -719,8 +719,8 @@ void PublishOnChangeState::InitPostScript() {
             continue;
         }
 
-        // Cast to RecordVal and adopt the location the whole table
-        // for any subsequent error reporting during Instantiate().
+
+
         auto table_val = cast_intrusive<TableVal>(id->GetVal());
         auto poc_rec_val = with_location_of(cast_intrusive<RecordVal>(val), table_val);
 
@@ -731,22 +731,22 @@ void PublishOnChangeState::InitPostScript() {
 }
 
 bool cluster_publish_table(const std::string& topic, const TableVal& table_val, size_t batch_size) {
-    // Static type and field offsets.
+
     static const auto helper = RecordBuilderHelper();
 
-    // The state isn't all that important for publishing. It's more important
-    // for receiving as we publish using Cluster::table_change_infos(), but it's
-    // easy way to to the table identifier.
+
+
+
     const auto* poc_state = table_val.GetPublishOnChangeState();
     if ( ! poc_state )
         return false;
 
-    // Construct the header.
+
     auto now = run_state::network_time;
     auto tcheader =
         helper.BuildTableChangeHeader(poc_state->GetIdentifier(), now, PublishOnChangeState::GetLocalNodeId());
 
-    // Number of elements published.
+
     size_t published = 0;
 
     const auto* dict = table_val.Get();
@@ -757,7 +757,7 @@ bool cluster_publish_table(const std::string& topic, const TableVal& table_val, 
     for ( const auto& tve : *dict ) {
         ListValPtr index = table_val.RecreateIndex(*tve.GetHashKey());
         auto tcinfo = helper.BuildChangeInfo(BifEnum::TABLE_ELEMENT_NEW, now, *index, tve.value->GetVal(),
-                                             /*previous_value=*/nullptr);
+                                             nullptr);
 
         tcinfos->Append(std::move(tcinfo));
 
@@ -770,11 +770,11 @@ bool cluster_publish_table(const std::string& topic, const TableVal& table_val, 
         ++published;
     }
 
-    // Publish any remaining entries.
+
     if ( tcinfos->Size() > 0 )
         poc_state->PublishQueuedChanges(now, topic, tcheader, tcinfos);
 
 
     return true;
 }
-} // namespace zeek::detail
+}

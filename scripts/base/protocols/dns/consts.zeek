@@ -1,16 +1,16 @@
-##! Types, errors, and fields for analyzing DNS data.  A helper file
-##! for DNS analysis scripts.
+
+
 
 module DNS;
 
 export {
-	const PTR = 12;  ##< RR TYPE value for a domain name pointer.
-	const EDNS = 41; ##< An OPT RR TYPE value described by EDNS.
-	const NONE = 254; ##< A class representing no classes, used by dynamic update.
-	const ANY = 255; ##< A QTYPE value describing a request for all records.
+	const PTR = 12;
+	const EDNS = 41;
+	const NONE = 254;
+	const ANY = 255;
 
-	## Mapping of DNS query type codes to human readable string
-	## representation.
+
+
 	const query_types = {
 		[1] = "A",
 		[2] = "NS",
@@ -101,47 +101,47 @@ export {
 		[65281] = "WINS",
 		[65282] = "WINS-R",
 		[65422] = "XPF",
-		[65521] = "INTEGRITY", # google: https://docs.google.com/document/d/14eCqVyT_3MSj7ydqNFl1Yl0yg1fs6g24qmYUUdi5V-k/edit
+		[65521] = "INTEGRITY",
 	} &default = function(n: count): string { return fmt("query-%d", n); };
 
-	## Errors used for non-TSIG/EDNS types.
+
 	const base_errors = {
-		[0] = "NOERROR",        # No Error
-		[1] = "FORMERR",        # Format Error
-		[2] = "SERVFAIL",       # Server Failure
-		[3] = "NXDOMAIN",       # Non-Existent Domain
-		[4] = "NOTIMP",         # Not Implemented
-		[5] = "REFUSED",        # Query Refused
-		[6] = "YXDOMAIN",       # Name Exists when it should not
-		[7] = "YXRRSET",        # RR Set Exists when it should not
-		[8] = "NXRRSet",        # RR Set that should exist does not
-		[9] = "NOTAUTH",        # Server Not Authoritative for zone
-		[10] = "NOTZONE",       # Name not contained in zone
-		[11] = "unassigned-11", # available for assignment
-		[12] = "unassigned-12", # available for assignment
-		[13] = "unassigned-13", # available for assignment
-		[14] = "unassigned-14", # available for assignment
-		[15] = "unassigned-15", # available for assignment
-		[16] = "BADVERS",       # for EDNS, collision w/ TSIG
-		[17] = "BADKEY",        # Key not recognized
-		[18] = "BADTIME",       # Signature out of time window
-		[19] = "BADMODE",       # Bad TKEY Mode
-		[20] = "BADNAME",       # Duplicate key name
-		[21] = "BADALG",        # Algorithm not supported
-		[22] = "BADTRUNC",      # draft-ietf-dnsext-tsig-sha-05.txt
-		[23] = "BADCOOKIE",     # Bad EDNS cookie value
-		[3842] = "BADSIG",      # 16 <= number collision with EDNS(16);
-		                        # this is a translation from TSIG(16)
+		[0] = "NOERROR",
+		[1] = "FORMERR",
+		[2] = "SERVFAIL",
+		[3] = "NXDOMAIN",
+		[4] = "NOTIMP",
+		[5] = "REFUSED",
+		[6] = "YXDOMAIN",
+		[7] = "YXRRSET",
+		[8] = "NXRRSet",
+		[9] = "NOTAUTH",
+		[10] = "NOTZONE",
+		[11] = "unassigned-11",
+		[12] = "unassigned-12",
+		[13] = "unassigned-13",
+		[14] = "unassigned-14",
+		[15] = "unassigned-15",
+		[16] = "BADVERS",
+		[17] = "BADKEY",
+		[18] = "BADTIME",
+		[19] = "BADMODE",
+		[20] = "BADNAME",
+		[21] = "BADALG",
+		[22] = "BADTRUNC",
+		[23] = "BADCOOKIE",
+		[3842] = "BADSIG",
+
 	} &default = function(n: count): string { return fmt("rcode-%d", n); };
 
-	## This deciphers EDNS Z field values.
+
 	const edns_zfield = {
-		[0]     = "NOVALUE",    # regular entry
-		[32768] = "DNS_SEC_OK", # accepts DNS Sec RRs
+		[0]     = "NOVALUE",
+		[32768] = "DNS_SEC_OK",
 	} &default="?";
 
-	## Possible values of the CLASS field in resource records or QCLASS
-	## field in query messages.
+
+
 	const classes = {
 		[1]   = "C_INTERNET",
 		[2]   = "C_CSNET",
@@ -151,7 +151,7 @@ export {
 		[255] = "C_ANY",
 	} &default = function(n: count): string { return fmt("qclass-%d", n); };
 
-	## Possible values of the algorithms used in DNSKEY, DS and RRSIG records
+
 	const algorithms = {
 		[0] = "reserved0",
 		[1] = "RSA_MD5",
@@ -174,7 +174,7 @@ export {
 		[255] = "reserved255",
 	} &default = function(n: count): string { return fmt("algorithm-%d", n); };
 
-	## Possible digest types used in DNSSEC.
+
 	const digests = {
 		[0] = "reserved0",
 		[1] = "SHA1",
@@ -183,8 +183,8 @@ export {
 		[4] = "SHA384",
 	} &default = function(n: count): string { return fmt("digest-%d", n); };
 
-	## SVCB/HTTPS SvcParam keys as defined in :rfc:`9460#name-initial-contents`.
-	## Keep in sync with src/analyzer/protocol/dns/DNS.h SVCPARAM_Key.
+
+
 	const svcparam_keys = {
 		[0] = "mandatory",
 		[1] = "alpn",
@@ -202,7 +202,7 @@ export {
 	const DNS_OP_DYNAMIC_UPDATE = 5;
 	const DNS_OP_DSO = 6;
 
-	## Mapping of DNS operation type codes to human readable string representation.
+
 	const opcodes = {
 		[0] = "query",
 		[1] = "iquery",
@@ -212,9 +212,9 @@ export {
 		[6] = "dso",
 	} &default = function(n: count): string { return fmt("opcode-%d", n); };
 
-	## Mapping of DNS operation type codes to human readable string representation for
-	## NetBIOS Name Service (NBNS) queries. These codes are defined in
-	## https://datatracker.ietf.org/doc/html/rfc1002#section-4.2.1.1
+
+
+
 	const netbios_opcodes = {
 		[0] = "netbios-query",
 		[5] = "netbios-registration",

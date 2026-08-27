@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/broker/Plugin.h"
 
@@ -12,10 +12,10 @@
 using namespace zeek::plugin::Zeek_Cluster_Backend_Broker;
 
 zeek::plugin::Configuration Plugin::Configure() {
-    // For now, there's always the broker_mgr instance that's explicitly
-    // instantiated in zeek-setup.cc. Don't even allow to instantiate
-    // a second one via the plugin mechanism. In the future, this could
-    // be changed so that broker is instantiated on demand only.
+
+
+
+
     auto fail_instantiate =
         [](std::unique_ptr<cluster::EventSerializer>, std::unique_ptr<cluster::LogSerializer>,
            std::unique_ptr<cluster::detail::EventHandlingStrategy>) -> std::unique_ptr<cluster::Backend> {

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #define binpac_regex_h
 
@@ -16,4 +16,4 @@ int bytestring_to_int(bytestring const* s) { return atoi(reinterpret_cast<const 
 
 double bytestring_to_double(bytestring const* s) { return atof(reinterpret_cast<const char*>(s->begin())); }
 
-} // namespace binpac
+}

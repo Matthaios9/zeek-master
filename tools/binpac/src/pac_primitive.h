@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_primitive_h
 #define pac_primitive_h
@@ -68,4 +68,4 @@ private:
     Expr* expr_;
 };
 
-#endif // pac_primitive_h
+#endif

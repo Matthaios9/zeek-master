@@ -1,4 +1,4 @@
-##! Software identification and extraction for MySQL traffic.
+
 
 @load base/frameworks/software
 
@@ -6,7 +6,7 @@ module MySQL;
 
 export {
 	redef enum Software::Type += {
-		## Identifier for MySQL servers in the software framework.
+
 		SERVER,
 	};
 }

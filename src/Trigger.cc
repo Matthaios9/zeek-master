@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Trigger.h"
 
@@ -20,12 +20,12 @@
 using namespace zeek::detail;
 using namespace zeek::detail::trigger;
 
-// Callback class to traverse an expression, registering all relevant IDs and
-// Vals for change notifications.
+
+
 
 namespace zeek::detail::trigger {
 
-// Used to extract the globals and locals seen in a trigger expression.
+
 class TriggerTraversalCallback : public TraversalCallback {
 public:
     TriggerTraversalCallback(IDSet& _globals, IDSet& _locals) : globals(_globals), locals(_locals) {}
@@ -38,8 +38,8 @@ private:
 };
 
 TraversalCode trigger::TriggerTraversalCallback::PreExpr(const Expr* expr) {
-    // We catch all expressions here which in some way reference global
-    // state.
+
+
 
     switch ( expr->Tag() ) {
         case EXPR_NAME: {
@@ -53,7 +53,7 @@ TraversalCode trigger::TriggerTraversalCallback::PreExpr(const Expr* expr) {
         };
 
         default:
-            // All others are uninteresting.
+
             break;
     }
 
@@ -73,9 +73,9 @@ public:
     ~TriggerTimer() override { Unref(trigger); }
 
     void Dispatch(double t, bool is_expire) override {
-        // The network_time may still have been zero when the
-        // timer was instantiated.  In this case, it fires
-        // immediately and we simply restart it.
+
+
+
         if ( time )
             trigger->Timeout();
         else {
@@ -131,8 +131,8 @@ Trigger::Trigger(const std::shared_ptr<WhenInfo>& wi, const IDSet& _globals, std
         f->SetDelayed();
     }
 
-    // Make sure we don't get deleted if somebody calls a method like
-    // Timeout() while evaluating the trigger.
+
+
     Ref(this);
 
     if ( ! Eval() && timeout_value >= 0 ) {
@@ -146,8 +146,8 @@ void Trigger::Terminate() {
         auto parent = frame->GetTrigger();
 
         if ( ! parent->Disabled() ) {
-            // If the trigger was already disabled due to interpreter
-            // exception, an Unref already happened at that point.
+
+
             parent->Disable();
             Unref(parent);
         }
@@ -169,8 +169,8 @@ Trigger::~Trigger() {
     UnregisterAll();
 
     Unref(attached);
-    // Due to ref'counting, "this" cannot be part of pending at this
-    // point.
+
+
 }
 
 void Trigger::ReInit(const std::vector<ValPtr>& index_expr_results) {
@@ -213,21 +213,21 @@ bool Trigger::Eval() {
         return false;
     }
 
-    // It's unfortunate that we have to copy the frame again here but
-    // otherwise changes to any of the locals would propagate to later
-    // evaluations.
-    //
-    // An alternative approach to copying the frame would be to deep-copy
-    // the expression itself, replacing all references to locals with
-    // constants.
+
+
+
+
+
+
+
 
     Frame* f = nullptr;
 
     try {
         f = frame->CloneForTrigger();
     } catch ( InterpreterException& ) {
-        // Frame contains values that couldn't be cloned. It's
-        // already been reported, disable trigger.
+
+
         Disable();
         Unref(this);
         return false;
@@ -240,7 +240,7 @@ bool Trigger::Eval() {
 
     try {
         v = cond->Eval(f);
-    } catch ( InterpreterException& ) { /* Already reported */
+    } catch ( InterpreterException& ) {
     }
 
     IndexExprWhen::EndEval();
@@ -256,7 +256,7 @@ bool Trigger::Eval() {
     }
 
     if ( ! v || v->IsZero() ) {
-        // Not true. Perhaps next time...
+
         DBG_LOG(DBG_NOTIFIERS, "%s: trigger condition is false", Name());
         Unref(f);
         ReInit(index_expr_results);
@@ -270,7 +270,7 @@ bool Trigger::Eval() {
 
     try {
         v = body->Exec(f, flow);
-    } catch ( InterpreterException& e ) { /* Already reported. */
+    } catch ( InterpreterException& e ) {
     }
 
     if ( is_return ) {
@@ -290,8 +290,8 @@ bool Trigger::Eval() {
         frame->ClearTrigger();
 
         if ( ! queued && trigger->TimeoutValue() < 0 )
-            // Usually the parent-trigger would get unref'd either by
-            // its Eval() or its eventual Timeout(), but has neither
+
+
             Unref(trigger);
     }
 
@@ -318,7 +318,7 @@ void Trigger::Timeout() {
 
         try {
             v = timeout_stmts->Exec(f.get(), flow);
-        } catch ( InterpreterException& e ) { /* Already reported. */
+        } catch ( InterpreterException& e ) {
         }
 
         if ( is_return ) {
@@ -337,8 +337,8 @@ void Trigger::Timeout() {
             frame->ClearTrigger();
 
             if ( ! queued && trigger->TimeoutValue() < 0 )
-                // Usually the parent-trigger would get unref'd either by
-                // its Eval() or its eventual Timeout(), but has neither
+
+
                 Unref(trigger);
         }
     }
@@ -449,10 +449,10 @@ double Manager::GetNextTimeout() { return pending->empty() ? -1 : run_state::net
 void Manager::Process() {
     DBG_LOG(DBG_NOTIFIERS, "evaluating all pending triggers");
 
-    // While we iterate over the list, executing statements, we may
-    // in fact trigger new triggers and thereby modify the list.
-    // Therefore, we create a new temporary list which will receive
-    // triggers triggered during this time.
+
+
+
+
     TriggerList* orig = pending;
     TriggerList tmp;
     pending = &tmp;
@@ -482,4 +482,4 @@ void Manager::GetStats(Stats* stats) {
     stats->pending = pending->size();
 }
 
-} // namespace zeek::detail::trigger
+}

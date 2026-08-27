@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/ScannedFile.h"
 
@@ -6,9 +6,9 @@
 #include <filesystem>
 
 #ifdef _MSC_VER
-#include <io.h> // _access
+#include <io.h>
 #else
-#include <unistd.h> // access
+#include <unistd.h>
 #endif
 
 #include "zeek/DebugLogger.h"
@@ -31,9 +31,9 @@ ScannedFile::ScannedFile(int arg_include_level, std::string arg_name, bool arg_s
         std::error_code ec;
         auto canon = std::filesystem::canonical(name, ec);
         if ( ec ) {
-            // canonical() failed — check if the file is actually accessible
-            // (e.g. via a virtual/redirected filesystem that hooks access()
-            // but not the Win32 APIs used by std::filesystem::canonical).
+
+
+
 #ifdef _MSC_VER
             auto accessible = _access(name.data(), 0) == 0;
 #else
@@ -70,4 +70,4 @@ SignatureFile::SignatureFile(std::string file) : file(std::move(file)) {}
 SignatureFile::SignatureFile(std::string file, std::string full_path, Location load_location)
     : file(std::move(file)), full_path(std::move(full_path)), load_location(load_location) {}
 
-} // namespace zeek::detail
+}

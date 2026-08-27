@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/TempVar.h"
 
@@ -15,8 +15,8 @@ TempVar::TempVar(size_t num, ExprPtr _rhs) {
 
 void TempVar::SetAlias(IDPtr _alias) {
     if ( _alias == alias )
-        // This can happen when treating function parameters as
-        // temporary variables.
+
+
         return;
 
     if ( alias )
@@ -28,4 +28,4 @@ void TempVar::SetAlias(IDPtr _alias) {
     alias = std::move(_alias);
 }
 
-} // namespace zeek::detail
+}

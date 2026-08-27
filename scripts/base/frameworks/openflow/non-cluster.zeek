@@ -2,7 +2,7 @@
 
 module OpenFlow;
 
-# the flow_mod function wrapper
+
 function flow_mod(controller: Controller, match: ofp_match, flow_mod: ofp_flow_mod): bool
 	{
 	if ( ! controller$state$_activated )

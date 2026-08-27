@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_param.h"
 
@@ -48,5 +48,5 @@ void ParamField::GenInitCode(Output* out_cc, Env* env) {
 }
 
 void ParamField::GenCleanUpCode(Output* out_cc, Env* env) {
-    // Do nothing
+
 }

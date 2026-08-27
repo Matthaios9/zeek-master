@@ -7,10 +7,10 @@
 module FTP;
 
 export {
-	## Default file handle provider for FTP.
+
 	global get_file_handle: function(c: connection, is_orig: bool): string;
 
-	## Describe the file being transferred.
+
 	global describe_file: function(f: fa_file): string;
 
 	redef record fa_file += {
@@ -28,7 +28,7 @@ function get_file_handle(c: connection, is_orig: bool): string
 
 function describe_file(f: fa_file): string
 	{
-	# This shouldn't be needed, but just in case...
+
 	if ( f$source != "FTP" )
 		return "";
 

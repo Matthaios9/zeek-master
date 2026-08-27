@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/file_analysis/FileReassembler.h"
 
@@ -22,7 +22,7 @@ uint64_t FileReassembler::Flush() {
 
     const auto& last_block = block_list.LastBlock();
 
-    // This is expected to call back into FileReassembler::Undelivered().
+
     flushing = true;
     uint64_t rval = TrimToSeq(last_block.upper);
     flushing = false;
@@ -52,7 +52,7 @@ void FileReassembler::BlockInserted(DataBlockMap::const_iterator it) {
         if ( b.seq > last_reassem_seq )
             break;
 
-        if ( b.seq == last_reassem_seq ) { // New stuff.
+        if ( b.seq == last_reassem_seq ) {
             uint64_t len = b.Size();
             last_reassem_seq += len;
             the_file->DeliverStream(b.block, len);
@@ -61,25 +61,25 @@ void FileReassembler::BlockInserted(DataBlockMap::const_iterator it) {
         ++it;
     }
 
-    // Throw out forwarded data
+
     TrimToSeq(last_reassem_seq);
 }
 
 void FileReassembler::Undelivered(uint64_t up_to_seq) {
-    // If we have blocks that begin below up_to_seq, deliver them.
+
     auto it = block_list.Begin();
 
     while ( it != block_list.End() ) {
         const auto& b = it->second;
 
         if ( b.seq < last_reassem_seq ) {
-            // Already delivered this block.
+
             ++it;
             continue;
         }
 
         if ( b.seq >= up_to_seq )
-            // Block is beyond what we need to process at this point.
+
             break;
 
         uint64_t gap_at_seq = last_reassem_seq;
@@ -87,8 +87,8 @@ void FileReassembler::Undelivered(uint64_t up_to_seq) {
         the_file->Gap(gap_at_seq, gap_len);
         last_reassem_seq += gap_len;
         BlockInserted(it);
-        // Inserting a block may cause trimming of what's buffered,
-        // so have to assume 'b' is invalid, hence re-assign to start.
+
+
         it = block_list.Begin();
     }
 
@@ -99,13 +99,13 @@ void FileReassembler::Undelivered(uint64_t up_to_seq) {
 }
 
 void FileReassembler::Overlap(const u_char* b1, const u_char* b2, uint64_t n) {
-    // Not doing anything here yet.
-}
-} // namespace zeek::file_analysis
 
-// Test reassembler logic through FileReassembler.
+}
+}
+
+
 TEST_CASE("file reassembler") {
-    // Can not construct due to protected constructor.
+
     class TestFile : public zeek::file_analysis::File {
     public:
         TestFile(const std::string& file_id, const std::string& source_name)
@@ -122,10 +122,10 @@ TEST_CASE("file reassembler") {
         r->NewBlock(0.0, 0xfffffffffffffff7, 15, data);
         r->NewBlock(0.0, 0xfffffffffffffff3, 15, data);
 
-        // 0xfffffffffffffff3 through 0xffffffffffffffff
+
         CHECK_EQ(r->TotalSize(), 12u);
 
-        // This previously hung with an endless loop.
+
         r->Flush();
         CHECK_FALSE(r->HasBlocks());
         CHECK_EQ(r->TotalSize(), 0u);

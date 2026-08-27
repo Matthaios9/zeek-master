@@ -1,12 +1,12 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include <hilti/rt/libhilti.h>
 
 namespace hlt_websocket::WebSocket {
 
-// // Implement XOR unmasking of WebSocket frames in C++ since this code is very hot.
-//
-// https://github.com/zeek/spicy/issues/1663
+
+
+
 ::hilti::rt::Bytes fast_unmask(const hilti::rt::integer::safe<uint64_t>& masking_key_idx,
                                const hilti::rt::Vector<hilti::rt::integer::safe<uint8_t>>& masking_key,
                                const hilti::rt::Bytes& chunk) {
@@ -31,4 +31,4 @@ namespace hlt_websocket::WebSocket {
     return {std::move(unmasked)};
 }
 
-} // namespace hlt_websocket::WebSocket
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/protocol/vlan/VLAN.h"
 
@@ -29,36 +29,36 @@ bool VLANAnalyzer::AnalyzePacket(size_t len, const uint8_t* data, Packet* packet
         packet->inner_vlan = {.id = vlan_id, .pcp = vlan_pcp, .dei = vlan_dei};
     }
 
-    // Get the protocol/length field from the last 2 bytes of the header.
+
     uint32_t protocol = ((data[2] << 8u) + data[3]);
 
     if ( protocol >= 1536 ) {
         packet->eth_type = protocol;
-        // Skip the VLAN header
+
         return ForwardPacket(len - 4, data + 4, packet, protocol);
     }
 
     if ( protocol <= 1500 ) {
-        // Skip over the VLAN header
+
         len -= 4;
         data += 4;
 
-        // Need at least two bytes to check the packet types below.
+
         if ( len < 2 ) {
             Weird("truncated_VLAN_header", packet);
             return false;
         }
         if ( len > protocol )
-            len = protocol; // use 802.3/802.2 length field and remove trailing bytes
+            len = protocol;
 
         if ( data[0] == 0xAA && data[1] == 0xAA )
-            // IEEE 802.2 SNAP
+
             return ForwardPacket(len, data, packet, snap_forwarding_key);
         else if ( data[0] == 0xFF && data[1] == 0xFF )
-            // Novell raw IEEE 802.3
+
             return ForwardPacket(len, data, packet, novell_forwarding_key);
         else
-            // IEEE 802.2 LLC
+
             return ForwardPacket(len, data, packet, llc_forwarding_key);
     }
 

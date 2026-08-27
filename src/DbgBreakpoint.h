@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Structures and methods for implementing breakpoints in the Zeek debugger.
+
+
 
 #pragma once
 
@@ -23,23 +23,23 @@ public:
     int GetID() const { return BPID; }
     void SetID(int newID) { BPID = newID; }
 
-    // True if breakpoint could be set; false otherwise
+
     bool SetLocation(ParseLocationRec plr, std::string_view loc_str);
     bool SetLocation(Stmt* stmt);
     bool SetLocation(double time);
 
-    bool Reset(); // cancel and re-apply bpt when restarting execution
+    bool Reset();
 
-    // Temporary = disable (remove?) the breakpoint right after it's hit.
+
     bool IsTemporary() const { return temporary; }
     void SetTemporary(bool is_temporary) { temporary = is_temporary; }
 
-    // Feed it a Stmt* or a time and see if this breakpoint should
-    // hit.  bcHitAndDelete means that it has hit, and should now be
-    // deleted entirely.
-    //
-    // NOTE: If it returns a hit, the DbgBreakpoint object will take
-    // appropriate action (e.g., resetting counters).
+
+
+
+
+
+
     BreakCode ShouldBreak(Stmt* s);
     BreakCode ShouldBreak(double t);
 
@@ -47,12 +47,12 @@ public:
     bool SetCondition(const std::string& new_condition);
 
     int GetRepeatCount() const { return repeat_count; }
-    bool SetRepeatCount(int count); // implements function of ignore command in gdb
+    bool SetRepeatCount(int count);
 
     bool IsEnabled() const { return enabled; }
     bool SetEnable(bool do_enable);
 
-    // e.g. "FooBar() at foo.c:23"
+
     const char* Description() const { return description; }
 
 protected:
@@ -62,27 +62,27 @@ protected:
     void AddToStmt();
     void RemoveFromStmt();
 
-    BreakCode HasHit(); // a breakpoint hit, update state, return proper code.
-    void PrintHitMsg(); // display reason when the breakpoint hits
+    BreakCode HasHit();
+    void PrintHitMsg();
 
     Kind kind;
     int32_t BPID;
 
     char description[512];
-    std::string function_name; // location
+    std::string function_name;
     const char* source_filename;
     int32_t source_line;
-    bool enabled; // ### comment this and next
+    bool enabled;
     bool temporary;
 
     Stmt* at_stmt;
-    double at_time; // break when the virtual time is this
+    double at_time;
 
-    // Support for conditional and N'th time breakpoints.
-    int32_t repeat_count; // if positive, break after this many hits
-    int32_t hit_count;    // how many times it's been hit (w/o breaking)
 
-    std::string condition; // condition to evaluate; nil for none
+    int32_t repeat_count;
+    int32_t hit_count;
+
+    std::string condition;
 };
 
-} // namespace zeek::detail
+}

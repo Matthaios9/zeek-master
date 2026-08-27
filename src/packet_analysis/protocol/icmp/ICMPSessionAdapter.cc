@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/protocol/icmp/ICMPSessionAdapter.h"
 
@@ -10,15 +10,15 @@ using namespace zeek::packet_analysis::ICMP;
 using namespace zeek::packet_analysis::IP;
 
 enum ICMP_EndpointState : uint8_t {
-    ICMP_INACTIVE, // no packet seen
-    ICMP_ACTIVE,   // packets seen
+    ICMP_INACTIVE,
+    ICMP_ACTIVE,
 };
 
 void ICMPSessionAdapter::AddExtraAnalyzers(Connection* conn) {
     static zeek::Tag analyzer_connsize = analyzer_mgr->GetComponentTag("CONNSIZE");
 
     if ( analyzer_mgr->IsEnabled(analyzer_connsize) )
-        // Add ConnSize analyzer. Needs to see packets, not stream.
+
         AddChildAnalyzer(new analyzer::conn_size::ConnSize_Analyzer(conn));
 }
 

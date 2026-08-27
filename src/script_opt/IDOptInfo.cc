@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/IDOptInfo.h"
 
@@ -79,7 +79,7 @@ void IDOptInfo::SetDefinedAfter(const Stmt* s, const ExprPtr& e, const std::vect
         printf("ID %s defined at %d: %s\n", trace_ID, s ? s->GetOptInfo()->stmt_num : NO_DEF,
                s ? obj_desc(s).c_str() : "<entry>");
 
-    if ( ! s ) { // This is a definition-upon-entry
+    if ( ! s ) {
         ASSERT(usage_regions.empty());
         usage_regions.emplace_back(0, 0, true, 0);
         if ( tracing )
@@ -91,55 +91,55 @@ void IDOptInfo::SetDefinedAfter(const Stmt* s, const ExprPtr& e, const std::vect
     auto stmt_num = s_oi->stmt_num;
 
     if ( usage_regions.empty() ) {
-        // We're seeing this identifier for the first time,
-        // so we don't have any context or confluence
-        // information for it.  Create its "backstory" region.
+
+
+
         ASSERT(confluence_stmts.empty());
         usage_regions.emplace_back(0, 0, false, NO_DEF);
     }
 
-    // Any pending regions stop prior to this statement.
+
     EndRegionsAfter(stmt_num - 1, s_oi->block_level);
 
-    // Fill in any missing confluence blocks.
-    int b = 0; // index into our own blocks
+
+    int b = 0;
     int n = confluence_stmts.size();
 
     while ( b < n && conf_start < conf_blocks.size() ) {
         auto outer_block = conf_blocks[conf_start];
 
-        // See if we can find that block.
+
         for ( ; b < n; ++b )
             if ( confluence_stmts[b] == outer_block )
                 break;
 
-        if ( b < n ) { // We found it, look for the next one.
+        if ( b < n ) {
             ++conf_start;
             ++b;
         }
     }
 
-    // Add in the remainder.
+
     for ( ; conf_start < conf_blocks.size(); ++conf_start )
         StartConfluenceBlock(conf_blocks[conf_start]);
 
     if ( e ) {
-        // If we just ended a region that's (1) at the same block level,
-        // (2) definitive in terms of having assigned to the identifier,
-        // and (3) adjacent to the one we're about to start (no intervening
-        // confluence), then mark it as ended-due-to-assignment (as opposed
-        // to ended-due-to-confluence). Doing so enables us to propagate that
-        // assignment value to the beginning of this block in
-        // FindRegionBeforeIndex() so we can collapse assignment cascades;
-        // see the comment in that method.
+
+
+
+
+
+
+
+
         auto& ub = usage_regions.back();
         if ( ub.BlockLevel() == s->GetOptInfo()->block_level && ub.EndsAfter() == stmt_num - 1 && ub.DefExprAfter() )
             ub.SetEndedDueToAssignment();
     }
 
-    // Create a new region corresponding to this definition.
-    // This needs to come after filling out the confluence
-    // blocks, since they'll create their own (earlier) regions.
+
+
+
     usage_regions.emplace_back(s, true, stmt_num);
     usage_regions.back().SetDefExpr(e);
 
@@ -151,7 +151,7 @@ void IDOptInfo::ReturnAt(const Stmt* s) {
     if ( tracing )
         printf("ID %s subject to return %d: %s\n", trace_ID, s->GetOptInfo()->stmt_num, obj_desc(s).c_str());
 
-    // Look for a catch-return that this would branch to.
+
     for ( int i = confluence_stmts.size() - 1; i >= 0; --i )
         if ( confluence_stmts[i]->Tag() == STMT_CATCH_RETURN ) {
             BranchBeyond(s, confluence_stmts[i], false);
@@ -172,13 +172,13 @@ void IDOptInfo::BranchBackTo(const Stmt* from, const Stmt* to, bool close_all) {
         printf("ID %s branching back from %d->%d: %s\n", trace_ID, from->GetOptInfo()->stmt_num,
                to->GetOptInfo()->stmt_num, obj_desc(from).c_str());
 
-    // The key notion we need to update is whether the regions
-    // between from_reg and to_reg still have unique definitions.
-    // Confluence due to the branch can only take that away, it
-    // can't instill it.  (OTOH, in principle it could update
-    // "maybe defined", but not in a way we care about, since we
-    // only draw upon that for diagnosing usage errors, and for
-    // those the error has already occurred on entry into the loop.)
+
+
+
+
+
+
+
 
     auto from_reg = ActiveRegion();
     auto f_oi = from->GetOptInfo();
@@ -187,11 +187,11 @@ void IDOptInfo::BranchBackTo(const Stmt* from, const Stmt* to, bool close_all) {
     auto& t_r = usage_regions[t_r_ind];
 
     if ( from_reg && from_reg->DefinedAfter() != t_r.DefinedAfter() && t_r.DefinedAfter() != NO_DEF ) {
-        // They disagree on the definition.  Move the definition
-        // point to be the start of the confluence region, and
-        // update any blocks inside the region that refer to
-        // a pre-"to" definition to instead reflect the confluence
-        // region (and remove their definition expressions).
+
+
+
+
+
         int new_def = t_oi->stmt_num;
 
         for ( auto i = t_r_ind; i < usage_regions.size(); ++i ) {
@@ -242,7 +242,7 @@ void IDOptInfo::StartConfluenceBlock(const Stmt* s) {
     auto s_oi = s->GetOptInfo();
     int block_level = s_oi->block_level;
 
-    // End any confluence blocks at this or inner levels.
+
     for ( auto cs : confluence_stmts ) {
         ASSERT(cs != s);
 
@@ -259,29 +259,29 @@ void IDOptInfo::StartConfluenceBlock(const Stmt* s) {
     confluence_stmts.push_back(s);
     block_has_orig_flow.push_back(s_oi->contains_branch_beyond);
 
-    // Inherit the closest open, outer region, if necessary.
+
     for ( int i = usage_regions.size() - 1; i >= 0; --i ) {
         auto& ur = usage_regions[i];
 
         if ( ur.EndsAfter() == NO_DEF ) {
             if ( ur.BlockLevel() > block_level ) {
-                // This can happen for regions left over
-                // from a previous catch-return, which
-                // we haven't closed out yet because we
-                // don't track new identifiers beyond
-                // outer CRs.  Close the region now.
+
+
+
+
+
                 ASSERT(s->Tag() == STMT_CATCH_RETURN);
                 ur.SetEndsAfter(s_oi->stmt_num - 1);
                 continue;
             }
 
             if ( ur.BlockLevel() < block_level )
-                // Didn't find one at our own level,
-                // so create one inherited from the
-                // outer one.
+
+
+
                 usage_regions.emplace_back(s, ur);
 
-            // We now have one at our level that we can use.
+
             break;
         }
     }
@@ -297,8 +297,8 @@ void IDOptInfo::ConfluenceBlockEndsAfter(const Stmt* s, bool no_orig_flow) {
     auto cs = confluence_stmts.back();
     auto& pc = pending_confluences[cs];
 
-    // End any active regions.  Those will all have a level >= that
-    // of cs, since we're now returning to cs's level.
+
+
     int cs_stmt_num = cs->GetOptInfo()->stmt_num;
     int cs_level = cs->GetOptInfo()->block_level;
 
@@ -309,9 +309,9 @@ void IDOptInfo::ConfluenceBlockEndsAfter(const Stmt* s, bool no_orig_flow) {
     if ( block_has_orig_flow.back() )
         no_orig_flow = false;
 
-    // Compute the state of the definition at the point of confluence:
-    // whether it's at least could-be-defined, whether it's definitely
-    // defined and if so whether it has a single point of definition.
+
+
+
     bool maybe = false;
     bool defined = true;
 
@@ -326,25 +326,25 @@ void IDOptInfo::ConfluenceBlockEndsAfter(const Stmt* s, bool no_orig_flow) {
         auto& ur = usage_regions[i];
 
         if ( ur.BlockLevel() < cs_level )
-            // Region is not applicable.
+
             continue;
 
-        if ( ur.EndsAfter() == NO_DEF ) { // End this region.
+        if ( ur.EndsAfter() == NO_DEF ) {
             ur.SetEndsAfter(stmt_num);
 
             if ( ur.StartsAfter() <= cs_stmt_num && no_orig_flow && ! pc.contains(i) )
-                // Don't include this region in our assessment.
+
                 continue;
         }
 
         else if ( ur.EndsAfter() < cs_stmt_num || ! pc.contains(i) )
-            // Irrelevant, didn't extend into confluence region.
-            // We test here just to avoid the set lookup in
-            // the next test, which presumably will sometimes
-            // be a tad expensive.
-            // or
-            // This region isn't active, and we're not
-            // tracking it for confluence.
+
+
+
+
+
+
+
             continue;
 
         ++num_regions;
@@ -367,7 +367,7 @@ void IDOptInfo::ConfluenceBlockEndsAfter(const Stmt* s, bool no_orig_flow) {
         }
     }
 
-    if ( num_regions == 0 ) { // Nothing survives.
+    if ( num_regions == 0 ) {
         ASSERT(maybe == false);
         defined = false;
     }
@@ -378,8 +378,8 @@ void IDOptInfo::ConfluenceBlockEndsAfter(const Stmt* s, bool no_orig_flow) {
     }
 
     if ( have_multi_defs )
-        // Definition reflects confluence point, which comes
-        // just after 's'.
+
+
         single_def = stmt_num + 1;
 
     int level = cs->GetOptInfo()->block_level;
@@ -452,22 +452,22 @@ int IDOptInfo::FindRegionBeforeIndex(int stmt_num) {
         if ( ur.StartsAfter() >= stmt_num )
             break;
 
-        // It's active for everything beyond its start.
-        // or
-        // It's active at the beginning of the statement of interest.
+
+
+
         if ( ur.EndsAfter() == NO_DEF || ur.EndsAfter() >= stmt_num )
-            region_ind = i; // NOLINT(bugprone-branch-clone)
+            region_ind = i;
 
         else if ( ur.EndsAfter() == stmt_num - 1 && ur.EndedDueToAssignment() ) {
-            // There's one other possibility, which occurs for a series of
-            // statements like:
-            //
-            //	a = some_val;
-            //	a = a + 1;
-            //
-            // Here, the assignment for "a = some_val" ends right after
-            // that statement due to new assignment to 'a' on the second line.
-            // However, it's okay to use the first region on the RHS.
+
+
+
+
+
+
+
+
+
             region_ind = i;
         }
     }
@@ -492,4 +492,4 @@ void IDOptInfo::DumpBlocks() const {
     printf("<end>\n");
 }
 
-} // namespace zeek::detail
+}

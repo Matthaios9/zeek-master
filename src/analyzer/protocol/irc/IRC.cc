@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/irc/IRC.h"
 
@@ -60,7 +60,7 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
         return;
     }
 
-    // check line size
+
     if ( length > 512 ) {
         if ( AnalyzerConfirmed() )
             Weird("irc_line_size_exceeded");
@@ -76,23 +76,23 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
         return;
     }
 
-    // IRCv3 can pass arbitrary tags at the start of each line. Commonly this is @time,
-    // which is a timestamp for when the message was sent. They come as a semi-colon
-    // separated list, and are separated from the rest of the line by a space.
+
+
+
     if ( myline.starts_with('@') ) {
         std::size_t first_space = myline.find(' ');
-        // A set of tags doesn't necessarily need to be followed by a command. In this
-        // case just return.
+
+
         if ( first_space == string::npos )
             return;
 
-        // We don't do anything with tags right now. Just skip over them.
+
         myline = myline.substr(first_space + 1);
     }
 
-    // Check for prefix.
+
     string prefix = "";
-    if ( myline[0] == ':' ) { // find end of prefix and extract it
+    if ( myline[0] == ':' ) {
         auto pos = myline.find(' ');
         if ( pos == string::npos ) {
             if ( AnalyzerConfirmed() )
@@ -101,15 +101,15 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
         }
 
         prefix = myline.substr(1, pos - 1);
-        myline = myline.substr(pos + 1); // remove prefix from line
+        myline = myline.substr(pos + 1);
         SkipLeadingWhitespace(myline);
     }
 
     int code = 0;
     string command = "";
 
-    // Check if line is long enough to include status code or command.
-    // (shortest command with optional params is "WHO")
+
+
     if ( myline.length() < 3 ) {
         if ( AnalyzerConfirmed() )
             Weird("irc_invalid_line");
@@ -117,7 +117,7 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
         return;
     }
 
-    // Check if this is a server reply.
+
     if ( isdigit(myline[0]) ) {
         if ( isdigit(myline[1]) && isdigit(myline[2]) && myline[3] == ' ' ) {
             code = (myline[0] - '0') * 100 + (myline[1] - '0') * 10 + (myline[2] - '0');
@@ -130,16 +130,16 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
             return;
         }
     }
-    else { // get command
+    else {
         auto pos = myline.find(' ');
-        // Not all commands require parameters
+
         if ( pos == string::npos )
             pos = myline.length();
 
         command = myline.substr(0, pos);
         command = util::to_upper(command);
 
-        // Adjust for the no-parameter case
+
         if ( pos == myline.length() )
             pos--;
 
@@ -147,18 +147,18 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
         SkipLeadingWhitespace(myline);
     }
 
-    // Extract parameters.
+
     string params = myline;
 
     if ( ! AnalyzerConfirmed() && orig && IsValidClientCommand(command) ) {
         AnalyzerConfirmation();
     }
 
-    // special case
+
     if ( command == "STARTTLS" )
         return;
 
-    // Check for Server2Server - connections with ZIP enabled.
+
     if ( orig && orig_status == WAIT_FOR_REGISTRATION ) {
         if ( command == "PASS" ) {
             vector<string> p = SplitWords(params, ' ');
@@ -168,11 +168,11 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
                 orig_zip_status = NO_ZIP;
         }
 
-        // We do not check if SERVER command is successful, since
-        // the connection will be terminated by the server if
-        // authentication fails.
-        //
-        // (### This seems not quite prudent to me - VP)
+
+
+
+
+
         if ( command == "SERVER" && prefix.empty() ) {
             orig_status = REGISTERED;
         }
@@ -187,37 +187,37 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
                 resp_zip_status = NO_ZIP;
         }
 
-        // Again, don't bother checking whether SERVER command
-        // is successful.
+
+
         if ( command == "SERVER" && prefix.empty() )
             resp_status = REGISTERED;
     }
 
-    // Analyze server reply messages.
+
     if ( code > 0 ) {
         switch ( code ) {
-            /*
-            case 1: // RPL_WELCOME
-            case 2: // RPL_YOURHOST
-            case 3: // RPL_CREATED
-            case 4: // RPL_MYINFO
-            case 5: // RPL_BOUNCE
-            case 252: // number of ops online
-            case 253: // number of unknown connections
-            case 265: // RPL_LOCALUSERS
-            case 312: // whois server reply
-            case 315: // end of who list
-            case 317: // whois idle reply
-            case 318: // end of whois list
-            case 366: // end of names list
-            case 372: // RPL_MOTD
-            case 375: // RPL_MOTDSTART
-            case 376: // RPL_ENDOFMOTD
-            case 331: // RPL_NOTOPIC
-                break;
-            */
 
-            // Count of users, services and servers in whole network.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             case 251: {
                 if ( ! irc_network_info )
                     break;
@@ -234,14 +234,14 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
                         services = atoi(parts[i - 1].c_str());
                     else if ( parts[i] == "servers" )
                         servers = atoi(parts[i - 1].c_str());
-                    // else ###
+
                 }
 
                 EnqueueConnEvent(irc_network_info, ConnVal(), val_mgr->Bool(orig), val_mgr->Count(users),
                                  val_mgr->Count(services), val_mgr->Count(servers));
             } break;
 
-            // List of users in a channel (names command).
+
             case 353: {
                 if ( ! irc_names_info )
                     break;
@@ -253,13 +253,13 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
                     return;
                 }
 
-                // Remove nick name.
+
                 parts.erase(parts.begin());
 
                 string type = parts[0];
                 string channel = parts[1];
 
-                // Remove type and channel.
+
                 parts.erase(parts.begin());
                 parts.erase(parts.begin());
 
@@ -280,7 +280,7 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
                                  std::move(set));
             } break;
 
-            // Count of users and services on this server.
+
             case 255: {
                 if ( ! irc_server_info )
                     break;
@@ -297,14 +297,14 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
                         services = atoi(parts[i - 1].c_str());
                     else if ( parts[i] == "servers" )
                         servers = atoi(parts[i - 1].c_str());
-                    // else ###
+
                 }
 
                 EnqueueConnEvent(irc_server_info, ConnVal(), val_mgr->Bool(orig), val_mgr->Count(users),
                                  val_mgr->Count(services), val_mgr->Count(servers));
             } break;
 
-            // Count of channels.
+
             case 254: {
                 if ( ! irc_channel_info )
                     break;
@@ -318,10 +318,10 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
                 EnqueueConnEvent(irc_channel_info, ConnVal(), val_mgr->Bool(orig), val_mgr->Count(channels));
             } break;
 
-            // RPL_GLOBALUSERS
+
             case 266: {
-                // FIXME: We should really streamline all this
-                // parsing code ...
+
+
                 if ( ! irc_global_users )
                     break;
 
@@ -343,7 +343,7 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
                                  make_intrusive<StringVal>(eop - prefix, prefix), make_intrusive<StringVal>(++msg));
             } break;
 
-            // WHOIS user reply line.
+
             case 311: {
                 if ( ! irc_whois_user_line )
                     break;
@@ -381,7 +381,7 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
                 EnqueueConnEvent(irc_whois_user_line, std::move(vl));
             } break;
 
-            // WHOIS operator reply line.
+
             case 313: {
                 if ( ! irc_whois_operator_line )
                     break;
@@ -400,7 +400,7 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
                                  make_intrusive<StringVal>(parts[0].c_str()));
             } break;
 
-            // WHOIS channel reply.
+
             case 319: {
                 if ( ! irc_whois_channel_line )
                     break;
@@ -412,7 +412,7 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
                 }
 
                 string nick = parts[0];
-                // Remove nick name.
+
                 parts.erase(parts.begin());
 
                 if ( parts[0][0] == ':' )
@@ -429,7 +429,7 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
                                  make_intrusive<StringVal>(nick.c_str()), std::move(set));
             } break;
 
-            // RPL_TOPIC reply.
+
             case 332: {
                 if ( ! irc_channel_topic )
                     break;
@@ -457,7 +457,7 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
                 }
             } break;
 
-            // WHO reply line.
+
             case 352: {
                 if ( ! irc_who_line )
                     break;
@@ -485,7 +485,7 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
                                  make_intrusive<StringVal>(parts[8].c_str()));
             } break;
 
-            // Invalid nick name.
+
             case 431:
             case 432:
             case 433:
@@ -494,19 +494,19 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
                     EnqueueConnEvent(irc_invalid_nick, ConnVal(), val_mgr->Bool(orig));
                 break;
 
-            // Operator responses.
-            case 381: // User is operator
-            case 491: // user is not operator
+
+            case 381:
+            case 491:
                 if ( irc_oper_response )
                     EnqueueConnEvent(irc_oper_response, ConnVal(), val_mgr->Bool(orig), val_mgr->Bool(code == 381));
                 break;
 
             case 670:
-                // StartTLS success reply to StartTLS
+
                 StartTLS();
                 break;
 
-            // All other server replies.
+
             default:
                 if ( irc_reply )
                     EnqueueConnEvent(irc_reply, ConnVal(), val_mgr->Bool(orig),
@@ -517,7 +517,7 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
         return;
     }
 
-    // Check if command is valid.
+
     if ( command.size() > 20 ) {
         Weird("irc_invalid_command");
         if ( ++invalid_msg_count > invalid_msg_max_count ) {
@@ -542,23 +542,23 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
         if ( ! message.empty() && message[0] == ':' )
             message = message.substr(1);
         if ( ! message.empty() && message[0] == 1 )
-            message = message.substr(1); // DCC
+            message = message.substr(1);
 
-        // Check for DCC messages.
+
         if ( message.size() > 3 && message.starts_with("DCC") ) {
             if ( message[message.size() - 1] == 1 )
                 message = message.substr(0, message.size() - 1);
 
             vector<string> parts = SplitWords(message, ' ');
             if ( parts.size() < 5 || parts.size() > 6 ) {
-                // Turbo DCC extension appends a "T" at the end of handshake.
+
                 if ( ! (parts.size() == 7 && parts[6] == "T") ) {
                     Weird("irc_invalid_dcc_message_format");
                     return;
                 }
             }
 
-            // Calculate IP address.
+
             uint32_t raw_ip = 0;
             for ( size_t i = 0; i < parts[3].size(); ++i ) {
                 string s = parts[3].substr(i, 1);
@@ -617,7 +617,7 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
     }
 
     else if ( irc_user_message && command == "USER" ) {
-        // extract username and real name
+
         vector<string> parts = SplitWords(params, ' ');
         Args vl;
         vl.reserve(6);
@@ -653,7 +653,7 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
     }
 
     else if ( irc_oper_message && command == "OPER" ) {
-        // extract username and password
+
         vector<string> parts = SplitWords(params, ' ');
         if ( parts.size() == 2 )
             EnqueueConnEvent(irc_oper_message, ConnVal(), val_mgr->Bool(orig),
@@ -664,7 +664,7 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
     }
 
     else if ( irc_kick_message && command == "KICK" ) {
-        // Extract channels, users and comment.
+
         vector<string> parts = SplitWords(params, ' ');
         if ( parts.size() <= 1 ) {
             Weird("irc_invalid_kick_message_format");
@@ -730,7 +730,7 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
                 info->Assign(2, passwords[i]);
             else
                 info->Assign(2, empty_string);
-            // User mode.
+
             info->Assign(3, empty_string);
             list->Assign(std::move(info), nullptr);
         }
@@ -776,9 +776,9 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
 
             info->Assign(0, nick);
             info->Assign(1, channel);
-            // Password:
+
             info->Assign(2, empty_string);
-            // User mode:
+
             info->Assign(3, mode);
             list->Assign(std::move(info), nullptr);
         }
@@ -854,7 +854,7 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
         if ( parts.size() == 2 && parts[1] == "o" )
             oper = true;
 
-        // Remove ":" from mask.
+
         if ( ! parts.empty() && ! parts[0].empty() && parts[0][0] == ':' )
             parts[0] = parts[0].substr(1);
 
@@ -894,7 +894,7 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
 
     else if ( irc_invite_message && command == "INVITE" ) {
         vector<string> parts = SplitWords(params, ' ');
-        if ( parts.size() == 2 ) { // remove ":" from channel
+        if ( parts.size() == 2 ) {
             if ( ! parts[1].empty() && parts[1][0] == ':' )
                 parts[1] = parts[1].substr(1);
 
@@ -961,8 +961,8 @@ void IRC_Analyzer::DeliverStream(int length, const u_char* line, bool orig) {
 }
 
 void IRC_Analyzer::StartTLS() {
-    // STARTTLS was successful. Remove support analyzers, add SSL
-    // analyzer, and throw event signifying the change.
+
+
     starttls = true;
 
     RemoveSupportAnalyzer(cl_orig);
@@ -985,7 +985,7 @@ vector<string> IRC_Analyzer::SplitWords(const string& input, char split) {
     unsigned int start = 0;
     unsigned int split_pos = 0;
 
-    // Ignore split-characters at the line beginning.
+
     while ( input[start] == split ) {
         ++start;
         ++split_pos;
@@ -1000,7 +1000,7 @@ vector<string> IRC_Analyzer::SplitWords(const string& input, char split) {
         start = split_pos + 1;
     }
 
-    // Add line end if needed.
+
     if ( start < input.size() ) {
         word = input.substr(start, input.size() - start);
         words.push_back(std::move(word));
@@ -1009,12 +1009,12 @@ vector<string> IRC_Analyzer::SplitWords(const string& input, char split) {
     return words;
 }
 
-} // namespace irc
+}
 
 namespace file {
 
 void IRC_Data::DeliverStream(int len, const u_char* data, bool orig) {
-    // Bytes from originator are acknowledgements
+
     if ( ! orig )
         File_Analyzer::DeliverStream(len, data, orig);
     else {
@@ -1039,6 +1039,6 @@ void IRC_Data::Undelivered(uint64_t seq, int len, bool orig) {
         File_Analyzer::Undelivered(seq, len, orig);
 }
 
-} // namespace file
+}
 
-} // namespace zeek::analyzer
+}

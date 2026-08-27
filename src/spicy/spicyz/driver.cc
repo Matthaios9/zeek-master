@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "driver.h"
 
@@ -28,17 +28,17 @@
 using namespace zeek::spicy;
 using Driver = ::zeek::spicy::Driver;
 
-/**
- * Visitor to type information from a HILTI AST. This extracts user-visible
- * types only, we skip any internal ones.
- */
+
+
+
+
 struct VisitorTypes : public spicy::visitor::PreOrder {
     explicit VisitorTypes(Driver* driver, GlueCompiler* glue, bool is_resolved)
         : driver(driver), glue(glue), is_resolved(is_resolved) {}
 
     void operator()(hilti::declaration::Module* n) final {
         if ( n->uid().in_memory ) {
-            // Ignore modules built by us in memory.
+
             module = {};
             return;
         }
@@ -78,9 +78,9 @@ Driver::Driver(std::unique_ptr<GlueCompiler> glue, const char* argv0, hilti::rt:
     : ::spicy::Driver("<Spicy support for Zeek>"), _glue(std::move(glue)) {
     _glue->init(this, zeek_version);
 
-    // The HILTI configuration compares `argv0` against the spicy submodule's
-    // `PROJECT_BINARY_DIR` which doesn't match because zeek's `spicyz` lives
-    // outside that subtree. Re-detect here using the top-level zeek build dir.
+
+
+
     try {
         auto exec = hilti::rt::normalizePath(hilti::rt::filesystem::canonical(hilti::util::currentExecutable()))
                         .generic_string();
@@ -91,14 +91,14 @@ Driver::Driver(std::unique_ptr<GlueCompiler> glue, const char* argv0, hilti::rt:
             _using_build_directory = true;
         }
     } catch ( const hilti::rt::filesystem::filesystem_error& ) {
-        // Fall through to default (install) mode.
+
     }
 
     ::spicy::Configuration::extendHiltiConfiguration();
     auto options = hiltiOptions();
 
-    // Note that, different from Spicy's own SPICY_PATH, this extends the
-    // search path, it doesn't replace it.
+
+
     if ( auto path = hilti::rt::getenv("ZEEK_SPICY_PATH") ) {
         for ( const auto& dir : hilti::rt::split(*path, ":") ) {
             if ( dir.size() )
@@ -109,8 +109,8 @@ Driver::Driver(std::unique_ptr<GlueCompiler> glue, const char* argv0, hilti::rt:
     try {
         lib_path = hilti::rt::filesystem::weakly_canonical(lib_path);
 
-        // We make our search paths relative to the plugin library, so that the
-        // plugin installation can move around.
+
+
         options.library_paths.push_back(std::move(lib_path));
     } catch ( const hilti::rt::filesystem::filesystem_error& e ) {
         ::hilti::logger().warning(
@@ -127,8 +127,8 @@ Driver::Driver(std::unique_ptr<GlueCompiler> glue, const char* argv0, hilti::rt:
     }
 
 #ifdef _WIN32
-    // On Windows, JIT-compiled DLLs need to link against the host
-    // executable's import library to resolve runtime symbols at load time.
+
+
     auto zeek_lib = configuration::ZeekExeImportLib();
     if ( hilti::rt::filesystem::exists(zeek_lib) )
         options.cxx_link.push_back(zeek_lib.string());
@@ -278,7 +278,7 @@ std::vector<std::pair<TypeInfo, hilti::ID>> Driver::exportedTypes() const {
         }
     }
 
-    // Automatically export public enums for backwards compatibility.
+
     for ( const auto& t : _public_enums )
         result.emplace_back(t, t.id);
 

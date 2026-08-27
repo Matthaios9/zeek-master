@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// Methods for traversing Expr AST nodes to generate ZAM code.
+
+
 
 #include "zeek/Desc.h"
 #include "zeek/Reporter.h"
@@ -234,8 +234,8 @@ ZAMStmt ZAMCompiler::CompileAssignExpr(const AssignExpr* e) {
         return AssignVC(lhs, rhs->AsConstExpr());
 
     if ( rhs->Tag() == EXPR_IN && r1->Tag() == EXPR_LIST ) {
-        // r2 can be a constant due to propagating "const"
-        // globals, for example.
+
+
         if ( r2->Tag() == EXPR_NAME ) {
             auto r2n = r2->AsNameExpr();
 
@@ -265,8 +265,8 @@ ZAMStmt ZAMCompiler::CompileAssignExpr(const AssignExpr* e) {
         return Bool_Vec_CondVVVV(lhs, r1->AsNameExpr(), r2->AsNameExpr(), r3->AsNameExpr());
 
     if ( rhs->Tag() == EXPR_COND && r2->IsConst() && r3->IsConst() ) {
-        // Split into two statement, given we don't support
-        // two constants in a single statement.
+
+
         auto n1 = r1->AsNameExpr();
         auto c2 = r2->AsConstExpr();
         auto c3 = r3->AsConstExpr();
@@ -306,9 +306,9 @@ ZAMStmt ZAMCompiler::CompileRecFieldUpdates(const RecordFieldUpdatesExpr* e) {
     aux->map = e->LHSMap();
     aux->rhs_map = rhs_map;
 
-    // Used to track the different types present, so we can see whether
-    // we can use a homogeneous operator or need a mixed one. Won't be
-    // needed if we're doing assignments, but handy if we're doing adds.
+
+
+
     std::set<TypeTag> field_tags;
 
     size_t num_managed = 0;
@@ -323,18 +323,18 @@ ZAMStmt ZAMCompiler::CompileRecFieldUpdates(const RecordFieldUpdatesExpr* e) {
             ++num_managed;
         }
         else
-            // This will only be needed if is_managed winds up being true,
-            // but it's harmless to build it up in any case.
+
+
             aux->is_managed.push_back(false);
 
-        // The following is only needed for non-homogeneous "add"s, but
-        // likewise it's harmless to build it anyway.
+
+
         aux->types.push_back(rt_ft_i);
     }
 
     bool homogeneous = field_tags.size() == 1;
-    // Here we leverage the fact that C++ "+=" works identically for
-    // signed and unsigned int's.
+
+
     if ( ! homogeneous && field_tags.size() == 2 && field_tags.contains(TYPE_INT) && field_tags.contains(TYPE_COUNT) )
         homogeneous = true;
 
@@ -342,7 +342,7 @@ ZAMStmt ZAMCompiler::CompileRecFieldUpdates(const RecordFieldUpdatesExpr* e) {
 
     if ( e->Tag() == EXPR_REC_ASSIGN_FIELDS ) {
         if ( num_managed == rhs_map.size() )
-            // This operand allows for a simpler implementation.
+
             op = OP_REC_ASSIGN_FIELDS_ALL_MANAGED_VV;
         else if ( num_managed > 0 )
             op = OP_REC_ASSIGN_FIELDS_MANAGED_VV;
@@ -354,7 +354,7 @@ ZAMStmt ZAMCompiler::CompileRecFieldUpdates(const RecordFieldUpdatesExpr* e) {
         if ( field_tags.contains(TYPE_DOUBLE) )
             op = OP_REC_ADD_DOUBLE_FIELDS_VV;
         else
-            // Here we leverage that += will work for both signed/unsigned.
+
             op = OP_REC_ADD_INT_FIELDS_VV;
     }
 
@@ -382,7 +382,7 @@ ZAMStmt ZAMCompiler::CompileZAMBuiltin(const NameExpr* lhs, const ScriptOptBuilt
             ASSERT(t1 == op2->GetType()->InternalType());
 
             bool is_min = zbi->Tag() == ScriptOptBuiltinExpr::MINIMUM;
-            // Canonicalize to have constant as second op.
+
             if ( op1->Tag() == EXPR_CONST ) {
                 ASSERT(op2->Tag() != EXPR_CONST);
                 std::swap(op1, op2);
@@ -493,8 +493,8 @@ ZAMStmt ZAMCompiler::CompileFieldLHSAssignExpr(const FieldLHSAssignExpr* e) {
     if ( rhs->Tag() == EXPR_FIELD ) {
         auto rhs_f = rhs->AsFieldExpr();
 
-        // Note, the LHS field comes after the RHS field rather than before,
-        // to maintain layout symmetry close to that for non-field RHS's.
+
+
         if ( r1->Tag() == EXPR_NAME )
             return Field_LHS_AssignFVii(e, r1->AsNameExpr(), rhs_f->Field(), field);
 
@@ -566,7 +566,7 @@ ZAMStmt ZAMCompiler::CompileEvent(EventHandler* h, const ListExpr* l) {
             break;
         }
 
-    if ( n > 4 || ! all_vars ) { // do generic form
+    if ( n > 4 || ! all_vars ) {
         ZInstI z(OP_EVENT_HL);
         z.aux = InternalBuildVals(l);
         z.aux->event_handler = h;
@@ -696,8 +696,8 @@ ZAMStmt ZAMCompiler::CompileInExpr(const NameExpr* n1, const ListExpr* l, const 
     auto& l_e = l->Exprs();
     int n = l_e.length();
 
-    // Look for a very common special case: l is a single-element list,
-    // and n2 is present rather than c.
+
+
     if ( n == 1 && n2 ) {
         ZInstI z;
         bool is_vec = n2->GetType()->Tag() == TYPE_VECTOR;
@@ -718,8 +718,8 @@ ZAMStmt ZAMCompiler::CompileInExpr(const NameExpr* n1, const ListExpr* l, const 
         return AddInst(z);
     }
 
-    // Also somewhat common is a 2-element index.  Here, one or both of
-    // the elements might be a constant, which makes things messier.
+
+
 
     if ( n == 2 && n2 && (l_e[0]->Tag() == EXPR_NAME || l_e[1]->Tag() == EXPR_NAME) ) {
         auto is_name0 = l_e[0]->Tag() == EXPR_NAME;
@@ -753,8 +753,8 @@ ZAMStmt ZAMCompiler::CompileInExpr(const NameExpr* n1, const ListExpr* l, const 
         }
 
         else {
-            // Ugh, both are constants.  Assign first to
-            // a temporary.
+
+
             ASSERT(l_e0_c);
             ASSERT(l_e1_c);
 
@@ -801,8 +801,8 @@ ZAMStmt ZAMCompiler::CompileIndex(const NameExpr* n1, int n2_slot, const TypePtr
     int n = l->Exprs().length();
     auto n2tag = n2t->Tag();
 
-    // Whether this is an instance of indexing a table[pattern] of X
-    // with a string.
+
+
     bool is_pat_str_ind = false;
 
     if ( n2tag == TYPE_TABLE && n == 1 ) {
@@ -995,7 +995,7 @@ ZAMStmt ZAMCompiler::AssignVecElems(const Expr* e) {
     auto indexes_expr = index_assign->GetOp2()->AsListExpr();
     auto indexes = indexes_expr->Exprs();
 
-    if ( indexes.length() > 1 ) { // Vector slice assignment.
+    if ( indexes.length() > 1 ) {
         ASSERT(op1->Tag() == EXPR_NAME);
         ASSERT(op3->Tag() == EXPR_NAME);
         ASSERT(t1->Tag() == TYPE_VECTOR);
@@ -1015,8 +1015,8 @@ ZAMStmt ZAMCompiler::AssignVecElems(const Expr* e) {
     auto op2 = indexes[0];
 
     if ( op2->Tag() == EXPR_CONST && op3->Tag() == EXPR_CONST ) {
-        // Turn into a VVC assignment by assigning the index to
-        // a temporary.
+
+
         auto c = op2->AsConstExpr();
         auto tmp = TempForConst(c);
 
@@ -1141,7 +1141,7 @@ ZAMStmt ZAMCompiler::DoCall(const CallExpr* c, const NameExpr* n) {
     bool in_when = c->IsInWhen();
 
     if ( indirect || in_when )
-        call_case = -1; // force default of some flavor of CallN
+        call_case = -1;
 
     auto nt = n ? n->GetType()->Tag() : TYPE_VOID;
     auto n_slot = n ? Frame1Slot(n, OP1_WRITE) : -1;
@@ -1319,12 +1319,12 @@ ZAMStmt ZAMCompiler::ConstructTable(const NameExpr* n, const Expr* e) {
     if ( ! captures )
         return zstmt;
 
-    // What a pain.  The table's default value is a lambda that has
-    // captures.  The semantics of this are that the captures are
-    // evaluated at table-construction time.  We need to build the
-    // lambda and assign it as the table's default.
 
-    auto slot = NewSlot(true); // since func_val's are managed
+
+
+
+
+    auto slot = NewSlot(true);
     (void)BuildLambda(slot, def_lambda);
 
     z = GenInst(OP_SET_TABLE_DEFAULT_LAMBDA_VV, n, slot);
@@ -1356,10 +1356,10 @@ ZAMStmt ZAMCompiler::ConstructRecord(const NameExpr* n, const Expr* e, bool is_f
 
     auto aux = InternalBuildVals(rc->Op().get());
 
-    // Note that we set the vector to the full size of the record being
-    // constructed, *not* the size of any map (which could be smaller).
-    // This is because we want to provide the vector directly to the
-    // constructor.
+
+
+
+
     aux->zvec.resize(rt->NumFields());
 
     if ( pfs->HasSideEffects(SideEffectsOp::CONSTRUCTION, rec_e->GetType()) )
@@ -1368,29 +1368,29 @@ ZAMStmt ZAMCompiler::ConstructRecord(const NameExpr* n, const Expr* e, bool is_f
     ZOp op;
 
     const auto& map = rc->Map();
-    int network_time_index = -1; // -1 = "no network_time() initializer"
+    int network_time_index = -1;
 
     if ( map ) {
         aux->map = *map;
 
         auto fi = std::make_unique<std::vector<std::pair<int, std::shared_ptr<detail::FieldInit>>>>();
 
-        // Populate the field inits as needed.
+
         for ( auto& c : rt->CreationInits() ) {
             bool seen = false;
             for ( auto r : *map )
                 if ( c.first == r ) {
-                    // Superseded by a constructor element;
+
                     seen = true;
                     break;
                 }
 
             if ( ! seen ) {
-                // Look for very fine-grained optimization: a record
-                // initialization expression of network_time(). This winds
-                // up occurring a lot, and it's expensive since it means
-                // every such record creation entails a script-level
-                // function call.
+
+
+
+
+
                 auto ie = c.second->InitExpr();
                 if ( ie && ie->Tag() == EXPR_CALL ) {
                     auto call = ie->AsCallExpr();
@@ -1406,7 +1406,7 @@ ZAMStmt ZAMCompiler::ConstructRecord(const NameExpr* n, const Expr* e, bool is_f
             }
 
             if ( ! seen )
-                // Need to generate field dynamically.
+
                 fi->push_back(c);
         }
 
@@ -1429,10 +1429,10 @@ ZAMStmt ZAMCompiler::ConstructRecord(const NameExpr* n, const Expr* e, bool is_f
 
     ZInstI z;
 
-    TypePtr rhs_t; // in case we're constructing from a record
+    TypePtr rhs_t;
 
     if ( is_from_rec ) {
-        // Map non-from-rec operand to the from-rec equivalent.
+
         switch ( op ) {
             case OP_CONSTRUCT_KNOWN_RECORD_WITH_NT_Vi: op = OP_CONSTRUCT_KNOWN_RECORD_WITH_NT_FROM_VVi; break;
 
@@ -1446,8 +1446,8 @@ ZAMStmt ZAMCompiler::ConstructRecord(const NameExpr* n, const Expr* e, bool is_f
                 op = OP_CONSTRUCT_KNOWN_RECORD_WITH_INITS_FROM_VV;
                 break;
 
-                // Note, no case for OP_CONSTRUCT_DIRECT_RECORD_V - shouldn't
-                // happen given how we construct ConstructFromRecordExpr's.
+
+
             default: reporter->InternalError("bad op in ZAMCompiler::ConstructRecord");
         }
 
@@ -1481,14 +1481,14 @@ ZAMStmt ZAMCompiler::ConstructRecord(const NameExpr* n, const Expr* e, bool is_f
 
     auto inst = AddInst(z);
 
-    // If one of the initialization values is an unspecified vector (which
-    // in general we can't know until run-time) then we'll need to
-    // "concretize" it. We first see whether this is a possibility, since
-    // it usually isn't, by counting up how many of the initialized record
-    // fields are vectors.
 
-    // First just gather up the types of all the fields, and their location
-    // in the target.
+
+
+
+
+
+
+
     std::vector<std::pair<TypePtr, int>> init_field_types;
 
     for ( int i = 0; i < z.aux->n; ++i ) {
@@ -1498,29 +1498,29 @@ ZAMStmt ZAMCompiler::ConstructRecord(const NameExpr* n, const Expr* e, bool is_f
     }
 
     if ( is_from_rec )
-        // Need to also check the source record.
+
         for ( auto i : aux->lhs_map ) {
             auto& field_t = rt->GetFieldType(i);
             init_field_types.emplace_back(field_t, i);
         }
 
-    // Now spin through to find the vector fields.
 
-    std::vector<int> vector_fields; // holds indices of the vector fields
+
+    std::vector<int> vector_fields;
     for ( auto& ft : init_field_types )
         if ( ft.first->Tag() == TYPE_VECTOR && ft.first->Yield()->Tag() != TYPE_ANY )
             vector_fields.push_back(ft.second);
 
     if ( vector_fields.empty() )
-        // Common case of no vector fields, we're done.
+
         return inst;
 
-    // Need to add a separate instruction for concretizing the fields.
+
     z = GenInst(OP_CONCRETIZE_VECTOR_FIELDS_V, n);
     z.SetType(rec_e->GetType());
     int nf = static_cast<int>(vector_fields.size());
     z.aux = new ZInstAux(nf);
-    z.aux->elems_has_slots = false; // we're storing field offsets, not slots
+    z.aux->elems_has_slots = false;
     for ( int i = 0; i < nf; ++i )
         z.aux->Add(i, vector_fields[i]);
 
@@ -1618,7 +1618,7 @@ ZAMStmt ZAMCompiler::RecordCoerce(const NameExpr* n, const Expr* e) {
     for ( auto i = 0U; i < map_size; ++i )
         z.aux->Add(i, map[i], nullptr);
 
-    // Mark the integer entries in z.aux as not being frame slots as usual.
+
     z.aux->elems_has_slots = false;
 
     if ( pfs->HasSideEffects(SideEffectsOp::CONSTRUCTION, e->GetType()) )
@@ -1661,4 +1661,4 @@ ZAMStmt ZAMCompiler::Is(const NameExpr* n, const Expr* e) {
     return AddInst(z);
 }
 
-} // namespace zeek::detail
+}

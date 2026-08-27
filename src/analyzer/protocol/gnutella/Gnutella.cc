@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/gnutella/Gnutella.h"
 
@@ -29,7 +29,7 @@ GnutellaMsgState::GnutellaMsgState() {
     payload_len = 0;
 }
 
-} // namespace detail
+}
 
 Gnutella_Analyzer::Gnutella_Analyzer(Connection* conn) : analyzer::tcp::TCP_ApplicationAnalyzer("GNUTELLA", conn) {
     state = 0;
@@ -112,7 +112,7 @@ bool Gnutella_Analyzer::IsHTTP(std::string_view header) {
 
     if ( a && Parent()->AddChildAnalyzer(a) ) {
         if ( Parent()->IsAnalyzer("TCP") ) {
-            // Replay buffered data.
+
             analyzer::pia::PIA* pia = static_cast<packet_analysis::IP::SessionAdapter*>(Parent())->GetPIA();
             if ( pia )
                 static_cast<analyzer::pia::PIA_TCP*>(pia)->ReplayStreamBuffer(a);
@@ -166,7 +166,7 @@ void Gnutella_Analyzer::DeliverLines(int len, const u_char* data, bool orig) {
                     new_state |= orig ? ORIG_OK : RESP_OK;
             }
 
-            // Length after adding the CRLF and new line
+
             auto new_headers_len = ms->headers.length() + 2 + ms->buffer.length();
             if ( zeek::BifConst::Gnutella::max_header_length > 0 &&
                  new_headers_len >= zeek::BifConst::Gnutella::max_header_length ) {
@@ -275,4 +275,4 @@ void Gnutella_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
         DeliverMessages(len, data, orig);
 }
 
-} // namespace zeek::analyzer::gnutella
+}

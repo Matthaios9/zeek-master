@@ -23,7 +23,7 @@ rel_test=$(echo $1 | sed 's,.*testing/btest/,,')
 export ZEEK_GEN_CPP=1
 export ZEEK_REPORT_UNCOMPILABLE=1
 export ZEEK_CPP_DIR=$(pwd)
-# export ZEEK_OPT_FUNCS="<global-stmts>"
+
 export ZEEK_OPT_FILES="testing/btest"
 
 (
@@ -31,7 +31,7 @@ export ZEEK_OPT_FILES="testing/btest"
     ../../auxil/btest/btest $rel_test
 )
 
-# export -n ZEEK_GEN_CPP ZEEK_CPP_DIR ZEEK_OPT_FUNCS ZEEK_OPT_FILES
+
 unset ZEEK_GEN_CPP ZEEK_REPORT_UNCOMPILABLE ZEEK_CPP_DIR ZEEK_OPT_FILES
 
 ninja

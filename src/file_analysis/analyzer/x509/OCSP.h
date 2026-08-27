@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -31,8 +31,8 @@ private:
     void ParseExtensionsSpecific(openssl_x509_ext_t* ex, bool, openssl_asn1_obj_t*, const char*) override;
 
     std::string ocsp_data;
-    bool request = false; // true if ocsp request, false if reply
+    bool request = false;
 };
 
-} // namespace detail
-} // namespace zeek::file_analysis
+}
+}

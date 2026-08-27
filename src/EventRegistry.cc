@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/EventRegistry.h"
 
@@ -20,8 +20,8 @@ EventRegistry::EventRegistry() = default;
 EventRegistry::~EventRegistry() noexcept = default;
 
 EventHandlerPtr EventRegistry::Register(std::string_view name, bool is_from_script) {
-    // If there already is an entry in the registry, we have a
-    // local handler on the script layer.
+
+
     EventHandler* h = event_registry->Lookup(name);
 
     if ( h ) {
@@ -126,14 +126,14 @@ EventGroupPtr EventRegistry::LookupGroup(EventGroupKind kind, std::string_view n
 
 EventGroup::EventGroup(EventGroupKind kind, std::string_view name) : kind(kind), name(name) {}
 
-// Run through all ScriptFunc instances associated with this group and
-// update their bodies after a group's enable/disable state has changed.
-// Once that has completed, also update the Func's has_enabled_bodies
-// setting based on the new state of its bodies.
-//
-// EventGroup is private friend with Func, so fiddling with the bodies
-// and private members works and keeps the logic out of Func and away
-// from the public zeek:: namespace.
+
+
+
+
+
+
+
+
 void EventGroup::UpdateFuncBodies() {
     static auto is_group_disabled = [](const auto& g) { return g->IsDisabled(); };
     static auto is_body_enabled = [](const auto& b) { return ! b.disabled; };
@@ -191,7 +191,7 @@ public:
     std::set<zeek::TypeTag> reject = {TYPE_ANY, TYPE_FUNC, TYPE_FILE, TYPE_OPAQUE};
 };
 
-} // namespace
+}
 
 bool EventRegistry::RegisterMetadata(EnumValPtr id, TypePtr type) {
     static const auto& metadata_id_type = id::find_type<EnumType>("EventMetadata::ID");
@@ -232,4 +232,4 @@ const EventMetadataDescriptor* EventRegistry::LookupMetadata(zeek_uint_t id) con
     return &(it->second);
 }
 
-} // namespace zeek
+}

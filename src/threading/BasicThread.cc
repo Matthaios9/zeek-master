@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/threading/BasicThread.h"
 
@@ -44,14 +44,14 @@ void BasicThread::SetName(const char* arg_name) {
 }
 
 void BasicThread::SetOSName(const char* arg_name) {
-    // Do it only if libc++ supports pthread_t.
+
     if constexpr ( std::is_same_v<std::thread::native_handle_type, pthread_t> )
         zeek::util::detail::set_thread_name(arg_name, reinterpret_cast<pthread_t>(thread.native_handle()));
 }
 
 const char* BasicThread::Fmt(const char* format, ...) {
     if ( buf_len > 10 * STD_FMT_BUF_LEN ) {
-        // Shrink back to normal.
+
         buf = reinterpret_cast<char*>(util::safe_realloc(buf, STD_FMT_BUF_LEN));
         buf_len = STD_FMT_BUF_LEN;
     }
@@ -61,11 +61,11 @@ const char* BasicThread::Fmt(const char* format, ...) {
     int n = vsnprintf(buf, buf_len, format, al);
     va_end(al);
 
-    if ( static_cast<unsigned int>(n) >= buf_len ) { // Not enough room, grow the buffer.
+    if ( static_cast<unsigned int>(n) >= buf_len ) {
         buf_len = n + 32;
         buf = reinterpret_cast<char*>(util::safe_realloc(buf, buf_len));
 
-        // Is it portable to restart?
+
         va_start(al, format);
         n = vsnprintf(buf, buf_len, format, al);
         va_end(al);
@@ -137,9 +137,9 @@ void BasicThread::Join() {
 }
 
 void BasicThread::Kill() {
-    // We don't *really* kill the thread here because that leads to race
-    // conditions. Instead we set a flag that parts of the code need
-    // to check and get out of any loops they might be in.
+
+
+
     terminating = true;
     killed = true;
     OnKill();
@@ -156,14 +156,14 @@ void* BasicThread::launcher(void* arg) {
     BasicThread* thread = reinterpret_cast<BasicThread*>(arg);
 
 #ifndef _MSC_VER
-    // Block signals in thread. We handle signals only in the main
-    // process.
+
+
     sigset_t mask_set;
     sigfillset(&mask_set);
 
-    // Unblock the signals where according to POSIX the result is undefined if they are blocked
-    // in a thread and received by that thread. If those are not unblocked, threads will just
-    // hang when they crash without the user being notified.
+
+
+
     sigdelset(&mask_set, SIGFPE);
     sigdelset(&mask_set, SIGILL);
     sigdelset(&mask_set, SIGSEGV);
@@ -172,7 +172,7 @@ void* BasicThread::launcher(void* arg) {
     assert(res == 0);
 #endif
 
-    // Run thread's main function.
+
     thread->Run();
 
     thread->Done();
@@ -180,4 +180,4 @@ void* BasicThread::launcher(void* arg) {
     return nullptr;
 }
 
-} // namespace zeek::threading
+}

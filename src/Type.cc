@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Type.h"
 
@@ -31,32 +31,32 @@ namespace zeek {
 
 Type::TypeAliasMap Type::type_aliases;
 
-// Note: This function must be thread-safe.
+
 const char* type_name(TypeTag t) {
     static constexpr const char* type_names[static_cast<int>(NUM_TYPES)] = {
-        "void",     // 0
-        "bool",     // 1
-        "int",      // 2
-        "count",    // 3
-        "double",   // 4
-        "time",     // 5
-        "interval", // 6
-        "string",   // 7
-        "pattern",  // 8
-        "enum",     // 9
-        "port",     // 10
-        "addr",     // 11
-        "subnet",   // 12
-        "any",      // 13
-        "table",    // 14
-        "record",   // 15
-        "types",    // 16
-        "func",     // 17
-        "file",     // 18
-        "vector",   // 19
-        "opaque",   // 20
-        "type",     // 21
-        "error",    // 22
+        "void",
+        "bool",
+        "int",
+        "count",
+        "double",
+        "time",
+        "interval",
+        "string",
+        "pattern",
+        "enum",
+        "port",
+        "addr",
+        "subnet",
+        "any",
+        "table",
+        "record",
+        "types",
+        "func",
+        "file",
+        "vector",
+        "opaque",
+        "type",
+        "error",
     };
 
     if ( static_cast<int>(t) >= NUM_TYPES )
@@ -71,7 +71,7 @@ Type::Type(TypeTag t, bool arg_base_type)
       is_network_order(zeek::is_network_order(t)),
       base_type(arg_base_type) {}
 
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+
 #define CHECK_TYPE_TAG(tag_type, func_name) CHECK_TAG(tag, tag_type, func_name, type_name)
 
 const TypeList* Type::AsTypeList() const {
@@ -317,7 +317,7 @@ detail::TraversalCode TypeList::Traverse(detail::TraversalCallback* cb) const {
 }
 
 int IndexType::MatchesIndex(detail::ListExpr* const index) const {
-    // If we have a type indexed by subnets, addresses are ok.
+
     const auto& types = indices->GetTypes();
     const ExprPList& exprs = index->Exprs();
 
@@ -333,7 +333,7 @@ void IndexType::DoDescribe(ODesc* d) const {
 
     const auto& its = GetIndexTypes();
 
-    // Deal with unspecified table/set.
+
     if ( its.empty() ) {
         if ( ! d->IsBinary() )
             d->Add("()");
@@ -423,8 +423,8 @@ static bool is_supported_index_type(const TypePtr& t, const char** tname, std::u
     if ( t->InternalType() != TYPE_INTERNAL_OTHER )
         return true;
 
-    // Handle recursive calls as good: If they turn out not
-    // to be, that should've been discovered further down.
+
+
     if ( seen.contains(t) )
         return true;
 
@@ -433,7 +433,7 @@ static bool is_supported_index_type(const TypePtr& t, const char** tname, std::u
     auto tag = t->Tag();
 
     switch ( tag ) {
-        // Allow functions, since they can be compared for Func* pointer equality.
+
         case TYPE_FUNC:
         case TYPE_PATTERN: return true;
 
@@ -525,7 +525,7 @@ TypePtr TableType::ShallowClone() { return make_intrusive<TableType>(indices, yi
 void TableType::RegenerateHash() { table_hash = std::make_unique<detail::CompositeHash>(GetIndices()); }
 
 bool TableType::IsUnspecifiedTable() const {
-    // Unspecified types have an empty list of indices.
+
     return indices->GetTypes().empty();
 }
 
@@ -555,7 +555,7 @@ bool TableType::DoExpireCheck(const detail::AttrPtr& attr) {
         return true;
 
     const auto& func_index_types = e_ft->ParamList()->GetTypes();
-    // Keep backwards compatibility with idx: any idiom.
+
     if ( func_index_types.size() == 2 ) {
         if ( func_index_types[1]->Tag() == TYPE_ANY )
             return true;
@@ -581,7 +581,7 @@ bool TableType::DoExpireCheck(const detail::AttrPtr& attr) {
 SetType::SetType(TypeListPtr ind, detail::ListExprPtr arg_elements)
     : TableType(std::move(ind), nullptr), elements(std::move(arg_elements)) {
     if ( elements ) {
-        if ( indices ) { // We already have a type.
+        if ( indices ) {
             if ( ! check_and_promote_exprs(elements.get(), indices) )
                 SetError();
         }
@@ -625,7 +625,7 @@ SetType::~SetType() = default;
 FuncType::Capture::Capture(detail::IDPtr _id, bool _deep_copy) : id(std::move(_id)), deep_copy(_deep_copy) {
     is_managed = id ? ZVal::IsManagedType(id->GetType()) : false;
     if ( ! is_managed )
-        // For non-managed types, deep copying isn't applicable.
+
         deep_copy = false;
 }
 
@@ -879,7 +879,7 @@ namespace detail {
 
 ExprPtr FieldInit::InitExpr() const { return nullptr; }
 
-// A record field initialization that directly assigns a fixed value ...
+
 class DirectFieldInit final : public FieldInit {
 public:
     DirectFieldInit(ZVal _init_val) : init_val(_init_val) {}
@@ -890,7 +890,7 @@ private:
     ZVal init_val;
 };
 
-// ... the same, but for a value that needs memory management.
+
 class DirectManagedFieldInit final : public FieldInit {
 public:
     DirectManagedFieldInit(ZVal _init_val) : init_val(_init_val) {}
@@ -905,12 +905,12 @@ private:
     ZVal init_val;
 };
 
-// A record field initialization that's done by evaluating an expression.
+
 class ExprFieldInit final : public FieldInit {
 public:
-    // Initialization requires evaluating the given expression,
-    // yielding a value of the given type (which might require
-    // coercion for some records).
+
+
+
     ExprFieldInit(detail::ExprPtr _init_expr, TypePtr _init_type)
         : init_expr(std::move(_init_expr)), init_type(std::move(_init_type)) {
         if ( init_type->Tag() == TYPE_RECORD && ! same_type(init_expr->GetType(), init_type) )
@@ -935,25 +935,25 @@ public:
 
     bool IsDeferrable() const override {
         if ( init_expr->Tag() == EXPR_RECORD_CONSTRUCTOR ) {
-            // Special-case deferrable record construction.
+
             auto rce = zeek::cast_intrusive<RecordConstructorExpr>(init_expr);
             auto rt = rce->GetType<zeek::RecordType>();
 
-            // The empty constructor_list check here is a short-cut: If the
-            // constructor expression contained only further const expressions
-            // or only further deferrable record constructors, this could be
-            // more aggressively deferring initializations.
+
+
+
+
             auto constructor_list = rce->Op();
             return rt->IsDeferrable() && constructor_list->Exprs().empty();
         }
 
-        // Allow deferring fairly common &default=vector() field initialization...
+
         if ( init_expr->Tag() == EXPR_VECTOR_CONSTRUCTOR ) {
             auto vce = zeek::cast_intrusive<VectorConstructorExpr>(init_expr);
             return vce->GetType<zeek::VectorType>()->IsUnspecifiedVector();
         }
 
-        // ...and also &default=table() and &default=set().
+
         if ( init_expr->Tag() == EXPR_TABLE_COERCE || init_expr->Tag() == EXPR_TABLE_CONSTRUCTOR ||
              init_expr->Tag() == EXPR_SET_CONSTRUCTOR ) {
             auto une = zeek::cast_intrusive<UnaryExpr>(init_expr);
@@ -969,11 +969,11 @@ public:
 private:
     detail::ExprPtr init_expr;
     TypePtr init_type;
-    RecordTypePtr coerce_type; // non-nil iff coercion is required
+    RecordTypePtr coerce_type;
 };
 
-// A record field initialization where the field is initialized to an
-// empty/default record of the given type.
+
+
 class RecordFieldInit final : public FieldInit {
 public:
     RecordFieldInit(RecordTypePtr _init_type) : init_type(std::move(_init_type)) {}
@@ -989,8 +989,8 @@ private:
     RecordTypePtr init_type;
 };
 
-// A record field initialization where the field is initialized to an
-// empty table of the given type.
+
+
 class TableFieldInit final : public FieldInit {
 public:
     TableFieldInit(TableTypePtr _init_type, detail::AttributesPtr _attrs)
@@ -1003,8 +1003,8 @@ private:
     detail::AttributesPtr attrs;
 };
 
-// A record field initialization where the field is initialized to an
-// empty vector of the given type.
+
+
 class VectorFieldInit final : public FieldInit {
 public:
     VectorFieldInit(VectorTypePtr _init_type) : init_type(std::move(_init_type)) {}
@@ -1015,11 +1015,11 @@ private:
     VectorTypePtr init_type;
 };
 
-} // namespace detail
+}
 
-// Helper TraversalCallback optimizing RecordType instances by moving
-// deferrable FieldInits from creation_inits to deferred_inits once
-// parsing has completed.
+
+
+
 class RecordType::CreationInitsOptimizer : public detail::TraversalCallback {
 public:
     detail::TraversalCode PreTypedef(const detail::ID* id) override {
@@ -1040,8 +1040,8 @@ private:
         int i = 0;
         for ( auto& ci : rt->creation_inits ) {
             if ( ! ci.second->IsDeferrable() ) {
-                // A non-deferrable field with a &default attribute is expected to also exist in deferred_inits
-                // such that re-initialization after deletion of the field works.
+
+
                 if ( rt->FieldDecl(ci.first)->GetAttr(detail::ATTR_DEFAULT) != detail::Attr::nil ) {
                     if ( ! rt->deferred_inits[ci.first] )
                         zeek::reporter->InternalError("non-deferrable field %s$%s with &default not in deferred_inits",
@@ -1055,9 +1055,9 @@ private:
                 rt->creation_inits[i++] = std::move(ci);
             }
             else {
-                // If deferred_inits already has a value, it should be the same as the one
-                // stored in creation_inits. This happens for deferrable record fields
-                // that have a &default attribute.
+
+
+
                 if ( rt->deferred_inits[ci.first] && rt->deferred_inits[ci.first] != ci.second )
                     zeek::reporter->InternalError("deferrable field %s$%s has inconsistent inits",
                                                   rt->GetName().c_str(), rt->FieldName(i));
@@ -1066,11 +1066,11 @@ private:
             }
         }
 
-        // Discard remaining elements.
+
         rt->creation_inits.resize(i);
     }
 
-    // Endless recursion avoidance.
+
     std::unordered_set<TypePtr> analyzed_types;
 };
 
@@ -1093,8 +1093,8 @@ void RecordType::InitPostScript() {
     detail::traverse_all(&cb);
 }
 
-// in this case the clone is actually not so shallow, since
-// it gets modified by everyone.
+
+
 TypePtr RecordType::ShallowClone() {
     auto pass = new type_decl_list();
     for ( const auto& type : *types )
@@ -1117,8 +1117,8 @@ void RecordType::AddField(unsigned int field, const TypeDecl* td) {
 
     managed_fields.push_back(ZVal::IsManagedType(td->type));
 
-    // We defer error-checking until here so that we can keep deferred_inits
-    // and managed_fields correctly tracking the associated fields.
+
+
 
     if ( field_ids.contains(td->id) ) {
         reporter->Error("duplicate field '%s' found in record definition", td->id);
@@ -1153,11 +1153,11 @@ void RecordType::AddField(unsigned int field, const TypeDecl* td) {
         }
 
         else {
-            // Note that init is placed into creation_inits and deferred_inits
-            // such that accessing a record field after deleting it will run the
-            // &default expression to re-initialize it again.
-            //
-            // Also see RecordType::CreationInitsOptimizer.
+
+
+
+
+
             init = std::make_shared<detail::ExprFieldInit>(def_expr, type);
             creation_inits.emplace_back(field, init);
         }
@@ -1167,11 +1167,11 @@ void RecordType::AddField(unsigned int field, const TypeDecl* td) {
         TypeTag tag = type->Tag();
 
         if ( tag == TYPE_RECORD ) {
-            // Initially, put record fields into creation_inits. Once parsing has
-            // completed, they may move into deferred_inits. See RecordType::InitPostScript()
-            // and RecordType::CreationInitisOptimizer.
-            //
-            // init (nil) is appended to deferred_inits as placeholder.
+
+
+
+
+
             auto rfi = std::make_shared<detail::RecordFieldInit>(cast_intrusive<RecordType>(type));
             creation_inits.emplace_back(field, std::move(rfi));
         }
@@ -1282,8 +1282,8 @@ TableValPtr RecordType::GetRecordFieldsVal(const RecordVal* rv) const {
     static auto record_field_table = id::find_type<TableType>("record_field_table");
 
     auto attrs = zeek::make_intrusive<detail::Attributes>(record_field_table,
-                                                          /*in_record=*/false,
-                                                          /*is_global=*/false);
+                                                          false,
+                                                          false);
     attrs->AddAttr(make_intrusive<detail::Attr>(detail::ATTR_ORDERED));
     auto rval = make_intrusive<TableVal>(record_field_table, std::move(attrs));
 
@@ -1414,21 +1414,21 @@ void RecordType::DescribeFieldsReST(ODesc* d, bool func_args) const {
             d->Add("<recursion>");
         else {
             if ( num_fields == 1 && util::streq(td->id, "va_args") && td->type->Tag() == TYPE_ANY )
-                // This was a BIF using variable argument list
+
                 d->Add("...");
             else {
                 if ( func_args ) {
                     td->DescribeReST(d);
                 }
                 else {
-                    // ReST rendering of a TypeDecl as zeek:field directive if
-                    // this is about rendering a proper record type and not
-                    // function parameters.
-                    //
-                    // Not sure why we're treating record types and function
-                    // signatures the same thing and than denote what it is
-                    // by passing around a bool. Open-code the field directive
-                    // rendering here.
+
+
+
+
+
+
+
+
                     d->Add(".. zeek:field:: ");
                     d->Add(td->id);
                     d->Add(" ");
@@ -1438,14 +1438,14 @@ void RecordType::DescribeFieldsReST(ODesc* d, bool func_args) const {
                         d->Add("`");
                     }
                     else {
-                        td->type->DescribeReST(d, /*roles_only=*/true);
+                        td->type->DescribeReST(d, true);
                     }
                     if ( td->attrs ) {
                         d->SP();
-                        td->attrs->DescribeReST(d, /*shorten=*/true);
+                        td->attrs->DescribeReST(d, true);
                     }
 
-                    // Good thing ReST doesn't care too much about extra whitespace.
+
                     d->NL();
                 }
             }
@@ -1540,9 +1540,9 @@ bool RecordType::IsDeferrable() const {
     assert(! run_state::is_parsing);
     auto is_deferrable = [](const auto& p) -> bool { return p.second->IsDeferrable(); };
 
-    // If all creation_inits are deferrable, this record type is deferrable, too.
-    // It will be optimized later on. Note, all_of() returns true for an empty
-    // range, which is correct.
+
+
+
     return std::ranges::all_of(creation_inits, is_deferrable);
 }
 
@@ -1587,25 +1587,25 @@ void OpaqueType::DescribeReST(ODesc* d, bool roles_only) const {
     d->Add(util::fmt(":zeek:type:`%s` of %s", type_name(Tag()), name.c_str()));
 }
 
-bool OpaqueType::HashSingleValue(const detail::CompositeHash* /*ch*/, detail::HashKey& /*hk*/, const Val* /*v*/,
-                                 bool /*type_check*/, bool /*singleton*/) const {
+bool OpaqueType::HashSingleValue(const detail::CompositeHash* , detail::HashKey& , const Val* ,
+                                 bool , bool ) const {
     reporter->InternalError("opaque type '%s' does not support hashing (HashSingleValue)", name.c_str());
     return false;
 }
 
-bool OpaqueType::RecoverValFromHash(const detail::CompositeHash* /*ch*/, const detail::HashKey& /*hk*/,
-                                    ValPtr* /*pval*/, bool /*singleton*/) const {
+bool OpaqueType::RecoverValFromHash(const detail::CompositeHash* , const detail::HashKey& ,
+                                    ValPtr* , bool ) const {
     reporter->InternalError("opaque type '%s' does not support hashing (RecoverValFromHash)", name.c_str());
     return false;
 }
 
-bool OpaqueType::ReserveHashKeySize(const detail::CompositeHash* /*ch*/, detail::HashKey& /*hk*/, const Val* /*v*/,
-                                    bool /*type_check*/, bool /*calc_static_size*/, bool /*singleton*/) const {
+bool OpaqueType::ReserveHashKeySize(const detail::CompositeHash* , detail::HashKey& , const Val* ,
+                                    bool , bool , bool ) const {
     reporter->InternalError("opaque type '%s' does not support hashing (ReserveHashKeySize)", name.c_str());
     return false;
 }
 
-ValPtr OpaqueType::CastValueTo(const ValPtr& /*v*/, const Type* /*t*/, std::string& err) const {
+ValPtr OpaqueType::CastValueTo(const ValPtr& , const Type* , std::string& err) const {
     err = "opaque type does not support this cast";
     return nullptr;
 }
@@ -1631,12 +1631,12 @@ TypePtr EnumType::ShallowClone() {
 
 EnumType::~EnumType() = default;
 
-// Note, we use reporter->Error() here (not Error()) to include the current script
-// location in the error message, rather than the one where the type was
-// originally defined.
+
+
+
 void EnumType::AddName(const string& module_name, const char* name, bool is_export, detail::Expr* deprecation,
                        bool from_redef) {
-    /* implicit, auto-increment */
+
     if ( counter < 0 ) {
         reporter->Error("cannot mix explicit enumerator assignment and implicit auto-increment");
         SetError();
@@ -1648,7 +1648,7 @@ void EnumType::AddName(const string& module_name, const char* name, bool is_expo
 
 void EnumType::AddName(const string& module_name, const char* name, zeek_int_t val, bool is_export,
                        detail::Expr* deprecation, bool from_redef) {
-    /* explicit value specified */
+
     if ( counter > 0 ) {
         reporter->Error("cannot mix explicit enumerator assignment and implicit auto-increment");
         SetError();
@@ -1689,9 +1689,9 @@ void EnumType::CheckAndAddName(const string& module_name, const char* name, zeek
         detail::zeekygen_mgr->Identifier(id, from_redef);
     }
     else {
-        // We allow double-definitions if matching exactly. This is so that
-        // we can define an enum both in a *.bif and *.zeek for avoiding
-        // cyclic dependencies.
+
+
+
         if ( ! id->IsEnumConst() || (id->HasVal() && val != id->GetVal()->AsEnum()) ||
              GetName() != id->GetType()->GetName() || (names.contains(fullname) && names[fullname] != val) ) {
             auto cl = detail::GetCurrentLocation();
@@ -1856,10 +1856,10 @@ TypePtr VectorType::ShallowClone() { return make_intrusive<VectorType>(yield_typ
 VectorType::~VectorType() = default;
 
 const TypePtr& VectorType::Yield() const {
-    // Work around the fact that we use void internally to mark a vector
-    // as being unspecified. When looking at its yield type, we need to
-    // return any as that's what other code historically expects for type
-    // comparisons.
+
+
+
+
     if ( IsUnspecifiedVector() )
         return zeek::base_type(TYPE_ANY);
 
@@ -1919,11 +1919,11 @@ detail::TraversalCode VectorType::Traverse(detail::TraversalCallback* cb) const 
     HANDLE_TC_TYPE_POST(tc);
 }
 
-// Returns true if t1 is initialization-compatible with t2 (i.e., if an
-// initializer with type t1 can be used to initialize a value with type t2),
-// false otherwise.  Assumes that t1's tag is different from t2's.  Note
-// that the test is in only one direction - we don't check whether t2 is
-// initialization-compatible with t1.
+
+
+
+
+
 static bool is_init_compat(const Type& t1, const Type& t2) {
     if ( t1.Tag() == TYPE_LIST ) {
         if ( t2.Tag() == TYPE_RECORD )
@@ -1952,21 +1952,21 @@ bool same_type(const Type& arg_t1, const Type& arg_t2, bool is_init, bool match_
         return false;
     }
 
-    // A major complication we have to deal with is the potential
-    // presence of recursive types (records, in particular).  If
-    // we simply traverse a type's members recursively, then if the
-    // type is itself recursive we will end up with infinite recursion.
-    // To prevent this, we need to instead track our analysis process
 
-    // Which types we're in the process of analyzing.  We add (compound)
-    // types to this as we recurse into their elements, and remove them
-    // when we're done processing them.
+
+
+
+
+
+
+
+
     static std::unordered_set<const Type*> analyzed_types;
 
-    // First do all checks that don't require any recursion.
+
 
     switch ( t1->Tag() ) {
-        case TYPE_VOID: // NOLINT(bugprone-branch-clone)
+        case TYPE_VOID:
         case TYPE_BOOL:
         case TYPE_INT:
         case TYPE_COUNT:
@@ -1982,17 +1982,17 @@ bool same_type(const Type& arg_t1, const Type& arg_t2, bool is_init, bool match_
         case TYPE_ERROR: return true;
 
         case TYPE_ENUM: {
-            // We have enum types with the same name, but different pointers.
-            // This comes from situations where the same enum is defined within
-            // a .bif file and a .zeek file. Supervisor::ClusterRole and
-            // Broker::BackendType are examples.
-            //
-            // It'd be nice if enum types were singletons instead.
+
+
+
+
+
+
             if ( t1->GetName() == t2->GetName() )
                 return true;
 
-            // If an EnumType has a parent and the type to compare
-            // against is that parent, they are compatible...
+
+
             const auto* t1p = t1->AsEnumType()->GetParentType().get();
             const auto* t2p = t2->AsEnumType()->GetParentType().get();
 
@@ -2002,19 +2002,19 @@ bool same_type(const Type& arg_t1, const Type& arg_t2, bool is_init, bool match_
             if ( t2p && t2p == t1 )
                 return true;
 
-            // Remove in v9.1: Make enums nominally typed. Change trailing
-            // return to false.
-            //
-            // We only output warnings during parse time for the user to see
-            // when we return true for nominally different enum types. I'm a
-            // bit worried we may somehow get here at runtime and spill a lot
-            // of warnings unexpectedly.
+
+
+
+
+
+
+
             if ( run_state::is_parsing )
                 reporter->Deprecation(
                     util::fmt("Remove in v9.1. Mixing incompatible enum types %s and %s will become an error.",
                               obj_desc_short(t1).c_str(), obj_desc_short(t2).c_str()));
 
-            // Remove in v9.1: Change to return false.
+
             return true;
         }
 
@@ -2034,8 +2034,8 @@ bool same_type(const Type& arg_t1, const Type& arg_t2, bool is_init, bool match_
             if ( (tl1 || tl2) && ! (tl1 && tl2) )
                 return false;
 
-            // If one is a set and one isn't, they shouldn't
-            // be considered the same type.
+
+
             if ( t1->IsSet() != t2->IsSet() )
                 return false;
 
@@ -2099,32 +2099,32 @@ bool same_type(const Type& arg_t1, const Type& arg_t2, bool is_init, bool match_
         case TYPE_TYPE: break;
     }
 
-    // If we get to here, then we're dealing with a type with
-    // subtypes, and thus potentially recursive.
+
+
 
     if ( analyzed_types.contains(t1) || analyzed_types.contains(t2) ) {
-        // We've analyzed at least one of the types previously.
-        // Avoid infinite recursion.
+
+
 
         if ( analyzed_types.contains(t1) && analyzed_types.contains(t2) )
-            // We've analyzed them both.  In theory, this
-            // could happen while the types are still different.
-            // Checking for that is a pain - we could do so
-            // by recursively expanding all of the types present
-            // when traversing them (suppressing repeats), and
-            // see that they individually match in a non-recursive
-            // manner.  For now, we assume they're a direct match.
+
+
+
+
+
+
+
             return true;
 
-        // One is definitely recursive and the other has not yet
-        // manifested as such.  In theory, they again could still
-        // be a match, if the non-recursive one would manifest
-        // becoming recursive if only we traversed it further, but
-        // for now we assume they're not a match.
+
+
+
+
+
         return false;
     }
 
-    // Track the two types for when we recurse.
+
     analyzed_types.insert(t1);
     analyzed_types.insert(t2);
 
@@ -2141,10 +2141,10 @@ bool same_type(const Type& arg_t1, const Type& arg_t2, bool is_init, bool match_
             if ( ! same_type(tl1, tl2, is_init, match_record_field_names) )
                 result = false;
             else if ( t1->IsSet() && t2->IsSet() )
-                // Sets don't have yield types because they don't have values. If
-                // both types are sets, and we already matched on the indices
-                // above consider that a success. We already checked the case
-                // where only one of the two is a set earlier.
+
+
+
+
                 result = true;
             else {
                 const auto& y1 = t1->Yield();
@@ -2232,7 +2232,7 @@ bool record_promotion_compatible(const RecordType* super_rec, const RecordType* 
         int o = super_rec->FieldOffset(sub_rec->FieldName(i));
 
         if ( o < 0 )
-            // Orphaned field.
+
             continue;
 
         const auto& sub_field_type = sub_rec->GetFieldType(i);
@@ -2335,8 +2335,8 @@ TypeTag max_type(TypeTag t1, TypeTag t2) {
 }
 
 static TypePtr merge_enum_types(const Type* t1, const Type* t2) {
-    // Could compare pointers t1 == t2, but maybe there's someone out
-    // there creating clones of the type, so safer to compare name.
+
+
     if ( t1->GetName() != t2->GetName() ) {
         std::string msg =
             util::fmt("incompatible enum types: '%s' and '%s'", t1->GetName().data(), t2->GetName().data());
@@ -2345,16 +2345,16 @@ static TypePtr merge_enum_types(const Type* t1, const Type* t2) {
         return nullptr;
     }
 
-    // Doing a lookup here as a roundabout way of ref-ing t1, without
-    // changing the function params which has t1 as const and also
-    // (potentially) avoiding a pitfall mentioned earlier about clones.
+
+
+
     const auto& id = detail::global_scope()->Find(t1->GetName());
 
     if ( id && id->IsType() && id->GetType()->Tag() == TYPE_ENUM )
-        // It should make most sense to return the real type here rather
-        // than a copy since it may be redef'd later in parsing.  If we
-        // return a copy, then whoever is using this return value won't
-        // actually see those changes from the redef.
+
+
+
+
         return id->GetType();
 
     std::string msg = util::
@@ -2430,9 +2430,9 @@ static TypePtr merge_record_types(const Type* t1, const Type* t2) {
     const RecordType* rt1 = static_cast<const RecordType*>(t1);
     const RecordType* rt2 = static_cast<const RecordType*>(t2);
 
-    // We allow the records to have different numbers of fields.
-    // We first go through all of the fields in rt1, and then we
-    // check for whether rt2 has any additional fields.
+
+
+
 
     type_decl_list* tdl3 = new type_decl_list();
 
@@ -2472,7 +2472,7 @@ static TypePtr merge_record_types(const Type* t1, const Type* t2) {
         tdl3->push_back(td3);
     }
 
-    // Now add in any extras from rt2.
+
     for ( int i = 0; i < rt2->NumFields(); ++i ) {
         auto td2 = rt2->FieldDecl(i);
         auto td1_offset_i = rt1->FieldOffset(rt2->FieldName(i));
@@ -2555,8 +2555,8 @@ TypePtr merge_types(const TypePtr& arg_t1, const TypePtr& arg_t2) {
 
     auto t1 = arg_t1.get();
     auto t2 = arg_t2.get();
-    // t1 = flatten_type(t1);
-    // t2 = flatten_type(t2);
+
+
 
     TypeTag tg1 = t1->Tag();
     TypeTag tg2 = t2->Tag();
@@ -2641,7 +2641,7 @@ TypePtr maximal_type(detail::ListExpr* elements) {
     return t;
 }
 
-// Reduces an aggregate type.
+
 static Type* reduce_type(Type* t) {
     if ( t->Tag() == TYPE_LIST )
         return flatten_type(t);
@@ -2683,7 +2683,7 @@ static TableTypePtr init_table_type(detail::ListExpr* l) {
         yield = merge_types(yield, y);
 
         if ( ! index || ! yield )
-            // Error message already generated.
+
             return nullptr;
     }
 
@@ -2749,11 +2749,11 @@ TypePtr init_type(const detail::ExprPtr& init) {
         return nullptr;
     }
 
-    // Could be a record, a set, or a list of table elements.
+
     auto e0 = el[0];
 
     if ( e0->IsRecordElement(nullptr) )
-        // ListExpr's know how to build a record from their components.
+
         return init_list->InitType();
 
     if ( e0->Tag() == detail::EXPR_ASSIGN )
@@ -2777,10 +2777,10 @@ bool is_atomic_type(const Type& t) {
 const TypePtr& base_type(TypeTag tag) {
     static TypePtr base_types[NUM_TYPES];
 
-    // We could check here that "tag" actually corresponds to a basic type.
+
     if ( ! base_types[tag] ) {
         base_types[tag] = make_intrusive<Type>(tag, true);
-        // Give the base types a pseudo-location for easier identification.
+
         detail::Location l(type_name(tag), 0, 0);
         base_types[tag]->SetLocationInfo(&l);
     }
@@ -2788,4 +2788,4 @@ const TypePtr& base_type(TypeTag tag) {
     return base_types[tag];
 }
 
-} // namespace zeek
+}

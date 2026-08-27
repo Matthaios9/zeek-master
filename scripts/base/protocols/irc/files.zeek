@@ -6,11 +6,11 @@ module IRC;
 
 export {
 	redef record Info += {
-		## File unique ID.
+
 		fuid: string &log &optional;
 	};
 
-	## Default file handle provider for IRC.
+
 	global get_file_handle: function(c: connection, is_orig: bool): string;
 
 	redef record fa_file += {

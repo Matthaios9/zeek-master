@@ -1,7 +1,7 @@
 zeek_add_plugin(
     Zeek SMB
     SOURCES SMB.cc Plugin.cc
-    BIFS # SMB 1.
+    BIFS
          smb1_com_check_directory.bif
          smb1_com_close.bif
          smb1_com_create_directory.bif
@@ -21,7 +21,7 @@ zeek_add_plugin(
          smb1_com_tree_disconnect.bif
          smb1_com_write_andx.bif
          smb1_events.bif
-         # SMB 2.
+
          smb2_com_close.bif
          smb2_com_create.bif
          smb2_com_negotiate.bif
@@ -33,11 +33,11 @@ zeek_add_plugin(
          smb2_com_write.bif
          smb2_com_transform_header.bif
          smb2_events.bif
-         # Common boilerplate.
+
          events.bif
          consts.bif
          types.bif
-    PAC # Common boilerplate.
+    PAC
         smb.pac
         smb-common.pac
         smb-strings.pac
@@ -45,7 +45,7 @@ zeek_add_plugin(
         smb-pipe.pac
         smb-gssapi.pac
         smb-mailslot.pac
-        # SMB 1.
+
         smb1-protocol.pac
         smb1-com-check-directory.pac
         smb1-com-close.pac
@@ -67,7 +67,7 @@ zeek_add_plugin(
         smb1-com-tree-connect-andx.pac
         smb1-com-tree-disconnect.pac
         smb1-com-write-andx.pac
-        # SMB 2.
+
         smb2-protocol.pac
         smb2-com-close.pac
         smb2-com-create.pac

@@ -7,31 +7,31 @@ module KRB;
 
 export {
 	redef record Info += {
-		## Client certificate
+
 		client_cert:		Files::Info &optional;
-		## Subject of client certificate, if any
+
 		client_cert_subject:	string &log &optional;
-		## File unique ID of client cert, if any
+
 		client_cert_fuid:	string &log &optional;
 
-		## Server certificate
+
 		server_cert:		Files::Info &optional;
-		## Subject of server certificate, if any
+
 		server_cert_subject:	string &log &optional;
-		## File unique ID of server cert, if any
+
 		server_cert_fuid:	string &log &optional;
 	};
 
-	## Default file handle provider for KRB.
+
 	global get_file_handle: function(c: connection, is_orig: bool): string;
 
-	## Default file describer for KRB.
+
 	global describe_file: function(f: fa_file): string;
 }
 
 function get_file_handle(c: connection, is_orig: bool): string
 	{
-	# Unused.  File handles are generated in the analyzer.
+
 	return "";
 	}
 
@@ -43,11 +43,11 @@ function describe_file(f: fa_file): string
 	if ( ! f?$info || ! f$info?$x509 || ! f$info$x509?$certificate )
 		return "";
 
-	# It is difficult to reliably describe a certificate - especially since
-	# we do not know when this function is called (hence, if the data structures
-	# are already populated).
-	#
-	# Just return a bit of our connection information and hope that is good enough.
+
+
+
+
+
 	for ( _, c in f$conns )
 		{
 		if ( c?$krb )

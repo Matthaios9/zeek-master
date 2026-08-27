@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -20,22 +20,22 @@ public:
 
     static zeek::packet_analysis::AnalyzerPtr Instantiate() { return std::make_shared<TeredoAnalyzer>(); }
 
-    /**
-     * Emits a weird only if the analyzer has previously been able to
-     * decapsulate a Teredo packet in both directions or if *force* param is
-     * set, since otherwise the weirds could happen frequently enough to be less
-     * than helpful.  The *force* param is meant for cases where just one side
-     * has a valid encapsulation and so the weird would be informative.
-     */
+
+
+
+
+
+
+
     void Weird(Connection* conn, const char* name, bool force = false) const {
         if ( AnalyzerConfirmed(conn) || force )
             reporter->Weird(conn, name, "", GetAnalyzerName());
     }
 
-    /**
-     * If the delayed confirmation option is set, then a valid encapsulation
-     * seen from both end points is required before confirming.
-     */
+
+
+
+
     void Confirm(Connection* conn, bool valid_orig, bool valid_resp) {
         if ( ! BifConst::Tunnel::delay_teredo_confirmation || (valid_orig && valid_resp) ) {
             AnalyzerConfirmation(conn);
@@ -64,10 +64,10 @@ class TeredoEncapsulation {
 public:
     TeredoEncapsulation(const TeredoAnalyzer* ta, Connection* conn) : analyzer(ta), conn(conn) {}
 
-    /**
-     * Returns whether input data parsed as a valid Teredo encapsulation type.
-     * If it was valid, the len argument is decremented appropriately.
-     */
+
+
+
+
     bool Parse(const u_char* data, size_t& len) { return DoParse(data, len, false, false); }
 
     const u_char* InnerIP() const { return inner_ip; }
@@ -90,6 +90,6 @@ private:
     Connection* conn = nullptr;
 };
 
-} // namespace detail
+}
 
-} // namespace zeek::packet_analysis::teredo
+}

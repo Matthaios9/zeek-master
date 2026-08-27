@@ -1,6 +1,6 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// C++ compiler methods relating to generating code for Stmt's.
+
+
 
 #include "zeek/script_opt/CPP/Compile.h"
 
@@ -17,8 +17,8 @@ void CPPCompile::GenStmt(const Stmt* s) {
         case STMT_INIT: GenInitStmt(s->AsInitStmt()); break;
 
         case STMT_LIST: {
-            // These always occur in contexts surrounded by {}'s,
-            // so no need to add them explicitly.
+
+
             auto sl = s->AsStmtList();
             const auto& stmts = sl->Stmts();
 
@@ -83,7 +83,7 @@ void CPPCompile::GenInitStmt(const InitStmt* init) {
         auto type_ind = GenTypeName(t);
 
         if ( ! locals.contains(aggr) ) {
-            // fprintf(stderr, "aggregate %s unused\n", obj_desc(aggr.get()).c_str());
+
             continue;
         }
 
@@ -95,8 +95,8 @@ void CPPCompile::GenInitStmt(const InitStmt* init) {
         if ( ! attrs )
             continue;
 
-        // Remove attributes that aren't relevant given we don't actually
-        // create local (Zeek) variables.
+
+
         attrs->RemoveAttr(ATTR_IS_USED);
         attrs->RemoveAttr(ATTR_IS_ASSIGNED);
 
@@ -146,7 +146,7 @@ void CPPCompile::GenReturnStmt(const ReturnStmt* r) {
         Emit("return true;");
 
     else if ( ! e && ret_type && ret_type->Tag() != TYPE_VOID )
-        // This occurs for ExpressionlessReturnOkay() functions.
+
         Emit("return nullptr;");
 
     else if ( ! ret_type || ! e || e->GetType()->Tag() == TYPE_VOID )
@@ -187,8 +187,8 @@ void CPPCompile::GenSwitchStmt(const SwitchStmt* sw) {
 }
 
 void CPPCompile::GenTypeSwitchStmt(const Expr* e, const case_list* cases) {
-    // Start a scoping block so we avoid naming conflicts if a function
-    // has multiple type switches.
+
+
     Emit("{");
     Emit("static std::vector<int> CPP__switch_types =");
     StartBlock();
@@ -237,19 +237,19 @@ void CPPCompile::GenTypeSwitchStmt(const Expr* e, const case_list* cases) {
 
     --break_level;
 
-    Emit("}"); // end the switch
-    Emit("}"); // end the scoping block
+    Emit("}");
+    Emit("}");
 }
 
 void CPPCompile::GenTypeSwitchCase(const IDPtr id, int case_offset, bool is_multi) {
     Emit("case %s:", Fmt(case_offset));
 
     if ( ! id->Name() )
-        // No assignment, we're done.
+
         return;
 
-    // It's an assignment case.  If it's a collection of multiple cases,
-    // assign to the variable only for this particular case.
+
+
     IndentUp();
 
     if ( is_multi ) {
@@ -361,8 +361,8 @@ void CPPCompile::GenWhenStmt(const WhenInfo* wi, const string& when_lambda, cons
 
     Emit("CPP__wi->Instantiate(%s);", when_lambda);
 
-    // We need a new frame for the trigger to unambiguously associate
-    // with, in case we're called multiple times with our existing frame.
+
+
     Emit("auto new_frame = make_intrusive<Frame>(0, nullptr, nullptr);");
     Emit("auto curr_t = f__CPP->GetTrigger();");
     Emit("auto curr_assoc = f__CPP->GetTriggerAssoc();");
@@ -377,9 +377,9 @@ void CPPCompile::GenWhenStmt(const WhenInfo* wi, const string& when_lambda, cons
         timeout_val);
 
     if ( ret_type && ret_type->Tag() != TYPE_VOID ) {
-        // Note, ret_type can be active but we *still* don't have
-        // a return value, due to the faked-up "any" return type
-        // associated with "when" lambdas, so check for that case.
+
+
+
         Emit("if ( curr_t )");
         StartBlock();
         Emit("ValPtr retval = {NewRef{}, curr_t->Lookup(curr_assoc)};");
@@ -388,8 +388,8 @@ void CPPCompile::GenWhenStmt(const WhenInfo* wi, const string& when_lambda, cons
         Emit("return %s;", GenericValPtrToGT("retval", ret_type, GEN_NATIVE));
         EndBlock();
 
-        // Return something to avoid return-without-value warnings - but not
-        // if this is a when-inside-a-when, or a hook.
+
+
         if ( ! func_type->ExpressionlessReturnOkay() && ! in_hook )
             Emit("return 0;");
     }
@@ -525,4 +525,4 @@ void CPPCompile::GenAssertStmt(const AssertStmt* a) {
     Emit("} // end of \"assert\" scope");
 }
 
-} // namespace zeek::detail
+}

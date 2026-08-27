@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -20,11 +20,11 @@
 
 #include <spicy/compiler/driver.h>
 
-// Debug stream for compiler messages.
+
 static const ::hilti::logging::DebugStream ZeekPlugin("zeek");
 
-// Macro helper to report debug messages.
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+
+
 #define SPICY_DEBUG(msg) HILTI_DEBUG(ZeekPlugin, std::string(msg));
 
 namespace zeek::spicy {
@@ -32,71 +32,71 @@ namespace zeek::spicy {
 class GlueCompiler;
 
 struct TypeInfo {
-    hilti::ID id;                         /**< fully-qualified name of the type */
-    hilti::QualifiedType* type = nullptr; /**< the type itself */
-    hilti::declaration::Linkage linkage;  /**< linkage of of the type's declaration */
-    bool is_resolved = false; /**< true if we are far enough in processing that the type has been fully resolved */
-    hilti::ID module_id;      /**< name of module type is defined in */
-    hilti::rt::filesystem::path module_path; /**< path of module that type is defined in */
-    hilti::Location location;                /**< location of type's declaration */
+    hilti::ID id;
+    hilti::QualifiedType* type = nullptr;
+    hilti::declaration::Linkage linkage;
+    bool is_resolved = false;
+    hilti::ID module_id;
+    hilti::rt::filesystem::path module_path;
+    hilti::Location location;
 };
 
-/** Spicy compilation driver. */
+
 class Driver : public ::spicy::Driver {
 public:
-    /**
-     * Constructor.
-     *
-     * @param argv0 path to current executable, or empty to determine automatically
-     * @param lib_path Path to library files the Spicy support needs
-     * @param zeek_version Version number of Zeek we're working with
-     */
+
+
+
+
+
+
+
     Driver(std::unique_ptr<GlueCompiler> glue, const char* argv0, hilti::rt::filesystem::path lib_path,
            int zeek_version);
 
-    /** Destructor. */
+
     ~Driver() override;
 
-    /**
-     * Schedules an *.spicy, *.evt, or *.hlt file for loading. Note that it
-     * won't necessarily load them all immediately, but may queue some for
-     * later processing.
-     *
-     * @param file file to load, which will be searched across all current search paths
-     * @param relative_to if given, relative paths will be interpreted as relative to this directory
-     */
+
+
+
+
+
+
+
+
     hilti::Result<hilti::Nothing> loadFile(hilti::rt::filesystem::path file,
                                            const hilti::rt::filesystem::path& relative_to = {});
 
-    /**
-     * After user scripts have been read, compiles and links all resulting
-     * Spicy code. Note that compiler and driver options must have been set
-     * before calling this.
-     *
-     * Must be called before any packet processing starts.
-     *
-     * @return False if an error occurred. It will have been reported already.
-     */
+
+
+
+
+
+
+
+
+
     hilti::Result<hilti::Nothing> compile();
 
-    /**
-     * Returns meta information for a type. The Spicy module defining the type
-     * must have been compiled already for it to be found.
-     *
-     * @param id fully qualified name of type to look up
-     * @return meta data, or an error if the type is not (yet) known
-     */
+
+
+
+
+
+
+
     hilti::Result<TypeInfo> lookupType(const hilti::ID& id);
 
-    /**
-     * Returns meta information for a type, enforcing it to be a of a certain
-     * kind. The Spicy module defining the type must have been compiled already
-     * for it to be found.
-     *
-     * @tparam T type to enforce; method will return an error if type is not of this class
-     * @param id fully qualified name of type to look up
-     * @return meta data, or an error if the type is not (yet) known
-     */
+
+
+
+
+
+
+
+
+
     template<typename T>
     hilti::Result<TypeInfo> lookupType(const hilti::ID& id) {
         auto ti = lookupType(id);
@@ -109,70 +109,70 @@ public:
         return ti;
     }
 
-    /**
-     * Returns all types seen so far during processing of Spicy files.
-     * Depending on where we are at with processing, these may or may not be
-     * resolved yet (as indicated by their `is_resolved` field).
 
-     * @return list of types
-     */
+
+
+
+
+
+
     std::vector<TypeInfo> types() const;
 
-    /**
-     * Returns all *exported* types seen so far during processing of Spicy
-     * files, including their desired Zeek-side names. Depending on where we
-     * are at with processing, these may or may not be resolved yet (as
-     * indicated by their `is_resolved` field).
-     *
-     * @return list of pairs of type and Zeek-side name
-     */
+
+
+
+
+
+
+
+
     std::vector<std::pair<TypeInfo, hilti::ID>> exportedTypes() const;
 
-    /** Returns true if we're running out of the plugin's build directory. */
+
     bool usingBuildDirectory() const { return _using_build_directory; }
 
-    /** Returns the glue compiler in use by the driver. */
+
     const auto* glueCompiler() const { return _glue.get(); }
 
-    /** Prints a usage message for options supported by `parseOptions{Pre,Post}Script()`. */
+
     static void usage(std::ostream& out);
 
 protected:
-    /**
-     * Hook executed for all type declarations encountered in a Spicy module.
-     * Derived classes may override this to add custom processing. This hook
-     * executes twices for each declaration: once before we compile the AST
-     * (meaning types have not been resolved yet), and once after. The type
-     * info's `is_resolved` field indicates which of the two we're in.
-     *
-     * @param t type's meta information
-     */
-    virtual void hookNewType(const TypeInfo& /*ti*/) {}
 
-    /** Overridden from HILTI driver. */
+
+
+
+
+
+
+
+
+    virtual void hookNewType(const TypeInfo& ) {}
+
+
     void hookNewASTPreCompilation(const hilti::Plugin& plugin, hilti::ASTRoot* root) override;
 
-    /** Overridden from HILTI driver. */
+
     bool hookNewASTPostCompilation(const hilti::Plugin& plugin, hilti::ASTRoot* root) override;
 
-    /** Overridden from HILTI driver. */
+
     hilti::Result<hilti::Nothing> hookCompilationFinished(hilti::ASTRoot* root) override;
 
-    /** Overridden from HILTI driver. */
+
     void hookInitRuntime() override;
 
-    /** Overridden from HILTI driver. */
+
     void hookFinishRuntime() override;
 
-    std::unique_ptr<GlueCompiler> _glue;            // glue compiler in use
-    std::unordered_map<hilti::ID, TypeInfo> _types; // map of Spicy type declarations encountered so far
-    std::vector<TypeInfo> _public_enums;            // tracks Spicy enum types declared public, for automatic export
-    bool _using_build_directory = false;            // true if we're running out of the plugin's build directory
-    hilti::Result<hilti::Nothing> _error = hilti::Nothing(); // error encountered during compilation
+    std::unique_ptr<GlueCompiler> _glue;
+    std::unordered_map<hilti::ID, TypeInfo> _types;
+    std::vector<TypeInfo> _public_enums;
+    bool _using_build_directory = false;
+    hilti::Result<hilti::Nothing> _error = hilti::Nothing();
 
-    // State machine for glue code generation, to do things in the right order.
+
     enum class GluePhase : uint8_t { Create, ExportTypes, Done };
-    GluePhase _glue_phase = GluePhase::Create; // current phase of glue code generation
+    GluePhase _glue_phase = GluePhase::Create;
 };
 
-} // namespace zeek::spicy
+}

@@ -1,4 +1,4 @@
-##! Detect the TLS heartbleed attack. See https://heartbleed.com for more.
+
 
 @load base/protocols/ssl
 @load base/frameworks/notice
@@ -7,19 +7,19 @@ module Heartbleed;
 
 export {
 	redef enum Notice::Type += {
-		## Indicates that a host performed a heartbleed attack or scan.
+
 		SSL_Heartbeat_Attack,
-		## Indicates that a host performing a heartbleed attack was probably successful.
+
 		SSL_Heartbeat_Attack_Success,
-		## Indicates we saw heartbeat requests with odd length. Probably an attack or scan.
+
 		SSL_Heartbeat_Odd_Length,
-		## Indicates we saw many heartbeat requests without a reply. Might be an attack.
+
 		SSL_Heartbeat_Many_Requests
 	};
 }
 
-# Do not disable analyzers after detection - otherwise we will not notice
-# encrypted attacks.
+
+
 redef SSL::disable_analyzer_after_detection=F;
 
 redef record SSL::Info += {
@@ -29,10 +29,10 @@ redef record SSL::Info += {
 	originator_heartbeats: count &default=0;
 	responder_heartbeats: count &default=0;
 
-	# Unencrypted connections - was an exploit attempt detected yet.
+
 	heartbleed_detected: bool &default=F;
 
-	# Count number of appdata packages and bytes exchanged so far.
+
 	enc_appdata_packages: count &default=0;
 	enc_appdata_bytes: count &default=0;
 };
@@ -47,9 +47,9 @@ global min_lengths_tls11: vector of min_length = vector();
 
 event zeek_init()
 	{
-	# Minimum length a heartbeat packet must have for different cipher suites.
-	# Note - tls 1.1f and 1.0 have different lengths :(
-	# This should be all cipher suites usually supported by vulnerable servers.
+
+
+
 	min_lengths_tls11 += [$cipher=/_AES_256_GCM_SHA384$/, $min_length=43];
 	min_lengths_tls11 += [$cipher=/_AES_128_GCM_SHA256$/, $min_length=43];
 	min_lengths_tls11 += [$cipher=/_256_CBC_SHA384$/, $min_length=96];
@@ -147,7 +147,7 @@ event ssl_encrypted_heartbeat(c: connection, is_client: bool, length: count)
 			                    $msg=fmt("More than 3 heartbeat requests without replies from server. Possible attack. Client count: %d, server count: %d", c$ssl$originator_heartbeats, c$ssl$responder_heartbeats),
 			                    $conn=c,
 			                    $n=(c$ssl$originator_heartbeats-c$ssl$responder_heartbeats),
-			                    $identifier=fmt("%s%d", c$uid, c$ssl$responder_heartbeats/1000) # re-throw every 1000 heartbeats
+			                    $identifier=fmt("%s%d", c$uid, c$ssl$responder_heartbeats/1000)
 			                    ));
 
 	if ( c$ssl$responder_heartbeats > c$ssl$originator_heartbeats + 3 )
@@ -155,7 +155,7 @@ event ssl_encrypted_heartbeat(c: connection, is_client: bool, length: count)
 			                    $msg=fmt("Server sending more heartbeat responses than requests seen. Possible attack. Client count: %d, server count: %d", c$ssl$originator_heartbeats, c$ssl$responder_heartbeats),
 			                    $conn=c,
 			                    $n=(c$ssl$responder_heartbeats-c$ssl$originator_heartbeats),
-			                    $identifier=fmt("%s%d", c$uid, c$ssl$responder_heartbeats/1000) # re-throw every 1000 heartbeats
+			                    $identifier=fmt("%s%d", c$uid, c$ssl$responder_heartbeats/1000)
 			                    ));
 
 	if ( is_client && length < 19 )
@@ -166,9 +166,9 @@ event ssl_encrypted_heartbeat(c: connection, is_client: bool, length: count)
 			                    $identifier=fmt("%s-weak-%d", c$uid, length)
 			                    ));
 
-	# Examine request lengths based on used cipher...
+
 	local min_length_choice: vector of min_length;
-	if ( (c$ssl$version == "TLSv11") || (c$ssl$version == "TLSv12") ) # tls 1.1+ have different lengths for CBC
+	if ( (c$ssl$version == "TLSv11") || (c$ssl$version == "TLSv12") )
 		min_length_choice = min_lengths_tls11;
 	else
 		min_length_choice = min_lengths;
@@ -196,7 +196,7 @@ event ssl_encrypted_heartbeat(c: connection, is_client: bool, length: count)
 		{
 		if ( c$ssl?$last_responder_heartbeat_request_size )
 			{
-			# server originated heartbeat. Ignore & continue
+
 			delete c$ssl$last_responder_heartbeat_request_size;
 			}
 
@@ -211,7 +211,7 @@ event ssl_encrypted_heartbeat(c: connection, is_client: bool, length: count)
 			                    $msg=fmt("An encrypted TLS heartbleed attack was probably detected! First packet client record length %d, first packet server record length %d. Time: %f",
 			                    c$ssl$last_originator_heartbeat_request_size, length, duration),
 			                    $conn=c,
-			                    $identifier=c$uid # only throw once per connection
+			                    $identifier=c$uid
 			                    ));
 			}
 

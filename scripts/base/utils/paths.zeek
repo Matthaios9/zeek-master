@@ -1,15 +1,15 @@
-##! Functions to parse and manipulate UNIX style paths and directories.
+
 
 const absolute_path_pat = /(\/|[A-Za-z]:[\\\/]).*/;
 
-## Given an arbitrary string, extracts a single, absolute path (directory
-## with filename).
-##
-## .. todo:: Make this work on Window's style directories.
-##
-## input: a string that may contain an absolute path.
-##
-## Returns: the first absolute path found in input string, else an empty string.
+
+
+
+
+
+
+
+
 function extract_path(input: string): string
 	{
 	const dir_pattern = /(\/|[A-Za-z]:[\\\/])([^\"\ ]|(\\\ ))*/;

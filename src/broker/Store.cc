@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/broker/Store.h"
 
@@ -43,12 +43,12 @@ void StoreHandleVal::ValDescribe(ODesc* d) const {
 IMPLEMENT_OPAQUE_VALUE(StoreHandleVal)
 
 std::optional<BrokerData> StoreHandleVal::DoSerializeData() const {
-    // Cannot serialize.
+
     return std::nullopt;
 }
 
 bool StoreHandleVal::DoUnserializeData(BrokerDataView) {
-    // Cannot unserialize.
+
     return false;
 }
 
@@ -95,4 +95,4 @@ broker::backend_options to_backend_options(broker::backend backend, RecordVal* o
     return result;
 }
 
-} // namespace zeek::Broker::detail
+}

@@ -1,57 +1,57 @@
-##! A module for performing active HTTP requests and
-##! getting the reply at runtime.
+
+
 
 @load ./exec
 
 module ActiveHTTP;
 
 export {
-	## The default timeout for HTTP requests.
+
 	option default_max_time = 1min;
 
-	## The default HTTP method/verb to use for requests.
+
 	option default_method = "GET";
 
 	type Response: record {
-		## Numeric response code from the server.
+
 		code:      count;
-		## String response message from the server.
+
 		msg:       string;
-		## Full body of the response.
+
 		body:      string                  &optional;
-		## All headers returned by the server.
+
 		headers:   table[string] of string &optional;
 	};
 
 	type Request: record {
-		## The URL being requested.
+
 		url:             string;
-		## The HTTP method/verb to use for the request.
+
 		method:          string                  &default=default_method;
-		## Data to send to the server in the client body.  Keep in
-		## mind that you will probably need to set the *method* field
-		## to "POST" or "PUT".
+
+
+
 		client_data:     string                  &optional;
 
-		# Arbitrary headers to pass to the server.  Some headers
-		# will be included by libCurl.
-		#custom_headers: table[string] of string &optional;
 
-		## Timeout for the request.
+
+
+
+
 		max_time:        interval                &default=default_max_time;
-		## Additional curl command line arguments.  Be very careful
-		## with this option since shell injection could take place
-		## if careful handling of untrusted data is not applied.
+
+
+
 		addl_curl_args:  string                  &optional;
 	};
 
-	## Perform an HTTP request according to the
-	## :zeek:type:`ActiveHTTP::Request` record.  This is an asynchronous
-	## function and must be called within a "when" statement.
-	##
-	## req: A record instance representing all options for an HTTP request.
-	##
-	## Returns: A record with the full response message.
+
+
+
+
+
+
+
 	global request: function(req: ActiveHTTP::Request): ActiveHTTP::Response;
 }
 
@@ -71,7 +71,7 @@ function request2curl(r: Request, bodyfile: string, headersfile: string): string
 		cmd = fmt("%s %s", cmd, r$addl_curl_args);
 
 	cmd = fmt("%s %s", cmd, safe_shell_quote(r$url));
-	# Make sure file will exist even if curl did not write one.
+
 	cmd = fmt("%s && touch %s", cmd, safe_shell_quote(bodyfile));
 	return cmd;
 	}
@@ -84,7 +84,7 @@ function request(req: Request): ActiveHTTP::Response
 	resp$body = "";
 	resp$headers = table();
 
-	# Sanity-check the method parameter as it will go directly into our command line.
+
 	if ( req$method != /[A-Za-z]+/ )
 		{
 		Reporter::error(fmt("There was an illegal method specified with ActiveHTTP (\"%s\").", req$method));
@@ -107,7 +107,7 @@ function request(req: Request): ActiveHTTP::Response
 
 	return when [req, resp, cmd, stdin_data, bodyfile, headersfile] ( local result = Exec::run(Exec::Command($cmd=cmd, $stdin=stdin_data, $read_files=set(bodyfile, headersfile))) )
 		{
-		# If there is no response line then nothing else will work either.
+
 		if ( ! (result?$files && headersfile in result$files) )
 			{
 			Reporter::error(fmt("There was a failure when requesting \"%s\" with ActiveHTTP.", req$url));
@@ -117,7 +117,7 @@ function request(req: Request): ActiveHTTP::Response
 		local headers = result$files[headersfile];
 		for ( i in headers )
 			{
-			# The reply is the first line.
+
 			if ( i == 0 )
 				{
 				local response_line = split_string_n(headers[0], /[[:blank:]]+/, F, 2);

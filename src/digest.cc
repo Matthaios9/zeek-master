@@ -1,8 +1,8 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-/**
- * Wrapper and helper functions for MD5/SHA digest algorithms.
- */
+
+
+
+
 
 #include "zeek/digest.h"
 
@@ -30,7 +30,7 @@ namespace {
 auto* to_native_ptr(HashDigestState* ptr) { return reinterpret_cast<EVP_MD_CTX*>(ptr); }
 auto* to_native_ptr(const HashDigestState* ptr) { return reinterpret_cast<const EVP_MD_CTX*>(ptr); }
 auto* to_opaque_ptr(EVP_MD_CTX* ptr) { return reinterpret_cast<HashDigestState*>(ptr); }
-} // namespace
+}
 
 HashDigestState* hash_init(HashAlgorithm alg) {
     EVP_MD_CTX* c = EVP_MD_CTX_new();
@@ -39,7 +39,7 @@ HashDigestState* hash_init(HashAlgorithm alg) {
     switch ( alg ) {
         case Hash_MD5:
 #ifdef EVP_MD_CTX_FLAG_NON_FIPS_ALLOW
-            /* Allow this to work even if FIPS disables it */
+
             EVP_MD_CTX_set_flags(c, EVP_MD_CTX_FLAG_NON_FIPS_ALLOW);
 #endif
             md = EVP_md5();
@@ -83,11 +83,11 @@ void hash_copy(HashDigestState* out, const HashDigestState* in) {
 }
 
 unsigned char* calculate_digest(HashAlgorithm alg, const unsigned char* data, uint64_t len, unsigned char* out) {
-    // maximum possible length for supported hashes
+
     static unsigned char static_out[SHA512_DIGEST_LENGTH];
 
     if ( ! out )
-        out = static_out; // use static array for return, see OpenSSL man page
+        out = static_out;
 
     auto* c = hash_init(alg);
     hash_update(c, data, len);
@@ -95,4 +95,4 @@ unsigned char* calculate_digest(HashAlgorithm alg, const unsigned char* data, ui
     return out;
 }
 
-} // namespace zeek::detail
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/ID.h"
 
@@ -140,8 +140,8 @@ void ID::SetVal(ValPtr v) {
                 register_new_event({NewRef{}, this});
         }
         else {
-            // Otherwise, internally defined events cannot
-            // have local handler.
+
+
             handler->SetFunc(func);
         }
     }
@@ -215,7 +215,7 @@ void ID::UpdateValAttrs() {
         const auto& attr = attrs->Find(ATTR_LOG);
 
         if ( attr ) {
-            // Apply &log to all record fields.
+
             RecordType* rt = GetType()->AsRecordType();
             for ( int i = 0; i < rt->NumFields(); ++i ) {
                 TypeDecl* fd = rt->FieldDecl(i);
@@ -290,7 +290,7 @@ void ID::SetOption() {
 
     is_option = true;
 
-    // option implied redefinable
+
     if ( ! IsRedefinable() )
         AddAttr(make_intrusive<Attr>(ATTR_REDEF));
 }
@@ -316,7 +316,7 @@ TraversalCode ID::Traverse(TraversalCallback* cb) const {
         HANDLE_TC_STMT_PRE(tc);
     }
 
-    // FIXME: Perhaps we should be checking at other than global scope.
+
     else if ( val && IsFunc(val->GetType()->Tag()) && cb->current_scope == detail::global_scope() ) {
         tc = val->AsFunc()->Traverse(cb);
         HANDLE_TC_STMT_PRE(tc);
@@ -478,13 +478,13 @@ void ID::DescribeReST(ODesc* d, bool roles_only) const {
     }
 
     if ( val && type && type->Tag() != TYPE_FUNC && type->InternalType() != TYPE_INTERNAL_VOID &&
-         // Do not include a default value for enum const identifiers,
-         // as their value can't be changed.
+
+
          ! IsEnumConst() &&
 
-         // Values within Version module are likely to include a
-         // constantly-changing version number and be a frequent
-         // source of error/desynchronization, so don't include them.
+
+
+
          ModuleName() != "Version" ) {
         d->Add(":Default:");
         auto ii = zeekygen_mgr->GetIdentifierInfo(Name());
@@ -502,7 +502,7 @@ void ID::DescribeReST(ODesc* d, bool roles_only) const {
                         d->NL();
                         break;
                     }
-                    // Fall-through.
+
 
                 default:
                     d->NL();
@@ -579,7 +579,7 @@ void ID::AddOptionHandler(FuncPtr callback, int priority) {
 }
 
 std::vector<Func*> ID::GetOptionHandlers() const {
-    // It might be worth caching this if we expect it to be called a lot...
+
     std::vector<Func*> v;
     for ( const auto& element : option_handlers )
         v.push_back(element.second.get());
@@ -591,6 +591,6 @@ void ID::ClearOptInfo() {
     opt_info = nullptr;
 }
 
-} // namespace detail
+}
 
-} // namespace zeek
+}

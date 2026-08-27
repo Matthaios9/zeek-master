@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_flow.h"
 
@@ -58,13 +58,13 @@ void FlowDecl::ProcessDataUnitElement(AnalyzerDataUnit* dataunit_elem) {
         ASSERT(AnalyzerContextDecl::current_analyzer_context());
         AnalyzerContextDecl::current_analyzer_context()->AddFlowBuffer();
 
-        // Add an argument to the context initiation
+
         dataunit_->context_type()->AddParamArg(new Expr(flow_buffer_var_field_->id()->clone()));
     }
 }
 
 void FlowDecl::Prepare() {
-    // Add the connection parameter
+
     if ( ! conn_decl_ ) {
         throw Exception(this, "no connection is not declared for the flow");
     }
@@ -82,10 +82,10 @@ void FlowDecl::Prepare() {
 void FlowDecl::GenPubDecls(Output* out_h, Output* out_cc) { AnalyzerDecl::GenPubDecls(out_h, out_cc); }
 
 void FlowDecl::GenPrivDecls(Output* out_h, Output* out_cc) {
-    // Declare the data unit
+
     dataunit_->dataunit_var_field()->GenPrivDecls(out_h, env_);
 
-    // Declare the analyzer context
+
     dataunit_->context_var_field()->GenPrivDecls(out_h, env_);
 
     AnalyzerDecl::GenPrivDecls(out_h, out_cc);
@@ -188,7 +188,7 @@ void FlowDecl::GenProcessFunc(Output* out_h, Output* out_cc) {
 
 void FlowDecl::GenNewDataUnit(Output* out_cc) {
     Type* unit_datatype = dataunit_->data_type();
-    // dataunit_->data_type()->GenPreParsing(out_cc, env_);
+
     dataunit_->GenNewDataUnit(out_cc, env_);
     if ( unit_datatype->buffer_input() && unit_datatype->buffer_mode() == Type::BUFFER_BY_LENGTH ) {
         out_cc->println("%s->NewFrame(0, false);", env_->LValue(flow_buffer_id));
@@ -197,8 +197,8 @@ void FlowDecl::GenNewDataUnit(Output* out_cc) {
 }
 
 void FlowDecl::GenDeleteDataUnit(Output* out_cc) {
-    // Do not just delete dataunit, because we may just want to Unref it.
-    // out_cc->println("delete %s;", env_->LValue(dataunit_id));
+
+
     dataunit_->data_type()->GenCleanUpCode(out_cc, env_);
     dataunit_->context_type()->GenCleanUpCode(out_cc, env_);
 }
@@ -214,7 +214,7 @@ void FlowDecl::GenCodeFlowUnit(Output* out_cc) {
     out_cc->println("( !%s->have_pending_request() || %s->ready() ) ) {", env_->LValue(flow_buffer_id),
                     env_->LValue(flow_buffer_id));
 
-    // Generate a new dataunit if necessary
+
     out_cc->println("if ( ! %s ) {", env_->LValue(dataunit_id));
     out_cc->inc_indent();
     out_cc->println("BINPAC_ASSERT(!%s);", env_->LValue(analyzer_context_id));
@@ -229,7 +229,7 @@ void FlowDecl::GenCodeFlowUnit(Output* out_cc) {
     out_cc->inc_indent();
     out_cc->println("// Clean up the flow unit after parsing");
     GenDeleteDataUnit(out_cc);
-    // out_cc->println("BINPAC_ASSERT(%s == 0);", env_->LValue(dataunit_id));
+
     out_cc->dec_indent();
     out_cc->println("} else {");
     out_cc->inc_indent();

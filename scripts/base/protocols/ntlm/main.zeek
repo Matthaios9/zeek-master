@@ -8,36 +8,36 @@ export {
 	global log_policy: Log::PolicyHook;
 
 	type Info: record {
-		## Timestamp for when the event happened.
+
 		ts         : time     &log;
-		## Unique ID for the connection.
+
 		uid        : string   &log;
-		## The connection's 4-tuple of endpoint addresses/ports.
+
 		id         : conn_id  &log;
 
-		## Username given by the client.
+
 		username   : string   &log &optional;
-		## Hostname given by the client.
+
 		hostname   : string   &log &optional;
-		## Domainname given by the client.
+
 		domainname : string   &log &optional;
 
-		## NetBIOS name given by the server in a CHALLENGE.
+
 		server_nb_computer_name: string &log &optional;
-		## DNS name given by the server in a CHALLENGE.
+
 		server_dns_computer_name: string &log &optional;
-		## Tree name given by the server in a CHALLENGE.
+
 		server_tree_name: string &log &optional;
 
-		## Indicate whether or not the authentication was successful.
+
 		success    : bool     &log &optional;
 
-		## Internally used field to indicate if the login attempt
-		## has already been logged.
+
+
 		done: bool  &default=F;
 	};
 
-	## NTLM finalization hook.  Remaining NTLM info may get logged when it's called.
+
 	global finalize_ntlm: Conn::RemovalHook;
 }
 
@@ -96,7 +96,7 @@ event ntlm_authenticate(c: connection, request: NTLM::Authenticate) &priority=5
 
 event gssapi_neg_result(c: connection, state: count) &priority=3
 	{
-	# Ignore "incomplete" replies (state==1)
+
 	if ( c?$ntlm && state != 1 )
 		c$ntlm$success = (state == 0);
 	}
@@ -105,7 +105,7 @@ event gssapi_neg_result(c: connection, state: count) &priority=-3
 	{
 	if ( c?$ntlm && ! c$ntlm$done )
 		{
-		# Only write if success is actually set to something...
+
 		if ( c$ntlm?$success )
 			{
 			Log::write(NTLM::LOG, c$ntlm);

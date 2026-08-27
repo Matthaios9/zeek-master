@@ -1,19 +1,19 @@
-##! NetControl plugin for the process-level PacketFilter that comes with
-##! Zeek. Since the PacketFilter in Zeek is quite limited in scope
-##! and can only add/remove filters for addresses, this is quite
-##! limited in scope at the moment.
+
+
+
+
 
 @load ../plugin
 
 module NetControl;
 
 export {
-	## Instantiates the packetfilter plugin.
+
 	global create_packetfilter: function() : PluginState;
 }
 
-# Check if we can handle this rule. If it specifies ports or
-# anything Zeek cannot handle, simply ignore it for now.
+
+
 function packetfilter_check_rule(r: Rule) : bool
 	{
 	if ( r$ty != DROP )
@@ -26,7 +26,7 @@ function packetfilter_check_rule(r: Rule) : bool
 	if ( e$ty == ADDRESS )
 		return T;
 
-	if ( e$ty != FLOW ) # everything else requires ports or MAC stuff
+	if ( e$ty != FLOW )
 		return F;
 
 	if ( e$flow?$src_p || e$flow?$dst_p || e$flow?$src_m || e$flow?$dst_m )
@@ -98,8 +98,8 @@ function packetfilter_name(p: PluginState) : string
 global packetfilter_plugin = Plugin(
 	$name=packetfilter_name,
 	$can_expire = F,
-#	$init = packetfilter_init,
-#	$done = packetfilter_done,
+
+
 	$add_rule = packetfilter_add_rule,
 	$remove_rule = packetfilter_remove_rule
 	);

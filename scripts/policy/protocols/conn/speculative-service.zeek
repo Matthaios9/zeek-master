@@ -1,14 +1,14 @@
-##! This script adds information about matched DPD signatures to the connection
-##! log.
+
+
 
 @load base/protocols/conn
 
 module Conn;
 
 redef record Info += {
-	## Protocol that was determined by a matching signature after the beginning
-	## of a connection. In this situation no analyzer can be attached and hence
-	## the data cannot be analyzed nor the protocol can be confirmed.
+
+
+
 	speculative_service: string &log &optional;
 };
 

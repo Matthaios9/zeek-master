@@ -2,37 +2,37 @@
 
 module Intel;
 
-## This file adds mapping between the Collective Intelligence Framework (CIF) and Zeek.
+
 
 export {
 	redef record Intel::MetaData += {
-		## Maps to the 'tags' fields in CIF
+
 		cif_tags: string &optional;
-		## Maps to the 'confidence' field in CIF
+
 		cif_confidence: double &optional;
-		## Maps to the 'source' field in CIF
+
 		cif_source: string &optional;
-		## Maps to the 'description' field in CIF
+
 		cif_description: string &optional;
-		## Maps to the 'firstseen' field in CIF
+
 		cif_firstseen: string &optional;
-		## Maps to the 'lastseen' field in CIF
+
 		cif_lastseen: string &optional;
 	};
 
-	## CIF record used for consistent formatting of CIF values.
+
 	type CIF: record {
-		## CIF tags observations, examples for tags are ``botnet`` or ``exploit``.
+
 		tags: string &optional &log;
-		## In CIF Confidence details the degree of certainty of a given observation.
+
 		confidence: double &optional &log;
-		## Source given in CIF.
+
 		source: string &optional &log;
-		## description given in CIF.
+
 		description: string &optional &log;
-		## First time the source observed the behavior.
+
 		firstseen: string &optional &log;
-		## Last time the source observed the behavior.
+
 		lastseen: string &optional &log;
 	};
 

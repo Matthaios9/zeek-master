@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/cluster/Backend.h"
 
@@ -39,7 +39,7 @@ void detail::LocalEventHandlingStrategy::DoProcessLocalEvent(EventHandlerPtr h, 
     zeek::event_mgr.Enqueue(h, std::move(args));
 }
 
-// Backend errors are raised via a generic Cluster::Backend::error(tag, message) event.
+
 void detail::LocalEventHandlingStrategy::DoProcessError(std::string_view tag, std::string_view message) {
     if ( Cluster::Backend::error )
         zeek::event_mgr.Enqueue(Cluster::Backend::error, zeek::make_intrusive<zeek::StringVal>(tag),
@@ -69,8 +69,8 @@ std::optional<zeek::Args> detail::check_args(const zeek::FuncValPtr& handler, ze
         auto got_type = a->GetType();
         const auto& expected_type = types[i];
 
-        // If called with an unspecified table or set, adopt the expected type
-        // as otherwise same_type() fails.
+
+
         if ( got_type->Tag() == TYPE_TABLE && got_type->AsTableType()->IsUnspecifiedTable() )
             if ( expected_type->Tag() == TYPE_TABLE && got_type->IsSet() == expected_type->IsSet() )
                 got_type = expected_type;
@@ -97,7 +97,7 @@ Backend::Backend(std::string_view arg_name, std::unique_ptr<EventSerializer> es,
     if ( ! tag )
         reporter->InternalError("unknown cluster backend name '%s'; mismatch with tag component?", name.c_str());
 
-    // No telemetry by default.
+
     telemetry = std::make_unique<detail::NullTelemetry>();
 }
 
@@ -118,25 +118,25 @@ std::optional<Event> Backend::MakeClusterEvent(FuncValPtr handler, ArgsSpan args
         return std::nullopt;
     }
 
-    /**
-     * If you ever stare at this and wonder: Currently, if someone calls
-     * Cluster::publish() from within a remote event in script land, then
-     * CurrentEventTime() below will yield the network timestamp of the
-     * remote event. That means that the outgoing event from this node will
-     * have the network timestamp of the originating node, which may be
-     * different from what the local network time is.
-     *
-     * This could be confusing and another policy might be to always set
-     * the network timestamp metadata for for outgoing events to the local
-     * network time instead, even when currently handling a remote event.
-     *
-     * @J-Gras prefers the current behavior. @awelzel wonders if there should
-     * be an opt-in/opt-out for this behavior. Procrastinating it for now.
-     *
-     * In any case, if the current event has no timestamp information
-     * (detail::NO_TIMESTAMP is -1.0), use the current network time for
-     * the outgoing event instead as network timestamp metadata.
-     */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     zeek::detail::EventMetadataVectorPtr meta;
     if ( zeek::BifConst::EventMetadata::add_network_timestamp ) {
         auto ts = zeek::event_mgr.CurrentEventTime();
@@ -169,13 +169,13 @@ bool Backend::Unsubscribe(const std::string& topic_prefix) {
     return DoUnsubscribe(topic_prefix);
 }
 
-// NOLINTNEXTLINE(performance-unnecessary-value-param)
+
 void Backend::DoReadyToPublishCallback(Backend::ReadyCallback cb) {
     Backend::ReadyCallbackInfo info{Backend::CallbackStatus::Success};
     cb(info);
 }
 
-// Default implementation doing the serialization.
+
 bool Backend::DoPublishEvent(const std::string& topic, cluster::Event& event) {
     byte_buffer buf;
 
@@ -191,7 +191,7 @@ bool Backend::DoPublishEvent(const std::string& topic, cluster::Event& event) {
     return DoPublishEvent(topic, event_serializer->Name(), buf);
 }
 
-// Default implementation doing log record serialization.
+
 bool Backend::DoPublishLogWrites(const zeek::logging::detail::LogWriteHeader& header,
                                  std::span<zeek::logging::detail::LogRecord> records) {
     byte_buffer buf;
@@ -236,8 +236,8 @@ bool Backend::ProcessEventMessage(std::string_view topic, std::string_view forma
 }
 
 bool Backend::ProcessLogMessage(std::string_view format, byte_buffer_span payload) {
-    // We could also dynamically lookup the right de-serializer, but
-    // for now assume we just receive what is configured.
+
+
     if ( format != log_serializer->Name() ) {
         zeek::reporter->Error("Got log message in format '%s', but have deserializer '%s'", std::string{format}.c_str(),
                               log_serializer->Name().c_str());
@@ -264,7 +264,7 @@ ThreadedBackend::ThreadedBackend(std::string_view name, std::unique_ptr<EventSer
                                  std::unique_ptr<LogSerializer> ls, std::unique_ptr<detail::EventHandlingStrategy> ehs,
                                  zeek::detail::OnLoopProcess<ThreadedBackend, QueueMessage>* onloop)
     : Backend(name, std::move(es), std::move(ls), std::move(ehs)), onloop(onloop) {
-    onloop->Register(true); // Register as don't count first
+    onloop->Register(true);
 }
 
 
@@ -274,8 +274,8 @@ ThreadedBackend::ThreadedBackend(std::string_view name, std::unique_ptr<EventSer
                       new zeek::detail::OnLoopProcess<ThreadedBackend, QueueMessage>(this, name)) {}
 
 bool ThreadedBackend::DoInit() {
-    // Have the onloop instance count so Zeek does not terminate.
-    onloop->Register(/*dont_count=*/false);
+
+    onloop->Register(false);
     return true;
 }
 
@@ -288,7 +288,7 @@ void ThreadedBackend::DoTerminate() {
 }
 
 void ThreadedBackend::Process(QueueMessage&& msg) {
-    // sonarlint wants to use std::visit. not sure...
+
     if ( auto* emsg = std::get_if<EventMessage>(&msg) ) {
         ProcessEventMessage(emsg->topic, emsg->format, emsg->payload_span());
     }
@@ -328,8 +328,8 @@ TEST_CASE("add metadata") {
         CHECK_EQ(event.Timestamp(), -1.0);
         CHECK(event.AddMetadata(nts, zeek::make_intrusive<zeek::TimeVal>(42.0)));
         CHECK(event.AddMetadata(nts, zeek::make_intrusive<zeek::TimeVal>(43.0)));
-        CHECK_EQ(event.Timestamp(), 42.0);      // finds the first one
-        CHECK_EQ(event.Metadata()->size(), 2u); // both are stored
+        CHECK_EQ(event.Timestamp(), 42.0);
+        CHECK_EQ(event.Metadata()->size(), 2u);
     }
 
     SUBCASE("invalid-value-type") {

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/file_analysis/analyzer/data_event/DataEvent.h"
 
@@ -55,4 +55,4 @@ bool DataEvent::DeliverStream(const u_char* data, uint64_t len) {
     return true;
 }
 
-} // namespace zeek::file_analysis::detail
+}

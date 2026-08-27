@@ -1,9 +1,9 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
 extern "C" {
-#include <linux/if_packet.h> // AF_PACKET, etc.
+#include <linux/if_packet.h>
 }
 
 #include <cstdint>
@@ -21,9 +21,9 @@ public:
 
 class RX_Ring {
 public:
-    /**
-     * Constructor
-     */
+
+
+
     RX_Ring(int sock, size_t bufsize, size_t blocksize, int blocktimeout_msec);
     ~RX_Ring();
 
@@ -46,4 +46,4 @@ private:
     size_t size;
 };
 
-} // namespace zeek::iosource::af_packet
+}

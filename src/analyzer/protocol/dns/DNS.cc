@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/dns/DNS.h"
 
@@ -43,14 +43,14 @@ zeek::StringValPtr extract_char_string(zeek::analyzer::Analyzer* analyzer, const
 
     return rval;
 }
-} // namespace
+}
 
 namespace zeek::analyzer::dns {
 
 namespace detail {
 
-// Used for checking whether the connection being parsed comes from NetBIOS,
-// since it's similar to DNS but does some things differently.
+
+
 constexpr int NETBIOS_PORT = 137;
 
 DNS_Interpreter::DNS_Interpreter(analyzer::Analyzer* arg_analyzer) : analyzer(arg_analyzer) {
@@ -59,7 +59,7 @@ DNS_Interpreter::DNS_Interpreter(analyzer::Analyzer* arg_analyzer) : analyzer(ar
 }
 
 void DNS_Interpreter::ParseMessage(const u_char* data, int len, int is_query) {
-    // Every packet for every opcode starts with same size header.
+
     int hdr_len = sizeof(detail::DNS_RawMsgHdr);
 
     if ( len < hdr_len ) {
@@ -67,14 +67,14 @@ void DNS_Interpreter::ParseMessage(const u_char* data, int len, int is_query) {
         return;
     }
 
-    // The flags section may be different between the different opcodes, but the
-    // opcode is always in the same location. Parse out just that part of it here
-    // even though it will probably be reparsed later.
+
+
+
     auto* hdr = reinterpret_cast<const detail::DNS_RawMsgHdr*>(data);
     auto flags = ntohs(hdr->flags);
     auto opcode = static_cast<uint16_t>((flags & 0x7800) >> 11);
 
-    // NetBIOS registration and release messages look like regular DNS requests, so parse them as such
+
     if ( opcode != DNS_OP_QUERY && opcode != DNS_OP_DYNAMIC_UPDATE && ! is_netbios && opcode != DNS_OP_NOTIFY ) {
         analyzer->Weird("DNS_unknown_opcode", util::fmt("%d", opcode));
         analyzer->Conn()->CheckHistory(zeek::session::detail::HIST_UNKNOWN_PKT, 'X');
@@ -97,8 +97,8 @@ void DNS_Interpreter::ParseMessage(const u_char* data, int len, int is_query) {
         analyzer->EnqueueConnEvent(dns_message, analyzer->ConnVal(), val_mgr->Bool(is_query), msg.BuildHdrVal(),
                                    val_mgr->Count(len));
 
-    // There is a great deal of non-DNS traffic that runs on port 53.
-    // This should weed out most of it.
+
+
     if ( zeek::detail::dns_max_queries > 0 && msg.qd_zo_count > zeek::detail::dns_max_queries ) {
         analyzer->AnalyzerViolation("DNS_Conn_count_too_large");
         analyzer->LimitReachedWeird("DNS_Conn_count_too_large", msg.qd_zo_count, zeek::detail::dns_max_queries);
@@ -106,27 +106,27 @@ void DNS_Interpreter::ParseMessage(const u_char* data, int len, int is_query) {
         return;
     }
 
-    const u_char* msg_start = data; // needed for interpreting compression
+    const u_char* msg_start = data;
 
     data += hdr_len;
     len -= hdr_len;
 
     if ( msg.is_dynamic_update ) {
         if ( msg.qd_zo_count != 1 ) {
-            // dynamic update events should only have a single zone in them.
+
             analyzer->Weird("DNS_DU_invalid_zone_count", util::fmt("%d", msg.qd_zo_count));
             EndMessage(&msg);
             return;
         }
 
-        // Dynamic update looks like this:
-        // 1. A single "zone" that is just the first three fields of an SOA RR. It's
-        //    required to be an SOA, so a weird is returned if not.
-        // 2. Zero or more "prerequisite" RRs that are required to be true in the zone
-        //    before updates take place.
-        // 3. Zero or more "update" RRs that are the updates to be made to the zone.
-        // 4. Zero or more "additional" RRs that are unrelated to the updates. These are
-        //    handled same to the other additional RRs with other op codes.
+
+
+
+
+
+
+
+
         if ( ! ParseAnswerHeader(&msg, data, len, msg_start) ) {
             EndMessage(&msg);
             return;
@@ -150,8 +150,8 @@ void DNS_Interpreter::ParseMessage(const u_char* data, int len, int is_query) {
             return;
         }
 
-        // Send an event if the first three parts parsed correctly, since they're the
-        // actual update bits.
+
+
         if ( dns_dynamic_update )
             analyzer->EnqueueConnEvent(dns_dynamic_update, analyzer->ConnVal(), msg.BuildHdrVal(), zname,
                                        val_mgr->Count(msg.zclass));
@@ -172,7 +172,7 @@ void DNS_Interpreter::ParseMessage(const u_char* data, int len, int is_query) {
 
     bool skip_auth = (zeek::detail::dns_skip_all_auth != 0);
     bool skip_addl = (zeek::detail::dns_skip_all_addl != 0);
-    if ( msg.an_pr_count > 0 ) { // We did an answer, so can potentially skip auth/addl.
+    if ( msg.an_pr_count > 0 ) {
         static auto dns_skip_auth = id::find_val<TableVal>("dns_skip_auth");
         static auto dns_skip_addl = id::find_val<TableVal>("dns_skip_addl");
         auto server = make_intrusive<AddrVal>(analyzer->Conn()->RespAddr());
@@ -182,12 +182,12 @@ void DNS_Interpreter::ParseMessage(const u_char* data, int len, int is_query) {
     }
 
     if ( skip_auth && skip_addl ) {
-        // No point doing further work parsing the message.
+
         EndMessage(&msg);
         return;
     }
 
-    // Dynamic update doesn't have an authority section.
+
     if ( ! msg.is_dynamic_update ) {
         msg.skip_event = skip_auth;
         if ( ! ParseAnswers(&msg, msg.ns_up_count, detail::DNS_AUTHORITY, data, len, msg_start) ) {
@@ -197,7 +197,7 @@ void DNS_Interpreter::ParseMessage(const u_char* data, int len, int is_query) {
     }
 
     if ( skip_addl ) {
-        // No point doing further work parsing the message.
+
         EndMessage(&msg);
         return;
     }
@@ -253,8 +253,8 @@ bool DNS_Interpreter::ParseQuestion(detail::DNS_MsgInfo* msg, const u_char*& dat
         dns_event = dns_request;
 
     else if ( msg->QR == 1 && msg->an_pr_count == 0 && msg->ns_up_count == 0 && msg->arcount == 0 )
-        // Service rejected in some fashion, and it won't be reported
-        // via a returned RR because there aren't any.
+
+
         dns_event = dns_rejected;
     else
         dns_event = dns_query_reply;
@@ -262,7 +262,7 @@ bool DNS_Interpreter::ParseQuestion(detail::DNS_MsgInfo* msg, const u_char*& dat
     if ( dns_event && ! msg->skip_event ) {
         String* original_name = new String(name, name_end - name, true);
 
-        // Downcase the Name to normalize it
+
         for ( u_char* np = name; np < name_end; ++np )
             if ( isupper(*np) )
                 *np = tolower(*np);
@@ -272,7 +272,7 @@ bool DNS_Interpreter::ParseQuestion(detail::DNS_MsgInfo* msg, const u_char*& dat
         SendReplyOrRejectEvent(msg, dns_event, data, len, question_name, original_name);
     }
     else {
-        // Consume the unused type/class.
+
         (void)ExtractShort(data, len);
         (void)ExtractShort(data, len);
     }
@@ -295,8 +295,8 @@ bool DNS_Interpreter::ParseAnswerHeader(detail::DNS_MsgInfo* msg, const u_char*&
         return false;
     }
 
-    // Note that the exact meaning of some of these fields will be
-    // re-interpreted by other, more adventurous RR types.
+
+
 
     msg->query_name = make_intrusive<StringVal>(new String(name, name_end - name, true));
     msg->atype = static_cast<detail::RR_Type>(ExtractShort(data, len));
@@ -319,20 +319,20 @@ bool DNS_Interpreter::ParseAnswer(detail::DNS_MsgInfo* msg, const u_char*& data,
 
     if ( msg->is_dynamic_update ) {
         if ( msg->answer_type == DNS_UPDATES ) {
-            // For Updates:
-            // 1. The class of a normal RR must be the same as the zone's class.
-            // 1. RRsets being deleted can have TTL and rdlength of zero and the class
-            //    must be ANY.
-            // 2. A name being cleansed of all RRsets must have a type of ANY, TTL of
-            //    zero, rdlength of zero, and a class of ANY.
-            // 3. An RR being deleted from an RRset must have a class of NONE and TTL of
-            //    zero. They're otherwise normal RRs.
+
+
+
+
+
+
+
+
             if ( msg->aclass == DNS_CLASS_ANY && msg->ttl == 0 && rdlength == 0 ) {
                 if ( dns_dynamic_update_del && ! msg->skip_event )
                     analyzer->EnqueueConnEvent(dns_dynamic_update_del, analyzer->ConnVal(), msg->BuildHdrVal(),
                                                msg->BuildAnswerVal());
 
-                // emit a reply event with the limited info we have
+
                 return true;
             }
             else if ( ! ((msg->aclass == DNS_CLASS_NONE && msg->ttl == 0) || (msg->aclass == msg->zclass)) ) {
@@ -341,19 +341,19 @@ bool DNS_Interpreter::ParseAnswer(detail::DNS_MsgInfo* msg, const u_char*& data,
             }
         }
         else if ( msg->answer_type == DNS_PREREQUISITES ) {
-            // For prerequisites:
-            // 1. For an RRset that must exist (independent), the class is ANY, read
-            //    length is zero, ttl is zero.
-            // 2. For an RRSet that must exist (dependent), the class is that of the zone,
-            //    ttl is zero.
-            // 3. For an RRSet that must not exist, class is NONE, read length is zero,
-            //    ttl is zero.
-            // 4. For an RR that must exist with a specific name, class is ANY, read
-            //    length is zero, type is ANY, and ttl is zero.
-            // 5. For an RR that must not exist with a specific name, class is NONE, read
-            //    length is zero, type is ANY, and ttl is zero.
+
+
+
+
+
+
+
+
+
+
+
             if ( msg->ttl != 0 ) {
-                // The ttl should always be zero for all prerequisites.
+
                 analyzer->Weird("DNS_dynamic_update_prereq_nonzero_ttl", util::fmt("%d", msg->ttl));
                 return true;
             }
@@ -366,14 +366,14 @@ bool DNS_Interpreter::ParseAnswer(detail::DNS_MsgInfo* msg, const u_char*& data,
             else
                 analyzer->Weird("DNS_dynamic_update_invalid_prereq");
 
-            // We don't parse actual RRs out of prereq sections.
+
             return true;
         }
     }
 
     if ( rdlength == 0 && len > 0 ) {
         if ( msg->is_dynamic_update )
-            // See above for when this isn't allowed.
+
             return true;
 
         analyzer->Weird("DNS_zero_rdlength");
@@ -409,10 +409,10 @@ bool DNS_Interpreter::ParseAnswer(detail::DNS_MsgInfo* msg, const u_char*& data,
 
         case detail::TYPE_SRV:
             if ( ntohs(analyzer->Conn()->RespPort()) == NETBIOS_PORT ) {
-                // This is an NBSTAT (NetBIOS NODE STATUS) record.
-                // The SRV RFC reused the value that was already being
-                // used for this.
-                // We aren't parsing this yet.
+
+
+
+
                 status = true;
             }
             else
@@ -491,12 +491,12 @@ u_char* DNS_Interpreter::ExtractName(const u_char*& data, int& len, u_char* name
         analyzer->Weird("DNS_NAME_too_long");
 
     if ( n >= 2 && name[-1] == '.' ) {
-        // Remove trailing dot.
+
         --name;
         name[0] = 0;
     }
 
-    // Convert labels to lower case for consistency.
+
     if ( downcase )
         for ( u_char* np = name_start; np < name; ++np )
             if ( isupper(*np) )
@@ -520,10 +520,10 @@ DNS_Interpreter::LabelParseState DNS_Interpreter::ExtractLabel(const u_char*& da
     --len;
 
     if ( label_len == 0 )
-        // Found terminating label.
+
         return LabelParseState::EndOfName;
 
-    // If the label length is 0xc0, this is a pointer to another spot in the packet data.
+
     if ( (label_len & 0xc0) == 0xc0 ) {
         if ( len <= 0 ) {
             analyzer->Weird("dns_invalid_name");
@@ -538,19 +538,19 @@ DNS_Interpreter::LabelParseState DNS_Interpreter::ExtractLabel(const u_char*& da
         --len;
 
         if ( offset >= orig_data - msg_start ) {
-            // (You'd think that actually the offset should be
-            //  at least 6 bytes below our current position:
-            //  2 bytes for a non-trivial label, plus 4 bytes for
-            //  its class and type, which presumably are between
-            //  our current location and the instance of the label.
-            //  But actually this turns out not to be the case -
-            //  sometimes compression points to compression.)
+
+
+
+
+
+
+
 
             analyzer->Weird("DNS_label_forward_compress_offset");
             return LabelParseState::ParseError;
         }
 
-        // Recursively resolve name.
+
         const u_char* recurse_data = msg_start + offset;
         int recurse_max_len = orig_data - recurse_data;
 
@@ -568,13 +568,13 @@ DNS_Interpreter::LabelParseState DNS_Interpreter::ExtractLabel(const u_char*& da
 
     if ( label_len > len ) {
         analyzer->Weird("DNS_label_len_gt_pkt");
-        data += len; // consume the rest of the packet
+        data += len;
         len = 0;
         return LabelParseState::ParseError;
     }
 
     if ( label_len > 63 &&
-         // NetBIOS name service look ups can use longer labels.
+
          ntohs(analyzer->Conn()->RespPort()) != NETBIOS_PORT ) {
         analyzer->Weird("DNS_label_too_long");
         return LabelParseState::ParseError;
@@ -797,13 +797,13 @@ bool DNS_Interpreter::ParseRR_NAPTR(detail::DNS_MsgInfo* msg, const u_char*& dat
         return false;
     }
 
-    // These all check rdlength and return nullptr if there's not enough data available.
+
     auto flags = extract_char_string(analyzer, data, len, rdlength);
     auto service = extract_char_string(analyzer, data, len, rdlength);
     auto regexp = extract_char_string(analyzer, data, len, rdlength);
 
-    // The replacement string is a name. Compression shouldn't be used, but doesn't seem
-    // we have a helper that would allow to control this.
+
+
     u_char replacement[513];
     int replacement_len = sizeof(replacement) - 1;
     u_char* replacement_end = ExtractName(data, len, replacement, replacement_len, msg_start, false);
@@ -839,7 +839,7 @@ bool DNS_Interpreter::ParseRR_EDNS(detail::DNS_MsgInfo* msg, const u_char*& data
 
     int rr_remaining = rdlength;
 
-    // Parse EDNS options. Each one starts with a 4-byte header.
+
     while ( rr_remaining >= 4 ) {
         auto option_code = ExtractShort(data, len);
         int option_len = ExtractShort(data, len);
@@ -853,10 +853,10 @@ bool DNS_Interpreter::ParseRR_EDNS(detail::DNS_MsgInfo* msg, const u_char*& data
         const u_char* option_data = data;
         int option_remaining = option_len;
 
-        // TODO: Implement additional option codes
+
         switch ( option_code ) {
             case detail::TYPE_ECS: {
-                // must be 4 bytes + variable number of octets for address
+
                 if ( option_len <= 4 ) {
                     analyzer->Weird("EDNS_ECS_invalid_option_len");
                     break;
@@ -868,10 +868,10 @@ bool DNS_Interpreter::ParseRR_EDNS(detail::DNS_MsgInfo* msg, const u_char*& data
                 opt.ecs_src_pfx_len = (source_scope >> 8) & 0xff;
                 opt.ecs_scp_pfx_len = source_scope & 0xff;
 
-                // ADDRESS, variable number of octets, contains either an IPv4 or
-                // IPv6 address, depending on FAMILY, which MUST be truncated to the
-                // number of bits indicated by the SOURCE PREFIX-LENGTH field,
-                // padding with 0 bits to pad to the end of the last octet needed.
+
+
+
+
                 if ( ecs_family == L3_IPV4 ) {
                     if ( opt.ecs_src_pfx_len > 32 ) {
                         analyzer->Weird("EDNS_ECS_invalid_addr_v4_prefix",
@@ -937,30 +937,30 @@ bool DNS_Interpreter::ParseRR_EDNS(detail::DNS_MsgInfo* msg, const u_char*& data
                     opt.ecs_addr = make_intrusive<AddrVal>(addr);
                 }
                 else {
-                    // non ipv4/ipv6 family address
+
                     break;
                 }
 
                 analyzer->EnqueueConnEvent(dns_EDNS_ecs, analyzer->ConnVal(), msg->BuildHdrVal(),
                                            msg->BuildEDNS_ECS_Val(&opt));
                 break;
-            } // END EDNS ECS
+            }
 
             case TYPE_TCP_KA: {
                 EDNS_TCP_KEEPALIVE edns_tcp_keepalive{true, 0};
                 if ( option_len == 0 || option_len == 2 ) {
-                    // 0 bytes is permitted by RFC 7828, showing that the timeout value is
-                    // omitted.
+
+
                     if ( option_len == 2 ) {
                         edns_tcp_keepalive.keepalive_timeout = ExtractShort(option_data, option_remaining);
                         edns_tcp_keepalive.keepalive_timeout_omitted = false;
                     }
 
                     if ( analyzer->Conn()->ConnTransport() == TRANSPORT_UDP ) {
-                        /*
-                         * Based on RFC 7828 (3.2.1/3.2.2), clients and servers MUST NOT
-                         * negotiate TCP Keepalive timeout in DNS-over-UDP.
-                         */
+
+
+
+
                         analyzer->Weird("EDNS_TCP_Keepalive_In_UDP");
                     }
 
@@ -968,17 +968,17 @@ bool DNS_Interpreter::ParseRR_EDNS(detail::DNS_MsgInfo* msg, const u_char*& data
                                                msg->BuildEDNS_TCP_KA_Val(&edns_tcp_keepalive));
                 }
                 break;
-            } // END EDNS TCP KEEPALIVE
+            }
 
             case TYPE_COOKIE: {
                 EDNS_COOKIE cookie{};
                 if ( option_len != 8 && ! (option_len >= 16 && option_len <= 40) ) {
-                    /*
-                     * option length for DNS Cookie must be 8 bytes (with client cookie only)
-                     * OR
-                     * between 16 bytes to 40 bytes (with an 8 bytes client and an 8 to 32 bytes
-                     * server cookie)
-                     */
+
+
+
+
+
+
                     break;
                 }
 
@@ -996,7 +996,7 @@ bool DNS_Interpreter::ParseRR_EDNS(detail::DNS_MsgInfo* msg, const u_char*& data
                                            msg->BuildEDNS_COOKIE_Val(&cookie));
 
                 break;
-            } // END EDNS COOKIE
+            }
 
             default: break;
         }
@@ -1027,7 +1027,7 @@ void DNS_Interpreter::ExtractOctets(const u_char*& data, int& len, String** p) {
 
 String* DNS_Interpreter::ExtractStream(const u_char*& data, int& len, int l) {
     l = std::max(l, 0);
-    int dlen = std::min(len, l); // Len in bytes of the algorithm use
+    int dlen = std::min(len, l);
     auto rval = new String(data, dlen, false);
 
     data += dlen;
@@ -1053,7 +1053,7 @@ bool DNS_Interpreter::ParseRR_TSIG(detail::DNS_MsgInfo* msg, const u_char*& data
     ExtractOctets(data, len, dns_TSIG_addl ? &request_MAC : nullptr);
     auto orig_id = ExtractShort(data, len);
     auto rr_error = ExtractShort(data, len);
-    ExtractOctets(data, len, nullptr); // Other Data
+    ExtractOctets(data, len, nullptr);
 
     if ( dns_TSIG_addl ) {
         detail::TSIG_DATA tsig;
@@ -1097,7 +1097,7 @@ bool DNS_Interpreter::ParseRR_TKEY(detail::DNS_MsgInfo* msg, const u_char*& data
     auto error = ExtractShort(data, len);
     String* key_data;
     ExtractOctets(data, len, dns_TKEY ? &key_data : nullptr);
-    ExtractOctets(data, len, nullptr); // Other data
+    ExtractOctets(data, len, nullptr);
 
     if ( dns_TKEY ) {
         detail::TKEY_DATA tkey;
@@ -1125,7 +1125,7 @@ bool DNS_Interpreter::ParseRR_RRSIG(detail::DNS_MsgInfo* msg, const u_char*& dat
         return false;
 
     auto type_covered = ExtractShort(data, len);
-    // split the two bytes for algo and labels extraction
+
     auto algo_lab = ExtractShort(data, len);
     auto algo = (algo_lab >> 8) & 0xff;
     auto lab = algo_lab & 0xff;
@@ -1135,7 +1135,7 @@ bool DNS_Interpreter::ParseRR_RRSIG(detail::DNS_MsgInfo* msg, const u_char*& dat
     auto sign_incp = ExtractLong(data, len);
     auto key_tag = ExtractShort(data, len);
 
-    // implement signer's name with the msg_start offset
+
     const u_char* data_start = data;
     u_char name[513];
     size_t name_len = sizeof(name) - 1;
@@ -1200,21 +1200,21 @@ bool DNS_Interpreter::ParseRR_DNSKEY(detail::DNS_MsgInfo* msg, const u_char*& da
         return false;
 
     auto dflags = ExtractShort(data, len);
-    // split the two bytes for protocol and algorithm extraction
+
     auto proto_algo = ExtractShort(data, len);
     auto dprotocol = (proto_algo >> 8) & 0xff;
     auto dalgorithm = proto_algo & 0xff;
     auto dsa = static_cast<detail::DNSSEC_Algo>(dalgorithm);
-    // Evaluating the size of remaining bytes for Public Key
+
     String* key = ExtractStream(data, len, rdlength - 4);
 
-    // flags bit  7: zone key
-    // flags bit  8: revoked
-    // flags bit 15: Secure Entry Point, key signing key
+
+
+
     if ( (dflags & 0xfe7e) != 0 )
         analyzer->Weird("DNSSEC_DNSKEY_Invalid_Flag", util::fmt("%d", dflags));
 
-    // flags bit 7, 8, and 15 all set
+
     if ( (dflags & 0x0181) == 0x0181 )
         analyzer->Weird("DNSSEC_DNSKEY_Revoked_KSK", util::fmt("%d", dflags));
 
@@ -1434,7 +1434,7 @@ bool DNS_Interpreter::ParseRR_DS(detail::DNS_MsgInfo* msg, const u_char*& data, 
         return false;
 
     auto ds_key_tag = ExtractShort(data, len);
-    // split the two bytes for algorithm and digest type extraction
+
     auto ds_algo_dtype = ExtractShort(data, len);
     auto ds_algo = (ds_algo_dtype >> 8) & 0xff;
     auto ds_dtype = ds_algo_dtype & 0xff;
@@ -1542,12 +1542,12 @@ bool DNS_Interpreter::ParseRR_LOC(detail::DNS_MsgInfo* msg, const u_char*& data,
     const u_char* rr_data = data;
     int remaining = rdlength;
 
-    // split the two bytes for version and size extraction
+
     auto ver_size = ExtractShort(rr_data, remaining);
     auto version = (ver_size >> 8) & 0xff;
     auto size = ver_size & 0xff;
 
-    // split the two bytes for horizontal and vertical precision extraction
+
     auto horiz_vert = ExtractShort(rr_data, remaining);
     auto horiz_pre = (horiz_vert >> 8) & 0xff;
     auto vert_pre = horiz_vert & 0xff;
@@ -1601,8 +1601,8 @@ bool DNS_Interpreter::ParseRR_A(detail::DNS_MsgInfo* msg, const u_char*& data, i
 bool DNS_Interpreter::ParseRR_AAAA(detail::DNS_MsgInfo* msg, const u_char*& data, int& len, int rdlength) {
     uint32_t addr[4];
 
-    // Intentionally leaving this as a normal loop because it's more descriptive.
-    // NOLINTNEXTLINE(modernize-loop-convert)
+
+
     for ( size_t i = 0; i < 4; i++ ) {
         addr[i] = htonl(ExtractLong(data, len));
 
@@ -1635,10 +1635,10 @@ bool DNS_Interpreter::ParseRR_WKS(detail::DNS_MsgInfo* msg, const u_char*& data,
         return true;
     }
 
-    // TODO: Pass the ports as parameters to the event
+
     analyzer->EnqueueConnEvent(dns_WKS_reply, analyzer->ConnVal(), msg->BuildHdrVal(), msg->BuildAnswerVal());
 
-    // TODO: Return a status which reflects if the port parameters were successfully parsed
+
     return true;
 }
 
@@ -1744,10 +1744,10 @@ VectorValPtr DNS_Interpreter::Parse_SvcParams(const u_char*& data, int& len, int
 
     auto svc_params = make_intrusive<VectorVal>(dns_svcb_param_vec);
 
-    // Each service parameter is at least four bytes, two for key and value length each.
+
     while ( svc_params_len >= 4 ) {
-        // len is modified during parsing and svc_params_len should never
-        // exceed it, otherwise the length accounting go out of sync.
+
+
         assert(svc_params_len <= len);
 
         auto svc_param = make_intrusive<RecordVal>(dns_svcb_param);
@@ -1765,7 +1765,7 @@ VectorValPtr DNS_Interpreter::Parse_SvcParams(const u_char*& data, int& len, int
         svc_param->Assign(0, zeek::val_mgr->Count(key));
 
         switch ( key ) {
-            case detail::mandatory: // list of keys
+            case detail::mandatory:
             {
                 if ( value_len == 0 || value_len % 2 != 0 ) {
                     analyzer->Weird("DNS_SVCB_mandatory_length_invalid");
@@ -1784,7 +1784,7 @@ VectorValPtr DNS_Interpreter::Parse_SvcParams(const u_char*& data, int& len, int
                 break;
             }
 
-            case detail::alpn: // list of length-prefixed (1 octet) ALPN IDs
+            case detail::alpn:
             {
                 auto alpn = make_intrusive<VectorVal>(id::string_vec);
 
@@ -1796,11 +1796,11 @@ VectorValPtr DNS_Interpreter::Parse_SvcParams(const u_char*& data, int& len, int
                     if ( alpn_len == 0 || alpn_len > 255 || alpn_len + item_len_parsed > value_len ) {
                         analyzer->Weird("DNS_SVCB_alpn_length_invalid");
 
-                        // We've consumed item_len_parsed from len and data
-                        // already, but now hit an invalid inner alpn_len value.
-                        // At the malformed label, we want to extract the full
-                        // invalid value, so reset data and len accordingly
-                        // and free any extracted strings explicitly.
+
+
+
+
+
                         data -= item_len_parsed;
                         len += item_len_parsed;
                         alpn = nullptr;
@@ -1815,8 +1815,8 @@ VectorValPtr DNS_Interpreter::Parse_SvcParams(const u_char*& data, int& len, int
                     item_len_parsed += alpn_len;
                 }
 
-                // If we didn't end up consuming all of value, tickle
-                // a weird and treat the whole alpn list as malformed.
+
+
                 if ( value_len != item_len_parsed ) {
                     analyzer->Weird("DNS_SVCB_alpn_length_invalid");
                     data -= item_len_parsed;
@@ -1838,7 +1838,7 @@ VectorValPtr DNS_Interpreter::Parse_SvcParams(const u_char*& data, int& len, int
                 }
                 break;
 
-            case detail::port: // port
+            case detail::port:
                 if ( value_len != 2 ) {
                     analyzer->Weird("DNS_SVCB_port_length_invalid");
                     goto malformed;
@@ -1847,8 +1847,8 @@ VectorValPtr DNS_Interpreter::Parse_SvcParams(const u_char*& data, int& len, int
                 svc_param->Assign(3, zeek::val_mgr->Count(ExtractShort(data, len)));
                 break;
 
-            case detail::ipv4hint: // list of IPs
-            case detail::ipv6hint: // list of IPs
+            case detail::ipv4hint:
+            case detail::ipv6hint:
             {
                 const bool is_ipv4 = key == detail::ipv4hint;
                 const int addr_len = is_ipv4 ? 4 : 16;
@@ -1877,11 +1877,11 @@ VectorValPtr DNS_Interpreter::Parse_SvcParams(const u_char*& data, int& len, int
                 break;
             }
 
-            case detail::ech: // ECHConfigList
+            case detail::ech:
             {
                 const String* ech = ExtractStream(data, len, value_len);
 
-                // Convert binary blob to presentation format.
+
                 String* b64 = zeek::detail::encode_base64(ech, nullptr, analyzer->Conn());
                 delete ech;
 
@@ -1903,14 +1903,14 @@ VectorValPtr DNS_Interpreter::Parse_SvcParams(const u_char*& data, int& len, int
     return svc_params;
 }
 
-/**
- * https://datatracker.ietf.org/doc/html/rfc9460#name-rdata-wire-format
- */
+
+
+
 bool DNS_Interpreter::ParseRR_SVCB(detail::DNS_MsgInfo* msg, const u_char*& data, int& len, int rdlength,
                                    const u_char* msg_start, const RR_Type& svcb_type) {
     const u_char* data_start = data;
-    // the smallest SVCB/HTTPS rr is 3 bytes:
-    // the first 2 bytes are for the svc priority, and the third byte is root (0x0)
+
+
     if ( rdlength < 3 ) {
         analyzer->Weird("DNS_SVCB_wrong_length");
         return false;
@@ -1924,8 +1924,8 @@ bool DNS_Interpreter::ParseRR_SVCB(detail::DNS_MsgInfo* msg, const u_char*& data
     if ( ! name_end )
         return false;
 
-    // target name can be root - in this case the alternative endpoint is
-    // qname itself. make sure that we print "." instead of an empty string
+
+
     if ( name_end - target_name == 0 ) {
         target_name[0] = '.';
         target_name[1] = '\0';
@@ -1965,7 +1965,7 @@ void DNS_Interpreter::SendReplyOrRejectEvent(detail::DNS_MsgInfo* msg, EventHand
 
 DNS_MsgInfo::DNS_MsgInfo(DNS_RawMsgHdr* hdr, bool arg_is_query, bool arg_is_netbios)
     : is_query(arg_is_query), is_netbios(arg_is_netbios) {
-    // ### Need to fix alignment if hdr is misaligned (not on a short boundary).
+
     uint16_t flags = ntohs(hdr->flags);
 
     QR = (flags & 0x8000) != 0;
@@ -2026,27 +2026,27 @@ RecordValPtr DNS_MsgInfo::BuildAnswerVal() {
 }
 
 RecordValPtr DNS_MsgInfo::BuildEDNS_Val() {
-    // We have to treat the additional record type in EDNS differently
-    // than a regular resource record.
+
+
     static auto dns_edns_additional = id::find_type<RecordType>("dns_edns_additional");
     auto r = make_intrusive<RecordVal>(dns_edns_additional);
 
     r->Assign(0, query_name);
     r->Assign(1, answer_type);
 
-    // type = 0x29 or 41 = EDNS
+
     r->Assign(2, atype);
 
-    // sender's UDP payload size, per RFC 2671 4.3
+
     r->Assign(3, aclass);
 
-    // Need to break the TTL field into three components:
-    // initial: [------------- ttl (32) ---------------------]
-    // after:   [ ext rcode (8)][ver # (8)][   Z field (16)  ]
+
+
+
 
     uint32_t ercode = (ttl >> 24) & 0xff;
     uint32_t version = (ttl >> 16) & 0xff;
-    // uint32_t DO = ttl & 0x8000;	// "DNSSEC OK" - RFC 3225
+
     uint32_t z = ttl & 0xffff;
 
     uint32_t return_error = (ercode << 4) | rcode;
@@ -2116,7 +2116,7 @@ RecordValPtr DNS_MsgInfo::BuildTSIG_Val(struct TSIG_DATA* tsig) {
     auto r = make_intrusive<RecordVal>(dns_tsig_additional);
     double rtime = tsig->time_s + tsig->time_ms / 1000.0;
 
-    // r->Assign(0, answer_type);
+
     r->Assign(0, query_name);
     r->Assign(1, answer_type);
     r->Assign(2, tsig->alg_name);
@@ -2260,7 +2260,7 @@ RecordValPtr DNS_MsgInfo::BuildSVCB_Val(const SVCB_DATA& svcb) {
     return r;
 }
 
-} // namespace detail
+}
 
 Contents_DNS::Contents_DNS(Connection* conn, bool orig, detail::DNS_Interpreter* arg_interp)
     : analyzer::tcp::TCP_SupportAnalyzer("CONTENTS_DNS", conn, orig) {
@@ -2274,8 +2274,8 @@ Contents_DNS::Contents_DNS(Connection* conn, bool orig, detail::DNS_Interpreter*
 Contents_DNS::~Contents_DNS() { free(msg_buf); }
 
 void Contents_DNS::Flush() {
-    if ( buf_n > 0 ) { // Deliver partial message.
-        // '2' here means whether it's a query is unknown.
+    if ( buf_n > 0 ) {
+
         interp->ParseMessage(msg_buf, buf_n, 2);
         msg_size = 0;
     }
@@ -2333,7 +2333,7 @@ void Contents_DNS::ProcessChunk(int& len, const u_char*& data, bool orig) {
     len -= n;
 
     if ( buf_n < msg_size )
-        // Haven't filled up the message buffer yet, no more to do.
+
         return;
 
     ForwardPacket(msg_size, msg_buf, orig, -1, nullptr, 0);
@@ -2384,9 +2384,9 @@ void DNS_Analyzer::ConnectionClosed(analyzer::tcp::TCP_Endpoint* endpoint, analy
 }
 
 void DNS_Analyzer::ExpireTimer(double t) {
-    // The - 1.0 in the following is to allow 1 second for the
-    // common case of a single request followed by a single reply,
-    // so we don't needlessly set the timer twice in that case.
+
+
+
     if ( t - Conn()->LastTime() >= zeek::detail::dns_session_timeout - 1.0 || run_state::terminating ) {
         Event(connection_timeout);
         session_mgr->Remove(Conn());
@@ -2396,4 +2396,4 @@ void DNS_Analyzer::ExpireTimer(double t) {
                            zeek::detail::TIMER_DNS_EXPIRE);
 }
 
-} // namespace zeek::analyzer::dns
+}

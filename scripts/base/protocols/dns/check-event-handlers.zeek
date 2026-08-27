@@ -1,5 +1,5 @@
-##! This script checks if DNS event handlers that will not be raised
-##! are used and raises a warning in those cases.
+
+
 
 module DNS;
 

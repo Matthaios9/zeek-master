@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/Analyzer.h"
 
@@ -48,8 +48,8 @@ void AnalyzerTimer::Dispatch(double t, bool is_expire) {
     if ( is_expire && ! do_expire )
         return;
 
-    // Remove ourselves from the connection's set of timers so
-    // it doesn't try to cancel us.
+
+
     analyzer->RemoveTimer(this);
 
     (analyzer->*timer)(t);
@@ -60,8 +60,8 @@ void AnalyzerTimer::Init(Analyzer* arg_analyzer, analyzer_timer_func arg_timer, 
     timer = arg_timer;
     do_expire = arg_do_expire;
 
-    // We need to Ref the connection as the analyzer doesn't do it and
-    // we need to have it around until we expire.
+
+
     Ref(analyzer->Conn());
 }
 
@@ -96,8 +96,8 @@ Analyzer::Analyzer(const zeek::Tag& tag, Connection* conn) { CtorInit(tag, conn)
 Analyzer::Analyzer(Connection* conn) { CtorInit(zeek::Tag(), conn); }
 
 void Analyzer::CtorInit(const zeek::Tag& arg_tag, Connection* arg_conn) {
-    // Don't Ref conn here to avoid circular ref'ing. It can't be deleted
-    // before us.
+
+
     conn = arg_conn;
     tag = arg_tag;
     id = ++id_counter;
@@ -246,7 +246,7 @@ void Analyzer::ForwardPacket(int len, const u_char* data, bool is_orig, uint64_t
 
     AppendNewChildren();
 
-    // Pass to all children.
+
     for ( auto i = children.begin(); i != children.end(); ) {
         Analyzer* current = *i;
 
@@ -321,24 +321,24 @@ void Analyzer::ForwardEndOfData(bool orig) {
 bool Analyzer::AddChildAnalyzer(Analyzer* analyzer, bool init) {
     auto t = analyzer->GetAnalyzerTag();
 
-    // Prevent attaching child analyzers to analyzer subtrees where
-    // either the parent has finished or is being removed. Further,
-    // don't attach analyzers when the connection has finished or is
-    // currently being finished (executing Done()).
-    //
-    // Scenarios in which analyzers have been observed that late in
-    // analyzer / connection lifetime are:
-    //
-    // * A DPD signature match on undelivered TCP data that is flushed
-    //   during Connection::Done(). The PIA analyzer activates a new
-    //   analyzer adding it to the TCP analyzer.
-    //
-    // * Analyzers flushing buffered state during Done(), resulting
-    //   in new analyzers being created.
-    //
-    // Analyzers added during Done() are problematic as calling Done()
-    // within the parent's destructor isn't safe, so we prevent these
-    // situations.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     if ( Removing() || IsFinished() || Conn()->IsFinished() ) {
         analyzer->Done();
         delete analyzer;
@@ -351,11 +351,11 @@ bool Analyzer::AddChildAnalyzer(Analyzer* analyzer, bool init) {
         return false;
     }
 
-    // We add new children to new_children first.  They are then
-    // later copied to the "real" child list.  This is necessary
-    // because this method may be called while somebody is iterating
-    // over the children and we might confuse the caller by modifying
-    // the list.
+
+
+
+
+
 
     analyzer->parent = this;
     new_children.push_back(analyzer);
@@ -391,12 +391,12 @@ bool Analyzer::RemoveChild(const analyzer_list& children, ID id) {
             return false;
 
         DBG_LOG(DBG_ANALYZER, "%s disabling child %s", fmt_analyzer(this).c_str(), fmt_analyzer(i).c_str());
-        // We just flag it as being removed here but postpone
-        // actually doing that to later. Otherwise, we'd need
-        // to call Done() here, which then in turn might
-        // cause further code to be executed that may assume
-        // something not true because of a violation that
-        // triggered the removal in the first place.
+
+
+
+
+
+
         i->removing = true;
         return true;
     }
@@ -466,8 +466,8 @@ Analyzer* Analyzer::FindChild(ID arg_id) {
     return nullptr;
 }
 
-// NOLINT here because changing the function signature breaks the API.
-// NOLINTNEXTLINE(performance-unnecessary-value-param)
+
+
 Analyzer* Analyzer::FindChild(zeek::Tag arg_tag) {
     if ( tag == arg_tag && ! (removing || finished) )
         return this;
@@ -504,7 +504,7 @@ void Analyzer::CleanupChildren() {
 analyzer_list::iterator Analyzer::DeleteChild(analyzer_list::iterator i) {
     Analyzer* child = *i;
 
-    // Analyzer must have already been finished or marked for removal.
+
     assert(child->finished || child->removing);
 
     if ( child->removing ) {
@@ -531,7 +531,7 @@ void Analyzer::AddSupportAnalyzer(SupportAnalyzer* analyzer) {
 
     SupportAnalyzer** head = analyzer->IsOrig() ? &orig_supporters : &resp_supporters;
 
-    // Find end of the list.
+
     SupportAnalyzer* prev = nullptr;
     SupportAnalyzer* s;
     for ( s = *head; s; prev = s, s = s->sibling )
@@ -554,11 +554,11 @@ void Analyzer::RemoveSupportAnalyzer(SupportAnalyzer* analyzer) {
     DBG_LOG(DBG_ANALYZER, "%s disabled %s support analyzer %s", fmt_analyzer(this).c_str(),
             analyzer->IsOrig() ? "originator" : "responder", fmt_analyzer(analyzer).c_str());
 
-    // We mark the analyzer as being removed here, which will prevent it
-    // from being used further. However, we don't actually delete it
-    // before the parent gets destroyed. While we could do that, it's a
-    // bit tricky to do at the right time and it doesn't seem worth the
-    // trouble.
+
+
+
+
+
     analyzer->removing = true;
     return;
 }
@@ -636,8 +636,8 @@ void Analyzer::EnqueueAnalyzerConfirmationInfo(const zeek::Tag& arg_tag) {
     event_mgr.Enqueue(analyzer_confirmation_info, arg_tag.AsVal(), info);
 }
 
-// NOLINT here because changing the function signature breaks the API.
-// NOLINTNEXTLINE(performance-unnecessary-value-param)
+
+
 void Analyzer::AnalyzerConfirmation(zeek::Tag arg_tag) {
     if ( analyzer_confirmed )
         return;
@@ -667,8 +667,8 @@ void Analyzer::EnqueueAnalyzerViolationInfo(const char* reason, const char* data
     event_mgr.Enqueue(analyzer_violation_info, arg_tag.AsVal(), info);
 }
 
-// NOLINT here because changing the function signature breaks the API.
-// NOLINTNEXTLINE(performance-unnecessary-value-param)
+
+
 void Analyzer::AnalyzerViolation(const char* reason, const char* data, int len, zeek::Tag arg_tag) {
     const auto& effective_tag = arg_tag ? arg_tag : tag;
 
@@ -695,14 +695,14 @@ void Analyzer::AddTimer(analyzer_timer_func timer, double t, bool do_expire, zee
 void Analyzer::RemoveTimer(zeek::detail::Timer* t) { timers.remove(t); }
 
 void Analyzer::CancelTimers() {
-    // We are going to cancel our timers which, in turn, may cause them to
-    // call RemoveTimer(), which would then modify the list we're just
-    // traversing.  Thus, we first make a copy of the list which we then
-    // iterate through.
+
+
+
+
     TimerPList tmp(timers.length());
     std::ranges::copy(timers, back_inserter(tmp));
 
-    // TODO: could be a for_each
+
     for ( auto timer : tmp )
         zeek::detail::timer_mgr->Cancel(timer);
 
@@ -748,53 +748,53 @@ SupportAnalyzer* SupportAnalyzer::Sibling(bool only_active) const {
 
 void SupportAnalyzer::ForwardPacket(int len, const u_char* data, bool is_orig, uint64_t seq, const IP_Hdr* ip,
                                     int caplen) {
-    // We do not call parent's method, as we're replacing the functionality.
+
 
     if ( GetOutputHandler() ) {
         GetOutputHandler()->DeliverPacket(len, data, is_orig, seq, ip, caplen);
         return;
     }
 
-    // If the parent is being removed or has finished, there's little point
-    // for a support analyzers to move packets forward.
+
+
     if ( Parent()->Removing() || Parent()->IsFinished() )
         return;
 
     SupportAnalyzer* next_sibling = Sibling(true);
 
     if ( next_sibling )
-        // Pass to next in chain.
+
         next_sibling->NextPacket(len, data, is_orig, seq, ip, caplen);
     else
-        // Finished with preprocessing - now it's the parent's turn.
+
         Parent()->DeliverPacket(len, data, is_orig, seq, ip, caplen);
 }
 
 void SupportAnalyzer::ForwardStream(int len, const u_char* data, bool is_orig) {
-    // We do not call parent's method, as we're replacing the functionality.
+
 
     if ( GetOutputHandler() ) {
         GetOutputHandler()->DeliverStream(len, data, is_orig);
         return;
     }
 
-    // If the parent is being removed or has finished, there's little point
-    // for a support analyzers to move stream data forward.
+
+
     if ( Parent()->Removing() || Parent()->IsFinished() )
         return;
 
     SupportAnalyzer* next_sibling = Sibling(true);
 
     if ( next_sibling )
-        // Pass to next in chain.
+
         next_sibling->NextStream(len, data, is_orig);
     else
-        // Finished with preprocessing - now it's the parent's turn.
+
         Parent()->DeliverStream(len, data, is_orig);
 }
 
 void SupportAnalyzer::ForwardUndelivered(uint64_t seq, int len, bool is_orig) {
-    // We do not call parent's method, as we're replacing the functionality.
+
 
     if ( GetOutputHandler() ) {
         GetOutputHandler()->Undelivered(seq, len, is_orig);
@@ -804,19 +804,19 @@ void SupportAnalyzer::ForwardUndelivered(uint64_t seq, int len, bool is_orig) {
     SupportAnalyzer* next_sibling = Sibling(true);
 
     if ( next_sibling )
-        // Pass to next in chain.
+
         next_sibling->NextUndelivered(seq, len, is_orig);
     else
-        // Finished with preprocessing - now it's the parent's turn.
+
         Parent()->Undelivered(seq, len, is_orig);
 }
 
-} // namespace zeek::analyzer
+}
 
 TEST_SUITE("Analyzer management") {
     TEST_CASE("Re-add analyzer after removal") {
-        // This test tries to reactivate an analyzer which was previously removed.
-        // It's a regression test for #2801.
+
+
         REQUIRE(zeek::analyzer_mgr);
 
         zeek::Packet p;
@@ -861,11 +861,11 @@ TEST_SUITE("Analyzer management") {
         REQUIRE(imap);
 
         zeek::analyzer_mgr->AddComponentMapping(ssh->GetAnalyzerTag(), imap->GetAnalyzerTag());
-        zeek::analyzer_mgr->DisableAnalyzer(ssh->GetAnalyzerTag()); // needs to be disabled for mapping to take effect
+        zeek::analyzer_mgr->DisableAnalyzer(ssh->GetAnalyzerTag());
         auto ssh_is_imap = zeek::analyzer_mgr->InstantiateAnalyzer("SSH", conn.get());
-        CHECK_EQ(ssh_is_imap->GetAnalyzerTag(), imap->GetAnalyzerTag()); // SSH is now IMAP
+        CHECK_EQ(ssh_is_imap->GetAnalyzerTag(), imap->GetAnalyzerTag());
 
-        // orderly cleanup through connection
+
         auto* tcp = new zeek::packet_analysis::TCP::TCPSessionAdapter(conn.get());
         conn->SetSessionAdapter(tcp, nullptr);
         tcp->AddChildAnalyzer(ssh);

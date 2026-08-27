@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/session/Manager.h"
 
@@ -73,7 +73,7 @@ private:
     ProtocolMap entries;
 };
 
-} // namespace detail
+}
 
 Manager::Manager() {
     stats = new detail::ProtocolStats();
@@ -90,14 +90,14 @@ Manager::~Manager() {
 }
 
 Connection* Manager::FindConnection(Val* v) {
-    // XXX: This could in the future dispatch to different factories for
-    // different kinds of Vals. ``v`` will usually be a conn_id instance, which
-    // is IP-specific. If ``v`` is something else, maybe we'd like to use a
-    // different builder.
+
+
+
+
     auto r = conn_key_mgr->GetFactory().ConnKeyFromVal(*v);
 
     if ( ! r.has_value() ) {
-        // Produce a loud error for invalid script-layer conn_id records.
+
         zeek::emit_builtin_error(r.error().c_str());
         return nullptr;
     }
@@ -131,9 +131,9 @@ void Manager::Remove(Session* s) {
                 stat_block->active->Dec();
         }
 
-        // Mark that the session isn't in the table so that in case the
-        // session has been Ref()'d somewhere, we know that on a future
-        // call to Remove() that it's no longer in the map.
+
+
+
         s->SetInSessionTable(false);
 
         Unref(s);
@@ -155,8 +155,8 @@ void Manager::Insert(Session* s, bool remove_existing) {
     InsertSession(std::move(key), s);
 
     if ( old && old != s ) {
-        // Some clean-ups similar to those in Remove() (but invisible
-        // to the script layer).
+
+
         old->CancelTimers();
         old->SetInSessionTable(false);
         Unref(old);
@@ -164,9 +164,9 @@ void Manager::Insert(Session* s, bool remove_existing) {
 }
 
 void Manager::Drain() {
-    // If a random seed was passed in, we're most likely in testing mode and need the
-    // order of the sessions to be consistent. Sort the keys to force that order
-    // every run.
+
+
+
     if ( zeek::util::detail::have_random_seed() ) {
         std::vector<const detail::Key*> keys;
         keys.reserve(session_map.size());
@@ -259,4 +259,4 @@ void Manager::InsertSession(detail::Key key, Session* session) {
     }
 }
 
-} // namespace zeek::session
+}

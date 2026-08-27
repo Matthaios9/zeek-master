@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/plugin/Plugin.h"
 
@@ -23,7 +23,7 @@ public:
     }
 
     void InitPostScript() override {
-        // Load generic_packet_thresholds at InitPostScript() time.
+
         auto t = id::find_const<TableVal>("ConnThreshold::generic_packet_thresholds");
         std::vector<uint64_t> thresholds;
         thresholds.reserve(t->Size());
@@ -37,4 +37,4 @@ public:
     }
 } plugin;
 
-} // namespace zeek::plugin::detail::Zeek_ConnSize
+}

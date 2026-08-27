@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -25,4 +25,4 @@ private:
 
 extern Plugin plugin;
 
-} // namespace zeek::plugin::detail::Zeek_RawReader
+}

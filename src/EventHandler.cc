@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/EventHandler.h"
 
@@ -57,7 +57,7 @@ void EventHandler::Call(Args* vl) {
         NewEvent(vl);
 
     if ( local )
-        // No try/catch here; we pass exceptions upstream.
+
         local->Invoke(vl);
 }
 
@@ -66,7 +66,7 @@ void EventHandler::NewEvent(Args* vl) {
         return;
 
     if ( this == new_event.Ptr() )
-        // new_event() is the one event we don't want to report.
+
         return;
 
     auto vargs = MakeCallArgumentVector(*vl, GetType()->Params());
@@ -76,4 +76,4 @@ void EventHandler::NewEvent(Args* vl) {
 
 uint64_t EventHandler::CallCount() const { return call_count ? call_count->Value() : 0; }
 
-} // namespace zeek
+}

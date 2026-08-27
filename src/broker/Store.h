@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -18,17 +18,17 @@ namespace zeek::Broker::detail {
 
 extern OpaqueTypePtr opaque_of_store_handle;
 
-/**
- * Create a Broker::QueryStatus value.
- * @param success whether the query status should be set to success or failure.
- * @return a Broker::QueryStatus value.
- */
+
+
+
+
+
 EnumValPtr query_status(bool success);
 
-/**
- * @return a Broker::QueryResult value that has a Broker::QueryStatus indicating
- * a failure.
- */
+
+
+
+
 inline RecordValPtr query_result() {
     auto rval = make_intrusive<RecordVal>(BifType::Record::Broker::QueryResult);
     rval->Assign(0, query_status(false));
@@ -36,11 +36,11 @@ inline RecordValPtr query_result() {
     return rval;
 }
 
-/**
- * @param data the result of the query.
- * @return a Broker::QueryResult value that has a Broker::QueryStatus indicating
- * a success.
- */
+
+
+
+
+
 inline RecordValPtr query_result(RecordValPtr data) {
     auto rval = make_intrusive<RecordVal>(BifType::Record::Broker::QueryResult);
     rval->Assign(0, query_status(true));
@@ -48,11 +48,11 @@ inline RecordValPtr query_result(RecordValPtr data) {
     return rval;
 }
 
-/**
- * Convert an expiry from a double (used by Zeek) to the format required by Broker
- * @param e: expire interval as double; 0 if no expiry
- * @return expire interval in Broker format
- */
+
+
+
+
+
 static std::optional<broker::timespan> convert_expiry(double e) {
     std::optional<broker::timespan> ts;
 
@@ -65,9 +65,9 @@ static std::optional<broker::timespan> convert_expiry(double e) {
     return ts;
 }
 
-/**
- * Used for asynchronous data store queries which use "when" statements.
- */
+
+
+
 class StoreQueryCallback {
 public:
     StoreQueryCallback(zeek::detail::trigger::Trigger* arg_trigger, const void* arg_assoc, broker::store store)
@@ -98,9 +98,9 @@ private:
     broker::store store;
 };
 
-/**
- * An opaque handle which wraps a Broker data store.
- */
+
+
+
 class StoreHandleVal : public OpaqueVal {
 public:
     StoreHandleVal() : OpaqueVal(Broker::detail::opaque_of_store_handle) {}
@@ -122,7 +122,7 @@ public:
     broker::store store;
     broker::store::proxy proxy;
     broker::entity_id store_pid;
-    // Zeek table that events are forwarded to.
+
     TableValPtr forward_to;
     bool have_store = false;
 
@@ -132,10 +132,10 @@ protected:
     DECLARE_OPAQUE_VALUE_DATA(StoreHandleVal)
 };
 
-// Helper function to construct a broker backend type from script land.
+
 broker::backend to_backend_type(BifEnum::Broker::BackendType type);
 
-// Helper function to construct broker backend options from script land.
+
 broker::backend_options to_backend_options(broker::backend backend, RecordVal* options);
 
-} // namespace zeek::Broker::detail
+}

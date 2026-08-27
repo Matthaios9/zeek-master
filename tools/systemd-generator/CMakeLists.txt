@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.15.0 FATAL_ERROR)
 project(systemd-zeek-generator)
 
-# If there's no PARENT_DIRECTORY, this is a standalone build.
+
 get_directory_property(is_subproject PARENT_DIRECTORY)
 
 if (NOT is_subproject)
-    # Taken from RequireCXXStd for building standalone.
+
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
     set(CMAKE_CXX_STANDARD 20)
     set(CMAKE_CXX_EXTENSIONS OFF)
@@ -19,8 +19,8 @@ else ()
     set(DOCTEST_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../src/3rdparty/")
 endif ()
 
-# The systemd generator only does something where systemd runs, and working on
-# it needs a Linux container or VM anyway, so it is off by default elsewhere.
+
+
 set(_default ON)
 if (NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(_default OFF)
@@ -29,10 +29,10 @@ endif ()
 option(ENABLE_ZEEK_SYSTEMD_GENERATOR "Enable building and installing zeek-systemd-generator"
        ${_default})
 
-# zeek-cluster-layout-generator and the parsing it shares with the systemd
-# generator are not systemd-specific and are useful on their own, so they are
-# built wherever the sources compile.  They need unistd.h and friends, which
-# rules out MSVC.
+
+
+
+
 if (NOT MSVC)
     add_library(utils OBJECT src/utils.cc)
     add_library(zeek-cluster-config OBJECT src/zeek-cluster-config.cc)

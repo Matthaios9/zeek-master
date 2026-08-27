@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_cclass_h
 #define pac_cclass_h
@@ -18,16 +18,16 @@ using CVariableList = std::vector<CVariable*>;
 
 #include "pac_common.h"
 
-// Represents a C++ class.
-//
-// For now we adopt a simple model:
-//
-// 1. All members have a protected member variable "name_" and a
-// public constant access method "name()".
-//
-// 2. All methods are public.
-//
-// 3. We do not check repeated names.
+
+
+
+
+
+
+
+
+
+
 
 class CClass {
 public:
@@ -79,4 +79,4 @@ protected:
     CVariableList* params_;
 };
 
-#endif // pac_cclass_h
+#endif

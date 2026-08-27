@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/krb/KRB_TCP.h"
 
@@ -32,9 +32,9 @@ void KRB_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
         return;
 
     if ( had_gap )
-        // If only one side had a content gap, we could still try to
-        // deliver data to the other side if the script layer can
-        // handle this.
+
+
+
         return;
 
     try {
@@ -50,4 +50,4 @@ void KRB_Analyzer::Undelivered(uint64_t seq, int len, bool orig) {
     interp->NewGap(orig, len);
 }
 
-} // namespace zeek::analyzer::krb_tcp
+}

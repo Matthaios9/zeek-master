@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -13,4 +13,4 @@ public:
     static analyzer::Analyzer* Instantiate(Connection* conn) { return new Telnet_Analyzer(conn); }
 };
 
-} // namespace zeek::analyzer::login
+}

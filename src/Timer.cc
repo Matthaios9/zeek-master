@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Timer.h"
 
@@ -12,7 +12,7 @@
 
 namespace zeek::detail {
 
-// Names of timers in same order than in TimerType.
+
 const char* TimerNames[] = {
     "BackdoorTimer",
     "BreakpointTimer",
@@ -87,8 +87,8 @@ int TimerMgr::Advance(double arg_t, int max_expire) {
 }
 
 void TimerMgr::Process() {
-    // Just advance the timer manager based on the current network time. This won't actually
-    // change the time, but will dispatch any timers that need dispatching.
+
+
     run_state::current_dispatched +=
         Advance(run_state::network_time, max_timer_expires - run_state::current_dispatched);
 }
@@ -119,9 +119,9 @@ void TimerMgr::InitPostScript() {
 void TimerMgr::Add(Timer* timer) {
     DBG_LOG(DBG_TM, "Adding timer %s (%p) at %.6f", timer_type_to_string(timer->Type()), timer, timer->Time());
 
-    // Add the timer even if it's already expired - that way, if
-    // multiple already-added timers are added, they'll still
-    // execute in sorted order.
+
+
+
     if ( ! q->Add(timer) )
         reporter->InternalError("out of memory");
 
@@ -145,9 +145,9 @@ int TimerMgr::DoAdvance(double new_t, int max_expire) {
         last_timestamp = timer->Time();
         --current_timers[timer->Type()];
 
-        // Remove it before dispatching, since the dispatch
-        // can otherwise delete it, and then we won't know
-        // whether we should delete it too.
+
+
+
         (void)Remove();
 
         DBG_LOG(DBG_TM, "Dispatching timer %s (%p)", timer_type_to_string(timer->Type()), timer);
@@ -180,4 +180,4 @@ Timer* TimerMgr::Remove() { return static_cast<Timer*>(q->Remove()); }
 
 Timer* TimerMgr::Top() { return static_cast<Timer*>(q->Top()); }
 
-} // namespace zeek::detail
+}

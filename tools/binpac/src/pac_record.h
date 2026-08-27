@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_record_h
 #define pac_record_h
@@ -51,9 +51,9 @@ private:
     RecordFieldList* record_fields_;
 };
 
-// A data field of a record type. A RecordField corresponds to a
-// segment of input data, and therefore RecordField's are ordered---each
-// of them has a known previous and next field.
+
+
+
 
 class RecordField : public Field {
 public:
@@ -113,11 +113,11 @@ class RecordDataField : public RecordField, public Evaluatable {
 public:
     RecordDataField(ID* arg_id, Type* arg_type);
 
-    // Instantiates abstract class Field
+
     void Prepare(Env* env) override;
     void GenParseCode(Output* out, Env* env) override;
 
-    // Instantiates abstract class Evaluatable
+
     void GenEval(Output* out, Env* env) override;
 
     int StaticSize(Env* env, int) const override { return type()->StaticSize(env); }
@@ -141,11 +141,11 @@ public:
 
     void Prepare(Env* env) override;
 
-    void GenPubDecls(Output* out, Env* env) override { /* nothing */ }
-    void GenPrivDecls(Output* out, Env* env) override { /* nothing */ }
+    void GenPubDecls(Output* out, Env* env) override {  }
+    void GenPrivDecls(Output* out, Env* env) override {  }
 
-    void GenInitCode(Output* out, Env* env) override { /* nothing */ }
-    void GenCleanUpCode(Output* out, Env* env) override { /* nothing */ }
+    void GenInitCode(Output* out, Env* env) override {  }
+    void GenCleanUpCode(Output* out, Env* env) override {  }
     void GenParseCode(Output* out, Env* env) override;
 
     int StaticSize(Env* env, int offset) const override;
@@ -163,4 +163,4 @@ private:
     int wordsize_;
 };
 
-#endif // pac_record_h
+#endif

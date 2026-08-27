@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/session/Key.h"
 
@@ -73,4 +73,4 @@ bool Key::operator==(const Key& rhs) const {
     return memcmp(data, rhs.data, size) == 0;
 }
 
-} // namespace zeek::session::detail
+}

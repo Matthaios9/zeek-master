@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/logging/Component.h"
 
@@ -23,4 +23,4 @@ void Component::DoDescribe(ODesc* d) const {
     d->Add(CanonicalName());
 }
 
-} // namespace zeek::logging
+}

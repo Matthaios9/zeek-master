@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -10,9 +10,9 @@
 
 namespace zeek::input::reader::detail {
 
-/**
- * Binary mode file reader.
- */
+
+
+
 class Binary : public ReaderBackend {
 public:
     explicit Binary(ReaderFrontend* frontend);
@@ -38,9 +38,9 @@ private:
     file_ino_t ino = 0;
     bool firstrun = true;
 
-    // options set from the script-level.
+
     static std::streamsize chunk_size;
     std::string path_prefix;
 };
 
-} // namespace zeek::input::reader::detail
+}

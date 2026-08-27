@@ -1,4 +1,4 @@
-##! Software identification and extraction for DHCP traffic.
+
 
 @load base/protocols/dhcp
 @load base/frameworks/software
@@ -7,16 +7,16 @@ module DHCP;
 
 export {
 	redef enum Software::Type += {
-		## Identifier for web servers in the software framework.
+
 		DHCP::SERVER,
-		## Identifier for web browsers in the software framework.
+
 		DHCP::CLIENT,
 	};
 
 	redef record DHCP::Info += {
-		## Software reported by the client in the `vendor_class` option.
+
 		client_software: string &log &optional;
-		## Software reported by the server in the `vendor_class` option.
+
 		server_software: string &log &optional;
 	};
 }
@@ -46,7 +46,7 @@ event DHCP::log_dhcp(rec: DHCP::Info)
 		                   $orig_p=rec$client_port,
 		                   $resp_h=rec$server_addr,
 		                   $resp_p=rec$server_port,
-		                   $proto=17); # DHCP is typically UDP
+		                   $proto=17);
 
 		if ( rec?$client_software && rec$assigned_addr != 255.255.255.255 )
 			{

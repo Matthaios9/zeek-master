@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -13,7 +13,7 @@ public:
     ~Finger_Analyzer() override {}
 
     void Done() override;
-    // Line-based input.
+
     void DeliverStream(int len, const u_char* data, bool orig) override;
 
     static analyzer::Analyzer* Instantiate(Connection* conn) { return new Finger_Analyzer(conn); }
@@ -24,4 +24,4 @@ protected:
     int did_deliver;
 };
 
-} // namespace zeek::analyzer::finger
+}

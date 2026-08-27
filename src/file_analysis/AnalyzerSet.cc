@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/file_analysis/AnalyzerSet.h"
 
@@ -98,9 +98,9 @@ bool AnalyzerSet::Remove(const zeek::Tag& tag, std::unique_ptr<zeek::detail::Has
 
     a->Done();
 
-    // We don't delete the analyzer object right here because the remove
-    // operation may execute at a time when it can still be accessed.
-    // Instead we let the file know to delete the analyzer later.
+
+
+
     file->DoneWithAnalyzer(a);
 
     return true;
@@ -166,4 +166,4 @@ void AnalyzerSet::DrainModifications() {
     DBG_LOG(DBG_FILE_ANALYSIS, "[%s] End flushing analyzer mod queue.", file->GetID().c_str());
 }
 
-} // namespace zeek::file_analysis::detail
+}

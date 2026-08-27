@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/rdp/RDP.h"
 
@@ -37,14 +37,14 @@ void RDP_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
         return;
 
     if ( had_gap )
-        // If only one side had a content gap, we could still try to
-        // deliver data to the other side if the script layer can handle this.
+
+
         return;
 
     if ( interp->is_encrypted() ) {
-        // 0x00 is RDP native encryption which we don't do anything with now.
-        // 0x01 is SSL/TLS
-        // 0x03-0x04 is CredSSP which is effectively SSL/TLS
+
+
+
         if ( interp->encryption_method() > 0x00 ) {
             if ( ! tls_active ) {
                 tls_active = true;
@@ -65,7 +65,7 @@ void RDP_Analyzer::DeliverStream(int len, const u_char* data, bool orig) {
                                                             orig, len);
         }
     }
-    else // if not encrypted
+    else
     {
         try {
             interp->NewData(orig, data, data + len);
@@ -81,4 +81,4 @@ void RDP_Analyzer::Undelivered(uint64_t seq, int len, bool orig) {
     interp->NewGap(orig, len);
 }
 
-} // namespace zeek::analyzer::rdp
+}

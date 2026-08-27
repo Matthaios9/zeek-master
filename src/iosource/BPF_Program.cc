@@ -1,12 +1,12 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/iosource/BPF_Program.h"
 
-// clang-format off
-// Include order is required here for a working build on Windows.
+
+
 #include <unistd.h>
 #include <sys/socket.h>
-// clang-format on
+
 #include <cstring>
 
 #include "zeek/util.h"
@@ -19,7 +19,7 @@ int pcap_freecode(pcap_t* unused, struct bpf_program* program) {
     program->bf_len = 0;
 
     if ( program->bf_insns ) {
-        free((char*)program->bf_insns); // copied from libpcap
+        free((char*)program->bf_insns);
         program->bf_insns = 0;
     }
 
@@ -61,8 +61,8 @@ int pcap_compile_nopcap(int snaplen_arg, int linktype_arg, struct bpf_program* p
 
 namespace zeek::iosource::detail {
 
-// Simple heuristic to identify filters that always match, so that we can
-// skip the filtering in that case. "ip or not ip" is Zeek's default filter.
+
+
 static bool filter_matches_anything(const char* filter) {
     return (! filter) || strlen(filter) == 0 || strcmp(filter, "ip or not ip") == 0;
 }
@@ -93,10 +93,10 @@ bool BPF_Program::Compile(zeek_uint_t snaplen, int linktype, const char* filter,
     FreeCode();
 
     if ( linktype == DLT_NFLOG ) {
-        // No-op, NFLOG does not support BPF filters.
-        // Raising a warning might be good, but it would also be noisy
-        // since the default scripts will always attempt to compile
-        // and install a default filter
+
+
+
+
         m_compiled = true;
         m_matches_anything = true;
         return true;
@@ -135,4 +135,4 @@ FilterState BPF_Program::GetStateFromMessage(const std::string& err) {
     return FilterState::FATAL;
 }
 
-} // namespace zeek::iosource::detail
+}

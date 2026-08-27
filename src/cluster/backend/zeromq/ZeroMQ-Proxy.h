@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -9,23 +9,23 @@
 #include "zeek/cluster/backend/zeromq/ZeroMQ-ZAP.h"
 #include "zeek/cluster/backend/zeromq/ZeroMQ.h"
 
-// Central XPUB/XSUB proxy.
-//
-// Spawns a thread that runs zmq_proxy() for a XPUB/XSUB pair.
+
+
+
 namespace zeek::cluster::zeromq {
 class ProxyThread {
 public:
-    /**
-     * Constructor.
-     *
-     * @param xpub_endpoint the XPUB socket address to listen on.
-     * @param xsub_endpoint the XSUB socket address to listen on.
-     * @param control A ZeroMQ REP socket for the zmq::proxy_steerable() control parameter. This socket can be used to
-     * send commands to the proxy (https://libzmq.readthedocs.io/en/latest/zmq_proxy_steerable.html).
-     * @param xpub_nodrop the xpub_nodrop option to use on the XPUB socket.
-     * @param io_threads The number of IO threads to configure with the ZeroMQ context.
-     * @param curve_config Optional curve config to enable encryption.
-     */
+
+
+
+
+
+
+
+
+
+
+
     ProxyThread(std::string xpub_endpoint, std::string xsub_endpoint, zmq::socket_t&& control, int ipv6,
                 int xpub_nodrop, int io_threads, CurveConfig curve_config)
         : xpub_endpoint(std::move(xpub_endpoint)),
@@ -39,23 +39,23 @@ public:
 
     ~ProxyThread() { Shutdown(); }
 
-    /**
-     * Data kept in object and passed to thread.
-     */
+
+
+
     struct Args {
         zmq::socket_t xpub;
         zmq::socket_t xsub;
         zmq::socket_t control;
     };
 
-    /**
-     * Bind the sockets and spawn the thread.
-     */
+
+
+
     bool Start();
 
-    /**
-     * Shutdown the ZeroMQ context and join the thread.
-     */
+
+
+
     void Shutdown();
 
 private:
@@ -72,4 +72,4 @@ private:
     int io_threads = 2;
     CurveConfig curve_config;
 };
-} // namespace zeek::cluster::zeromq
+}

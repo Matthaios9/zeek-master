@@ -1,4 +1,4 @@
-##! Calculate the variance.
+
 
 @load ./average
 @load ../main
@@ -7,21 +7,21 @@ module SumStats;
 
 export {
 	redef enum Calculation += {
-		## Calculate the variance of the values.
+
 		VARIANCE
 	};
 
 	redef record ResultVal += {
-		## For numeric data, this is the variance.
+
 		variance: double &optional;
 	};
 }
 
 redef record ResultVal += {
-	# Internal use only.  Used for incrementally calculating variance.
+
 	prev_avg: double &optional;
 
-	# Internal use only.  For calculating incremental variance.
+
 	var_s: double &default=0.0;
 };
 
@@ -43,7 +43,7 @@ hook register_observe_plugins() &priority=-5
 	add_observe_plugin_dependency(VARIANCE, AVERAGE);
 	}
 
-# Reduced priority since this depends on the average
+
 hook compose_resultvals_hook(result: ResultVal, rv1: ResultVal, rv2: ResultVal) &priority=-5
 	{
 	if ( rv1?$var_s && rv1?$average &&

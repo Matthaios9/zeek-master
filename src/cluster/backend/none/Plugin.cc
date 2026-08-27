@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/plugin/Plugin.h"
 
@@ -10,9 +10,9 @@ namespace {
 
 using namespace zeek::cluster;
 
-/**
- * A backend that does nothing.
- */
+
+
+
 class NoneBackend : public Backend {
 private:
     bool DoInit() override { return true; };
@@ -38,7 +38,7 @@ public:
         return std::make_unique<NoneBackend>(std::move(es), std::move(ls), std::move(ehs));
     }
 };
-} // namespace
+}
 
 
 namespace zeek::plugin::Zeek_Cluster_None {
@@ -54,4 +54,4 @@ class Plugin : public zeek::plugin::Plugin {
     }
 } plugin;
 
-} // namespace zeek::plugin::Zeek_Cluster_None
+}

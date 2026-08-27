@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/DNS_Mgr.h"
 
@@ -49,14 +49,14 @@ using ztd::out_ptr::out_ptr;
 
 using namespace std::literals;
 
-// Number of seconds we'll wait for a reply.
+
 constexpr int DNS_TIMEOUT = 5;
 
-// The maximum allowed number of pending asynchronous requests.
+
 constexpr int MAX_PENDING_REQUESTS = 20;
 
-// The maximum number of bytes requested via UDP. TCP fallback won't happen on
-// requests until a response is larger than this.
+
+
 constexpr int MAX_UDP_BUFFER_SIZE = 4096;
 
 struct ares_deleter {
@@ -92,7 +92,7 @@ public:
 private:
     std::string host;
     IPAddr addr;
-    int request_type = 0; // Query type
+    int request_type = 0;
     bool async = false;
     std::unique_ptr<ares_dns_record_t, ares_deleter> query_rec;
     static uint16_t request_id;
@@ -102,8 +102,8 @@ uint16_t DNS_Request::request_id = 0;
 
 DNS_Request::DNS_Request(std::string host, int request_type, bool async)
     : host(std::move(host)), request_type(request_type), async(async) {
-    // We combine the ns_t_a and ns_t_aaaa requests together in one request, so set the type
-    // to ns_t_a to make things easier in other parts of the code (mostly around lookups).
+
+
     if ( request_type == ns_t_aaaa )
         request_type = ns_t_a;
 }
@@ -111,21 +111,21 @@ DNS_Request::DNS_Request(std::string host, int request_type, bool async)
 DNS_Request::DNS_Request(const IPAddr& addr, bool async) : addr(addr), async(async) { request_type = ns_t_ptr; }
 
 void DNS_Request::MakeRequest(ares_channel channel, DNS_Mgr* mgr) {
-    // This needs to get deleted at the end of the callback method.
+
     auto req_data = std::make_unique<CallbackArgs>();
     req_data->req = this;
     req_data->mgr = mgr;
 
-    // It's completely fine if this rolls over. It's just to keep the query ID different
-    // from one query to the next, and it's unlikely we'd do 2^16 queries so fast that
-    // all of them would be in flight at the same time.
+
+
+
     DNS_Request::request_id++;
 
     if ( request_type == ns_t_a ) {
-        // For A/AAAA requests, we use a different method than the other requests. Since
-        // we're using the AF_UNSPEC family, we get both the ipv4 and ipv6 responses
-        // back in the same request if use ares_getaddrinfo() so we can store them both
-        // in the same mapping.
+
+
+
+
         ares_addrinfo_hints hints = {ARES_AI_CANONNAME, AF_UNSPEC, 0, 0};
         ares_getaddrinfo(channel, host.c_str(), nullptr, &hints, addrinfo_cb, req_data.release());
     }
@@ -150,7 +150,7 @@ void DNS_Request::MakeRequest(ares_channel channel, DNS_Mgr* mgr) {
         if ( status != ARES_SUCCESS )
             return;
 
-        // Store this so it can be destroyed when the request is destroyed.
+
         this->query_rec = std::move(dnsrec);
         ares_send_dnsrec(channel, query_rec.get(), query_cb, req_data.release(), nullptr);
     }
@@ -168,22 +168,22 @@ void DNS_Request::ProcessAsyncResult(bool timed_out, DNS_Mgr* mgr) {
         mgr->CheckAsyncOtherRequest(host, timed_out, request_type);
 }
 
-/**
- * Retrieves the TTL value from the first RR in the response.
- *
- * This code is adapted from an internal c-ares method called * ares__parse_into_addrinfo,
- * which is used for ares_getaddrinfo callbacks. It's also the only method that properly
- * parses out TTL data currently. This skips over the question and the first bit of the
- * response to get to the first RR, and then returns the TTL from that RR. We only use the
- * first RR because it's a good approximation for now, at least until the work in c-ares
- * lands to add TTL support to the other RR-parsing methods.
- *
- * @param abuf The buffer containing the entire response from the server.
- * @param alen The length of the buffer
- * @param ttl An out param for returning the TTL value.
- * @return A status code from c-ares. This will be ARES_SUCCESS on success, or some other
- * code on failure.
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 static int get_ttl(unsigned char* abuf, int alen, int* ttl) {
     int status;
     long len;
@@ -215,25 +215,25 @@ static int get_ttl(unsigned char* abuf, int alen, int* ttl) {
     return status;
 }
 
-/**
- * Called in response to ares_getaddrinfo requests. Builds a hostent structure from
- * the result data and sends it to the DNS manager via AddResult().
- */
+
+
+
+
 static void addrinfo_cb(void* arg, int status, int timeouts, struct ares_addrinfo* result) {
     auto arg_data = reinterpret_cast<CallbackArgs*>(arg);
     const auto [req, mgr] = *arg_data;
     std::unique_ptr<ares_addrinfo, ares_deleter> res_ptr(result);
 
     if ( status != ARES_SUCCESS ) {
-        // These two statuses should only ever be sent if we're shutting down everything
-        // and all of the existing queries are being cancelled. There's no reason to
-        // store a status that's just going to get deleted, nor is there a reason to log
-        // anything.
+
+
+
+
         if ( status != ARES_ECANCELLED && status != ARES_EDESTRUCTION ) {
-            // Insert something into the cache so that the request loop will end correctly.
-            // We use the DNS_TIMEOUT value as the TTL here since it's small enough that the
-            // failed response will expire soon, and because we don't have the TTL from the
-            // response data.
+
+
+
+
             mgr->AddResult(req, nullptr, DNS_TIMEOUT);
         }
     }
@@ -252,7 +252,7 @@ static void addrinfo_cb(void* arg, int status, int timeouts, struct ares_addrinf
         }
 
         if ( ! addrs.empty() ) {
-            // Push a null on the end so the addr list has a final point during later parsing.
+
             addrs.push_back(nullptr);
 
             struct hostent he{};
@@ -267,7 +267,7 @@ static void addrinfo_cb(void* arg, int status, int timeouts, struct ares_addrinf
         }
 
         if ( ! addrs6.empty() ) {
-            // Push a null on the end so the addr list has a final point during later parsing.
+
             addrs6.push_back(nullptr);
 
             struct hostent he{};
@@ -284,7 +284,7 @@ static void addrinfo_cb(void* arg, int status, int timeouts, struct ares_addrinf
 
     req->ProcessAsyncResult(timeouts > 0, mgr);
 
-    // TODO: might need to turn these into unique_ptr as well?
+
     delete req;
     delete arg_data;
 }
@@ -294,15 +294,15 @@ static void query_cb(void* arg, ares_status_t status, size_t timeouts, const are
     const auto [req, mgr] = *arg_data;
 
     if ( status != ARES_SUCCESS ) {
-        // These two statuses should only ever be sent if we're shutting down everything
-        // and all of the existing queries are being cancelled. There's no reason to
-        // store a status that's just going to get deleted, nor is there a reason to log
-        // anything.
+
+
+
+
         if ( status != ARES_ECANCELLED && status != ARES_EDESTRUCTION ) {
-            // Insert something into the cache so that the request loop will end correctly.
-            // We use the DNS_TIMEOUT value as the TTL here since it's small enough that the
-            // failed response will expire soon, and because we don't have the TTL from the
-            // response data.
+
+
+
+
             mgr->AddResult(req, nullptr, DNS_TIMEOUT);
         }
     }
@@ -316,8 +316,8 @@ static void query_cb(void* arg, ares_status_t status, size_t timeouts, const are
         for ( size_t idx = 0; idx < rr_cnt; idx++ ) {
             const ares_dns_rr_t* rr = ares_dns_record_rr_get_const(dnsrec, ARES_SECTION_ANSWER, 0);
 
-            // Use the ttl from the first record, since we don't keep track of the TTLs for each
-            // individually.
+
+
             if ( idx == 0 )
                 ttl = ares_dns_rr_get_ttl(rr);
 
@@ -328,15 +328,15 @@ static void query_cb(void* arg, ares_status_t status, size_t timeouts, const are
             if ( type == ARES_REC_TYPE_PTR ) {
                 const char* txt = ares_dns_rr_get_str(rr, ARES_RR_PTR_DNAME);
                 if ( txt == nullptr ) {
-                    // According to the c-ares docs, this can happen but only in cases of "misuse". We
-                    // still need to check for it though.
+
+
                     error = true;
                     break;
                 }
 
-                // TODO: it's possible that a response has multiple aliases. We
-                // don't handle those so we can just break here after setting
-                // h_aliases to null.
+
+
+
                 he.h_name = util::copy_string(txt);
                 he.h_aliases = nullptr;
                 break;
@@ -346,12 +346,12 @@ static void query_cb(void* arg, ares_status_t status, size_t timeouts, const are
                 if ( abin_cnt == 0 )
                     break;
 
-                // TODO: We only process the first abin in the response. There might be more.
+
                 size_t abin_len;
                 const unsigned char* abin = ares_dns_rr_get_abin(rr, ARES_RR_TXT_DATA, 0, &abin_len);
                 if ( abin == nullptr ) {
-                    // According to the c-ares docs, this can happen but only in cases of "misuse". We
-                    // still need to check for it though.
+
+
                     error = true;
                     break;
                 }
@@ -361,7 +361,7 @@ static void query_cb(void* arg, ares_status_t status, size_t timeouts, const are
                 he.h_name[abin_len] = 0;
                 he.h_aliases = nullptr;
 
-                // TODO: We only process the first RR for a TXT query, even if there are more of them.
+
                 break;
             }
             else {
@@ -374,7 +374,7 @@ static void query_cb(void* arg, ares_status_t status, size_t timeouts, const are
         if ( rr_cnt != 0 && ! error )
             mgr->AddResult(req, &he, ttl);
         else
-            // See above for why DNS_TIMEOUT here.
+
             mgr->AddResult(req, nullptr, DNS_TIMEOUT);
 
         delete[] he.h_name;
@@ -385,11 +385,11 @@ static void query_cb(void* arg, ares_status_t status, size_t timeouts, const are
     delete req;
 }
 
-/**
- * Called when the c-ares socket changes state, which indicates that it's connected to
- * some source of data (either a host file or a DNS server). This indicates that we're
- * able to do lookups against c-ares now and should activate the IOSource.
- */
+
+
+
+
+
 static void sock_cb(void* data, ares_socket_t s, int read, int write) {
     auto mgr = reinterpret_cast<DNS_Mgr*>(data);
     mgr->RegisterSocket(static_cast<int>(s), read == 1, write == 1);
@@ -437,9 +437,9 @@ void DNS_Mgr::InitSource() {
     ares_options options;
     int optmask = 0;
 
-    // Enable an EDNS option to be sent with the requests. This allows us to set
-    // a bigger UDP buffer size in the request, which prevents fallback to TCP
-    // at least up to that size.
+
+
+
     options.flags = ARES_FLAG_EDNS;
     optmask |= ARES_OPT_FLAGS;
 
@@ -449,16 +449,16 @@ void DNS_Mgr::InitSource() {
     options.socket_receive_buffer_size = MAX_UDP_BUFFER_SIZE;
     optmask |= ARES_OPT_SOCK_RCVBUF;
 
-    // This option is in milliseconds.
+
     options.timeout = DNS_TIMEOUT * 1000;
     optmask |= ARES_OPT_TIMEOUTMS;
 
-    // This causes c-ares to only attempt each server twice before
-    // giving up.
+
+
     options.tries = 2;
     optmask |= ARES_OPT_TRIES;
 
-    // See the comment on sock_cb for how this gets used.
+
     options.sock_state_cb = sock_cb;
     options.sock_state_cb_data = this;
     optmask |= ARES_OPT_SOCK_STATE_CB;
@@ -467,11 +467,11 @@ void DNS_Mgr::InitSource() {
     if ( status != ARES_SUCCESS )
         reporter->FatalError("Failed to initialize c-ares for DNS resolution: %s", ares_strerror(status));
 
-    // Note that Init() may be called by way of LookupHost() during the act of
-    // parsing a hostname literal (e.g. google.com), so we can't use a
-    // script-layer option to configure the DNS resolver as it may not be
-    // configured to the user's desired address at the time when we need to to
-    // the lookup.
+
+
+
+
+
     auto dns_resolver = getenv("ZEEK_DNS_RESOLVER");
     if ( dns_resolver ) {
         ares_set_servers_csv(channel, dns_resolver);
@@ -529,15 +529,15 @@ void DNS_Mgr::InitPostScript() {
     if ( ! doctest::is_running_in_test ) {
         dm_rec = id::find_type<RecordType>("dns_mapping");
 
-        // Registering will call InitSource(), which sets up all of the DNS library stuff
+
         iosource_mgr->Register(this, true);
     }
     else {
-        // This would normally be called when registering the iosource above.
+
         InitSource();
     }
 
-    // Load the DNS cache from disk, if it exists.
+
     std::string cache_dir = dir.empty() ? "." : dir;
     cache_name = util::fmt("%s/%s", cache_dir.c_str(), ".zeek-dns-cache");
     LoadCache(cache_name);
@@ -602,7 +602,7 @@ ValPtr DNS_Mgr::Lookup(const std::string& name, int request_type) {
             req->MakeRequest(channel, this);
             Resolve();
 
-            // Call LookupHost() a second time to get the newly stored value out of the cache.
+
             return Lookup(name, request_type);
         }
 
@@ -621,17 +621,17 @@ TableValPtr DNS_Mgr::LookupHost(const std::string& name) {
 
     InitSource();
 
-    // Check the cache before attempting to look up the name remotely.
+
     if ( mode != DNS_PRIME ) {
         if ( auto val = LookupNameInCache(name, false, true) )
             return val;
     }
 
-    // Not found, or priming.
+
     switch ( mode ) {
         case DNS_PRIME: {
-            // We pass ns_t_a here, but DNSRequest::MakeRequest() will special-case that in
-            // a request that gets both ns_t_a and ns_t_aaaa results at one time.
+
+
             auto req = new DNS_Request(name, ns_t_a);
             req->MakeRequest(channel, this);
             return empty_addr_set();
@@ -640,13 +640,13 @@ TableValPtr DNS_Mgr::LookupHost(const std::string& name) {
         case DNS_FORCE: reporter->FatalError("can't find DNS entry for %s in cache", name.c_str()); return nullptr;
 
         case DNS_DEFAULT: {
-            // We pass ns_t_a here, but DNSRequest::MakeRequest() will special-case that in
-            // a request that gets both ns_t_a and ns_t_aaaa results at one time.
+
+
             auto req = new DNS_Request(name, ns_t_a);
             req->MakeRequest(channel, this);
             Resolve();
 
-            // Call LookupHost() a second time to get the newly stored value out of the cache.
+
             return LookupHost(name);
         }
 
@@ -663,13 +663,13 @@ StringValPtr DNS_Mgr::LookupAddr(const IPAddr& addr) {
 
     InitSource();
 
-    // Check the cache before attempting to look up the name remotely.
+
     if ( mode != DNS_PRIME ) {
         if ( auto val = LookupAddrInCache(addr, false, true) )
             return val;
     }
 
-    // Not found, or priming.
+
     switch ( mode ) {
         case DNS_PRIME: {
             auto req = new DNS_Request(addr);
@@ -686,7 +686,7 @@ StringValPtr DNS_Mgr::LookupAddr(const IPAddr& addr) {
             req->MakeRequest(channel, this);
             Resolve();
 
-            // Call LookupAddr() a second time to get the newly stored value out of the cache.
+
             return LookupAddr(addr);
         }
 
@@ -703,7 +703,7 @@ void DNS_Mgr::LookupHost(const std::string& name, LookupCallback* callback) {
         return;
     }
 
-    // Do we already know the answer?
+
     if ( auto addrs = LookupNameInCache(name, true, false) ) {
         resolve_lookup_cb(callback, std::move(addrs));
         return;
@@ -711,15 +711,15 @@ void DNS_Mgr::LookupHost(const std::string& name, LookupCallback* callback) {
 
     AsyncRequest* req = nullptr;
 
-    // If we already have a request waiting for this host, we don't need to make
-    // another one. We can just add the callback to it and it'll get handled
-    // when the first request comes back.
+
+
+
     auto key = std::make_pair(ns_t_a, name);
     auto i = asyncs.find(key);
     if ( i != asyncs.end() )
         req = i->second;
     else {
-        // A new one.
+
         req = new AsyncRequest{name, ns_t_a};
         asyncs_queued.push_back(req);
         asyncs.emplace_hint(i, std::move(key), req);
@@ -727,9 +727,9 @@ void DNS_Mgr::LookupHost(const std::string& name, LookupCallback* callback) {
 
     req->callbacks.push_back(callback);
 
-    // There may be requests in the queue that haven't been processed yet
-    // so go ahead and reissue them, even if this method didn't change
-    // anything.
+
+
+
     IssueAsyncRequests();
 }
 
@@ -742,7 +742,7 @@ void DNS_Mgr::LookupAddr(const IPAddr& addr, LookupCallback* callback) {
         return;
     }
 
-    // Do we already know the answer?
+
     if ( auto name = LookupAddrInCache(addr, true, false) ) {
         resolve_lookup_cb(callback, name->CheckString());
         return;
@@ -750,14 +750,14 @@ void DNS_Mgr::LookupAddr(const IPAddr& addr, LookupCallback* callback) {
 
     AsyncRequest* req = nullptr;
 
-    // If we already have a request waiting for this host, we don't need to make
-    // another one. We can just add the callback to it and it'll get handled
-    // when the first request comes back.
+
+
+
     auto i = asyncs.find(addr);
     if ( i != asyncs.end() )
         req = i->second;
     else {
-        // A new one.
+
         req = new AsyncRequest{addr};
         asyncs_queued.push_back(req);
         asyncs.emplace_hint(i, addr, req);
@@ -765,9 +765,9 @@ void DNS_Mgr::LookupAddr(const IPAddr& addr, LookupCallback* callback) {
 
     req->callbacks.push_back(callback);
 
-    // There may be requests in the queue that haven't been processed yet
-    // so go ahead and reissue them, even if this method didn't change
-    // anything.
+
+
+
     IssueAsyncRequests();
 }
 
@@ -780,7 +780,7 @@ void DNS_Mgr::Lookup(const std::string& name, int request_type, LookupCallback* 
         return;
     }
 
-    // Do we already know the answer?
+
     if ( auto txt = LookupOtherInCache(name, request_type, true) ) {
         resolve_lookup_cb(callback, txt->CheckString());
         return;
@@ -788,15 +788,15 @@ void DNS_Mgr::Lookup(const std::string& name, int request_type, LookupCallback* 
 
     AsyncRequest* req = nullptr;
 
-    // If we already have a request waiting for this host, we don't need to make
-    // another one. We can just add the callback to it and it'll get handled
-    // when the first request comes back.
+
+
+
     auto key = std::make_pair(request_type, name);
     auto i = asyncs.find(key);
     if ( i != asyncs.end() )
         req = i->second;
     else {
-        // A new one.
+
         req = new AsyncRequest{name, request_type};
         asyncs_queued.push_back(req);
         asyncs.emplace_hint(i, std::move(key), req);
@@ -839,7 +839,7 @@ void DNS_Mgr::Resolve() {
             ++nfds;
         }
 
-        // poll() timeout is in milliseconds.
+
         struct timeval* tvp = ares_timeout(channel, &tv, &tv);
         int timeout_ms = tvp->tv_sec * 1000 + tvp->tv_usec / 1000;
 
@@ -855,7 +855,7 @@ void DNS_Mgr::Resolve() {
             }
         }
         else if ( res == 0 )
-            // Do timeout processing when poll() timed out.
+
             ares_process_fd(channel, ARES_SOCKET_BAD, ARES_SOCKET_BAD);
     }
 }
@@ -894,7 +894,7 @@ RecordValPtr DNS_Mgr::BuildMappingVal(const DNS_MappingPtr& dm) {
 }
 
 void DNS_Mgr::AddResult(DNS_Request* dr, struct hostent* h, uint32_t ttl, bool merge) {
-    // TODO: Should we handle hostname aliases here somehow?
+
 
     DNS_MappingPtr new_mapping = nullptr;
     DNS_MappingPtr prev_mapping = nullptr;
@@ -950,7 +950,7 @@ void DNS_Mgr::AddResult(DNS_Request* dr, struct hostent* h, uint32_t ttl, bool m
 void DNS_Mgr::CompareMappings(const DNS_MappingPtr& prev_mapping, const DNS_MappingPtr& new_mapping) {
     if ( prev_mapping->Failed() ) {
         if ( new_mapping->Failed() )
-            // Nothing changed.
+
             return;
 
         Event(dns_mapping_valid, new_mapping);
@@ -1003,7 +1003,7 @@ ListValPtr DNS_Mgr::AddrListDelta(ListValPtr al1, ListValPtr al2) {
         }
 
         if ( j >= al2->Length() )
-            // Didn't find it.
+
             delta->Append(al1->Idx(i));
     }
 
@@ -1021,7 +1021,7 @@ void DNS_Mgr::LoadCache(const std::string& path) {
         return;
     }
 
-    // Loop until we find a mapping that doesn't initialize correctly.
+
     auto m = std::make_shared<DNS_Mapping>(f);
     for ( ; ! m->NoMapping() && ! m->InitFailed(); m = std::make_shared<DNS_Mapping>(f) ) {
         if ( m->ReqHost() )
@@ -1073,8 +1073,8 @@ TableValPtr DNS_Mgr::LookupNameInCache(const std::string& name, bool cleanup_exp
     if ( cleanup_expired && (d && d->Expired()) ) {
         all_mappings.erase(it);
 
-        // If the TTL is zero, we're immediately expiring the response. We don't want
-        // to return though because the response was valid for a brief moment in time.
+
+
         if ( d->TTL() != 0 )
             return nullptr;
     }
@@ -1097,8 +1097,8 @@ StringValPtr DNS_Mgr::LookupAddrInCache(const IPAddr& addr, bool cleanup_expired
     if ( cleanup_expired && d->Expired() ) {
         all_mappings.erase(it);
 
-        // If the TTL is zero, we're immediately expiring the response. We don't want
-        // to return though because the response was valid for a brief moment in time.
+
+
         if ( d->TTL() != 0 )
             return nullptr;
     }
@@ -1124,8 +1124,8 @@ StringValPtr DNS_Mgr::LookupOtherInCache(const std::string& name, int request_ty
     if ( cleanup_expired && d->Expired() ) {
         all_mappings.erase(it);
 
-        // If the TTL is zero, we're immediately expiring the response. We don't want
-        // to return though because the response was valid for a brief moment in time.
+
+
         if ( d->TTL() != 0 )
             return nullptr;
     }
@@ -1148,8 +1148,8 @@ void DNS_Mgr::IssueAsyncRequests() {
         if ( req->type == ns_t_ptr )
             dns_req = new DNS_Request(req->addr, true);
         else if ( req->type == ns_t_a || req->type == ns_t_aaaa )
-            // We pass ns_t_a here, but DNSRequest::MakeRequest() will special-case that in
-            // a request that gets both ns_t_a and ns_t_aaaa results at one time.
+
+
             dns_req = new DNS_Request(req->host.c_str(), ns_t_a, true);
         else
             dns_req = new DNS_Request(req->host.c_str(), req->type, true);
@@ -1162,7 +1162,7 @@ void DNS_Mgr::IssueAsyncRequests() {
 }
 
 void DNS_Mgr::CheckAsyncHostRequest(const std::string& host, bool timeout) {
-    // Note that this code is a mirror of that for CheckAsyncAddrRequest.
+
     auto i = asyncs.find(std::make_pair(ns_t_a, host));
 
     if ( i != asyncs.end() ) {
@@ -1185,10 +1185,10 @@ void DNS_Mgr::CheckAsyncHostRequest(const std::string& host, bool timeout) {
 }
 
 void DNS_Mgr::CheckAsyncAddrRequest(const IPAddr& addr, bool timeout) {
-    // Note that this code is a mirror of that for CheckAsyncHostRequest.
 
-    // In the following, if it's not in the respective map anymore, we've
-    // already finished it earlier and don't have anything to do.
+
+
+
     auto i = asyncs.find(addr);
 
     if ( i != asyncs.end() ) {
@@ -1211,7 +1211,7 @@ void DNS_Mgr::CheckAsyncAddrRequest(const IPAddr& addr, bool timeout) {
 }
 
 void DNS_Mgr::CheckAsyncOtherRequest(const std::string& host, bool timeout, int request_type) {
-    // Note that this code is a mirror of that for CheckAsyncAddrRequest.
+
 
     auto i = asyncs.find(std::make_pair(request_type, host));
     if ( i != asyncs.end() ) {
@@ -1245,12 +1245,12 @@ double DNS_Mgr::GetNextTimeout() {
     struct timeval tv;
     struct timeval* tvp = ares_timeout(channel, nullptr, &tv);
 
-    // If you pass nullptr as the max time argument to ares_timeout, it will return null if there
-    // isn't anything waiting to be processed.
+
+
     if ( ! tvp )
         return -1;
 
-    // Clamp the timeout to our desired max, since we passed NULl to ares_timeout.
+
     if ( tvp->tv_sec > DNS_TIMEOUT ) {
         tvp->tv_sec = DNS_TIMEOUT;
         tvp->tv_usec = 0;
@@ -1270,10 +1270,10 @@ void DNS_Mgr::ProcessFd(int fd, int flags) {
 }
 
 void DNS_Mgr::Process() {
-    // Process() is called when DNS_Mgr is found "ready" when its
-    // GetNextTimeout() returns 0.0, but there's no active FD.
-    //
-    // Kick off timeouts at least.
+
+
+
+
     ares_process_fd(channel, ARES_SOCKET_BAD, ARES_SOCKET_BAD);
 }
 
@@ -1342,8 +1342,8 @@ void DNS_Mgr::AsyncRequest::Timeout() {
 }
 
 TableValPtr DNS_Mgr::empty_addr_set() {
-    // TODO: can this be returned statically as well? Does the result get used in a way
-    // that would modify the same value being returned repeatedly?
+
+
     auto addr_t = base_type(TYPE_ADDR);
     auto set_index = make_intrusive<TypeList>(addr_t);
     set_index->Append(std::move(addr_t));
@@ -1353,15 +1353,15 @@ TableValPtr DNS_Mgr::empty_addr_set() {
 
 DNS_Mgr::AsyncRequest::AsyncRequest(const IPAddr& addr) : addr(addr), type(ns_t_ptr) {}
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////
 
-// Unit testing coverage for the DNS_Mgr code, including making actual DNS requests to
-// test responses and timeouts. Note that all of these tests are marked with the skip
-// decorator, since they take some time to run and this slows down local development. To
-// run them manually, pass the --no-skip flag when running tests. These tests are
-// run automatically as part of CI builds.
+
+
+
+
+
+
+
+
 
 static std::vector<IPAddr> get_result_addresses(TableValPtr addrs) {
     std::vector<IPAddr> results;
@@ -1401,11 +1401,11 @@ public:
     bool timeout = false;
 };
 
-/**
- * Derived testing version of DNS_Mgr so that the Process() method can be exposed
- * publicly. If new unit tests are added, this class should be used over using
- * DNS_Mgr directly.
- */
+
+
+
+
+
 class TestDNS_Mgr final : public DNS_Mgr {
 public:
     explicit TestDNS_Mgr(DNS_MgrMode mode) : DNS_Mgr(mode) {}
@@ -1413,21 +1413,21 @@ public:
 };
 
 void TestDNS_Mgr::Process() {
-    // Only allow usage of this method when running unit tests.
+
     assert(doctest::is_running_in_test);
     Resolve();
     IssueAsyncRequests();
 }
 
 TEST_CASE("dns_mgr priming" * doctest::skip(true)) {
-    // TODO: This test uses mkdtemp, which isn't available on Windows.
+
 #ifndef _MSC_VER
     char prefix[] = "/tmp/zeek-unit-test-XXXXXX";
     auto tmpdir = mkdtemp(prefix);
 
-    // Create a manager to prime the cache, make a few requests, and the save
-    // the result. This tests that the priming code will create the requests but
-    // wait for Resolve() to actually make the requests.
+
+
+
     TestDNS_Mgr mgr(DNS_PRIME);
     mgr.SetDir(tmpdir);
     mgr.InitPostScript();
@@ -1440,22 +1440,22 @@ TEST_CASE("dns_mgr priming" * doctest::skip(true)) {
     auto addr_result = mgr.LookupAddr(ones);
     CHECK(strcmp(addr_result->CheckString(), "<none>") == 0);
 
-    // This should wait until we have all of the results back from the above
-    // requests.
+
+
     mgr.Resolve();
 
-    // Save off the resulting values from Resolve() into a file on disk
-    // in the tmpdir created by mkdtemp.
+
+
     REQUIRE(mgr.Save());
 
-    // Make a second DNS manager and reload the cache that we just saved.
+
     TestDNS_Mgr mgr2(DNS_FORCE);
     dns_mgr = &mgr2;
     mgr2.SetDir(tmpdir);
     mgr2.InitPostScript();
 
-    // Make the same two requests, but verify that we're correctly getting
-    // data out of the cache.
+
+
     host_result = mgr2.LookupHost("one.one.one.one");
     REQUIRE(host_result != nullptr);
     CHECK_FALSE(host_result->EqualTo(TestDNS_Mgr::empty_addr_set()));
@@ -1464,7 +1464,7 @@ TEST_CASE("dns_mgr priming" * doctest::skip(true)) {
     REQUIRE(addr_result != nullptr);
     CHECK(strcmp(addr_result->CheckString(), "one.one.one.one") == 0);
 
-    // Clean up cache file and the temp directory
+
     unlink(mgr2.CacheFile().c_str());
     rmdir(tmpdir);
 #endif
@@ -1482,15 +1482,15 @@ TEST_CASE("dns_mgr alternate server" * doctest::skip(true)) {
     REQUIRE(result != nullptr);
     CHECK(strcmp(result->CheckString(), "one.one.one.one") == 0);
 
-    // FIXME: This won't run on systems without IPv6 connectivity.
-    // setenv("ZEEK_DNS_RESOLVER", "2606:4700:4700::1111", 1);
-    // TestDNS_Mgr mgr2(DNS_DEFAULT, true);
-    // mgr2.InitPostScript();
-    // result = mgr2.LookupAddr("1.1.1.1");
-    // mgr2.Resolve();
 
-    // result = mgr2.LookupAddr("1.1.1.1");
-    // CHECK(strcmp(result->CheckString(), "one.one.one.one") == 0);
+
+
+
+
+
+
+
+
 
     if ( old_server )
         setenv("ZEEK_DNS_RESOLVER", old_server, 1);
@@ -1536,8 +1536,8 @@ TEST_CASE("dns_mgr async host" * doctest::skip(true)) {
     TestCallback cb{};
     mgr.LookupHost("one.one.one.one", &cb);
 
-    // This shouldn't take any longer than DNS_TIMEOUT+1 seconds, so bound it
-    // just in case of some failure we're not aware of yet.
+
+
     int count = 0;
     while ( ! cb.done && (count < DNS_TIMEOUT + 1) ) {
         mgr.Process();
@@ -1564,8 +1564,8 @@ TEST_CASE("dns_mgr async addr" * doctest::skip(true)) {
     TestCallback cb{};
     mgr.LookupAddr(IPAddr{"1.1.1.1"}, &cb);
 
-    // This shouldn't take any longer than DNS_TIMEOUT +1 seconds, so bound it
-    // just in case of some failure we're not aware of yet.
+
+
     int count = 0;
     while ( ! cb.done && (count < DNS_TIMEOUT + 1) ) {
         mgr.Process();
@@ -1588,8 +1588,8 @@ TEST_CASE("dns_mgr async text" * doctest::skip(true)) {
     TestCallback cb{};
     mgr.Lookup("unittest.zeek.org", ns_t_txt, &cb);
 
-    // This shouldn't take any longer than DNS_TIMEOUT +1 seconds, so bound it
-    // just in case of some failure we're not aware of yet.
+
+
     int count = 0;
     while ( ! cb.done && (count < DNS_TIMEOUT + 1) ) {
         mgr.Process();
@@ -1608,9 +1608,9 @@ TEST_CASE("dns_mgr async text" * doctest::skip(true)) {
 TEST_CASE("dns_mgr timeouts" * doctest::skip(true)) {
     char* old_server = getenv("ZEEK_DNS_RESOLVER");
 
-    // This is the address for blackhole.webpagetest.org, which provides a DNS
-    // server that lets you connect but never returns any responses, always
-    // resulting in a timeout.
+
+
+
     setenv("ZEEK_DNS_RESOLVER", "3.219.212.117", 1);
     TestDNS_Mgr mgr(DNS_DEFAULT);
 
@@ -1633,9 +1633,9 @@ TEST_CASE("dns_mgr timeouts" * doctest::skip(true)) {
 TEST_CASE("dns_mgr async timeouts" * doctest::skip(true)) {
     char* old_server = getenv("ZEEK_DNS_RESOLVER");
 
-    // This is the address for blackhole.webpagetest.org, which provides a DNS
-    // server that lets you connect but never returns any responses, always
-    // resulting in a timeout.
+
+
+
     setenv("ZEEK_DNS_RESOLVER", "3.219.212.117", 1);
     TestDNS_Mgr mgr(DNS_DEFAULT);
     mgr.InitPostScript();
@@ -1643,8 +1643,8 @@ TEST_CASE("dns_mgr async timeouts" * doctest::skip(true)) {
     TestCallback cb{};
     mgr.Lookup("unittest.zeek.org", ns_t_txt, &cb);
 
-    // This shouldn't take any longer than DNS_TIMEOUT +1 seconds, so bound it
-    // just in case of some failure we're not aware of yet.
+
+
     int count = 0;
     while ( ! cb.done && (count < DNS_TIMEOUT + 1) ) {
         mgr.Process();
@@ -1664,4 +1664,4 @@ TEST_CASE("dns_mgr async timeouts" * doctest::skip(true)) {
         unsetenv("ZEEK_DNS_RESOLVER");
 }
 
-} // namespace zeek::detail
+}

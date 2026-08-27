@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -34,18 +34,18 @@ protected:
     void ClearEndpointState(bool orig);
     void DiscardFlowBuffer(bool orig);
 
-    /**
-     * Buffers packet data until it reaches a specified length.
-     * @param endp an endpoint speaking DNP3 to which data will be buffered.
-     * @param target_len the required length of the buffer
-     * @param data source buffer to copy bytes from.  Will be incremented
-     * by the number of bytes copied by this function.
-     * @param len the number of bytes available in \a data.  Will be decremented
-     * by the number of bytes copied by this function.
-     * @return -1 if invalid input parameters were supplied, 0 if the endpoint's
-     * buffer is not yet \a target_len bytes in size, or 1 the buffer is the
-     * required size.
-     */
+
+
+
+
+
+
+
+
+
+
+
+
     int AddToBuffer(Endpoint* endp, int target_len, const u_char** data, int* len);
 
     bool ParseAppLayer(Endpoint* endp);
@@ -64,7 +64,7 @@ protected:
     Endpoint resp_state;
 };
 
-} // namespace detail
+}
 
 class DNP3_TCP_Analyzer : public detail::DNP3_Base, public analyzer::tcp::TCP_ApplicationAnalyzer {
 public:
@@ -87,4 +87,4 @@ public:
     static analyzer::Analyzer* Instantiate(Connection* conn) { return new DNP3_UDP_Analyzer(conn); }
 };
 
-} // namespace zeek::analyzer::dnp3
+}

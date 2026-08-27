@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -8,9 +8,9 @@
 
 namespace zeek::file_analysis::detail {
 
-/**
- * Analyze Portable Executable files
- */
+
+
+
 class PE : public file_analysis::Analyzer {
 public:
     ~PE() override;
@@ -29,4 +29,4 @@ protected:
     bool done;
 };
 
-} // namespace zeek::file_analysis::detail
+}

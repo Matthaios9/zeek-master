@@ -1,4 +1,4 @@
-# See the file "COPYING" in the main distribution directory for copyright.
+
 
 @load base/frameworks/reporter
 @load base/protocols/conn/removal-hooks
@@ -10,98 +10,98 @@ module LDAP;
 export {
   redef enum Log::ID += { LDAP_LOG, LDAP_SEARCH_LOG };
 
-  ## TCP ports which should be considered for analysis.
+
   const ports_tcp = { 389/tcp, 3268/tcp } &redef;
 
-  ## UDP ports which should be considered for analysis.
+
   const ports_udp = { 389/udp } &redef;
 
-  ## Whether clear text passwords are captured or not.
+
   option default_capture_password = F;
 
-  ## Whether to log LDAP search attributes or not.
+
   option default_log_search_attributes = F;
 
-  ## Default logging policy hook for LDAP_LOG.
+
   global log_policy: Log::PolicyHook;
 
-  ## Default logging policy hook for LDAP_SEARCH_LOG.
+
   global log_policy_search: Log::PolicyHook;
 
-  ## LDAP finalization hook.
+
   global finalize_ldap: Conn::RemovalHook;
 
-  #############################################################################
-  # This is the format of ldap.log (ldap operations minus search-related)
-  # Each line represents a unique connection+message_id (requests/responses)
+
+
+
   type MessageInfo: record {
-    # Timestamp for when the event happened.
+
     ts: time &log;
 
-    # Unique ID for the connection.
+
     uid: string &log;
 
-    # The connection's 4-tuple of endpoint addresses/ports.
+
     id: conn_id &log;
 
-    # Message ID
+
     message_id: int &log &optional;
 
-    # LDAP version
+
     version: int &log &optional;
 
-    # Normalized operation (e.g., bind_request and bind_response to "bind")
+
     opcode: string &log &optional;
 
-    # Result code
+
     result: string &log &optional;
 
-    # Result diagnostic message
+
     diagnostic_message: string &log &optional;
 
-    # Object
+
     object: string &log &optional;
 
-    # Argument
+
     argument: string &log &optional;
   };
 
-  #############################################################################
-  # This is the format of ldap_search.log (search-related messages only)
-  # Each line represents a unique connection+message_id (requests/responses)
+
+
+
   type SearchInfo: record {
-    # Timestamp for when the event happened.
+
     ts: time &log;
 
-    # Unique ID for the connection.
+
     uid: string &log;
 
-    # The connection's 4-tuple of endpoint addresses/ports.
+
     id: conn_id &log;
 
-    # Message ID
+
     message_id: int &log &optional;
 
-    # sets of search scope and deref alias
+
     scope: string &log &optional;
     deref_aliases: string &log &optional;
 
-    # Base search objects
+
     base_object: string &log &optional;
 
-    # Number of results returned
+
     result_count: count &log &optional;
 
-    # Result code of search operation
+
     result: string &log &optional;
 
-    # Result diagnostic message
+
     diagnostic_message: string &log &optional;
 
-    # A string representation of the search filter used in the query
+
     filter: string &log &optional;
 
-    # A list of attributes that were returned in the search
+
     attributes: vector of string &log &optional;
   };
 
@@ -110,8 +110,8 @@ export {
     searches: table[int] of SearchInfo &optional;
   };
 
-  # Event that can be handled to access the ldap record as it is sent on
-  # to the logging framework.
+
+
   global log_ldap: event(rec: LDAP::MessageInfo);
   global log_ldap_search: event(rec: LDAP::SearchInfo);
 }
@@ -120,7 +120,7 @@ redef record connection += {
   ldap: State &optional;
 };
 
-#############################################################################
+
 global OPCODES_FINISHED: set[LDAP::ProtocolOpcode] = { LDAP::ProtocolOpcode_BIND_RESPONSE,
                                                        LDAP::ProtocolOpcode_UNBIND_REQUEST,
                                                        LDAP::ProtocolOpcode_SEARCH_RESULT_DONE,
@@ -137,7 +137,7 @@ global OPCODES_SEARCH: set[LDAP::ProtocolOpcode] = { LDAP::ProtocolOpcode_SEARCH
                                                      LDAP::ProtocolOpcode_SEARCH_RESULT_DONE,
                                                      LDAP::ProtocolOpcode_SEARCH_RESULT_REFERENCE };
 
-#############################################################################
+
 event zeek_init() &priority=5 {
   Analyzer::register_for_ports(Analyzer::ANALYZER_LDAP_TCP, LDAP::ports_tcp);
   Analyzer::register_for_ports(Analyzer::ANALYZER_LDAP_UDP, LDAP::ports_udp);
@@ -146,7 +146,7 @@ event zeek_init() &priority=5 {
   Log::create_stream(LDAP::LDAP_SEARCH_LOG, Log::Stream($columns=SearchInfo, $ev=log_ldap_search, $path="ldap_search", $policy=log_policy_search));
 }
 
-#############################################################################
+
 function set_session(c: connection, message_id: int, opcode: LDAP::ProtocolOpcode) {
 
   if (! c?$ldap ) {
@@ -175,7 +175,7 @@ function set_session(c: connection, message_id: int, opcode: LDAP::ProtocolOpcod
   }
 }
 
-#############################################################################
+
 event LDAP::message(c: connection,
                     message_id: int,
                     opcode: LDAP::ProtocolOpcode,
@@ -212,15 +212,15 @@ event LDAP::message(c: connection,
     Log::write(LDAP::LDAP_SEARCH_LOG, sm);
     delete c$ldap$searches[message_id];
 
-  } else if (opcode !in OPCODES_SEARCH) {  # search is handled via LDAP::search_request()
+  } else if (opcode !in OPCODES_SEARCH) {
     set_session(c, message_id, opcode);
 
     local m = c$ldap$messages[message_id];
 
     local opcode_str = PROTOCOL_OPCODES[opcode];
 
-    # bind request is explicitly handled via LDAP::bind_request() and
-    # can assume we have a more specific m$opcode set.
+
+
     if ( opcode_str != "bind" ) {
       if ( m?$opcode && opcode_str != m$opcode ) {
         Reporter::conn_weird("LDAP_message_opcode_change", c,
@@ -229,7 +229,7 @@ event LDAP::message(c: connection,
 
       m$opcode = opcode_str;
     } else if ( ! m?$opcode ) {
-      # This can happen if we see a bind response before the bind request.
+
       Reporter::conn_weird("LDAP_bind_without_opcode", c, fmt("%s: %s", message_id, opcode_str), "LDAP");
       m$opcode = opcode_str;
     }
@@ -284,7 +284,7 @@ event LDAP::message(c: connection,
   }
 }
 
-#############################################################################
+
 event LDAP::search_request(c: connection,
                            message_id: int,
                            base_object: string,
@@ -345,7 +345,7 @@ event LDAP::search_request(c: connection,
   }
 }
 
-#############################################################################
+
 event LDAP::search_result_entry(c: connection,
                                 message_id: int,
                                 object_name: string) {
@@ -355,7 +355,7 @@ event LDAP::search_result_entry(c: connection,
   c$ldap$searches[message_id]$result_count += 1;
 }
 
-#############################################################################
+
 event LDAP::bind_request(c: connection,
                          message_id: int,
                          version: int,
@@ -369,8 +369,8 @@ event LDAP::bind_request(c: connection,
   if ( ! m?$version )
     m$version = version;
 
-  # Getting herre, we don't expect the LDAP opcode to be set at all
-  # and it'll be overwritten below.
+
+
   if ( m?$opcode )
     Reporter::conn_weird("LDAP_bind_opcode_already_set", c, m$opcode, "LDAP");
 
@@ -394,9 +394,9 @@ event LDAP::bind_request(c: connection,
   }
 }
 
-#############################################################################
+
 hook finalize_ldap(c: connection) {
-  # log any "pending" unlogged LDAP messages/searches
+
 
   if ( c$ldap?$messages && (|c$ldap$messages| > 0) ) {
     for ( [mid], m in c$ldap$messages ) {

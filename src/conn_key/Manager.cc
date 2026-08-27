@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/conn_key/Manager.h"
 
@@ -32,8 +32,8 @@ FactoryPtr Manager::InstantiateFactory(const zeek::EnumValPtr& tag) {
         reporter->FatalError("factory instantiation failed");
     }
 
-    // Could add validation of actual tag vs obtained one here, as we do e.g. in
-    // the packet_analysis Manager.
+
+
 
     return factory;
 }

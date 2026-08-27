@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -32,7 +32,7 @@ using EnumTypePtr = IntrusivePtr<EnumType>;
 using ValPtr = IntrusivePtr<Val>;
 using FuncPtr = IntrusivePtr<Func>;
 
-} // namespace zeek
+}
 
 namespace zeek::detail {
 
@@ -133,9 +133,9 @@ public:
     void Error(const char* msg, const Obj* o2 = nullptr);
 
     void Describe(ODesc* d) const override;
-    // Adds type and value to description.
+
     void DescribeExtended(ODesc* d) const;
-    // Produces a description that's reST-ready.
+
     void DescribeReST(ODesc* d, bool roles_only = false) const;
     void DescribeReSTShort(ODesc* d) const;
 
@@ -170,92 +170,92 @@ protected:
     ValPtr val;
     AttributesPtr attrs;
 
-    // contains list of functions that are called when an option changes
+
     using OptionHandler = std::pair<int, FuncPtr>;
     std::forward_list<OptionHandler> option_handlers;
 
-    // Information managed by script optimization.  We package this
-    // up into a separate object for purposes of modularity, and,
-    // via the associated pointer, to allow it to be modified in
-    // contexts where the ID is itself "const".
+
+
+
+
     IDOptInfo* opt_info;
 };
 
-} // namespace zeek::detail
+}
 
 namespace zeek::id {
 
-/**
- * Lookup an ID in the global module and return it, if one exists;
- * @param name  The identifier name to lookup.
- * @return  The identifier, which may reference a nil object if no such
- * name exists.
- */
+
+
+
+
+
+
 const detail::IDPtr& find(std::string_view name);
 
-/**
- * Lookup an ID by its name and return its type.  A fatal occurs if the ID
- * does not exist.
- * @param name  The identifier name to lookup
- * @return  The type of the identifier.
- */
+
+
+
+
+
+
 const TypePtr& find_type(std::string_view name);
 
-/**
- * Lookup an ID by its name and return its type (as cast to @c T).
- * A fatal occurs if the ID does not exist.
- * @param name  The identifier name to lookup
- * @return  The type of the identifier.
- */
+
+
+
+
+
+
 template<class T>
 IntrusivePtr<T> find_type(std::string_view name) {
     return cast_intrusive<T>(find_type(name));
 }
 
-/**
- * Lookup an ID by its name and return its value.  A fatal occurs if the ID
- * does not exist.
- * @param name  The identifier name to lookup
- * @return  The current value of the identifier
- */
+
+
+
+
+
+
 const ValPtr& find_val(std::string_view name);
 
-/**
- * Lookup an ID by its name and return its value (as cast to @c T).
- * A fatal occurs if the ID does not exist.
- * @param name  The identifier name to lookup
- * @return  The current value of the identifier.
- */
+
+
+
+
+
+
 template<class T>
 IntrusivePtr<T> find_val(std::string_view name) {
     return cast_intrusive<T>(find_val(name));
 }
 
-/**
- * Lookup an ID by its name and return its value.  A fatal occurs if the ID
- * does not exist or if it is not "const".
- * @param name  The identifier name to lookup
- * @return  The current value of the identifier
- */
+
+
+
+
+
+
 const ValPtr& find_const(std::string_view name);
 
-/**
- * Lookup an ID by its name and return its value (as cast to @c T).
- * A fatal occurs if the ID does not exist.
- * @param name  The identifier name to lookup
- * @return  The current value of the identifier.
- */
+
+
+
+
+
+
 template<class T>
 IntrusivePtr<T> find_const(std::string_view name) {
     return cast_intrusive<T>(find_const(name));
 }
 
-/**
- * Lookup an ID by its name and return the function it references.
- * A fatal occurs if the ID does not exist or if it is not a function.
- * @param name  The identifier name to lookup
- * @return  The current function value the identifier references.
- */
+
+
+
+
+
+
 FuncPtr find_func(std::string_view name);
 
 ZEEK_EXTERN_DATA RecordTypePtr conn_id;
@@ -275,5 +275,5 @@ namespace detail {
 
 void init_types();
 
-} // namespace detail
-} // namespace zeek::id
+}
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -16,17 +16,17 @@ protected:
     bool RPC_BuildReply(RPC_CallInfo* c, BifEnum::rpc_status rpc_status, const u_char*& buf, int& n, double start_time,
                         double last_time, int reply_len) override;
 
-    // Returns a new val_list that already has a conn_val, rpc_status and
-    // nfs_status. These are the first parameters for each nfs_* event
-    // ...
+
+
+
     Args event_common_vl(RPC_CallInfo* c, BifEnum::rpc_status rpc_status, BifEnum::NFS3::status_t nfs_status,
                          double rep_start_time, double rep_last_time, int reply_len, int extra_elements);
 
-    // These methods parse the appropriate NFSv3 "type" out of buf. If
-    // there are any errors (i.e., buffer to short, etc), buf will be set
-    // to 0. However, the methods might still return an allocated Val * !
-    // So, you might want to Unref() the Val if buf is 0. Method names
-    // are based on the type names of RFC 1813.
+
+
+
+
+
     StringValPtr nfs3_fh(const u_char*& buf, int& n);
     RecordValPtr nfs3_fattr(const u_char*& buf, int& n);
     RecordValPtr nfs3_sattr(const u_char*& buf, int& n);
@@ -42,8 +42,8 @@ protected:
     RecordValPtr nfs3_sattrargs(const u_char*& buf, int& n);
     StringValPtr nfs3_nfspath(const u_char*& buf, int& n) { return nfs3_filename(buf, n); }
 
-    RecordValPtr nfs3_post_op_attr(const u_char*& buf, int& n); // Return 0 or an fattr
-    RecordValPtr nfs3_pre_op_attr(const u_char*& buf, int& n);  // Return 0 or an wcc_attr
+    RecordValPtr nfs3_post_op_attr(const u_char*& buf, int& n);
+    RecordValPtr nfs3_pre_op_attr(const u_char*& buf, int& n);
     RecordValPtr nfs3_sattr_reply(const u_char*& buf, int& n, BifEnum::NFS3::status_t status);
     RecordValPtr nfs3_lookup_reply(const u_char*& buf, int& n, BifEnum::NFS3::status_t status);
     RecordValPtr nfs3_readargs(const u_char*& buf, int& n);
@@ -60,10 +60,10 @@ protected:
     RecordValPtr nfs3_readdirargs(bool isplus, const u_char*& buf, int& n);
     RecordValPtr nfs3_readdir_reply(bool isplus, const u_char*& buf, int& n, BifEnum::NFS3::status_t status);
 
-    // Consumes the file data in the RPC message. Depending on NFS::return_data* consts
-    // in zeek.init returns NULL or the data as string val:
-    //   * offset is the offset of the read/write call
-    //   * size is the amount of bytes read (or requested to be written),
+
+
+
+
     StringValPtr nfs3_file_data(const u_char*& buf, int& n, uint64_t offset, int size);
 
     uint32_t ExtractUint32(const u_char*& buf, int& n);
@@ -73,7 +73,7 @@ protected:
     bool ExtractBool(const u_char*& buf, int& n);
 };
 
-} // namespace detail
+}
 
 class NFS_Analyzer : public RPC_Analyzer {
 public:
@@ -83,4 +83,4 @@ public:
     static analyzer::Analyzer* Instantiate(Connection* conn) { return new NFS_Analyzer(conn); }
 };
 
-} // namespace zeek::analyzer::rpc
+}

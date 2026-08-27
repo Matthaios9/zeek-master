@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #ifndef pac_embedded_h
 #define pac_embedded_h
@@ -25,11 +25,11 @@ public:
     EmbeddedCode();
     ~EmbeddedCode() override;
 
-    // Append a character
+
     void Append(int atom);
     void Append(const char* str);
 
-    // Append a PAC primitive
+
     void Append(PacPrimitive* primitive);
 
     void GenCode(Output* out, Env* env);
@@ -39,4 +39,4 @@ private:
     EmbeddedCodeSegmentList* segments_;
 };
 
-#endif // pac_embedded_h
+#endif

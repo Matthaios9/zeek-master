@@ -1,8 +1,8 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// This code contributed to Zeek/Bro by Florian Schimandl and Hugh Dollman.
-//
-// An analyser for the POP3 protocol.
+
+
+
+
 
 #pragma once
 
@@ -62,7 +62,7 @@ enum POP3_SubState : uint8_t {
     POP3_WOK,
 };
 
-} // namespace detail
+}
 
 class POP3_Analyzer final : public analyzer::tcp::TCP_ApplicationAnalyzer {
 public:
@@ -113,4 +113,4 @@ private:
     analyzer::tcp::ContentLine_Analyzer* cl_resp;
 };
 
-} // namespace zeek::analyzer::pop3
+}

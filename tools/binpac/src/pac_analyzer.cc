@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "pac_analyzer.h"
 
@@ -143,7 +143,7 @@ void AnalyzerDecl::GenPubDecls(Output* out_h, Output* out_cc) {
         out_h->println("");
     }
 
-    // TODO: export public state variables
+
 }
 
 void AnalyzerDecl::GenPrivDecls(Output* out_h, Output* out_cc) {
@@ -155,7 +155,7 @@ void AnalyzerDecl::GenPrivDecls(Output* out_h, Output* out_cc) {
         GenHelpers(out_h, out_cc);
     }
 
-    // TODO: declare state variables
+
 }
 
 void AnalyzerDecl::GenInitCode(Output* out_cc) {
@@ -208,8 +208,8 @@ void AnalyzerDecl::GenFunctions(Output* out_h, Output* out_cc) {
 }
 
 AnalyzerState::~AnalyzerState() {
-    // Note: do not delete elements of statevars_, because they
-    // are referenced by the AnalyzerDecl.
+
+
     delete statevars_;
 }
 
@@ -237,7 +237,7 @@ AnalyzerFlow::AnalyzerFlow(Direction dir, ID* type_id, ExprList* params)
     if ( ! params )
         params = new ExprList();
 
-    // Add "this" to the list of params
+
     params->insert(params->begin(), new Expr(this_id->clone()));
 
     ID* flow_id = ((dir == UP) ? upflow_id : downflow_id)->clone();

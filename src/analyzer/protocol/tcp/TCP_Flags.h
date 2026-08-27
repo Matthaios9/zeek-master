@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -52,4 +52,4 @@ inline std::string TCP_Flags::AsString() const {
     return tcp_flags;
 }
 
-} // namespace zeek::analyzer::tcp
+}

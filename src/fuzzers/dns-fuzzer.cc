@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include <binpac.h>
 
@@ -46,7 +46,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     auto conn = add_connection();
     auto a = add_analyzer(conn);
 
-    // The conn protocol scripts assume that new_connection is run before connection_state_remove.
+
     if ( new_connection )
         conn->Event(new_connection, nullptr);
 

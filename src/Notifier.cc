@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/Notifier.h"
 
@@ -62,4 +62,4 @@ void Registry::Terminate() {
     }
 }
 
-} // namespace zeek::notifier::detail
+}

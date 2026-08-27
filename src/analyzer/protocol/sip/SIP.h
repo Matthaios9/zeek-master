@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -11,7 +11,7 @@ public:
     explicit SIP_Analyzer(Connection* conn);
     ~SIP_Analyzer() override;
 
-    // Overridden from Analyzer
+
 
     void Done() override;
     void DeliverPacket(int len, const u_char* data, bool orig, uint64_t seq, const IP_Hdr* ip, int caplen) override;
@@ -22,4 +22,4 @@ protected:
     binpac::SIP::SIP_Conn* interp;
 };
 
-} // namespace zeek::analyzer::sip
+}

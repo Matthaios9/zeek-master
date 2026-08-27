@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/iosource/pcapng/Source.h"
 
@@ -69,8 +69,8 @@ void Source::Open() {
         return;
     }
 
-    // We don't have direct access to the file descriptor in the light_file pointer. It's
-    // a FILE object internally to LightPcapNg, but it's not exposed externally.
+
+
     props.selectable_fd = -1;
 
     props.link_type = -1;
@@ -98,12 +98,12 @@ bool Source::ExtractNextPacket(Packet* pkt) {
 
     light_block block = nullptr;
 
-    // Loop until we've found an enhanced packet block.
+
     while ( true ) {
         bool endian_swap = false;
         light_read_block(pd, &block, &endian_swap);
         if ( ! block ) {
-            // If we get a nullptr back, we've run out of blocks and the file is done.
+
             Close();
             return false;
         }
@@ -130,8 +130,8 @@ bool Source::ExtractNextPacket(Packet* pkt) {
             break;
         }
         else if ( block->type == LIGHT_SECTION_HEADER_BLOCK )
-            // If we get a new section header block, it's like starting over with a new
-            // file. Reset the interfaces because we should get new ones.
+
+
             interfaces.clear();
         else
             DBG_LOG(DBG_PKTIO, "pcapng: ignoring block of type %d", block->type);
@@ -166,7 +166,7 @@ detail::BPF_Program* Source::CompileFilter(const std::string& filter) {
 PktSrc* Source::Instantiate(const std::string& path, bool is_live) { return new Source(path); }
 
 void Source::ParseInterfaceBlock(light_block block) {
-    // Use the struct defined by Light to avoid some parsing.
+
     auto lidb = reinterpret_cast<_light_interface_description_block*>(block->body);
 
     Interface intf;
@@ -185,7 +185,7 @@ void Source::ParseInterfaceBlock(light_block block) {
 }
 
 Source::PacketBlock Source::ParseEnhancedPacketBlock(light_block block) {
-    // Use the struct defined by Light to avoid some parsing.
+
     auto lepb = reinterpret_cast<_light_enhanced_packet_block*>(block->body);
 
     PacketBlock pb;
@@ -196,8 +196,8 @@ Source::PacketBlock Source::ParseEnhancedPacketBlock(light_block block) {
     ts <<= 32;
     ts += lepb->timestamp_low;
 
-    // The timestamp is the number of "units" of time since unix epoch. The units are based on the
-    // timestamp resolution from the interface.
+
+
     uint32_t ts_res = 1e6;
     if ( pb.interface < interfaces.size() )
         ts_res = interfaces[pb.interface].ts_resolution;

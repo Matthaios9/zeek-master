@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/analyzer/protocol/ident/Ident.h"
 
@@ -63,7 +63,7 @@ void Ident_Analyzer::DeliverStream(int length, const u_char* data, bool is_orig)
             if ( s && s->state == analyzer::tcp::TCP_ENDPOINT_CLOSED &&
                  (s->prev_state == analyzer::tcp::TCP_ENDPOINT_INACTIVE ||
                   s->prev_state == analyzer::tcp::TCP_ENDPOINT_PARTIAL) )
-                // not surprising the request is mangled.
+
                 return;
 
             BadRequest(length, orig_line);
@@ -93,7 +93,7 @@ void Ident_Analyzer::DeliverStream(int length, const u_char* data, bool is_orig)
             if ( s && s->state == analyzer::tcp::TCP_ENDPOINT_CLOSED &&
                  (s->prev_state == analyzer::tcp::TCP_ENDPOINT_INACTIVE ||
                   s->prev_state == analyzer::tcp::TCP_ENDPOINT_PARTIAL) )
-                // not surprising the request is mangled.
+
                 return;
 
             BadReply(length, orig_line);
@@ -136,7 +136,7 @@ void Ident_Analyzer::DeliverStream(int length, const u_char* data, bool is_orig)
         else {
             const char* sys_type = line;
             assert(line <= end_of_line);
-            size_t n = end_of_line >= line ? end_of_line - line : 0; // just to be sure if assertions aren't on.
+            size_t n = end_of_line >= line ? end_of_line - line : 0;
             const char* colon = reinterpret_cast<const char*>(memchr(line, ':', n));
             const char* comma = reinterpret_cast<const char*>(memchr(line, ',', n));
             if ( ! colon ) {
@@ -189,8 +189,8 @@ const char* Ident_Analyzer::ParsePort(const char* line, const char* end_of_line,
     const char* l = line;
 
     do {
-        // Stop accumulating once the value is out of range to avoid
-        // signed overflow; the check below still flags it as bad.
+
+
         if ( n <= 65535 )
             n = n * 10 + (*line - '0');
         ++line;
@@ -221,4 +221,4 @@ void Ident_Analyzer::BadReply(int length, const char* line) {
     }
 }
 
-} // namespace zeek::analyzer::ident
+}

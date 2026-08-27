@@ -18,10 +18,10 @@ set(binpac_bison_generated_files
 
 set_source_files_properties(${binpac_bison_generated_files} PROPERTIES SKIP_LINTING ON)
 
-# pac_main.cc includes up pac_parse.h, and so clang-tidy reports a bunch of warnings from
-# that header as part of it. adding NOLINTBEGIN/END around the include didn't resolve it.
-# I fixed the findings in pac_main.cc, but am ignoring it from here on to avoid the extra
-# noise.
+
+
+
+
 set_source_files_properties(pac_main.cc PROPERTIES SKIP_LINTING ON)
 
 set(binpac_SRCS
@@ -77,8 +77,8 @@ target_include_directories(binpac BEFORE PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 
 if (MSVC)
     target_compile_options(binpac PUBLIC "/J")
-    # If building separately from zeek, we need to add the libunistd subdirectory
-    # so that linking doesn't fail.
+
+
     if ("${CMAKE_PROJECT_NAME}" STREQUAL "BinPAC")
         add_subdirectory(${PROJECT_SOURCE_DIR}auxil/libunistd EXCLUDE_FROM_ALL)
     endif ()
@@ -87,6 +87,6 @@ endif ()
 
 install(TARGETS binpac DESTINATION bin)
 
-# This is set to assist superprojects that want to build BinPac from source and
-# rely on it as a target
+
+
 set(BinPAC_EXE binpac CACHE STRING "BinPAC executable" FORCE)

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -18,4 +18,4 @@ using WeirdStateMap = std::unordered_map<std::string, WeirdState>;
 
 bool PermitWeird(WeirdStateMap& wsm, const char* name, uint64_t threshold, uint64_t rate, double duration);
 
-} // namespace zeek::detail
+}

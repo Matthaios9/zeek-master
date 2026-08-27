@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -18,4 +18,4 @@ public:
     bool DetectProtocol(size_t len, const uint8_t* data, Packet* packet) override;
 };
 
-} // namespace zeek::packet_analysis::AYIYA
+}

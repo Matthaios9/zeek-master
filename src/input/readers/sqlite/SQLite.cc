@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/input/readers/sqlite/SQLite.h"
 
@@ -54,8 +54,8 @@ bool SQLite::checkError(int code) {
 }
 
 bool SQLite::DoInit(const ReaderInfo& info, int arg_num_fields, const threading::Field* const* arg_fields) {
-    // Allow connections to same DB to use single data/schema cache. Also
-    // allows simultaneous writes to one file.
+
+
 #ifndef ZEEK_TSAN
     sqlite3_enable_shared_cache(1);
 #endif
@@ -85,7 +85,7 @@ bool SQLite::DoInit(const ReaderInfo& info, int arg_num_fields, const threading:
     num_fields = arg_num_fields;
     fields = arg_fields;
 
-    // create the prepared select statement that we will re-use forever...
+
     if ( checkError(sqlite3_prepare_v2(db, query.c_str(), query.size() + 1, &st, nullptr)) ) {
         return false;
     }
@@ -95,8 +95,8 @@ bool SQLite::DoInit(const ReaderInfo& info, int arg_num_fields, const threading:
     return true;
 }
 
-// pos = field position
-// subpos = subfield position, only used for port-field
+
+
 Value* SQLite::EntryToVal(sqlite3_stmt* st, const threading::Field* field, int pos, int subpos) {
     if ( sqlite3_column_type(st, pos) == SQLITE_NULL )
         return new Value(field->type, field->subtype, false);
@@ -202,7 +202,7 @@ bool SQLite::DoUpdate() {
     int* mapping = new int[num_fields];
     int* submapping = new int[num_fields];
 
-    // first set them all to -1
+
     for ( unsigned int i = 0; i < num_fields; ++i ) {
         mapping[i] = -1;
         submapping[i] = -1;
@@ -275,7 +275,7 @@ bool SQLite::DoUpdate() {
     delete[] mapping;
     delete[] submapping;
 
-    if ( checkError(errorcode) ) // check the last error code returned by sqlite
+    if ( checkError(errorcode) )
         return false;
 
     EndCurrentSend();
@@ -286,4 +286,4 @@ bool SQLite::DoUpdate() {
     return true;
 }
 
-} // namespace zeek::input::reader::detail
+}

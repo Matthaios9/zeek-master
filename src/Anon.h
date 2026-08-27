@@ -1,14 +1,14 @@
-// See the file "COPYING" in the main distribution directory for copyright.
 
-// The prefix-preserving IP address anonymization code is largely
-// based on (and sometimes directly copied from) Eddie Kohler's
-// ipsumdump-1.20 code, per:
-//
-//	http://www.icir.org/kohler/ipsumdump/
-//
-// ipsumdump, in turn, takes some of its code from tcpdpriv:
-//
-//	http://ita.ee.lbl.gov/html/contrib/tcpdpriv.html
+
+
+
+
+
+
+
+
+
+
 
 #pragma once
 
@@ -18,11 +18,11 @@
 
 namespace zeek::detail {
 
-// TODO: Anon.h may not be the right place to put these functions ...
+
 
 enum ip_addr_anonymization_class_t : uint8_t {
-    ORIG_ADDR, // client address
-    RESP_ADDR, // server address
+    ORIG_ADDR,
+    RESP_ADDR,
     OTHER_ADDR,
     NUM_ADDR_ANONYMIZATION_CLASSES,
 };
@@ -40,8 +40,8 @@ enum ip_addr_anonymization_method_t : uint8_t {
 
 using ipaddr32_t = uint32_t;
 
-// NOTE: all addresses in parameters of *public* functions are in
-// network order.
+
+
 
 class AnonymizeIPAddr {
 public:
@@ -120,14 +120,14 @@ protected:
     bool before_anonymization = true;
     bool new_mapping = false;
 
-    // The root of prefix preserving mapping tree.
+
     Node* root = nullptr;
 
-    // A node pool for new_node.
+
     Node* next_free_node = nullptr;
     std::vector<Node*> blocks;
 
-    // for 0.0.0.0 and 255.255.255.255.
+
     Node special_nodes[2];
 
     void init();
@@ -141,7 +141,7 @@ protected:
     Node* find_node(ipaddr32_t);
 };
 
-// The global IP anonymizers.
+
 extern AnonymizeIPAddr* ip_anonymizer[NUM_ADDR_ANONYMIZATION_METHODS];
 
 void init_ip_addr_anonymizers();
@@ -150,4 +150,4 @@ ipaddr32_t anonymize_ip(ipaddr32_t ip, enum ip_addr_anonymization_class_t cl);
 #define LOG_ANONYMIZATION_MAPPING
 void log_anonymization_mapping(ipaddr32_t input, ipaddr32_t output);
 
-} // namespace zeek::detail
+}

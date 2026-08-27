@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -88,16 +88,16 @@ protected:
     uint32_t uid, gid;
     std::vector<int> auxgids;
     uint32_t verf_flavor = 0;
-    u_char* call_buf; // copy of original call buffer
+    u_char* call_buf;
     std::string machinename;
     double start_time;
     double last_time;
-    int rpc_len = 0;        // size of the full RPC call, incl. xid and msg_type
-    int call_n = 0;         // size of call buf
-    int header_len = 0;     // size of data before the arguments
-    bool valid_call = true; // whether call was well-formed
+    int rpc_len = 0;
+    int call_n = 0;
+    int header_len = 0;
+    bool valid_call = true;
 
-    ValPtr v; // single (perhaps compound) value corresponding to call
+    ValPtr v;
 };
 
 class RPC_Interpreter {
@@ -105,9 +105,9 @@ public:
     explicit RPC_Interpreter(analyzer::Analyzer* analyzer);
     virtual ~RPC_Interpreter();
 
-    // Delivers the given RPC.  Returns true if "len" bytes were
-    // enough, false otherwise.  "is_orig" is true if the data is
-    // from the originator of the connection.
+
+
+
     int DeliverRPC(const u_char* data, int len, int caplen, bool is_orig, double start_time, double last_time);
 
     void Timeout();
@@ -127,23 +127,23 @@ protected:
     analyzer::Analyzer* analyzer;
 };
 
-/* A simple buffer for reassembling the fragments that RPC-over-TCP
- * uses. Only needed by RPC_Contents.
 
- * However, RPC messages can be quite large. As a first step, we only
- * extract and analyzer the first part of an RPC message and skip
- * over the rest.
- *
- * We specify:
- *    maxsize:  the number of bytes we want to copy into the buffer to analyze.
- *    expected: the total number of bytes in the RPC message. Can be
- *              quite large. We will be "skipping over" expected-maxsize bytes.
- *
- * We can extend "expected" (by calling AddToExpected()), but maxsize is
- * fixed.
- *
- * TODO: grow buffer dynamically
- */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class RPC_Reasm_Buffer {
 public:
     RPC_Reasm_Buffer() {
@@ -159,37 +159,37 @@ public:
 
     void Init(int64_t arg_maxsize, int64_t arg_expected);
 
-    const u_char* GetBuf() { return buf; }            // Pointer to the buffer
-    int64_t GetFill() { return fill; }                // Number of bytes in buf
-    int64_t GetSkipped() { return processed - fill; } // How many bytes did we skipped?
-    int64_t GetExpected() { return expected; }        // How many bytes are we expecting?
-    int64_t GetProcessed() { return processed; }      // How many bytes are we expecting?
+    const u_char* GetBuf() { return buf; }
+    int64_t GetFill() { return fill; }
+    int64_t GetSkipped() { return processed - fill; }
+    int64_t GetExpected() { return expected; }
+    int64_t GetProcessed() { return processed; }
 
-    // Expand expected by delta bytes. Returns false if the number of
-    // expected bytes exceeds maxsize (which means that we will truncate
-    // the message).
+
+
+
     bool AddToExpected(int64_t delta) {
         expected += delta;
         return ! (expected > maxsize);
     }
 
-    // Consume a chunk of input data (pointed to by data, up len in
-    // size). data and len will be adjusted accordingly. Returns true if
-    // "expected" bytes have been processed, i.e., returns true when we
-    // don't expect any more data.
+
+
+
+
     bool ConsumeChunk(const u_char*& data, int& len);
 
 protected:
-    int64_t fill;      // how many bytes we currently have in the buffer
-    int64_t maxsize;   // maximum buffer size we want to allocate
-    int64_t processed; // number of bytes we have processed so far
-    int64_t expected;  // number of input bytes we expect
+    int64_t fill;
+    int64_t maxsize;
+    int64_t processed;
+    int64_t expected;
     u_char* buf;
 };
 
-} // namespace detail
+}
 
-/* Support Analyzer for reassembling RPC-over-TCP messages */
+
 class Contents_RPC final : public analyzer::tcp::TCP_SupportAnalyzer {
 public:
     Contents_RPC(Connection* conn, bool orig, detail::RPC_Interpreter* interp);
@@ -224,8 +224,8 @@ protected:
 
     detail::RPC_Interpreter* interp;
 
-    detail::RPC_Reasm_Buffer marker_buf; // reassembles the 32bit RPC-over-TCP marker
-    detail::RPC_Reasm_Buffer msg_buf;    // reassembles RPC messages
+    detail::RPC_Reasm_Buffer marker_buf;
+    detail::RPC_Reasm_Buffer msg_buf;
     state_t state;
 
     double start_time;
@@ -253,4 +253,4 @@ protected:
     Contents_RPC* resp_rpc = nullptr;
 };
 
-} // namespace zeek::analyzer::rpc
+}

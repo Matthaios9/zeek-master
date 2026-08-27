@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 #include "zeek/Expr.h"
 
 #include <exception>
@@ -32,11 +32,11 @@ namespace zeek::detail {
 class IsolationException : public std::exception {};
 
 const char* expr_name(ExprTag t) {
-    // Note that some of the names in the following have trailing spaces.
-    // These are for unary operations that (1) are identified by names
-    // rather than symbols, and (2) don't have custom ExprDescribe printers.
-    // Adding the spaces here lets them leverage the UnaryExpr::ExprDescribe
-    // method without it having to know about such expressions.
+
+
+
+
+
     static const char* expr_names[static_cast<int>(NUM_EXPRS)] = {
         "name",
         "const",
@@ -55,7 +55,7 @@ const char* expr_name(ExprTag t) {
         "-=",
         "*",
         "/",
-        "/", // mask operator
+        "/",
         "%",
         "&",
         "|",
@@ -109,15 +109,15 @@ const char* expr_name(ExprTag t) {
         "any[]",
         "ZAM-builtin()",
 
-        "nop", // don't add after this, it's used to compute NUM_EXPRS
+        "nop",
     };
 
     if ( static_cast<int>(t) >= NUM_EXPRS ) {
         static char errbuf[512];
 
-        // This isn't quite right - we return a static buffer,
-        // so multiple calls to expr_name() could lead to confusion
-        // by overwriting the buffer.  But oh well.
+
+
+
         snprintf(errbuf, sizeof(errbuf), "%d: not an expression tag", static_cast<int>(t));
         return errbuf;
     }
@@ -228,9 +228,9 @@ TypePtr Expr::AddType() const { return base_type(TYPE_VOID); }
 
 TypePtr Expr::DelType() const { return base_type(TYPE_VOID); }
 
-ValPtr Expr::Add(Frame* /* f */) { Internal("Expr::Add called"); }
+ValPtr Expr::Add(Frame* ) { Internal("Expr::Add called"); }
 
-ValPtr Expr::Delete(Frame* /* f */) { Internal("Expr::Delete called"); }
+ValPtr Expr::Delete(Frame* ) { Internal("Expr::Delete called"); }
 
 ExprPtr Expr::MakeLvalue() {
     if ( ! IsError() )
@@ -241,7 +241,7 @@ ExprPtr Expr::MakeLvalue() {
 
 bool Expr::InvertSense() { return false; }
 
-void Expr::Assign(Frame* /* f */, ValPtr /* v */) { Internal("Expr::Assign called"); }
+void Expr::Assign(Frame* , ValPtr ) { Internal("Expr::Assign called"); }
 
 void Expr::AssignToIndex(ValPtr v1, ValPtr v2, ValPtr v3) const {
     bool iterators_invalidated;
@@ -257,9 +257,9 @@ void Expr::AssignToIndex(ValPtr v1, ValPtr v2, ValPtr v3) const {
 
 static int get_slice_index(int idx, int len) {
     if ( abs(idx) > len )
-        idx = idx > 0 ? len : 0; // Clamp maximum positive/negative indices.
+        idx = idx > 0 ? len : 0;
     else if ( idx < 0 )
-        idx += len; // Map to a positive index.
+        idx += len;
 
     return idx;
 }
@@ -270,10 +270,10 @@ const char* assign_to_index(ValPtr v1, ValPtr v2, ValPtr v3, bool& iterators_inv
     if ( ! v1 || ! v2 || ! v3 )
         return nullptr;
 
-    // Hold an extra reference in case the ownership transfer
-    // to the table/vector goes wrong and we still want to obtain
-    // diagnostic info from the original value after the assignment
-    // already unref'd.
+
+
+
+
     auto v_extra = v3;
 
     switch ( v1->GetType()->Tag() ) {
@@ -286,12 +286,12 @@ const char* assign_to_index(ValPtr v1, ValPtr v2, ValPtr v3, bool& iterators_inv
                 zeek_int_t first = get_slice_index(lv->Idx(0)->CoerceToInt(), len);
                 zeek_int_t last = get_slice_index(lv->Idx(1)->CoerceToInt(), len);
 
-                // Remove the elements from the vector within the slice.
+
                 for ( auto idx = first; idx < last; idx++ )
                     v1_vect->Remove(first);
 
-                // Insert the new elements starting at the first
-                // position.
+
+
 
                 VectorVal* v_vect = v3->AsVectorVal();
 
@@ -347,7 +347,7 @@ const char* assign_to_index(ValPtr v1, ValPtr v2, ValPtr v3, bool& iterators_inv
 
 TypePtr Expr::InitType() const { return type; }
 
-bool Expr::IsRecordElement(TypeDecl* /* td */) const { return false; }
+bool Expr::IsRecordElement(TypeDecl* ) const { return false; }
 
 bool Expr::IsError() const { return type && type->Tag() == TYPE_ERROR; }
 
@@ -421,7 +421,7 @@ NameExpr::NameExpr(IDPtr arg_id, bool const_init) : Expr(EXPR_NAME), id(std::mov
 
 bool NameExpr::CanDel() const {
     if ( IsError() )
-        return true; // avoid cascading the error report
+        return true;
 
     return GetType()->Tag() == TYPE_TABLE || GetType()->Tag() == TYPE_VECTOR;
 }
@@ -439,7 +439,7 @@ ValPtr NameExpr::Delete(Frame* f) {
     return v;
 }
 
-// This isn't in-lined to avoid needing to pull in ID.h.
+
 const IDPtr& NameExpr::IdPtr() const { return id; }
 
 ValPtr NameExpr::Eval(Frame* f) const {
@@ -455,9 +455,9 @@ ValPtr NameExpr::Eval(Frame* f) const {
         v = f->GetElementByID(id);
 
     else
-        // No frame - evaluating for purposes of resolving a compile-time
-        // constant. Prevent upstream errors due to dereferencing a null
-        // pointer.
+
+
+
         throw IsolationException();
 
     if ( v )
@@ -519,7 +519,7 @@ ConstExpr::ConstExpr(ValPtr arg_val) : Expr(EXPR_CONST), val(std::move(arg_val))
 
 void ConstExpr::ExprDescribe(ODesc* d) const { val->Describe(d); }
 
-ValPtr ConstExpr::Eval(Frame* /* f */) const { return {NewRef{}, Value()}; }
+ValPtr ConstExpr::Eval(Frame* ) const { return {NewRef{}, Value()}; }
 
 TraversalCode ConstExpr::Traverse(TraversalCallback* cb) const {
     TraversalCode tc = cb->PreExpr(this);
@@ -544,12 +544,12 @@ ValPtr UnaryExpr::Eval(Frame* f) const {
         return nullptr;
 
     if ( is_vector(v) && Tag() != EXPR_IS && Tag() != EXPR_CAST && tag != EXPR_CAN_CONVERT &&
-         // The following allows passing vectors-by-reference to
-         // functions that use vector-of-any for generic vector
-         // manipulation ...
+
+
+
          Tag() != EXPR_TO_ANY_COERCE &&
-         // ... and the following to avoid vectorizing operations
-         // on vector-of-any's
+
+
          Tag() != EXPR_FROM_ANY_COERCE ) {
         VectorVal* v_op = v->AsVectorVal();
         VectorTypePtr out_t;
@@ -626,7 +626,7 @@ ValPtr BinaryExpr::Eval(Frame* f) const {
     bool is_vec1 = is_vector(v1);
     bool is_vec2 = is_vector(v2);
 
-    if ( is_vec1 && is_vec2 ) { // fold pairs of elements
+    if ( is_vec1 && is_vec2 ) {
         VectorVal* v_op1 = v1->AsVectorVal();
         VectorVal* v_op2 = v2->AsVectorVal();
 
@@ -649,7 +649,7 @@ ValPtr BinaryExpr::Eval(Frame* f) const {
         return v_result;
     }
 
-    if ( IsVector(GetType()->Tag()) && (is_vec1 || is_vec2) ) { // fold vector against scalar
+    if ( IsVector(GetType()->Tag()) && (is_vec1 || is_vec2) ) {
         VectorVal* vv = (is_vec1 ? v1 : v2)->AsVectorVal();
         auto v_result = make_intrusive<VectorVal>(GetType<VectorType>());
 
@@ -664,7 +664,7 @@ ValPtr BinaryExpr::Eval(Frame* f) const {
         return v_result;
     }
 
-    // scalar op scalar
+
     return Fold(v1.get(), v2.get());
 }
 
@@ -711,7 +711,7 @@ ValPtr BinaryExpr::Fold(Val* v1, Val* v2) const {
         return TableFold(v1, v2);
 
     if ( t1->Tag() == TYPE_VECTOR ) {
-        // We only get here when using a matching vector on the RHS.
+
         if ( ! v2->AsVectorVal()->AddTo(v1, false) )
             Error("incompatible vector element assignment", v2);
         return {NewRef{}, v1};
@@ -753,8 +753,8 @@ ValPtr BinaryExpr::Fold(Val* v1, Val* v2) const {
         RuntimeErrorWithCallStack("bad type in BinaryExpr::Fold");
 
     switch ( tag ) {
-        // Once we have C++20, these macros can become templated lambdas.
-        // NOLINTBEGIN(cppcoreguidelines-macro-usage)
+
+
 #define DO_INT_FOLD(op)                                                                                                \
     if ( is_integral )                                                                                                 \
         i3 = i1 op i2;                                                                                                 \
@@ -784,15 +784,15 @@ ValPtr BinaryExpr::Fold(Val* v1, Val* v2) const {
         i3 = u1 op u2;                                                                                                 \
     else                                                                                                               \
         i3 = d1 op d2;
-            // NOLINTEND(cppcoreguidelines-macro-usage)
+
 
         case EXPR_ADD:
         case EXPR_ADD_TO: DO_FOLD(+); break;
         case EXPR_SUB:
         case EXPR_REMOVE_FROM:
             DO_FOLD(-);
-            // When subtracting and the result is larger than the left
-            // operand we mostly likely underflowed and log a warning.
+
+
             if ( is_unsigned && u3 > u1 )
                 reporter->ExprRuntimeWarning(this, "count underflow");
             break;
@@ -906,13 +906,13 @@ ValPtr BinaryExpr::StringFold(Val* v1, Val* v2) const {
 
     switch ( tag ) {
 #undef DO_FOLD
-// NOLINTBEGIN(bugprone-macro-parentheses, cppcoreguidelines-macro-usage)
+
 #define DO_FOLD(sense)                                                                                                 \
     {                                                                                                                  \
         result = Bstr_cmp(s1, s2) sense 0;                                                                             \
         break;                                                                                                         \
     }
-            // NOLINTEND(bugprone-macro-parentheses, cppcoreguidelines-macro-usage)
+
 
         case EXPR_LT: DO_FOLD(<)
         case EXPR_LE: DO_FOLD(<=)
@@ -992,14 +992,14 @@ ValPtr BinaryExpr::SetFold(Val* v1, Val* v2) const {
 
         case EXPR_GE:
         case EXPR_GT:
-            // These shouldn't happen due to canonicalization.
+
             reporter->InternalError("confusion over canonicalization in set comparison");
             break;
 
         case EXPR_ADD_TO:
-            // Avoid doing the AddTo operation if tv2 is empty,
-            // because then it might not type-check for trivial
-            // reasons.
+
+
+
             if ( tv2->Size() > 0 )
                 tv2->AddTo(tv1, false);
             return {NewRef{}, tv1};
@@ -1021,9 +1021,9 @@ ValPtr BinaryExpr::TableFold(Val* v1, Val* v2) const {
 
     switch ( tag ) {
         case EXPR_ADD_TO:
-            // Avoid doing the AddTo operation if tv2 is empty,
-            // because then it might not type-check for trivial
-            // reasons.
+
+
+
             if ( tv2->Size() > 0 )
                 tv2->AddTo(tv1, false);
             return {NewRef{}, tv1};
@@ -1071,7 +1071,7 @@ ValPtr BinaryExpr::SubNetFold(Val* v1, Val* v2) const {
 }
 
 void BinaryExpr::SwapOps() {
-    // We could check here whether the operator is commutative.
+
     using std::swap;
     swap(op1, op2);
 }
@@ -1123,8 +1123,8 @@ bool BinaryExpr::CheckForRHSList() {
 
     if ( lhs_t->Tag() == TYPE_TABLE ) {
         if ( lhs_t->IsSet() && ! rhs_exprs.empty() && same_type(lhs_t, rhs_exprs[0]->GetType()) ) {
-            // This is potentially the idiom of "set1 += { set2 }"
-            // or "set1 += { set2, set3, set4 }".
+
+
             op2 = {NewRef{}, rhs_exprs[0]};
 
             for ( auto i = 1U; i < rhs_exprs.size(); ++i ) {
@@ -1138,10 +1138,10 @@ bool BinaryExpr::CheckForRHSList() {
         }
 
         if ( lhs_t->IsTable() && rhs_exprs.size() == 1 && same_type(lhs_t, rhs_exprs[0]->GetType()) ) {
-            // This is the idiom of "table1 += { table2 }" (or -=).
-            // Unlike for sets we don't allow more than one table
-            // in the RHS list because table "union" isn't
-            // well-defined.
+
+
+
+
             op2 = {NewRef{}, rhs_exprs[0]};
             SetType(op1->GetType());
 
@@ -1169,13 +1169,13 @@ bool BinaryExpr::CheckForRHSList() {
     }
 
     if ( op2->IsError() ) {
-        // Message should have already been generated, but propagate.
+
         SetError();
         return false;
     }
 
-    // Don't bother type-checking for the degenerate case of the RHS
-    // being empty, since it won't actually matter.
+
+
     if ( ! rhs_exprs.empty() && ! same_type(op1->GetType(), op2->GetType()) ) {
         ExprError("type clash for constructor list on RHS of assignment");
         return false;
@@ -1286,7 +1286,7 @@ PosExpr::PosExpr(ExprPtr arg_op) : UnaryExpr(EXPR_POSITIVE, std::move(arg_op)) {
     TypePtr base_result_type;
 
     if ( IsIntegral(bt) )
-        // Promote count and counter to int.
+
         base_result_type = base_type(TYPE_INT);
     else if ( bt == TYPE_INTERVAL || bt == TYPE_DOUBLE )
         base_result_type = t;
@@ -1318,7 +1318,7 @@ NegExpr::NegExpr(ExprPtr arg_op) : UnaryExpr(EXPR_NEGATE, std::move(arg_op)) {
     TypePtr base_result_type;
 
     if ( IsIntegral(bt) )
-        // Promote count and counter to int.
+
         base_result_type = base_type(TYPE_INT);
     else if ( bt == TYPE_INTERVAL || bt == TYPE_DOUBLE )
         base_result_type = t;
@@ -1367,11 +1367,11 @@ ValPtr SizeExpr::Eval(Frame* f) const {
 
 ValPtr SizeExpr::Fold(Val* v) const { return v->SizeVal(); }
 
-// Fill op1 and op2 type tags into bt1 and bt2.
-//
-// If both operands are vectors, use their yield type tag. If
-// either, but not both operands, is a vector, cause an expression
-// error and return false.
+
+
+
+
+
 static bool get_types_from_scalars_or_vectors(Expr* e, TypeTag& bt1, TypeTag& bt2) {
     bt1 = e->GetOp1()->GetType()->Tag();
     bt2 = e->GetOp2()->GetType()->Tag();
@@ -1401,7 +1401,7 @@ AddExpr::AddExpr(ExprPtr arg_op1, ExprPtr arg_op2) : BinaryExpr(EXPR_ADD, std::m
     TypePtr base_result_type;
 
     if ( (bt2 == TYPE_INTERVAL && (bt1 == TYPE_TIME || bt1 == TYPE_INTERVAL)) )
-        base_result_type = base_type(bt1); // NOLINT(bugprone-branch-clone)
+        base_result_type = base_type(bt1);
     else if ( bt2 == TYPE_TIME && bt1 == TYPE_INTERVAL )
         base_result_type = base_type(bt2);
     else if ( BothArithmetic(bt1, bt2) )
@@ -1444,33 +1444,33 @@ AggrDelExpr::AggrDelExpr(ExprPtr _op) : AggrAddDelExpr(EXPR_AGGR_DEL, std::move(
 
 ValPtr AggrDelExpr::Eval(Frame* f) const { return op->Delete(f); }
 
-// True if we should treat LHS += RHS as add-every-element-of-RHS-to-LHS.
-// False for the alternative, add-RHS-as-one-element-to-LHS.
-//
-// Assumes (1) LHS has already been confirmed as a vector, (2) the
-// "LHS += RHS" expression has been type-checked.
+
+
+
+
+
 
 static bool is_element_wise_vector_append(const TypePtr& lhs, const TypePtr& rhs) {
     if ( ! IsVector(rhs->Tag()) )
-        // Can't be add-every-element since RHS isn't even a vector.
+
         return false;
 
     if ( ! same_type(lhs, rhs) )
-        // Can't be add-every-element since they're different types of vectors.
+
         return false;
 
     if ( lhs->Yield()->Tag() != TYPE_VECTOR )
-        // LHS is not a vector-of-vector, and RHS is a vector, so
-        // clearly we're doing element-wise-append.
+
+
         return true;
 
     if ( rhs->AsVectorType()->IsUnspecifiedVector() )
-        // This is a vector-of-vector-of-X += vector() construct.
-        // It is *not* treated as element-wise-append of an empty RHS,
-        // instead append an empty vector to the LHS.
+
+
+
         return false;
 
-    // RHS is a compatible element-wise-append vector for LHS.
+
     return true;
 }
 
@@ -1510,8 +1510,8 @@ AddToExpr::AddToExpr(ExprPtr arg_op1, ExprPtr arg_op2)
     }
 
     else if ( IsVector(bt1) ) {
-        // Treat += of two vectors as appending each element
-        // of the RHS to the LHS if types agree.
+
+
         if ( is_element_wise_vector_append(t1, t2) ) {
             SetType(t1);
             return;
@@ -1833,11 +1833,11 @@ ValPtr BoolExpr::Eval(Frame* f) const {
     bool is_vec1 = is_vector(op1);
     bool is_vec2 = is_vector(op2);
 
-    // Handle scalar op scalar
+
     if ( ! is_vec1 && ! is_vec2 )
         return DoSingleEval(f, std::move(v1), op2.get());
 
-    // Both are vectors.
+
     auto v2 = op2->Eval(f);
 
     if ( ! v2 )
@@ -1904,7 +1904,7 @@ BitExpr::BitExpr(ExprTag arg_tag, ExprPtr arg_op1, ExprPtr arg_op2)
         else
             ExprError("requires integral operands");
 
-        return; // because following scalar check isn't apt
+        return;
     }
 
     if ( (bt1 == TYPE_COUNT) && (bt2 == TYPE_COUNT) ) {
@@ -1949,7 +1949,7 @@ CmpExpr::CmpExpr(ExprTag tag, ExprPtr _op1, ExprPtr _op2) : BinaryExpr(tag, std:
 void CmpExpr::Canonicalize() {
     if ( tag == EXPR_EQ || tag == EXPR_NE ) {
         if ( op2->GetType()->Tag() == TYPE_PATTERN )
-            SwapOps(); //NOLINT(bugprone-branch-clone)
+            SwapOps();
 
         else if ( op1->GetType()->Tag() == TYPE_PATTERN )
             ;
@@ -1986,7 +1986,7 @@ EqExpr::EqExpr(ExprTag arg_tag, ExprPtr arg_op1, ExprPtr arg_op2)
         PromoteOps(max_type(bt1, bt2));
 
     else if ( EitherArithmetic(bt1, bt2) &&
-              // Allow comparisons with zero.
+
               ((bt1 == TYPE_TIME && op2->IsZero()) || (bt2 == TYPE_TIME && op1->IsZero())) )
         PromoteOps(TYPE_TIME);
 
@@ -2015,7 +2015,7 @@ EqExpr::EqExpr(ExprTag arg_tag, ExprPtr arg_op1, ExprPtr arg_op2)
                     break;
                 }
 
-                // FALL THROUGH
+
 
             default: ExprError("illegal comparison");
         }
@@ -2173,8 +2173,8 @@ CondExpr::CondExpr(ExprPtr arg_op1, ExprPtr arg_op2, ExprPtr arg_op3)
                     ExprError("operands must be of the same type");
             }
             else if ( ! same_type(op2->GetType(), op3->GetType()) )
-                // Records could potentially also coerce, but may have some cases
-                // where the coercion direction is ambiguous.
+
+
                 ExprError("operands must be of the same type");
 
             if ( ! IsError() )
@@ -2185,12 +2185,12 @@ CondExpr::CondExpr(ExprPtr arg_op1, ExprPtr arg_op2, ExprPtr arg_op3)
 
 ValPtr CondExpr::Eval(Frame* f) const {
     if ( ! is_vector(op1) ) {
-        // Scalar case
+
         auto false_eval = op1->Eval(f)->IsZero();
         return (false_eval ? op3 : op2)->Eval(f);
     }
 
-    // Vector case: no mixed scalar/vector cases allowed
+
     auto v1 = op1->Eval(f);
 
     if ( ! v1 )
@@ -2295,8 +2295,8 @@ AssignExpr::AssignExpr(ExprPtr arg_op1, ExprPtr arg_op2, bool arg_is_init, ValPt
     }
 
     else if ( typecheck )
-        // We discard the status from TypeCheck since it has already
-        // generated error messages.
+
+
         (void)TypeCheck(attrs);
 
     val = std::move(arg_val);
@@ -2314,11 +2314,11 @@ bool AssignExpr::TypeCheck(const AttributesPtr& attrs) {
     }
 
     if ( bt1 == TYPE_LIST && bt2 == TYPE_ANY )
-        // This is ok because we cannot explicitly declare lists on
-        // the script level.
+
+
         return true;
 
-    // This should be one of them, but not both (i.e. XOR)
+
     if ( ((bt1 == TYPE_ENUM) ^ (bt2 == TYPE_ENUM)) ) {
         ExprError("can't convert to/from enumerated type");
         return false;
@@ -2327,7 +2327,7 @@ bool AssignExpr::TypeCheck(const AttributesPtr& attrs) {
     if ( IsArithmetic(bt1) )
         return TypeCheckArithmetics(bt1, bt2);
 
-    if ( bt1 == TYPE_TIME && IsArithmetic(bt2) && op2->IsZero() ) { // Allow assignments to zero as a special case.
+    if ( bt1 == TYPE_TIME && IsArithmetic(bt2) && op2->IsZero() ) {
         op2 = with_location_of(make_intrusive<ArithCoerceExpr>(op2, bt1), op2);
         return true;
     }
@@ -2354,7 +2354,7 @@ bool AssignExpr::TypeCheck(const AttributesPtr& attrs) {
         if ( same_type(op1->GetType(), op2->GetType()) )
             return true;
 
-        // Need to coerce.
+
         op2 = with_location_of(make_intrusive<RecordCoerceExpr>(op2, op1->GetType<RecordType>()), op2);
         return true;
     }
@@ -2362,9 +2362,9 @@ bool AssignExpr::TypeCheck(const AttributesPtr& attrs) {
     if ( ! same_type(op1->GetType(), op2->GetType()) ) {
         if ( bt1 == TYPE_TABLE && bt2 == TYPE_TABLE ) {
             if ( op2->Tag() == EXPR_SET_CONSTRUCTOR ) {
-                // Some elements in constructor list must not match, see if
-                // we can create a new constructor now that the expected type
-                // of LHS is known and let it do coercions where possible.
+
+
+
                 auto sce = cast_intrusive<SetConstructorExpr>(op2);
                 auto ctor_list = cast_intrusive<ListExpr>(sce->GetOp1());
 
@@ -2426,9 +2426,9 @@ bool AssignExpr::TypeCheckArithmetics(TypeTag bt1, TypeTag bt2) {
             op2 = with_location_of(make_intrusive<ArithCoerceExpr>(op2, bt1), op2);
         }
 
-        // Assignment of count to counter or vice
-        // versa is allowed, and requires no
-        // coercion.
+
+
+
     }
 
     return true;
@@ -2514,7 +2514,7 @@ IndexExpr::IndexExpr(ExprPtr arg_op1, ListExprPtr arg_op2, bool arg_is_slice, bo
     if ( IsError() )
         return;
 
-    if ( op1->GetType()->Tag() == TYPE_TABLE ) { // Check for a table[pattern] being indexed by a string
+    if ( op1->GetType()->Tag() == TYPE_TABLE ) {
         const auto& table_type = op1->GetType()->AsTableType();
         const auto& rhs_type = op2->GetType()->AsTypeList()->GetTypes();
         if ( table_type->IsPatternIndex() && table_type->Yield() && rhs_type.size() == 1 &&
@@ -2537,10 +2537,10 @@ IndexExpr::IndexExpr(ExprPtr arg_op1, ListExprPtr arg_op2, bool arg_is_slice, bo
         if ( IsString(op1->GetType()->Tag()) && match_type == MATCHES_INDEX_SCALAR )
             SetType(base_type(TYPE_STRING));
         else
-            // It's a set - so indexing it yields void.  We don't
-            // directly generate an error message, though, since this
-            // expression might be part of an add/delete statement,
-            // rather than yielding a value.
+
+
+
+
             SetType(base_type(TYPE_VOID));
     }
 
@@ -2556,15 +2556,15 @@ IndexExpr::IndexExpr(ExprPtr arg_op1, ListExprPtr arg_op2, bool arg_is_slice, bo
 
 bool IndexExpr::CanAdd() const {
     if ( IsError() )
-        return true; // avoid cascading the error report
+        return true;
 
-    // "add" only allowed if our type is "set".
+
     return op1->GetType()->IsSet();
 }
 
 bool IndexExpr::CanDel() const {
     if ( IsError() )
-        return true; // avoid cascading the error report
+        return true;
 
     return op1->GetType()->Tag() == TYPE_TABLE;
 }
@@ -2589,7 +2589,7 @@ ValPtr IndexExpr::Add(Frame* f) {
     if ( iterators_invalidated )
         reporter->ExprRuntimeWarning(this, "possible loop/iterator invalidation");
 
-    // In the future we could return a value, such as v1, here.
+
     return nullptr;
 }
 
@@ -2613,7 +2613,7 @@ ValPtr IndexExpr::Delete(Frame* f) {
     if ( iterators_invalidated )
         reporter->ExprRuntimeWarning(this, "possible loop/iterator invalidation");
 
-    // In the future we could return a value, such as removed, here.
+
     return nullptr;
 }
 
@@ -2642,7 +2642,7 @@ ValPtr IndexExpr::Eval(Frame* f) const {
         VectorVal* v_v2 = indv->AsVectorVal();
         auto vt = cast_intrusive<VectorType>(GetType());
 
-        // Booleans select each element (or not).
+
         if ( IsBool(v_v2->GetType()->Yield()->Tag()) ) {
             if ( v_v1->Size() != v_v2->Size() ) {
                 RuntimeError("size mismatch, boolean index and vector");
@@ -2652,7 +2652,7 @@ ValPtr IndexExpr::Eval(Frame* f) const {
             return vector_bool_select(vt, v_v1, v_v2);
         }
         else
-            // Elements are indices.
+
             return vector_int_select(vt, v_v1, v_v2);
     }
     else
@@ -2710,7 +2710,7 @@ StringValPtr index_string(const String* s, const ListVal* lv) {
         if ( idx < 0 )
             idx += len;
 
-        // Out-of-range index will return null pointer.
+
         substring = s->GetSubstring(idx, 1);
     }
     else {
@@ -2764,11 +2764,11 @@ VectorValPtr vector_bool_select(VectorTypePtr vt, const VectorVal* v1, const Vec
 VectorValPtr vector_int_select(VectorTypePtr vt, const VectorVal* v1, const VectorVal* v2) {
     auto v_result = make_intrusive<VectorVal>(std::move(vt));
 
-    // The elements are indices.
-    //
-    // ### Should handle negative indices here like S does, i.e.,
-    // by excluding those elements.  Probably only do this if *all*
-    // are negative.
+
+
+
+
+
     v_result->Resize(v2->Size());
     for ( unsigned int i = 0; i < v2->Size(); ++i ) {
         if ( auto idx_val = v2->ValAt(i) )
@@ -2852,7 +2852,7 @@ ValPtr FieldExpr::Delete(Frame* f) {
 
     auto former = op_v->AsRecordVal()->GetField(field);
     Assign(std::move(op_v), nullptr);
-    // In the future we could return a value, such as former, here.
+
     return nullptr;
 }
 
@@ -2860,7 +2860,7 @@ ValPtr FieldExpr::Fold(Val* v) const {
     if ( const auto& result = v->AsRecordVal()->GetField(field) )
         return result;
 
-    // Check for &default.
+
     const Attr* def_attr = td ? td->GetAttr(ATTR_DEFAULT).get() : nullptr;
 
     if ( def_attr )
@@ -2868,7 +2868,7 @@ ValPtr FieldExpr::Fold(Val* v) const {
     else {
         RuntimeError("field value missing");
         assert(false);
-        return nullptr; // Will never get here, but compiler can't tell.
+        return nullptr;
     }
 }
 
@@ -2931,9 +2931,9 @@ RecordConstructorExpr::RecordConstructorExpr(ListExprPtr constructor_list)
     if ( IsError() )
         return;
 
-    // Spin through the list, which should be comprised only of
-    // record-field-assign expressions, and build up a
-    // record type to associate with this constructor.
+
+
+
     const ExprPList& exprs = op->AsListExpr()->Exprs();
     type_decl_list* record_types = new type_decl_list(exprs.length());
 
@@ -2941,8 +2941,8 @@ RecordConstructorExpr::RecordConstructorExpr(ListExprPtr constructor_list)
 
     for ( const auto& e : exprs ) {
         if ( e->Tag() != EXPR_FIELD_ASSIGN ) {
-            // Don't generate the error yet, as reporting it
-            // requires that we have a well-formed type.
+
+
             constructor_error_expr = e;
             SetError();
             continue;
@@ -2971,7 +2971,7 @@ RecordConstructorExpr::RecordConstructorExpr(RecordTypePtr known_rt, ListExprPtr
     const auto& exprs = op->AsListExpr()->Exprs();
     map = std::vector<int>(exprs.length());
 
-    std::set<int> fields_seen; // used to check for missing fields
+    std::set<int> fields_seen;
 
     int i = 0;
     for ( const auto& e : exprs ) {
@@ -3010,7 +3010,7 @@ RecordConstructorExpr::RecordConstructorExpr(RecordTypePtr known_rt, ListExprPtr
         if ( ! fields_seen.contains(i) ) {
             const auto td_i = known_rt->FieldDecl(i);
             if ( IsAggr(td_i->type) )
-                // These are always initialized.
+
                 continue;
 
             if ( ! td_i->GetAttr(ATTR_OPTIONAL) ) {
@@ -3112,18 +3112,18 @@ static bool expand_op_elem(ListExprPtr elems, ExprPtr elem, TypePtr t) {
         yield = elem->GetOp2();
     }
     else
-        index = elem; // this is a set - no yield
+        index = elem;
 
-    // If the index isn't a list, then there's nothing to consider
-    // expanding.
+
+
     if ( index->Tag() != EXPR_LIST ) {
         elems->Append(elem);
         return false;
     }
 
-    // Look inside the index for any sub-lists or sets, and expand those.
-    // There might be more than one, but we'll pick that up recursively
-    // later.
+
+
+
     auto& index_exprs = index->AsListExpr()->Exprs();
     int index_n = index_exprs.length();
     int list_offset = -1;
@@ -3137,19 +3137,19 @@ static bool expand_op_elem(ListExprPtr elems, ExprPtr elem, TypePtr t) {
         }
 
         if ( ie_i->GetType()->IsSet() ) {
-            // Check for this set corresponding to what's expected
-            // in this location, in which case it shouldn't be
-            // expanded.
+
+
+
             const TypeList* tl = nullptr;
             if ( t && t->Tag() == TYPE_LIST )
                 tl = t->AsTypeList();
 
-            // So we're good-to-go in expanding if either
-            // (1) we weren't given a type, or it's not a list,
-            // or (2) it's a list, but doesn't correspond in
-            // length to the list of expressions, or (3) it does
-            // but its corresponding element at this position
-            // doesn't have the same type as this set.
+
+
+
+
+
+
             if ( ! tl || static_cast<int>(tl->GetTypes().size()) != index_n ||
                  ! same_type(tl->GetTypes()[i], ie_i->GetType()) ) {
                 set_offset = i;
@@ -3158,7 +3158,7 @@ static bool expand_op_elem(ListExprPtr elems, ExprPtr elem, TypePtr t) {
         }
     }
 
-    if ( set_offset >= 0 ) { // expand the set
+    if ( set_offset >= 0 ) {
         auto s_e = index_exprs[set_offset];
         auto v = eval_in_isolation(s_e);
         if ( ! v ) {
@@ -3175,12 +3175,12 @@ static bool expand_op_elem(ListExprPtr elems, ExprPtr elem, TypePtr t) {
         return true;
     }
 
-    if ( list_offset < 0 ) { // No embedded lists.
+    if ( list_offset < 0 ) {
         elems->Append(elem);
         return false;
     }
 
-    // Expand the identified list.
+
     auto sub_list = index_exprs[list_offset]->AsListExpr();
     for ( auto& sub_list_i : sub_list->Exprs() ) {
         ExprPtr e = {NewRef{}, sub_list_i};
@@ -3252,7 +3252,7 @@ TableConstructorExpr::TableConstructorExpr(ListExprPtr constructor_list,
     const auto& indices = type->AsTableType()->GetIndices()->GetTypes();
     const ExprPList& cle = op->AsListExpr()->Exprs();
 
-    // check and promote all assign expressions in ctor list
+
     for ( const auto& expr : cle ) {
         if ( expr->Tag() != EXPR_ASSIGN ) {
             expr->Error("illegal table constructor element");
@@ -3270,7 +3270,7 @@ TableConstructorExpr::TableConstructorExpr(ListExprPtr constructor_list,
             return;
         }
 
-        // Promote LHS
+
         ExprPList& idx_exprs = idx_expr->AsListExpr()->Exprs();
 
         if ( idx_exprs.length() != static_cast<int>(indices.size()) )
@@ -3292,7 +3292,7 @@ TableConstructorExpr::TableConstructorExpr(ListExprPtr constructor_list,
             return;
         }
 
-        // Promote RHS
+
         if ( auto promoted_val = check_and_promote_expr(val_expr, yield_type) ) {
             if ( promoted_val != val_expr )
                 expr->AsAssignExpr()->SetOp2(promoted_val);
@@ -3403,7 +3403,7 @@ SetConstructorExpr::SetConstructorExpr(ListExprPtr constructor_list, std::unique
     }
 
     else if ( indices.size() > 1 ) {
-        // Check/promote each expression in composite index.
+
         loop_over_list(cle, i) {
             Expr* ce = cle[i];
 
@@ -3483,9 +3483,9 @@ VectorConstructorExpr::VectorConstructorExpr(ListExprPtr constructor_list, TypeP
     }
     else {
         if ( op->AsListExpr()->Exprs().empty() ) {
-            // vector().
-            // By default, assign VOID type here. A vector with
-            // void type set is seen as an unspecified vector.
+
+
+
             SetType(make_intrusive<VectorType>(base_type(TYPE_VOID)));
             return;
         }
@@ -3589,9 +3589,9 @@ ValPtr ArithCoerceExpr::Fold(Val* v) const {
     auto t = GetType();
 
     if ( ! is_vector(v) ) {
-        // Our result type might be vector, in which case this
-        // invocation is being done per-element rather than on
-        // the whole vector.  Correct the type if so.
+
+
+
         if ( type->Tag() == TYPE_VECTOR )
             t = t->AsVectorType()->Yield();
 
@@ -3614,7 +3614,7 @@ ValPtr ArithCoerceExpr::Fold(Val* v) const {
     return result;
 }
 
-// Returns true if the record type or any of its fields have an error.
+
 static bool record_type_has_errors(const RecordType* rt) {
     if ( IsErrorType(rt->Tag()) )
         return true;
@@ -3649,7 +3649,7 @@ RecordCoerceExpr::RecordCoerceExpr(ExprPtr arg_op, RecordTypePtr r) : UnaryExpr(
         }
 
         int map_size = t_r->NumFields();
-        map.resize(map_size, -1); // -1 = field is not mapped
+        map.resize(map_size, -1);
 
         int i;
         for ( i = 0; i < sub_r->NumFields(); ++i ) {
@@ -3749,7 +3749,7 @@ RecordValPtr coerce_to_record(RecordTypePtr rt, Val* v, const std::vector<int>& 
             assert(rhs || rt->FieldDecl(i)->GetAttr(ATTR_OPTIONAL));
 
             if ( ! rhs ) {
-                // Optional field is missing.
+
                 val->Remove(i);
                 continue;
             }
@@ -3812,7 +3812,7 @@ TableCoerceExpr::TableCoerceExpr(ExprPtr arg_op, TableTypePtr tt, bool type_chec
         }
 
         if ( op->Tag() == EXPR_TABLE_COERCE && op->GetType() == tt )
-            // Avoid double-coercion.
+
             op = op->GetOp1();
     }
 
@@ -3859,14 +3859,14 @@ ValPtr VectorCoerceExpr::Fold(Val* v) const {
 ScheduleTimer::ScheduleTimer(const EventHandlerPtr& arg_event, Args arg_args, double t)
     : Timer(t, TIMER_SCHEDULE), event(arg_event), args(std::move(arg_args)) {}
 
-void ScheduleTimer::Dispatch(double /* t */, bool /* is_expire */) {
+void ScheduleTimer::Dispatch(double , bool ) {
     if ( event ) {
         detail::EventMetadataVectorPtr meta;
 
         if ( BifConst::EventMetadata::add_network_timestamp ) {
-            // An event's intended timestamp might be in the past as timer expiration is driven by
-            // network time. Guarantee that the intended timestamp is never in the future (e.g.,
-            // when all timers are expired on shutdown).
+
+
+
             auto ts = std::min(this->Time(), run_state::network_time);
             meta = detail::MakeEventMetadataVector(ts);
         }
@@ -3956,7 +3956,7 @@ InExpr::InExpr(ExprPtr arg_op1, ExprPtr arg_op2) : BinaryExpr(EXPR_IN, std::move
             return;
         }
         else if ( op2->GetType()->Tag() == TYPE_TABLE ) {
-            // fall through to type-checking at end of function
+
         }
         else {
             op2->GetType()->Error("pattern requires string or set/table index", op1.get());
@@ -3970,9 +3970,9 @@ InExpr::InExpr(ExprPtr arg_op1, ExprPtr arg_op2) : BinaryExpr(EXPR_IN, std::move
         return;
     }
 
-    // Check for:	<addr> in <subnet>
-    //		<addr> in set[subnet]
-    //		<addr> in table[subnet] of ...
+
+
+
     if ( op1->GetType()->Tag() == TYPE_ADDR ) {
         if ( op2->GetType()->Tag() == TYPE_SUBNET ) {
             SetType(base_type(TYPE_BOOL));
@@ -3985,7 +3985,7 @@ InExpr::InExpr(ExprPtr arg_op1, ExprPtr arg_op2) : BinaryExpr(EXPR_IN, std::move
         }
     }
 
-    // Support <string> in table[pattern] / set[pattern]
+
     if ( op1->GetType()->Tag() == TYPE_STRING ) {
         if ( op2->GetType()->Tag() == TYPE_TABLE ) {
             const auto& table_type = op2->GetType()->AsTableType();
@@ -4019,7 +4019,7 @@ ValPtr InExpr::Fold(Val* v1, Val* v2) const {
 
         const String* s1 = v1->AsString();
 
-        // Could do better here e.g. Boyer-Moore if done repeatedly.
+
         auto s = reinterpret_cast<const unsigned char*>(s1->CheckString());
         auto res = util::strstr_n(s2->Len(), s2->Bytes(), s1->Len(), s) != -1;
         return val_mgr->Bool(res);
@@ -4038,7 +4038,7 @@ ValPtr InExpr::Fold(Val* v1, Val* v2) const {
     else {
         const auto& table_val = v2->AsTableVal();
         const auto& table_type = table_val->GetType<zeek::TableType>();
-        // Special table[pattern] / set[pattern] in expression.
+
         if ( table_type->IsPatternIndex() && v1->GetType()->Tag() == TYPE_STRING )
             res = table_val->MatchPattern({NewRef{}, v1->AsStringVal()});
         else
@@ -4102,18 +4102,18 @@ CallExpr::CallExpr(ExprPtr arg_func, ListExprPtr arg_args, bool in_hook, bool _i
         else
             SetType(yield);
 
-        // Check for call to built-ins that can be statically analyzed.
+
         ValPtr func_val;
 
         if ( func->Tag() == EXPR_NAME &&
-             // This is cheating, but without it processing gets
-             // quite confused regarding "value used but not set"
-             // run-time errors when we apply this analysis during
-             // parsing.  Really we should instead do it after we've
-             // parsed the entire set of scripts.
+
+
+
+
+
              util::streq((static_cast<NameExpr*>(func.get()))->Id()->Name(), "fmt") &&
-             // The following is needed because fmt might not yet
-             // be bound as a name.
+
+
              did_builtin_init ) {
             func_val = eval_in_isolation(func);
             if ( func_val ) {
@@ -4130,7 +4130,7 @@ bool CallExpr::IsPure() const {
         return true;
 
     if ( func->Tag() != EXPR_NAME )
-        // Indirect call, can't resolve up front.
+
         return false;
 
     auto func_id = func->AsNameExpr()->Id();
@@ -4143,10 +4143,10 @@ bool CallExpr::IsPure() const {
 
     zeek::Func* f = func_val->AsFunc();
 
-    // Only recurse for built-in functions, as recursing on script
-    // functions can lead to infinite recursion if the function being
-    // called here happens to be recursive (either directly
-    // or indirectly).
+
+
+
+
     bool pure = false;
 
     if ( f->GetKind() == Func::BUILTIN_FUNC )
@@ -4159,9 +4159,9 @@ ValPtr CallExpr::Eval(Frame* f) const {
     if ( IsError() )
         return nullptr;
 
-    // If we are inside a trigger condition, we may have already been
-    // called, delayed, and then produced a result which is now cached.
-    // Check for that.
+
+
+
     if ( f ) {
         if ( trigger::Trigger* trigger = f->GetTrigger() ) {
             if ( Val* v = trigger->Lookup(this) ) {
@@ -4231,25 +4231,25 @@ LambdaExpr::LambdaExpr(FunctionIngredientsPtr arg_ing, IDPList arg_outer_ids, st
         return;
     }
 
-    // Now that we've validated that the captures match the outer_ids,
-    // we regenerate the latter to come in the same order as the captures.
-    // This avoids potentially subtle bugs when doing script optimization
-    // where one context uses the outer_ids and another uses the captures.
+
+
+
+
     if ( captures ) {
         outer_ids.clear();
         for ( auto& c : *captures )
             outer_ids.emplace_back(c.Id());
     }
 
-    // Install a primary version of the function globally.  This is used
-    // by both broker (for transmitting closures) and script optimization
-    // (replacing its AST body with a compiled one).
+
+
+
     primary_func = make_intrusive<ScriptFunc>(ingredients->GetID());
     primary_func->SetOuterIDs(outer_ids);
 
-    // When we build the body, it will get updated with initialization
-    // statements.  Update the ingredients to reflect the new body,
-    // and no more need for initializers.
+
+
+
     primary_func->AddBody(*ingredients);
     primary_func->SetScope(ingredients->Scope());
     ingredients->ClearInits();
@@ -4259,10 +4259,10 @@ LambdaExpr::LambdaExpr(FunctionIngredientsPtr arg_ing, IDPList arg_outer_ids, st
     else
         my_name = std::move(name);
 
-    // Install that in the current scope.
+
     lambda_id = install_ID(my_name.c_str(), current_module.c_str(), true, false);
 
-    // Update lamb's name
+
     primary_func->SetName(lambda_id->Name());
 
     auto v = make_intrusive<FuncVal>(primary_func);
@@ -4280,8 +4280,8 @@ LambdaExpr::LambdaExpr(LambdaExpr* orig) : Expr(EXPR_LAMBDA) {
     my_name = orig->my_name;
     private_captures = orig->private_captures;
 
-    // We need to have our own copies of the outer IDs and captures so
-    // we can rename them when inlined.
+
+
     for ( auto& i : orig->outer_ids )
         outer_ids.emplace_back(i);
 
@@ -4314,9 +4314,9 @@ bool LambdaExpr::CheckCaptures(StmtPtr when_parent) {
         auto cid = c.Id();
 
         if ( ! cid )
-            // This happens for undefined/inappropriate
-            // identifiers listed in captures.  There's
-            // already been an error message.
+
+
+
             continue;
 
         if ( capture_is_matched.contains(cid) ) {
@@ -4365,7 +4365,7 @@ bool LambdaExpr::CheckCaptures(StmtPtr when_parent) {
 }
 
 void LambdaExpr::BuildName() {
-    // Get the body's "string" representation.
+
     ODesc d;
     primary_func->Describe(&d);
 
@@ -4375,7 +4375,7 @@ void LambdaExpr::BuildName() {
                 d.AddSP("copy");
 
             if ( c.Id() )
-                // c.Id() will be nil for some errors
+
                 c.Id()->Describe(&d);
         }
 
@@ -4388,10 +4388,10 @@ void LambdaExpr::BuildName() {
         const auto& id = current_scope()->Find(fullname);
 
         if ( id )
-            // Just try again to make a unique lambda name.
-            // If two peer processes need to agree on the same
-            // lambda name, this assumes they're loading the same
-            // scripts and thus have the same hash collisions.
+
+
+
+
             d.Add(" ");
         else
             break;
@@ -4405,21 +4405,21 @@ void LambdaExpr::ReplaceBody(StmtPtr new_body) { ingredients->ReplaceBody(std::m
 ValPtr LambdaExpr::Eval(Frame* f) const {
     auto lamb = make_intrusive<ScriptFunc>(ingredients->GetID());
 
-    // Use the primary function as the source of the frame size
-    // and function body, rather than the ingredients, since script
-    // optimization might have changed the former but not the latter.
+
+
+
     lamb->SetFrameSize(primary_func->FrameSize());
     StmtPtr body = primary_func->GetBodies()[0].stmts;
 
     if ( run_state::is_parsing ) {
-        // We're evaluating this lambda at parse time, which happens
-        // for initializations.  If we're doing script optimization
-        // then the current version of the body might be left in an
-        // inconsistent state (e.g., if it's replaced with ZAM code)
-        // causing problems if we execute this lambda subsequently.
-        // To avoid that problem, we duplicate the AST so it's
-        // distinct, and we inform script optimization so it can track
-        // the alias we're introducing.
+
+
+
+
+
+
+
+
         auto orig_body = body;
         body = body->Duplicate();
         register_lambda_alias(orig_body, body);
@@ -4428,8 +4428,8 @@ ValPtr LambdaExpr::Eval(Frame* f) const {
     lamb->AddBody(*ingredients, body);
     lamb->CreateCaptures(f);
 
-    // Set name to corresponding master func.
-    // Allows for lookups by the receiver.
+
+
     lamb->SetName(my_name.c_str());
 
     return make_intrusive<FuncVal>(std::move(lamb));
@@ -4459,7 +4459,7 @@ void LambdaExpr::ExprDescribe(ODesc* d) const {
 
 TraversalCode LambdaExpr::Traverse(TraversalCallback* cb) const {
     if ( IsError() )
-        // Not well-formed.
+
         return TC_CONTINUE;
 
     TraversalCode tc = cb->PreExpr(this);
@@ -4533,9 +4533,9 @@ TraversalCode EventExpr::Traverse(TraversalCallback* cb) const {
 
     auto& f = handler->GetFunc();
     if ( f ) {
-        // We don't traverse the function, because that can lead
-        // to infinite traversals.  We do, however, see if we can
-        // locate the corresponding identifier, and traverse that.
+
+
+
 
         auto& id = lookup_ID(f->GetName().c_str(), GLOBAL_MODULE_NAME, false, false, false);
 
@@ -4640,7 +4640,7 @@ TypePtr ListExpr::InitType() const {
         for ( const auto& e : exprs ) {
             const auto& ti = e->GetType();
 
-            // Collapse any embedded sets or lists.
+
             if ( ti->IsSet() || ti->Tag() == TYPE_LIST ) {
                 TypeList* til = ti->IsSet() ? ti->AsTableType()->GetIndices().get() : ti->AsTypeList();
 
@@ -4703,10 +4703,10 @@ RecordAssignExpr::RecordAssignExpr(const ExprPtr& record, const ExprPtr& init_li
 
     RecordType* lhs = record->GetType()->AsRecordType();
 
-    // The inits have two forms:
-    // 1) other records -- use all matching field names+types
-    // 2) a string indicating the field name, then (as the next element)
-    //    the value to use for that field.
+
+
+
+
 
     for ( const auto& init : inits ) {
         if ( init->GetType()->Tag() == TYPE_RECORD ) {
@@ -4729,7 +4729,7 @@ RecordAssignExpr::RecordAssignExpr(const ExprPtr& record, const ExprPtr& init_li
             FieldAssignExpr* rf = static_cast<FieldAssignExpr*>(init);
             rf->Ref();
 
-            const char* field_name = ""; // rf->FieldName();
+            const char* field_name = "";
             if ( lhs->HasField(field_name) ) {
                 auto fe_lhs = with_location_of(make_intrusive<FieldExpr>(record, field_name), init_list);
                 ExprPtr fe_rhs = {NewRef{}, rf->Op()};
@@ -4901,8 +4901,8 @@ ExprPtr check_and_promote_expr(ExprPtr e, TypePtr t) {
                 auto& attrs = cast_intrusive<TableConstructorExpr>(e)->GetAttrs();
                 zeek::detail::AttrPtr def = Attr::nil;
 
-                // Check for &default or &default_insert expressions
-                // and use it for type checking against t.
+
+
                 if ( attrs ) {
                     def = attrs->Find(ATTR_DEFAULT);
                     if ( ! def )
@@ -4967,15 +4967,15 @@ bool check_and_promote_args(ListExpr* const args, const RecordType* types) {
     ExprPList& el = args->Exprs();
     int ntypes = types->NumFields();
 
-    // give variadic BIFs automatic pass
+
     if ( ntypes == 1 && types->FieldDecl(0)->type->Tag() == TYPE_ANY )
         return true;
 
     if ( el.length() < ntypes ) {
         std::vector<ExprPtr> def_elements;
 
-        // Start from rightmost parameter, work backward to fill in missing
-        // arguments using &default expressions.
+
+
         for ( int i = ntypes - 1; i >= el.length(); --i ) {
             auto td = types->FieldDecl(i);
             const auto& def_attr = td->attrs ? td->attrs->Find(ATTR_DEFAULT).get() : nullptr;
@@ -4985,14 +4985,14 @@ bool check_and_promote_args(ListExpr* const args, const RecordType* types) {
                 return false;
             }
 
-            // Don't use the default expression directly, as
-            // doing so will wind up sharing its code across
-            // different invocations that use the default
-            // argument.  That works okay for the interpreter,
-            // but if we transform the code we want that done
-            // separately for each instance, rather than
-            // one instance inheriting the transformed version
-            // from another.
+
+
+
+
+
+
+
+
             const auto& e = def_attr->GetExpr();
             def_elements.emplace_back(e->Duplicate());
         }
@@ -5061,4 +5061,4 @@ ValPtr eval_in_isolation(const Expr* e) {
 
 bool expr_greater(const Expr* e1, const Expr* e2) { return e1->Tag() > e2->Tag(); }
 
-} // namespace zeek::detail
+}

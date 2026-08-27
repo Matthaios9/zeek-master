@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/packet_analysis/protocol/tcp/Stats.h"
 
@@ -7,7 +7,7 @@
 namespace zeek::packet_analysis::TCP {
 
 TCPStateStats::TCPStateStats() {
-    for ( int i = 0; i < analyzer::tcp::TCP_ENDPOINT_RESET + 1; ++i ) // NOLINT
+    for ( int i = 0; i < analyzer::tcp::TCP_ENDPOINT_RESET + 1; ++i )
         for ( int j = 0; j < analyzer::tcp::TCP_ENDPOINT_RESET + 1; ++j )
             state_cnt[i][j] = 0;
 }
@@ -41,8 +41,8 @@ void TCPStateStats::PrintStats(File* file, const char* prefix) {
         file->Write(prefix);
 
         switch ( i ) {
-// This macro really doesn't save us much typing, if that was the intention
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+
+
 #define STATE_STRING(state, str)                                                                                       \
     case state: file->Write(str); break;
 
@@ -73,4 +73,4 @@ void TCPStateStats::PrintStats(File* file, const char* prefix) {
     }
 }
 
-} // namespace zeek::packet_analysis::TCP
+}

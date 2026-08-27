@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/util-types.h"
 
@@ -26,7 +26,7 @@ void SafePathOp::CheckValid(const char* op_result, const char* path, bool error_
 
 TEST_CASE("util path ops") {
 #ifdef _MSC_VER
-// TODO: adapt these tests to Windows paths
+
 #else
     SUBCASE("SafeDirname") {
         SafeDirname d("/this/is/a/path", false);
@@ -51,7 +51,7 @@ TEST_CASE("util path ops") {
 #endif
 }
 
-} // namespace detail
+}
 
 SafeDirname::SafeDirname(const char* path, bool error_aborts) : SafePathOp() { DoFunc(path ? path : "", error_aborts); }
 
@@ -63,10 +63,10 @@ void SafeDirname::DoFunc(const std::string& path, bool error_aborts) {
     delete[] tmp;
 
 #ifdef _MSC_VER
-    // Windows dirname() may leave a trailing separator; POSIX dirname does not.
+
     while ( result.size() > 1 && (result.back() == '/' || result.back() == '\\') ) {
         if ( result.size() == 3 && result[1] == ':' )
-            break; // preserve drive roots like "C:\"
+            break;
         result.pop_back();
     }
 #endif
@@ -84,4 +84,4 @@ void SafeBasename::DoFunc(const std::string& path, bool error_aborts) {
     delete[] tmp;
 }
 
-} // namespace zeek::util
+}

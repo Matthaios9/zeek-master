@@ -1,4 +1,4 @@
-##! Utilities specific for FTP processing.
+
 
 @load ./info
 @load base/utils/addrs
@@ -7,21 +7,21 @@
 module FTP;
 
 export {
-	## Creates a URL from an :zeek:type:`FTP::Info` record.
-	##
-	## rec: An :zeek:type:`FTP::Info` record.
-	##
-	## Returns: A URL, not prefixed by ``"ftp://"``.
+
+
+
+
+
 	global build_url: function(rec: Info): string;
 
-	## Creates a URL from an :zeek:type:`FTP::Info` record.
-	##
-	## rec: An :zeek:type:`FTP::Info` record.
-	##
-	## Returns: A URL prefixed with ``"ftp://"``.
+
+
+
+
+
 	global build_url_ftp: function(rec: Info): string;
 
-	## Create an extremely shortened representation of a log line.
+
 	global describe: function(rec: Info): string;
 }
 

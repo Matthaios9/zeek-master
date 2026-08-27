@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #pragma once
 
@@ -9,7 +9,7 @@
 
 namespace zeek::spicy::rt {
 
-/** A closed ranged of ports. */
+
 struct PortRange {
     PortRange() = default;
     PortRange(hilti::rt::Port begin_, hilti::rt::Port end_) : begin(begin_), end(end_) {
@@ -17,11 +17,11 @@ struct PortRange {
         assert(begin.protocol() == end.protocol());
     }
 
-    hilti::rt::Port begin; /**< first port in the range */
-    hilti::rt::Port end;   /**< last port in the range */
+    hilti::rt::Port begin;
+    hilti::rt::Port end;
 
     bool operator<(const PortRange& other) const {
-        // Just get us a deterministic order.
+
         return std::tie(begin, end) < std::tie(other.begin, other.end);
     }
 };
@@ -34,4 +34,4 @@ inline bool operator!=(const PortRange& a, const PortRange& b) { return ! (a == 
 
 inline PortRange make_port_range(hilti::rt::Port begin, hilti::rt::Port end) { return {begin, end}; }
 
-} // namespace zeek::spicy::rt
+}

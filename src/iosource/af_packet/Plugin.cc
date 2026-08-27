@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/plugin/Plugin.h"
 
@@ -24,4 +24,4 @@ class Plugin : public plugin::Plugin {
     }
 } plugin;
 
-} // namespace zeek::plugin::Zeek_AF_Packet
+}

@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/script_opt/CPP/Compile.h"
 
@@ -21,4 +21,4 @@ void CPPCompile::Indent() const {
         fprintf(write_file, "%s", "\t");
 }
 
-} // namespace zeek::detail
+}

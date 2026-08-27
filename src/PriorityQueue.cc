@@ -1,4 +1,4 @@
-// See the file "COPYING" in the main distribution directory for copyright.
+
 
 #include "zeek/PriorityQueue.h"
 
@@ -27,13 +27,13 @@ PQ_Element* PriorityQueue::Remove() {
     SetElement(0, heap[heap_size]);
     BubbleDown(0);
 
-    top->SetOffset(-1); // = not in heap
+    top->SetOffset(-1);
     return top;
 }
 
 PQ_Element* PriorityQueue::Remove(PQ_Element* e) {
     if ( e->Offset() < 0 || e->Offset() >= heap_size || heap[e->Offset()] != e )
-        return nullptr; // not in heap
+        return nullptr;
 
     e->MinimizeTime();
     BubbleUp(e->Offset());
@@ -93,9 +93,9 @@ void PriorityQueue::BubbleDown(int bin) {
     int r = RightChild(bin);
 
     if ( l >= heap_size )
-        return; // No children.
+        return;
 
-    if ( r >= heap_size ) { // Just a left child.
+    if ( r >= heap_size ) {
         if ( heap[l]->Time() < v )
             Swap(l, bin);
     }
@@ -118,4 +118,4 @@ void PriorityQueue::BubbleDown(int bin) {
     }
 }
 
-} // namespace zeek::detail
+}
