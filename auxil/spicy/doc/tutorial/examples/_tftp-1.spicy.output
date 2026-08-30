@@ -1,0 +1,8 @@
+# Automatically generated; do not edit. -- <HASH> spicy-driver -d -F tutorial/examples/tftp_rrq.dat -P 69/udp=TFTP::Packet -P 50618/udp=TFTP::Packet %INPUT/spicy-driver -d -F tftp_rrq.dat -P 69/udp=TFTP::Packet -P 50618/udp=TFTP::Packet tftp.spicy/False
+# spicy-driver -d -F tftp_rrq.dat -P 69/udp=TFTP::Packet -P 50618/udp=TFTP::Packet tftp.spicy
+[$opcode=1]
+[$opcode=3]
+[$opcode=4]
+[$opcode=3]
+[$opcode=4]
+[⋯]

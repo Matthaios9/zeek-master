@@ -1,0 +1,21 @@
+# Automatically generated; do not edit. -- <HASH> spicyc -P mylib programming/examples/mylibrary.spicy/spicyc -P mylib mylibrary.spicy/False
+# spicyc -P mylib mylibrary.spicy
+// Prototypes for module MyLibrary
+
+#ifndef HILTI_PROTOTYPES_MYLIBRARY_H
+#define HILTI_PROTOTYPES_MYLIBRARY_H
+
+#include <spicy/rt/libspicy.h>
+#include <hilti/rt/libhilti.h>
+
+extern uint64_t hlt_internal_mylib_hlto_scope;
+
+namespace MyLibrary {
+    extern auto rot13(const std::string& s) -> std::string;
+}
+
+namespace hlt_internal_mylib::MyLibrary {
+    extern void _t_register_module();
+}
+
+#endif

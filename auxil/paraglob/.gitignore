@@ -1,0 +1,13 @@
+# Ignore build output
+*.o
+*.a
+*.out
+Makefile
+.cmake
+build
+
+# clangd
+.cache
+
+# macOS
+.DS_Store

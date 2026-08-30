@@ -1,0 +1,103 @@
+# @TEST-EXEC-FAIL: ${HILTIC} -j %INPUT > output 2>&1
+# @TEST-EXEC: btest-diff output
+
+module Foo {
+
+# Functions can be redefined.
+function void fun(int<32> i) {}
+function void fun(uint<32> i) {}
+
+# Modules can be imported multiple times.
+import hilti;
+import hilti;
+
+# Variables cannot be redefined in the same scope.
+global i = 1;
+global i = 2;
+}
+
+# @TEST-START-NEXT
+
+module Foo {
+
+# A symbol defined as function cannot be redefined as a variable.
+function void f(int<32> i) {}
+global f = 1;
+
+}
+
+# @TEST-START-NEXT
+
+# Functions cannot be defined with the same parameters but different return types.
+module Foo {
+function void fail1() { return; }
+function int<32> fail1() { return 1; }
+
+function void fail2(int<32> i) { return; }
+function int<32> fail2(int<32> not_i) { return 1; }
+
+# This should apply even if the others are valid overloads of the first but not each other
+function void fail3(int<32> i) { return; }
+function void fail3(int<32> i, int<32> j) { return; }
+function int<32> fail3(int<32> i, int<32> j) { return 1; }
+}
+
+# @TEST-START-NEXT
+
+module Foo {
+# Ok if different parameters and different return types, but force a failure to get output
+function int<64> succeed(int<64> i, int<64> j) { return i + j; }
+function int<32> succeed(int<32> i) { return i; }
+
+global s1 = succeed(1, 2);
+global s2 = succeed(1);
+
+# Force failure to get output
+assert s1 == s2: "%d == %d" % (s1, s2);
+}
+
+# @TEST-START-NEXT
+
+module foo {
+
+import hilti;
+
+# Overloads which only differ in defaulted parameters are not allowed. This is
+# roughly in line with the overloads C++ allows.
+function uint<8> fun(uint<8> a) {
+    return uint8(1);
+}
+
+function uint<8> fun(uint<8> a, uint<8> b = uint8(0)) {
+    return uint8(2);
+}
+
+hilti::print(fun(uint8(1)));
+
+function uint<8> diff_return(uint<8> a) {
+    return uint8(1);
+}
+
+function uint<16> diff_return(uint<8> a, uint<8> b = uint8(0)) {
+    return uint16(2);
+}
+
+hilti::print(diff_return(uint8(1)));
+
+}
+
+# @TEST-START-NEXT
+
+module Foo {
+
+# Equivalent functions signatures should not be allowed.
+function void fail1() { return; }
+function void fail1() { return; }
+
+function string fail2(uint<8> x, string y) { return "hi!"; }
+function string fail2(uint<8> different, string names) { return "hi!"; }
+
+function uint<8> fail3() { return 1; }
+function uint<8> fail3() { return 2; }
+
+}

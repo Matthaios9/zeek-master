@@ -1,0 +1,12 @@
+# @TEST-GROUP: no-jit
+# @TEST-EXEC: ${HILTIC} -c -D compiler,ast-final %INPUT >output 2>debug.log
+# @TEST-EXEC: btest-diff output
+# @TEST-EXEC: btest-diff debug.log
+
+module Foo {
+
+type X = bool;
+
+function string foo(real bar) { return ""; }
+
+}

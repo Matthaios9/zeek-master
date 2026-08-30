@@ -1,0 +1,16 @@
+# @TEST-EXEC-FAIL: HILTI_JIT_SHOW_CXX_OUTPUT= hiltic -j %INPUT 2>output
+# @TEST-EXEC: grep -q does_not_exist hilti-jit-error.log
+# @TEST-EXEC: btest-diff output
+#
+# Check that a failure at the system link stage doesn't produce leaks or other
+# unexpected output. Because the actual output depends on the underlying
+# compiler, we just check for a keyword being in there.
+
+module Test {
+
+# hilti::rt::__does_not_exist is declared in the runtime library's header, but not implemented.
+declare public time does_not_exist() &cxxname="hilti::rt::__does_not_exist";
+
+does_not_exist();
+
+}

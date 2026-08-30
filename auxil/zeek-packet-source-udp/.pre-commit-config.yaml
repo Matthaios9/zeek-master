@@ -1,0 +1,16 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+#
+repos:
+- repo: https://github.com/pre-commit/mirrors-clang-format
+  rev: f4d7745e17a28aad7eed2f4874ca8d1568c11c4c  # frozen: v22.1.8
+  hooks:
+  - id: clang-format
+    types_or:
+      - "c"
+      - "c++"
+
+- repo: https://github.com/crate-ci/typos
+  rev: 96d9af6217dc2855210655af7e1ff19d23d4e593  # frozen: v1
+  hooks:
+    - id: typos

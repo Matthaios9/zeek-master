@@ -1,0 +1,180 @@
+# @TEST-DOC: Tests optimizations performing constant folding.
+#
+# @TEST-REQUIRES: which FileCheck
+# @TEST-EXEC: hiltic %INPUT -pg -o noopt.hlt
+# @TEST-EXEC: FileCheck %INPUT -check-prefix=NOOPT < noopt.hlt
+# @TEST-EXEC: hiltic %INPUT -p -o opt.hlt
+# @TEST-EXEC: FileCheck %INPUT -check-prefix=OPT < opt.hlt
+
+module Foo {
+import hilti;
+
+const t = True;
+const f = False;
+
+# NOOPT: print(t
+# OPT: print(True
+hilti::print(t);
+# NOOPT: print(f
+# OPT: print(False
+hilti::print(f);
+
+# NOOPT: if ( t ) {
+# Optimized just creates the 'if' block
+# OPT: {{^{$}}
+if (t) {
+    ## NOOPT: print(0
+    ## OPT: print(0
+    hilti::print(0);
+} else {
+    ## NOOPT: print(1
+    ## OPT-NOT: print(1
+    hilti::print(1);
+}
+
+# NOOPT: if ( f ) {
+# Optimized version just creates the 'else' block
+# OPT: {{^{$}}
+if (f) {
+    ## NOOPT: print(2
+    ## OPT-NOT: print(2
+    hilti::print(2);
+} else {
+    ## NOOPT: print(3
+    ## OPT: print(3
+    hilti::print(3);
+}
+
+# NOOPT: if ( t ) {
+# OPT: {{^{$}}
+if (t) {
+    # NOOPT: print(4
+    # OPT: print(4
+    hilti::print(4);
+}
+
+# NOOPT: if ( f ) {
+# Optimized version just removes this
+if (f) {
+    # NOOPT: print(5
+    # OPT-NOT: print(5
+    hilti::print(5);
+}
+
+# NOOPT: if ({{.*}}; t ) {
+# OPT: if ({{.*}}; True ) {
+if ( local int<64> x = 1; t ) {
+    hilti::print(x);
+}
+
+# NOOPT: if ({{.*}}; f ) {
+# OPT: if ({{.*}}; False ) {
+if ( local int<64> x = 1; f ) {
+    hilti::print(x);
+}
+
+# NOOPT: if ({{.*}}; t ) {
+# OPT: if ({{.*}}; True ) {
+if ( local int<64> x = 1; t ) {
+    hilti::print(x);
+}
+# NOOPT: else {
+# OPT: else {
+else {
+    hilti::print(! x);
+}
+
+# NOOPT: if ({{.*}}; f ) {
+# OPT: if ({{.*}}; False ) {
+if ( local int<64> x = 1; f ) {
+    hilti::print(x);
+}
+# NOOPT: else {
+# OPT: else {
+else {
+    hilti::print(! x);
+}
+
+# NOOPT: print(t ? 1 : 0
+# OPT: print(1
+hilti::print(t ? 1: 0);
+# NOOPT: print(f ? 0 : 1
+# OPT: print(1
+hilti::print(f ? 0: 1);
+
+# While loops over constants.
+# NOOPT: while ( False )
+while (False) {
+    # NOOPT: in while 1
+    # OPT-NOT: in while 1
+    "in while 1";
+}
+
+# NOOPT: while ( False )
+while (False) {
+    # NOOPT: in while 2
+    # OPT-NOT: in while 2
+    "in while 2";
+# NOOPT: else
+# OPT: {{^{$}}
+} else {
+    # NOOPT: in while 2 else
+    # OPT: in while 2 else
+    hilti::print("in while 2 else");
+}
+
+# NOOPT: while ( True )
+# OPT: while ( True )
+while (True) {
+    # NOOPT: in while 3
+    # OPT: in while 3
+    hilti::print("in while 3");
+}
+
+# NOOPT: while ( True )
+# OPT: while ( True )
+while (True) {
+    # NOOPT: in while 4
+    # OPT: in while 4
+    hilti::print("in while 4");
+} else {
+    # NOOPT: in while 4 else
+    # OPT-NOT: in while 4 else
+    hilti::print("in while 4 else");
+}
+
+# NOOPT: while ({{.*}}; t ) {
+# OPT: while ({{.*}}; True ) {
+while ( local int<64> x = 1; t ) {
+    hilti::print(x);
+}
+
+# NOOPT: while ({{.*}}; f ) {
+# OPT: while ({{.*}}; False ) {
+while ( local int<64> x = 1; f ) {
+    hilti::print(x);
+}
+
+# NOOPT: while ({{.*}}; t ) {
+# OPT: while ({{.*}}; True ) {
+while ( local int<64> x = 1; t ) {
+    hilti::print(x);
+}
+# NOOPT: else {
+# OPT: else {
+else {
+    hilti::print(! x);
+}
+
+# NOOPT: while ({{.*}}; f ) {
+# OPT: while ({{.*}}; False ) {
+while ( local int<64> x = 1; f ) {
+    hilti::print(x);
+}
+# NOOPT: else {
+# OPT: else {
+else {
+    hilti::print(! x);
+}
+
+}

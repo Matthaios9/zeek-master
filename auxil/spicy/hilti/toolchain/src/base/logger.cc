@@ -1,0 +1,143 @@
+// Copyright (c) 2020-now by the Zeek Project. See LICENSE for details.
+
+#include <utility>
+
+#include <hilti/base/logger.h>
+#include <hilti/base/util.h>
+
+using namespace hilti;
+
+std::map<std::string_view, logging::DebugStream>& logging::DebugStream::_streams() {
+    static std::map<std::string_view, logging::DebugStream> streams;
+    return streams;
+}
+
+std::vector<std::string_view> logging::DebugStream::all() {
+    std::vector<std::string_view> keys;
+
+    const auto& _all = _streams();
+
+    keys.reserve(_all.size());
+    for ( const auto& s : _all )
+        keys.push_back(s.first);
+
+    return keys;
+}
+
+logging::Stream::Buffer::Buffer(logging::Level level) : std::stringbuf(std::ios_base::out), _level(level) {
+    setp(nullptr, nullptr); // make every character go through overflow()
+}
+
+logging::Stream::Buffer::Buffer(logging::DebugStream dbg)
+    : std::stringbuf(std::ios_base::out), _level(Level::Debug), _dbg(dbg) {
+    setp(nullptr, nullptr); // make every character go through overflow()
+}
+
+int logging::Stream::Buffer::sync() {
+    if ( _buffer.empty() )
+        return 0;
+
+    if ( _dbg )
+        logger()._debug(*_dbg, util::rtrim(_buffer));
+    else
+        logger().log(_level, util::rtrim(_buffer));
+
+    _buffer.clear();
+    return 0;
+}
+
+int logging::Stream::Buffer::overflow(int ch) {
+    if ( ch != traits_type::eof() ) {
+        _buffer.push_back(static_cast<std::string::value_type>(ch));
+
+        if ( ch == '\n' )
+            sync();
+    }
+
+    return ch;
+}
+
+std::unique_ptr<Logger> hilti::setLogger(std::unique_ptr<Logger> logger) {
+    std::swap(Logger::_singleton, logger);
+    return logger;
+}
+
+void Logger::debugEnable(const logging::DebugStream& dbg) {
+    if ( ! _debug_streams.contains(dbg) )
+        _debug_streams[dbg] = 0;
+}
+
+bool Logger::debugEnable(std::string_view dbg) {
+    try {
+        debugEnable(logging::DebugStream::streamForName(dbg));
+        return true;
+    } catch ( std::out_of_range& ) {
+        return false;
+    }
+}
+
+bool Logger::debugDisable(std::string_view dbg) {
+    try {
+        debugDisable(logging::DebugStream::streamForName(dbg));
+        return true;
+    } catch ( std::out_of_range& ) {
+        return false;
+    }
+}
+
+void Logger::log(logging::Level level, std::string_view msg, const Location& l) {
+    report(_output_std, level, 0, "", msg, l);
+}
+
+void Logger::info(std::string_view msg, const Location& l) { report(_output_std, logging::Level::Info, 0, "", msg, l); }
+
+void Logger::warning(std::string_view msg, const Location& l) {
+    report(_output_std, logging::Level::Warning, 0, "", msg, l);
+    ++_warnings;
+}
+
+void Logger::deprecated(std::string_view msg, const Location& l) { warning(msg, l); }
+
+void Logger::error(std::string_view msg, const Location& l) { error(msg, {}, l); }
+
+void Logger::error(std::string_view msg, const std::vector<std::string>& context, const Location& l) {
+    report(_output_std, logging::Level::Error, 0, "", msg, l);
+
+    for ( const auto& x : context )
+        report(_output_std, logging::Level::Error, 0, "", util::fmt("  %s", x), l);
+
+    ++_errors;
+}
+
+void Logger::fatalError(std::string_view msg, const Location& l) {
+    report(_output_std, logging::Level::FatalError, 0, "", msg, l);
+    exit(1);
+}
+
+void Logger::internalError(std::string_view msg, const Location& l) {
+    report(_output_std, logging::Level::InternalError, 0, "", msg, l);
+    util::abortWithBacktrace();
+}
+
+void Logger::_debug(const logging::DebugStream& dbg, std::string_view msg, const Location& l) {
+    if ( auto i = _debug_streams.find(dbg); i != _debug_streams.end() )
+        report(_output_debug, logging::Level::Debug, i->second, dbg.name(), msg, l);
+}
+
+void Logger::report(std::ostream& output,
+                    logging::Level level,
+                    size_t indent,
+                    std::string_view addl,
+                    std::string_view msg,
+                    const Location& l) const {
+    std::string level_str = logging::to_string(level);
+    std::string indent_str = std::string(static_cast<std::string::size_type>(indent) * 2, ' ');
+
+    if ( level == logging::Level::Debug )
+        level_str = util::fmt("debug/%s", addl);
+
+    if ( l )
+        output << util::fmt("[%s] %s%s: %s", level_str, indent_str, std::string(l), msg) << '\n';
+    else
+        output << util::fmt("[%s] %s%s", level_str, indent_str, msg) << '\n';
+}

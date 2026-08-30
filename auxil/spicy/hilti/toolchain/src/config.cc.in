@@ -1,0 +1,307 @@
+// Copyright (c) 2020-now by the Zeek Project. See LICENSE for details.
+
+#include <algorithm>
+#include <cctype>
+#include <cstring>
+#include <ranges>
+#include <system_error>
+
+#include <hilti/rt/autogen/version.h>
+
+#include <hilti/autogen/config.h>
+#include <hilti/base/util.h>
+
+using namespace hilti;
+
+const auto flatten = util::flattenParts; // NOLINT(readability-identifier-naming)
+const auto prefix = util::prefixParts;   // NOLINT(readability-identifier-naming)
+
+namespace {
+std::optional<hilti::rt::filesystem::path> precompiledLibhilti(const Configuration& configuration, bool debug) {
+    // We disable use of precompiled headers for sanitizers builds since the
+    // sanitizer flags are not exposed on the config level.
+    //
+    // TODO(bbannier): Allow using of precompiled headers for sanitizer builds.
+#ifdef HILTI_HAVE_ASAN
+    return {};
+#endif
+
+    if ( auto&& cache = util::cacheDirectory(configuration) ) {
+        const rt::filesystem::path file_name = rt::fmt("precompiled_libhilti%s.h.gch", (debug ? "_debug" : ""));
+
+        std::error_code ec;
+        if ( auto pch = (*cache) / file_name; rt::filesystem::exists(pch, ec) )
+            return pch.replace_extension();
+    }
+
+    return {};
+}
+} // namespace
+
+hilti::Configuration::Configuration() { initLocation(false); }
+
+void hilti::Configuration::initLocation(bool use_build_directory) { init(use_build_directory); }
+
+void hilti::Configuration::initLocation(const char* argv0) { initLocation(std::string(argv0)); }
+
+void hilti::Configuration::initLocation(const hilti::rt::filesystem::path& argv0) {
+    try {
+        auto exec = hilti::rt::normalizePath(hilti::rt::filesystem::canonical(argv0)).generic_string();
+        auto prefix =
+            hilti::rt::normalizePath(hilti::rt::filesystem::canonical("${PROJECT_BINARY_DIR}")).generic_string() + "/";
+        init(util::startsWith(exec, prefix));
+    } catch ( const hilti::rt::filesystem::filesystem_error& ) {
+        init(false);
+    }
+}
+
+void Configuration::init(bool use_build_directory) {
+    uses_build_directory = use_build_directory;
+    std::string installation_tag = (use_build_directory ? "BUILD" : "INSTALL");
+
+    compiler_id = "${CMAKE_CXX_COMPILER_ID}";
+    std::ranges::transform(compiler_id, compiler_id.begin(), [](auto& c) { return std::tolower(c); });
+
+    // Allow to set a compiler wrapper through the environment.
+    if ( auto* hilti_cxx = getenv("HILTI_CXX"); hilti_cxx && *hilti_cxx )
+        cxx = hilti_cxx;
+    else {
+#ifdef _MSC_VER
+        // Use our GCC-compatible compiler wrapper so that the documented
+        // $(spicy-config --cxx) -o output ... invocation works on MSVC.
+        if ( uses_build_directory )
+            cxx = "${PROJECT_BINARY_DIR}/bin/hilti-cxx-driver";
+        else
+            cxx = "${CMAKE_INSTALL_PREFIX}/bin/hilti-cxx-driver";
+#else
+        cxx = "${CMAKE_CXX_COMPILER}";
+#endif
+    }
+
+    // Allow to set the compiler launcher through the environment variable `HILTI_CXX_COMPILER_LAUNCHER`.
+    //
+    // - if the environment variable is set it overrides any automatism. If it
+    //   contains a value we assume this to be an executable; if the environment
+    //   variable is empty no launcher will be used.
+    // - next we check whether any compiler launcher was set during the build and reuse it
+    // - else we disable use of a compiler launcher.
+    if ( auto* hilti_cxx_launcher = getenv("HILTI_CXX_COMPILER_LAUNCHER"); hilti_cxx_launcher ) {
+        if ( std::strlen(hilti_cxx_launcher) == 0 ) {
+            cxx_launcher = {};
+        }
+        else
+            cxx_launcher = hilti_cxx_launcher;
+    }
+    else if ( ! std::string("${HILTI_COMPILER_LAUNCHER}").empty() )
+        cxx_launcher = "${HILTI_COMPILER_LAUNCHER}";
+    else
+        cxx_launcher = {};
+
+    distbase = "${PROJECT_SOURCE_DIR}";
+    install_prefix = "${CMAKE_INSTALL_PREFIX}";
+    build_directory = "${PROJECT_BINARY_DIR}";
+    lib_directory = (uses_build_directory ? "${PROJECT_BINARY_DIR}/lib" : "${CMAKE_INSTALL_FULL_LIBDIR}");
+    hiltic = (uses_build_directory ? "${PROJECT_BINARY_DIR}/bin/hiltic" : "${CMAKE_INSTALL_PREFIX}/bin/hiltic");
+    version_number = HILTI_VERSION_NUMBER;
+    version_string = HILTI_VERSION_STRING_SHORT;
+    version_string_long = HILTI_VERSION_STRING_LONG;
+
+    std::vector<std::string> library_paths;
+
+    if ( auto* hilti_library_paths = std::getenv("HILTI_PATH") ) {
+#ifdef _WIN32
+        library_paths = util::toVector(hilti::rt::split(hilti_library_paths, ";") |
+#else
+        library_paths = util::toVector(hilti::rt::split(hilti_library_paths, ":") |
+#endif
+                                       std::views::transform([](auto s) { return std::string(s); }));
+    }
+    else {
+        library_paths = flatten({".", prefix("${HILTI_CONFIG_LIBRARY_DIRS}", "", installation_tag)});
+    }
+
+    hilti_library_paths = util::toVector(
+        library_paths | std::views::transform([](const auto& s) { return hilti::rt::filesystem::path(s); }));
+
+    runtime_cxx_include_paths =
+        util::toVector(hilti::util::split(prefix("${HILTI_CONFIG_RUNTIME_CXX_INCLUDE_DIRS}", "", installation_tag)) |
+                       std::views::transform([](const auto& s) { return hilti::rt::filesystem::path(s); }));
+
+    runtime_cxx_library_paths =
+        util::toVector(hilti::util::split(prefix("${HILTI_CONFIG_RUNTIME_CXX_LIBRARY_DIRS}", "", installation_tag)) |
+                       std::views::transform([](const auto& s) { return hilti::rt::filesystem::path(s); }));
+
+    toolchain_cxx_include_paths =
+        util::toVector(hilti::util::split(prefix("${HILTI_CONFIG_TOOLCHAIN_CXX_INCLUDE_DIRS}", "", installation_tag)) |
+                       std::views::transform([](const auto& s) { return hilti::rt::filesystem::path(s); }));
+
+    toolchain_cxx_library_paths =
+        util::toVector(hilti::util::split(prefix("${HILTI_CONFIG_TOOLCHAIN_CXX_LIBRARY_DIRS}", "", installation_tag)) |
+                       std::views::transform([](const auto& s) { return hilti::rt::filesystem::path(s); }));
+
+    // We hardcode the main compiler flags here instead of injecting them from
+    // CMake to make it clear that they are really independent on what CMake
+    // uses to compile the toolchain. This localizes the options here, and also
+    // allows us to customize them by use-case (JIT vs AOT). We do still inject
+    // some additional flags from CMake where we rely on stuff that CMake
+    // inferred about the environment.
+    //
+    // We compile generated code with hidden default symbol visibility because
+    // that:
+    //
+    // (1) reflects the public/non-public distinction at the HILTI level
+    //
+    // (2) avoids trouble when having the same symbols defined in multiple
+    // translation units (which can happen, e.g., because of code reuse).
+    //
+    // (3) it helps the optimizer to know that symbols won't be accessed
+    // externally.
+#ifdef _MSC_VER
+    runtime_cxx_flags_debug = flatten({
+        "-std:c++20",
+        "-Zi",
+        "-Od",
+        "-FS",
+        "-EHsc",
+        "-MD",
+        "-J",
+        "-bigobj",
+        "-FIunistd.h",
+        "-DNDEBUG",
+        prefix("${HILTI_CONFIG_RUNTIME_CXX_INCLUDE_DIRS}", "-I", installation_tag),
+        prefix("${HILTI_CONFIG_RUNTIME_CXX_FLAGS_DEBUG}", "", installation_tag),
+    });
+
+    runtime_cxx_flags_release = flatten({
+        "-std:c++20",
+        "-Zi",
+        "-O2",
+        "-FS",
+        "-DNDEBUG",
+        "-EHsc",
+        "-MD",
+        "-J",
+        "-bigobj",
+        "-FIunistd.h",
+        prefix("${HILTI_CONFIG_RUNTIME_CXX_INCLUDE_DIRS}", "-I", installation_tag),
+        prefix("${HILTI_CONFIG_RUNTIME_CXX_FLAGS_RELEASE}", "", installation_tag),
+    });
+#else
+    runtime_cxx_flags_debug = flatten({
+        "-fPIC",
+        "-std=c++20",
+        "-g",
+        "-O0",
+        "-fvisibility=hidden",
+        "-Wno-invalid-offsetof",
+        prefix("${HILTI_CONFIG_RUNTIME_CXX_INCLUDE_DIRS}", "-I", installation_tag),
+        prefix("${HILTI_CONFIG_RUNTIME_CXX_FLAGS_DEBUG}", "", installation_tag),
+    });
+
+    runtime_cxx_flags_release = flatten({
+        "-fPIC",
+        "-std=c++20",
+        "-O3",
+        "-DNDEBUG",
+        "-fvisibility=hidden",
+        "-Wno-invalid-offsetof",
+        prefix("${HILTI_CONFIG_RUNTIME_CXX_INCLUDE_DIRS}", "-I", installation_tag),
+        prefix("${HILTI_CONFIG_RUNTIME_CXX_FLAGS_RELEASE}", "", installation_tag),
+    });
+#endif
+
+    if ( auto libhilti_pch = precompiledLibhilti(*this, true) )
+#ifdef _MSC_VER
+        runtime_cxx_flags_debug.push_back(rt::fmt("-FI%s", libhilti_pch->generic_string()));
+#else
+        runtime_cxx_flags_debug.push_back(rt::fmt("-include%s", libhilti_pch->generic_string()));
+#endif
+
+    if ( auto libhilti_pch = precompiledLibhilti(*this, false) )
+#ifdef _MSC_VER
+        runtime_cxx_flags_release.push_back(rt::fmt("-FI%s", libhilti_pch->generic_string()));
+#else
+        runtime_cxx_flags_release.push_back(rt::fmt("-include%s", libhilti_pch->generic_string()));
+#endif
+
+#ifdef _MSC_VER
+    runtime_ld_flags_debug = flatten({
+        prefix("${HILTI_CONFIG_RUNTIME_CXX_LIBRARY_DIRS}", "-LIBPATH:", installation_tag),
+        prefix("${HILTI_CONFIG_RUNTIME_LIBRARIES_DEBUG}", "", installation_tag),
+        prefix("${HILTI_CONFIG_RUNTIME_LD_FLAGS_DEBUG}", "", installation_tag),
+    });
+
+    runtime_ld_flags_release = flatten({
+        prefix("${HILTI_CONFIG_RUNTIME_CXX_LIBRARY_DIRS}", "-LIBPATH:", installation_tag),
+        prefix("${HILTI_CONFIG_RUNTIME_LIBRARIES_RELEASE}", "", installation_tag),
+        prefix("${HILTI_CONFIG_RUNTIME_LD_FLAGS_RELEASE}", "", installation_tag),
+    });
+#else
+    runtime_ld_flags_debug = flatten({
+        prefix("${HILTI_CONFIG_RUNTIME_CXX_LIBRARY_DIRS}", "-L", installation_tag),
+        prefix("${HILTI_CONFIG_RUNTIME_CXX_LIBRARY_DIRS}", "-Wl,-rpath,", installation_tag),
+        prefix("${HILTI_CONFIG_RUNTIME_LIBRARIES_DEBUG}", "-l", installation_tag),
+        prefix("${HILTI_CONFIG_RUNTIME_LD_FLAGS_DEBUG}", "", installation_tag),
+        prefix(CMAKE_THREAD_LIBS_INIT, "-l", installation_tag),
+        prefix(CMAKE_DL_LIBS, "-l", installation_tag),
+        "-Wno-unused-command-line-argument",
+    });
+
+    runtime_ld_flags_release = flatten({
+        prefix("${HILTI_CONFIG_RUNTIME_CXX_LIBRARY_DIRS}", "-L", installation_tag),
+        prefix("${HILTI_CONFIG_RUNTIME_CXX_LIBRARY_DIRS}", "-Wl,-rpath,", installation_tag),
+        prefix("${HILTI_CONFIG_RUNTIME_LIBRARIES_RELEASE}", "-l", installation_tag),
+        prefix("${HILTI_CONFIG_RUNTIME_LD_FLAGS_RELEASE}", "", installation_tag),
+        prefix(CMAKE_THREAD_LIBS_INIT, "-l", installation_tag),
+        prefix(CMAKE_DL_LIBS, "-l", installation_tag),
+        "-Wno-unused-command-line-argument",
+    });
+#endif
+
+    hlto_cxx_flags_debug = runtime_cxx_flags_debug;
+    hlto_cxx_flags_release = runtime_cxx_flags_release;
+
+#ifdef _MSC_VER
+    // JIT/HLTO code is compiled into a DLL that imports symbols from the host
+    // executable.  HILTI_JIT_DLL triggers __declspec(dllimport) on those
+    // symbols; it must NOT appear in the flags used for ahead-of-time (static)
+    // compilation emitted by hilti-config --cxxflags.
+    hlto_cxx_flags_debug.push_back("-DHILTI_JIT_DLL");
+    hlto_cxx_flags_release.push_back("-DHILTI_JIT_DLL");
+#endif
+
+#ifdef _MSC_VER
+    // On MSVC, -LD tells cl.exe to produce a DLL.
+    hlto_ld_flags_debug = flatten({
+        "-LD",
+    });
+    hlto_ld_flags_release = flatten({
+        "-LD",
+    });
+#else
+    hlto_ld_flags_debug = flatten({
+        "-shared",
+        "-Wl,-undefined",
+        "-Wl,dynamic_lookup",
+        prefix("${HILTI_CONFIG_RUNTIME_LD_FLAGS_DEBUG}", "", installation_tag),
+    });
+    hlto_ld_flags_release = flatten({
+        "-shared",
+        "-Wl,-undefined",
+        "-Wl,dynamic_lookup",
+        prefix("${HILTI_CONFIG_RUNTIME_LD_FLAGS_RELEASE}", "", installation_tag),
+    });
+#endif
+
+#ifdef __APPLE__
+    // Recent macOS versions have started to report `ld: warning: -undefined
+    // dynamic_lookup may not work with chained fixups`. This suppresses that.
+    hlto_ld_flags_debug.emplace_back("-Wl,-w");
+    hlto_ld_flags_release.emplace_back("-Wl,-w");
+#endif
+};
+
+Configuration& hilti::configuration() {
+    static Configuration singleton;
+    return singleton;
+}

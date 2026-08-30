@@ -1,0 +1,123 @@
+// Copyright (c) 2020-now by the Zeek Project. See LICENSE for details.
+
+#pragma once
+
+#include <string>
+#include <utility>
+
+#include <hilti/rt/filesystem.h>
+
+#include <hilti/base/util.h>
+
+namespace hilti {
+
+/**
+ * Source code locations associated with AST nodes.
+ */
+class Location {
+public:
+    /**
+     * Constructor. If all arguments are left at their default, the instance
+     * will match `location::None`.
+     *
+     * @param file file name/path associated with the location; empty if unknown.
+     * @param from_line first line number of the described range; -1 if not available.
+     * @param to_line last line number of the described range; -1 if not available.
+     * @param from_character first character number of the described range; -1 if not available.
+     * @param to_character first character number of the described range; -1 if not available.
+     */
+    constexpr Location(std::string file = "",
+                       int from_line = -1,
+                       int to_line = -1,
+                       int from_character = -1,
+                       int to_character = -1)
+        : _file(std::move(file)),
+          _from_line(from_line),
+          _to_line(to_line),
+          _from_character(from_character),
+          _to_character(to_character) {}
+
+    Location(const Location&) = default;
+    Location(Location&&) = default;
+    Location& operator=(const Location&) = default;
+    Location& operator=(Location&&) = default;
+    ~Location() = default;
+
+    const auto& file() const { return _file; }
+    auto from() const { return _from_line; }
+    auto to() const { return _to_line; }
+
+    /**
+     * Merges this Location with the provided location. Returns new a location
+     * which encompasses the entire span.
+     */
+    Location merge(const Location& loc) const;
+
+    /**
+     * Returns a string representation of the location.
+     *
+     * @param no_path if true, do not include the file
+     */
+    std::string dump(bool no_path = false) const;
+
+    /**
+     * Returns true if the location is set. A location is unset if it equals
+     * `location::None` (which a default constructed location will)..
+     */
+    explicit operator bool() const;
+
+    /** Forwards to `dump()`. */
+    operator std::string() const { return dump(); }
+
+    bool operator<(const Location& other) const {
+        return std::tie(_file, _from_line, _from_character, _to_line, _to_character) <
+               std::tie(other._file, other._from_line, other._from_character, other._to_line, other._to_character);
+    }
+
+    bool operator==(const Location& other) const {
+        return std::tie(_file, _from_line, _from_character, _to_line, _to_character) ==
+               std::tie(other._file, other._from_line, other._from_character, other._to_line, other._to_character);
+    }
+
+private:
+    std::string _file;
+    int _from_line = -1;
+    int _to_line = -1;
+
+    int _from_character = -1;
+    int _to_character = -1;
+
+    friend struct std::hash<Location>;
+};
+
+/** Forwards to `Location::dump()`. */
+inline auto to_string(const Location& l) { return l.dump(); }
+
+/** Forwards to `Location::dump()`. */
+inline std::ostream& operator<<(std::ostream& out, const Location& l) {
+    out << l.dump();
+    return out;
+}
+
+namespace location {
+// TODO: This should be `constinit` to guarantee initialization at compile
+// time, but gcc-12 used on e.g., debian-12 does not recognize this as a
+// valid use.
+/** Sentinel value indicating that no location information is available. */
+/*constinit*/ static inline const Location None;
+} // namespace location
+
+} // namespace hilti
+
+namespace std {
+template<>
+struct hash<hilti::Location> {
+    size_t operator()(const hilti::Location& x) const {
+        return hilti::rt::hashCombine(std::hash<std::string>()(x._file),
+                                      x._from_line,
+                                      x._to_line,
+                                      x._from_character,
+                                      x._to_character);
+    }
+};
+} // namespace std

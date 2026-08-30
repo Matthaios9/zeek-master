@@ -1,0 +1,18 @@
+# Copyright (c) 2020-now by the Zeek Project. See LICENSE for details.
+
+[files]
+extend-exclude = [
+  # This is a file generated from a template not controlled by us.
+  "doc/Doxyfile",
+]
+
+[default.extend-words]
+inout = "inout"
+ocur = "ocur"
+bigsur = "Big Sur"
+Smoot = "Smoot"
+ba = "ba"
+Datas = "Datas"
+setp = "setp"
+Fo = "Fo"
+SEH = "SEH"

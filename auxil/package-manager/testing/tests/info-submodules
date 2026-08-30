@@ -1,0 +1,22 @@
+# @TEST-DOC: Test that the info doesn't recursively clone repos. The tested repository has a broken submodule in it and will fail to clone otherwise.
+#
+# @TEST-EXEC: bash %INPUT
+# @TEST-EXEC: zkg info ./clonetest | grep -v "metadata file:" > clonetest.info
+# @TEST-EXEC: TEST_DIFF_CANONIFIER=$SCRIPTS/diff-remove-abspath btest-diff clonetest.info
+
+zkg create --packagedir clonetest --user-var name=clonetest.gitmodules
+cp zkg.meta clonetest/zkg.meta
+
+pushd clonetest
+
+git add zkg.meta && gitcommit -v -m "Update zkg.meta"
+
+git submodule add "../$(basename $(realpath .))"
+sed 's~url.*$~url = http://github.com/zeek/A-REPO-WHICH-SHOULD-NOT-EXIST~' .gitmodules > modules && mv modules .gitmodules
+git add .gitmodules && git commit -v -m 'Add submodule'
+
+# @TEST-START-FILE zkg.meta
+[package]
+build_command = ./configure && make
+description = Zeek package with a broken submodule for testing 'zkg info'
+# @TEST-END-FILE

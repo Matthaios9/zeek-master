@@ -1,0 +1,32 @@
+# This test produces false positives on macos with ASAN.
+# @TEST-REQUIRES: ! sh ./isMacosAsan.sh
+#
+# @TEST-EXEC-FAIL: echo . | spicy-driver %INPUT >output 2>&1
+# @TEST-EXEC: btest-diff output
+#
+# @TEST-DOC: Check that stack overflows are caught before we crash.
+
+module Foo;
+
+function y() {
+}
+
+function fibo(n: int64) : int64 {
+    if ( n == 0 )
+        return 0;
+
+    if ( n == 1 )
+        return 1;
+
+    local x = fibo(n - 2) + fibo(n - 1);
+    y(); # prevent compiler from removing tail calls
+    return x;
+}
+
+public type X = unit() {
+    x: int8 { fibo(100000); }
+};
+
+# @TEST-START-FILE isMacosAsan.sh
+have-sanitizer && [[ "$OSTYPE" == "darwin"* ]]
+# @TEST-END-FILE

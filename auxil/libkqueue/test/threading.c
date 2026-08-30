@@ -1,0 +1,1836 @@
+/*
+ * Copyright (c) 2025,2026 Arran Cudbard-Bell <a.cudbardb@freeradius.org>
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#include "common.h"
+#include <stdbool.h>
+#ifndef _WIN32
+#  include <semaphore.h>
+#  include <stdatomic.h>
+#  include <sys/wait.h>
+#endif
+/*
+ * On Windows atomic_int and atomic_init come from src/windows/platform.h
+ * (pulled in via common.h) - they're defined as plain int + assignment
+ * because MSVC C11 stdatomic needs /experimental:c11atomics.  The test
+ * only uses atomic_int as a single-writer/single-reader stop flag, so
+ * the relaxed shim is functionally equivalent.
+ */
+#include <time.h>
+
+struct trigger_args {
+    int         kqfd;
+    uintptr_t   ident;
+};
+
+struct cross_trigger_args {
+    int             kqfd;
+    sem_t          *ready;
+    struct timespec elapsed;
+    int             got_events;
+    int             kevent_errno;
+};
+
+/* Forward decls so the helpers can be referenced before their
+ * definitions further down the file. */
+static sem_t *sem_open_anon(const char *tag);
+static void   sem_close_anon(sem_t *sem);
+
+static void *
+wait_for_user_trigger(void *arg)
+{
+    struct cross_trigger_args   *a = arg;
+    struct kevent               ret[1];
+    struct timespec             start, end;
+    /*
+     * Long enough that a true cross-thread deadlock manifests as a
+     * detectable wait, but bounded so a regression doesn't hang
+     * the test suite.  With the libkqueue lock-drop fix in place
+     * the trigger arrives in microseconds; without it, the wait
+     * runs to completion and the test fails on either timing or
+     * "no events received".
+     */
+    struct timespec             timeout = { 5, 0 };
+
+    if (clock_gettime(CLOCK_MONOTONIC, &start) < 0)
+        die("clock_gettime");
+
+    /* Signal readiness immediately before the blocking kevent.
+     * There's an irreducible scheduling gap between the post and
+     * the syscall, but the trigger path is robust to it: an
+     * EVFILT_USER NOTE_TRIGGER landing before kevent() entry just
+     * leaves a ready event queued for the very next call. */
+    if (sem_post(a->ready) != 0) die("sem_post(ready)");
+
+    a->got_events = kevent_get_timeout(ret, 1, a->kqfd, &timeout);
+    a->kevent_errno = (a->got_events < 0) ? errno : 0;
+
+    if (clock_gettime(CLOCK_MONOTONIC, &end) < 0)
+        die("clock_gettime");
+
+    a->elapsed.tv_sec  = end.tv_sec  - start.tv_sec;
+    a->elapsed.tv_nsec = end.tv_nsec - start.tv_nsec;
+    if (a->elapsed.tv_nsec < 0) {
+        a->elapsed.tv_sec--;
+        a->elapsed.tv_nsec += 1000000000L;
+    }
+
+    return NULL;
+}
+
+/*
+ * Reproducer for the cross-thread NOTE_TRIGGER hang.
+ *
+ * Pre-fix, libkqueue held the per-kq mutex across kevent_wait() -
+ * which is epoll_wait() on Linux.  A second thread calling
+ * kevent(kq, EV_ENABLE | NOTE_TRIGGER) on the same kq would block
+ * on the mutex until the waiter's epoll_wait returned for some
+ * other reason, typically the wait's own timeout.  Cross-thread
+ * EVFILT_USER wakes - the standard pattern for waking an event
+ * loop owned by another thread - effectively didn't work.
+ *
+ * The test arms a 5-second wait on an EVFILT_USER knote, fires
+ * the trigger from a second thread after a brief delay, and
+ * asserts:
+ *
+ *   - The waiter's kevent() returned an event (rather than timing
+ *     out).
+ *   - The wait completed well under the 5s ceiling - 1s is the
+ *     fail-budget; the fix makes it microseconds.
+ *
+ * Pre-fix the test fails on both axes; post-fix it passes
+ * comfortably.
+ */
+static void
+test_kevent_threading_user_trigger_cross_thread(struct test_context *ctx)
+{
+    struct kevent               kev;
+    pthread_t                   th;
+    struct cross_trigger_args   args = { 0 };
+    int                         kqfd;
+
+    (void) ctx;
+
+    kqfd = kqueue();
+    if (kqfd < 0)
+        die("kqueue");
+    args.kqfd = kqfd;
+
+    /*
+     * EV_DISPATCH so the knote auto-disables on first delivery and
+     * the trigger uses the EV_ENABLE | NOTE_TRIGGER atomic re-arm
+     * idiom - the same pattern rlm_kafka uses for cross-thread DR
+     * dispatch.
+     */
+    kevent_add(kqfd, &kev, 0, EVFILT_USER, EV_ADD | EV_DISPATCH, 0, 0, NULL);
+
+    args.ready = sem_open_anon("ready");
+
+    if (pthread_create(&th, NULL, wait_for_user_trigger, &args) != 0)
+        die("pthread_create");
+
+    /* Wait for the waiter to be one syscall away from kevent(). */
+    if (sem_wait(args.ready) != 0) die("sem_wait(ready)");
+
+    /* Cross-thread trigger from the parent thread. */
+    kevent_add(kqfd, &kev, 0, EVFILT_USER, EV_ENABLE, NOTE_TRIGGER, 0, NULL);
+
+    if (pthread_join(th, NULL) != 0)
+        die("pthread_join");
+
+    if (args.got_events < 0) {
+        errno = args.kevent_errno;
+        die("waiter kevent returned -1");
+    }
+    if (args.got_events != 1)
+        die("waiter did not receive trigger event (got_events=%d)",
+            args.got_events);
+    if (args.elapsed.tv_sec >= 1)
+        die("waiter took too long: %ld.%09lds (>= 1.0s budget) - "
+            "cross-thread trigger likely blocked on the kq mutex",
+            (long) args.elapsed.tv_sec, (long) args.elapsed.tv_nsec);
+
+    if (close(kqfd) < 0)
+        die("close");
+
+    sem_close_anon(args.ready);
+}
+
+struct close_kqueue_args {
+    int     *kqfd;
+    sem_t   *ready;
+};
+
+static void *
+close_kqueue(void *arg)
+{
+    struct close_kqueue_args *a = arg;
+
+    /* Wait until main is one syscall away from the blocking kevent.
+     * Closing before or after entry both produce the EBADF the test
+     * expects, so the irreducible post-then-syscall gap is benign. */
+    if (sem_wait(a->ready) != 0) die("sem_wait(ready)");
+
+    if (close(*a->kqfd) != 0)
+        die("close failed");
+
+    return NULL;
+}
+
+static void
+test_kevent_threading_close(struct test_context *ctx)
+{
+    struct kevent kev, ret[1];
+    pthread_t th;
+    int kqfd = kqueue();
+    sem_t *ready;
+    struct close_kqueue_args ka;
+
+    /* Add the event, then trigger it from another thread */
+    kevent_add(kqfd, &kev, 1, EVFILT_USER, EV_ADD | EV_CLEAR, 0, 0, NULL);
+
+    ready = sem_open_anon("ready");
+    ka.kqfd  = &kqfd;
+    ka.ready = ready;
+
+    if (pthread_create(&th, NULL, close_kqueue, &ka) != 0)
+        die("failed creating thread");
+
+    /* Tell the closer we're about to enter kevent. */
+    if (sem_post(ready) != 0) die("sem_post(ready)");
+
+	/* Wait for event (should be interrupted by close).  EBADF is
+	 * what the libkqueue Linux backend reports via the kq-wake
+	 * sentinel in copyout; native kqueue (macOS) reports the same. */
+	if (kevent(kqfd, NULL, 0, ret, 1, NULL) == -1) {
+		if (errno != EBADF && errno != ENOENT)
+			die("kevent failed with the wrong errno");
+	} else {
+		die("kevent did not fail");
+	}
+
+	/* Subsequent calls fail at kqueue_lookup with ENOENT now that
+	 * kqueue_free has run map_remove (libkqueue), or EBADF on
+	 * native kqueue where the closed fd is the actual error. */
+	if (kevent(kqfd, NULL, 0, ret, 1, NULL) == -1) {
+		if (errno != EBADF && errno != ENOENT)
+			die("kevent failed with the wrong errno (second call)");
+	} else {
+		die("kevent did not fail (second call)");
+	}
+
+    fprintf(stderr, "TC_BEFORE_JOIN\n"); fflush(stderr);
+    if (pthread_join(th, NULL) != 0)
+        die("pthread_join failed");
+    fprintf(stderr, "TC_AFTER_JOIN\n"); fflush(stderr);
+
+    sem_close_anon(ready);
+    fprintf(stderr, "TC_AFTER_SEM_CLOSE\n"); fflush(stderr);
+}
+
+/*
+ * Multi-waiter close: pre-fix, kqueue_free was free to run while N
+ * worker threads were inside the platform wait syscall on the same
+ * kqueue.  The free tore down the kq + per-kq mutex; the workers
+ * then returned from the syscall, called kqueue_lock on the
+ * destroyed mutex, and either crashed or read random heap.
+ *
+ * Post-fix, kqueue_free observes a non-empty kq_inflight under
+ * kq_mtx, sets kq_freeing, and returns without destroying anything.
+ * The last worker out of kevent() calls kqueue_complete_deferred_free
+ * once kq_inflight has drained.  This test pounds on that boundary
+ * by parking N waiters and then issuing the close from the main
+ * thread.
+ */
+struct close_multi_args {
+    int    *kqfd;
+    sem_t  *ready;
+    int     n_waiters;
+};
+
+static void *
+_close_multi_waiter(void *arg)
+{
+    struct close_multi_args   *a = arg;
+    struct kevent              ret[1];
+
+    if (sem_post(a->ready) != 0) die("sem_post(ready)");
+
+    /*
+     * Block until close() interrupts us.  Either EBADF (waiter was
+     * already in the syscall when close fired) or ENOENT (waiter
+     * raced past kqueue_lookup after map_remove ran) is acceptable.
+     * What we MUST NOT see is a crash, a hang, or a silent zero-
+     * event return.
+     */
+    if (kevent(*a->kqfd, NULL, 0, ret, 1, NULL) != -1)
+        die("kevent did not fail");
+    if (errno != EBADF && errno != ENOENT)
+        die("kevent failed with the wrong errno");
+
+    return NULL;
+}
+
+static void
+test_kevent_threading_close_multi(struct test_context *ctx)
+{
+    enum { N_WAITERS = 8 };
+    struct kevent               kev;
+    pthread_t                   th[N_WAITERS];
+    int                         kqfd;
+    sem_t                      *ready;
+    struct close_multi_args     a;
+    int                         i;
+
+    (void) ctx;
+
+    kqfd = kqueue();
+
+    /* Anchor knote so the workers don't race themselves to ENOENT
+     * via filter_lookup before reaching the wait. */
+    kevent_add(kqfd, &kev, 1, EVFILT_USER, EV_ADD | EV_CLEAR, 0, 0, NULL);
+
+    ready = sem_open_anon("ready");
+    a.kqfd      = &kqfd;
+    a.ready     = ready;
+    a.n_waiters = N_WAITERS;
+
+    for (i = 0; i < N_WAITERS; i++) {
+        if (pthread_create(&th[i], NULL, _close_multi_waiter, &a) != 0)
+            die("pthread_create");
+    }
+
+    /* Wait for all workers to be one syscall away from the wait. */
+    for (i = 0; i < N_WAITERS; i++) {
+        if (sem_wait(ready) != 0) die("sem_wait(ready)");
+    }
+
+    /* Tiny pause so workers actually reach the syscall - the post-
+     * then-syscall gap is benign for correctness, but the test is
+     * more interesting if the close fires while everyone is parked
+     * in the kernel rather than racing into the syscall. */
+    {
+        struct timespec t = { 0, 1L * 1000L * 1000L };  /* 1ms */
+        nanosleep(&t, NULL);
+    }
+
+    if (close(kqfd) != 0)
+        die("close failed");
+
+    for (i = 0; i < N_WAITERS; i++) {
+        if (pthread_join(th[i], NULL) != 0)
+            die("pthread_join");
+    }
+
+    sem_close_anon(ready);
+}
+
+/*
+ * Stress harness for the multi-waiter / deferred-free path.
+ *
+ * The Linux libkqueue implementation keeps an `epoll_udata` heap
+ * allocation alive across the kevent_wait window so that a thread
+ * which has a stale `data.ptr` in its TLS `epoll_events[]` buffer
+ * can still safely deref it after another thread has run EV_DELETE
+ * on the underlying knote.  The deferred udata is reclaimed only
+ * when no kevent() caller with an entry epoch <= the udata's
+ * boundary epoch is still in flight.
+ *
+ * The test below pounds on that path by:
+ *
+ *   - parking N waiter threads in concurrent epoll_wait calls on
+ *     the same kq, with timeouts long enough that the parent's
+ *     churn lands while every waiter is sleeping;
+ *
+ *   - cycling EVFILT_USER knotes from the parent: ADD a knote,
+ *     NOTE_TRIGGER it (kernel queues a ready event for whichever
+ *     waiter is dispatched), then EV_DELETE it (defer_free the
+ *     udata).  A waiter that wakes between the trigger and the
+ *     delete will dispatch normally; a waiter that wakes after
+ *     the delete will see ud_stale=true in copyout and skip.
+ *
+ * The dangerous case pre-fix was the second one: the waiter's TLS
+ * buffer carried a pointer into a freed heap slot.  ASAN/UBSAN
+ * builds catch the UAF directly; non-instrumented builds at least
+ * don't crash.
+ */
+struct multi_waiter_args {
+    int                 kqfd;
+    sem_t              *ready;
+    atomic_int          stop;
+    int                 received;
+    int                 errors;
+};
+
+static void *
+_multi_waiter(void *arg)
+{
+    struct multi_waiter_args   *a = arg;
+    struct kevent               ret[8];
+    struct timespec             timeout = { 0, 50L * 1000L * 1000L };  /* 50ms */
+    int                         n;
+
+    /* Tell the parent we're about to enter the kevent loop.  An event
+     * that arrives between this post and the syscall is queued by the
+     * kernel and picked up on the very next iteration. */
+    if (a->ready && sem_post(a->ready) != 0) die("sem_post(ready)");
+
+    while (!a->stop) {
+        /*
+         * Call kevent() directly rather than via kevent_get_timeout(),
+         * which err(3)-exits on any error.  A waiter racing a fork-heavy
+         * test (proc_delete_race forks 50 children) is interrupted by
+         * SIGCHLD; EINTR is not a failure, so retry.  Real errors are
+         * recorded for stop_waiters() to die() on.
+         */
+        n = kevent(a->kqfd, NULL, 0, ret, NUM_ELEMENTS(ret), &timeout);
+        if (n < 0) {
+            if (errno == EINTR)
+                continue;
+            a->errors++;
+            break;
+        }
+        a->received += n;
+    }
+
+    return NULL;
+}
+
+static void
+test_kevent_threading_multi_waiter_delete_race(struct test_context *ctx)
+{
+    enum { N_WAITERS = 4, N_ITERATIONS = 200 };
+    pthread_t                   waiters[N_WAITERS];
+    struct multi_waiter_args    wargs[N_WAITERS];
+    struct kevent               kev[2];
+    sem_t                      *ready;
+    int                         kqfd;
+    int                         i;
+
+    (void) ctx;
+
+    kqfd = kqueue();
+    if (kqfd < 0)
+        die("kqueue");
+
+    ready = sem_open_anon("ready");
+
+    for (i = 0; i < N_WAITERS; i++) {
+        wargs[i].kqfd = kqfd;
+        wargs[i].ready = ready;
+        atomic_init(&wargs[i].stop, 0);
+        wargs[i].received = 0;
+        wargs[i].errors = 0;
+        if (pthread_create(&waiters[i], NULL, _multi_waiter, &wargs[i]) != 0)
+            die("pthread_create");
+    }
+
+    /* Wait until every waiter has posted ready (about to enter kevent). */
+    for (i = 0; i < N_WAITERS; i++)
+        if (sem_wait(ready) != 0) die("sem_wait(ready)");
+
+    for (i = 0; i < N_ITERATIONS; i++) {
+        uintptr_t ident = (uintptr_t) (i + 1);
+
+        /*
+         * Add the knote (allocates kn_udata, registers with epoll)
+         * and trigger it in a single changelist.  Kernel queues a
+         * ready event for whichever waiter epoll_wait dispatches.
+         */
+        EV_SET(&kev[0], ident, EVFILT_USER, EV_ADD | EV_CLEAR, 0, 0, NULL);
+        EV_SET(&kev[1], ident, EVFILT_USER, EV_ENABLE, NOTE_TRIGGER, 0, NULL);
+        if (kevent(kqfd, kev, 2, NULL, 0, NULL) < 0)
+            die("kevent (add+trigger)");
+
+        /*
+         * Immediately delete the knote.  This calls
+         * epoll_ctl(EPOLL_CTL_DEL) and defer_frees the udata while
+         * a ready event for it may still be in the waiter's TLS
+         * buffer.  Copyout in the waiter must see ud_stale=true and
+         * skip dispatch without dereferencing the dangling back-
+         * pointer.
+         */
+        EV_SET(&kev[0], ident, EVFILT_USER, EV_DELETE, 0, 0, NULL);
+        if (kevent(kqfd, kev, 1, NULL, 0, NULL) < 0)
+            die("kevent (delete)");
+    }
+
+    /*
+     * Stop the waiters and let any final timeout cycle drain so
+     * every kevent() caller exits and the deferred-free sweep
+     * gets a chance to reclaim everything before close().
+     */
+    for (i = 0; i < N_WAITERS; i++) wargs[i].stop = 1;
+
+    for (i = 0; i < N_WAITERS; i++) {
+        if (pthread_join(waiters[i], NULL) != 0)
+            die("pthread_join");
+        if (wargs[i].errors > 0)
+            die("waiter %d reported %d kevent errors", i, wargs[i].errors);
+    }
+
+    if (close(kqfd) < 0)
+        die("close");
+
+    sem_close_anon(ready);
+}
+
+/*
+ * Reproducer for copyout-time defer_free races.
+ *
+ * Each ADDed knote carries EV_ONESHOT, so when a waiter dispatches
+ * the triggered event the filter's kn_delete runs from inside
+ * copyout (via knote_copyout_flag_actions).  That path calls
+ * KN_UDATA_DEFER_FREE on the same kq while the caller is still
+ * holding kq_mtx and still in kq_inflight.  The boundary captured
+ * is the current kq_next_epoch, which may be higher than the
+ * caller's own entry epoch if other threads entered during the
+ * wait.  The deferred-free sweep is run at the caller's exit and
+ * must correctly leave the entry pinned until every later caller
+ * has also exited.
+ *
+ * Combined with N concurrent waiters, this stresses the
+ * "boundary >= caller's epoch" path that the rebase + sweep code
+ * has to get right.
+ */
+static void
+test_kevent_threading_multi_waiter_oneshot(struct test_context *ctx)
+{
+    enum { N_WAITERS = 4, N_ITERATIONS = 200 };
+    pthread_t                   waiters[N_WAITERS];
+    struct multi_waiter_args    wargs[N_WAITERS];
+    struct kevent               kev[2];
+    sem_t                      *ready;
+    int                         kqfd;
+    int                         i;
+
+    (void) ctx;
+
+    kqfd = kqueue();
+    if (kqfd < 0)
+        die("kqueue");
+
+    ready = sem_open_anon("ready");
+
+    for (i = 0; i < N_WAITERS; i++) {
+        wargs[i].kqfd = kqfd;
+        wargs[i].ready = ready;
+        atomic_init(&wargs[i].stop, 0);
+        wargs[i].received = 0;
+        wargs[i].errors = 0;
+        if (pthread_create(&waiters[i], NULL, _multi_waiter, &wargs[i]) != 0)
+            die("pthread_create");
+    }
+
+    for (i = 0; i < N_WAITERS; i++)
+        if (sem_wait(ready) != 0) die("sem_wait(ready)");
+
+    for (i = 0; i < N_ITERATIONS; i++) {
+        uintptr_t ident = (uintptr_t) (i + 1);
+
+        EV_SET(&kev[0], ident, EVFILT_USER,
+               EV_ADD | EV_ONESHOT | EV_CLEAR, 0, 0, NULL);
+        EV_SET(&kev[1], ident, EVFILT_USER, EV_ENABLE, NOTE_TRIGGER, 0, NULL);
+        if (kevent(kqfd, kev, 2, NULL, 0, NULL) < 0)
+            die("kevent (add+trigger oneshot)");
+    }
+
+    for (i = 0; i < N_WAITERS; i++) wargs[i].stop = 1;
+
+    for (i = 0; i < N_WAITERS; i++) {
+        if (pthread_join(waiters[i], NULL) != 0)
+            die("pthread_join");
+        if (wargs[i].errors > 0)
+            die("waiter %d reported %d kevent errors", i, wargs[i].errors);
+    }
+
+    if (close(kqfd) < 0)
+        die("close");
+
+    sem_close_anon(ready);
+}
+
+/*
+ * Common spawn / teardown for the per-filter delete-race tests.
+ *
+ * Each helper expects the caller to have created the kq and stored
+ * its fd in `kqfd`.  spawn_waiters opens an anonymous `ready`
+ * semaphore, hands it to every waiter, and blocks until each waiter
+ * has posted - i.e. is one syscall away from kevent().  The caller
+ * then does its filter-specific churn and calls stop_waiters before
+ * close()ing the kq.  Caller is responsible for sem_close_anon on
+ * the returned semaphore.
+ */
+static sem_t *
+spawn_waiters(int kqfd, pthread_t *waiters, struct multi_waiter_args *wargs, int n)
+{
+    sem_t *ready = sem_open_anon("ready");
+    int i;
+
+    for (i = 0; i < n; i++) {
+        wargs[i].kqfd = kqfd;
+        wargs[i].ready = ready;
+        atomic_init(&wargs[i].stop, 0);
+        wargs[i].received = 0;
+        wargs[i].errors = 0;
+        if (pthread_create(&waiters[i], NULL, _multi_waiter, &wargs[i]) != 0)
+            die("pthread_create");
+    }
+
+    for (i = 0; i < n; i++)
+        if (sem_wait(ready) != 0) die("sem_wait(ready)");
+
+    return ready;
+}
+
+static void
+stop_waiters(pthread_t *waiters, struct multi_waiter_args *wargs, int n)
+{
+    int i;
+
+    for (i = 0; i < n; i++) wargs[i].stop = 1;
+
+    for (i = 0; i < n; i++) {
+        if (pthread_join(waiters[i], NULL) != 0)
+            die("pthread_join");
+        if (wargs[i].errors > 0)
+            die("waiter %d reported %d kevent errors", i, wargs[i].errors);
+    }
+}
+
+/*
+ * Per-filter delete-race torture tests.
+ *
+ * Same shape as test_kevent_threading_multi_waiter_delete_race but
+ * exercising the kn_udata / fds_udata teardown paths of every Linux
+ * filter that registers an fd with epoll.  Each test parks N waiters
+ * in concurrent epoll_wait and has the parent thread cycle ADD ->
+ * trigger (filter-specific) -> DELETE in a tight loop.  A waiter that
+ * wakes between trigger and DELETE dispatches normally; one that
+ * wakes after sees ud_stale=true in copyout and skips dispatch.
+ *
+ * ASAN+UBSAN catches any UAF on the deferred-free path; non-
+ * instrumented builds at least don't crash.
+ */
+
+/* EVFILT_TIMER: each timerfd is its own fd, no shared-eventfd race. */
+static void
+test_kevent_threading_timer_delete_race(struct test_context *ctx)
+{
+    enum { N_WAITERS = 4, N_ITERATIONS = 200 };
+    pthread_t                   waiters[N_WAITERS];
+    struct multi_waiter_args    wargs[N_WAITERS];
+    struct kevent               kev;
+    sem_t                      *ready;
+    int                         kqfd;
+    int                         i;
+
+    (void) ctx;
+
+    kqfd = kqueue();
+    if (kqfd < 0) die("kqueue");
+    ready = spawn_waiters(kqfd, waiters, wargs, N_WAITERS);
+
+    for (i = 0; i < N_ITERATIONS; i++) {
+        uintptr_t ident = (uintptr_t) (i + 1);
+        struct timespec settle = { 0, 1L * 1000L * 1000L };  /* 1ms */
+
+        /*
+         * 1ms one-shot timer plus a 1ms sleep so the timer reliably
+         * fires before EV_DELETE.  This forces the kernel to queue
+         * a ready event for the timerfd and lets the multi-waiter
+         * path actually exercise the timerfd drain.
+         */
+        EV_SET(&kev, ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, 0, 1, NULL);
+        if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0)
+            die("kevent (timer add)");
+
+        if (nanosleep(&settle, NULL) < 0) die("nanosleep");
+
+        EV_SET(&kev, ident, EVFILT_TIMER, EV_DELETE, 0, 0, NULL);
+        if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0 && errno != ENOENT)
+            die("kevent (timer delete)");
+    }
+
+    stop_waiters(waiters, wargs, N_WAITERS);
+    if (close(kqfd) < 0) die("close");
+    sem_close_anon(ready);
+}
+
+/*
+ * EVFILT_SIGNAL: signalfd is per-knote, registered with epoll.
+ * raise() delivers to the process; signalfd queues; copyout drains.
+ *
+ * NOTE: multi-waiter delivery on EVFILT_SIGNAL currently dispatches
+ * the same signal event to every waker (signalfd_reset returns void;
+ * losers see EAGAIN but proceed to dispatch anyway).  That's a
+ * separate correctness issue from the deferred-free path this test
+ * is targeting - the test still exercises ADD/DELETE under churn,
+ * which is what we care about here.
+ */
+#ifndef _WIN32
+static void
+test_kevent_threading_signal_delete_race(struct test_context *ctx)
+{
+    enum { N_WAITERS = 4, N_ITERATIONS = 200 };
+    pthread_t                   waiters[N_WAITERS];
+    struct multi_waiter_args    wargs[N_WAITERS];
+    struct kevent               kev;
+    struct sigaction            old_sa, ign_sa;
+    sem_t                      *ready;
+    sigset_t                    mask;
+    int                         kqfd;
+    int                         i;
+
+    (void) ctx;
+
+    /*
+     * Two layers of defence so SIGUSR1 can't terminate the test
+     * process during the churn:
+     *
+     *  1. Install SIG_IGN on SIGUSR1.  EVFILT_SIGNAL fires off the
+     *     kernel's signal-delivery path on Linux/macOS/FreeBSD
+     *     regardless of disposition, so SIG_IGN doesn't suppress
+     *     the kqueue notification - it just stops the default
+     *     terminate action if the mask below is somehow bypassed.
+     *
+     *  2. Block SIGUSR1 in this thread (and inherited by waiters
+     *     spawned after) so synchronous delivery becomes pending
+     *     on the process rather than running the (now no-op)
+     *     handler.
+     *
+     * Layer 1 alone is sufficient for the test to not die; we keep
+     * the mask too because that's the original intended path on
+     * Linux libkqueue.  An earlier mask-only version got the
+     * FreeBSD CI killed by SIGUSR1 mid-loop, presumably via a
+     * libc-internal thread that hadn't inherited the mask.
+     */
+    memset(&ign_sa, 0, sizeof(ign_sa));
+    ign_sa.sa_handler = SIG_IGN;
+    sigemptyset(&ign_sa.sa_mask);
+    if (sigaction(SIGUSR1, &ign_sa, &old_sa) != 0)
+        die("sigaction");
+
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGUSR1);
+    if (pthread_sigmask(SIG_BLOCK, &mask, NULL) != 0)
+        die("pthread_sigmask");
+
+    kqfd = kqueue();
+    if (kqfd < 0) die("kqueue");
+    ready = spawn_waiters(kqfd, waiters, wargs, N_WAITERS);
+
+    for (i = 0; i < N_ITERATIONS; i++) {
+        EV_SET(&kev, SIGUSR1, EVFILT_SIGNAL, EV_ADD, 0, 0, NULL);
+        if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0)
+            die("kevent (signal add)");
+
+        if (raise(SIGUSR1) != 0) die("raise");
+
+        EV_SET(&kev, SIGUSR1, EVFILT_SIGNAL, EV_DELETE, 0, 0, NULL);
+        if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0)
+            die("kevent (signal delete)");
+    }
+
+    stop_waiters(waiters, wargs, N_WAITERS);
+    if (close(kqfd) < 0) die("close");
+    sem_close_anon(ready);
+
+    /* Drain any signal we left pending and restore mask + handler. */
+    {
+        sigset_t pending;
+        sigpending(&pending);
+        if (sigismember(&pending, SIGUSR1)) {
+            int sig;
+            sigwait(&mask, &sig);
+        }
+    }
+    pthread_sigmask(SIG_UNBLOCK, &mask, NULL);
+    sigaction(SIGUSR1, &old_sa, NULL);
+}
+#endif /* !_WIN32 (signal_delete_race) */
+
+#if defined(EVFILT_VNODE)
+/*
+ * EVFILT_VNODE: each watched fd gets its own inotifyfd registered
+ * with epoll.  The test doesn't trigger any event - it just churns
+ * ADD / DELETE so the kn_udata is defer_free'd repeatedly.
+ */
+static void
+test_kevent_threading_vnode_delete_race(struct test_context *ctx)
+{
+    enum { N_WAITERS = 4, N_ITERATIONS = 200 };
+    pthread_t                   waiters[N_WAITERS];
+    struct multi_waiter_args    wargs[N_WAITERS];
+    struct kevent               kev;
+    sem_t                      *ready;
+    char                        path[1024];
+    int                         kqfd, fd;
+    int                         i;
+
+    (void) ctx;
+
+#ifdef _WIN32
+    if (kq_test_temp_path(path, sizeof(path), "libkqueue-vnode-race") < 0)
+        die("kq_test_temp_path");
+#else
+    snprintf(path, sizeof(path), "%s/libkqueue-vnode-race.%d", test_tmpdir(), (int) getpid());
+#endif
+    fd = open(path, O_RDWR | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0) die("open");
+
+    kqfd = kqueue();
+    if (kqfd < 0) die("kqueue");
+    ready = spawn_waiters(kqfd, waiters, wargs, N_WAITERS);
+
+    for (i = 0; i < N_ITERATIONS; i++) {
+        unsigned int mask = NOTE_DELETE;
+#ifdef NOTE_WRITE
+        mask |= NOTE_WRITE;
+#endif
+        EV_SET(&kev, fd, EVFILT_VNODE, EV_ADD | EV_CLEAR,
+               mask, 0, NULL);
+        if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0)
+            die("kevent (vnode add)");
+
+        /* Touch the file so inotify queues an event. */
+        if (write(fd, "x", 1) != 1) die("write");
+
+        EV_SET(&kev, fd, EVFILT_VNODE, EV_DELETE, 0, 0, NULL);
+        if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0)
+            die("kevent (vnode delete)");
+    }
+
+    stop_waiters(waiters, wargs, N_WAITERS);
+    if (close(kqfd) < 0) die("close kqfd");
+    if (close(fd) < 0) die("close fd");
+    unlink(path);
+    sem_close_anon(ready);
+}
+#endif /* EVFILT_VNODE */
+
+#if defined(EVFILT_PROC) && !defined(_WIN32)
+/*
+ * EVFILT_PROC: each watched pid gets its own pidfd registered with
+ * epoll.  Forking is heavy so this test runs fewer iterations.
+ */
+static void
+test_kevent_threading_proc_delete_race(struct test_context *ctx)
+{
+    enum { N_WAITERS = 4, N_ITERATIONS = 50 };
+    pthread_t                   waiters[N_WAITERS];
+    struct multi_waiter_args    wargs[N_WAITERS];
+    struct kevent               kev;
+    sem_t                      *ready;
+    int                         kqfd;
+    int                         i;
+
+    (void) ctx;
+
+    kqfd = kqueue();
+    if (kqfd < 0) die("kqueue");
+    ready = spawn_waiters(kqfd, waiters, wargs, N_WAITERS);
+
+    for (i = 0; i < N_ITERATIONS; i++) {
+        pid_t pid = -1;
+        int   tries;
+
+        /*
+         * The child exits promptly to queue a NOTE_EXIT, so it can win
+         * the race and be gone before we attach - macOS then rejects the
+         * proc knote with ESRCH.  Re-fork and retry until we attach while
+         * the child is still alive, so the iteration exercises a real
+         * delete-race.  Bounded so a pathological scheduler can't spin
+         * forever; in practice the parent wins within a try or two.
+         */
+        for (tries = 0; tries < 1000; tries++) {
+            pid = fork();
+            if (pid < 0) die("fork");
+            if (pid == 0)
+                _exit(0);
+
+            EV_SET(&kev, (uintptr_t) pid, EVFILT_PROC, EV_ADD,
+                   NOTE_EXIT, 0, NULL);
+            if (kevent(kqfd, &kev, 1, NULL, 0, NULL) == 0)
+                break;
+            if (errno != ESRCH)
+                die("kevent (proc add)");
+
+            waitpid(pid, NULL, 0);   /* child won the race; reap and retry */
+            pid = -1;
+        }
+        if (pid < 0)
+            continue;                /* child kept winning; skip this iteration */
+
+        EV_SET(&kev, (uintptr_t) pid, EVFILT_PROC, EV_DELETE, 0, 0, NULL);
+        if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0 && errno != ENOENT)
+            die("kevent (proc delete)");
+
+        /* Reap so we don't accumulate zombies. */
+        if (waitpid(pid, NULL, 0) < 0) die("waitpid");
+    }
+
+    stop_waiters(waiters, wargs, N_WAITERS);
+    if (close(kqfd) < 0) die("close");
+    sem_close_anon(ready);
+}
+#endif /* EVFILT_PROC && !_WIN32 */
+
+/*
+ * EVFILT_READ / EVFILT_WRITE share the platform's fd_state machinery
+ * (multiple knotes can target the same underlying fd, so libkqueue
+ * keeps a per-fd dedup struct - fds_udata - alive across both knotes).
+ * Both tests churn pipe registrations so each iteration allocates a
+ * fresh fd_state and a fresh fds_udata, then defer_frees both.
+ */
+static void
+test_kevent_threading_read_delete_race(struct test_context *ctx)
+{
+    enum { N_WAITERS = 4, N_ITERATIONS = 200 };
+    pthread_t                   waiters[N_WAITERS];
+    struct multi_waiter_args    wargs[N_WAITERS];
+    struct kevent               kev;
+    sem_t                      *ready;
+    int                         kqfd;
+    int                         pipefd[2];
+    int                         i;
+
+    (void) ctx;
+
+    if (pipe(pipefd) < 0) die("pipe");
+
+    kqfd = kqueue();
+    if (kqfd < 0) die("kqueue");
+    ready = spawn_waiters(kqfd, waiters, wargs, N_WAITERS);
+
+    for (i = 0; i < N_ITERATIONS; i++) {
+        EV_SET(&kev, pipefd[0], EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, NULL);
+        if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0)
+            die("kevent (read add)");
+
+        /* Write makes the read side readable; kernel queues an event. */
+        if (write(pipefd[1], "x", 1) != 1) die("write");
+
+        EV_SET(&kev, pipefd[0], EVFILT_READ, EV_DELETE, 0, 0, NULL);
+        if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0)
+            die("kevent (read delete)");
+
+        /* Drain the pipe so it doesn't fill up over many iterations. */
+        {
+            char buf[16];
+            (void) read(pipefd[0], buf, sizeof(buf));
+        }
+    }
+
+    stop_waiters(waiters, wargs, N_WAITERS);
+    if (close(kqfd) < 0) die("close kqfd");
+    if (close(pipefd[0]) < 0) die("close pipe[0]");
+    if (close(pipefd[1]) < 0) die("close pipe[1]");
+    sem_close_anon(ready);
+}
+
+static void
+test_kevent_threading_write_delete_race(struct test_context *ctx)
+{
+    enum { N_WAITERS = 4, N_ITERATIONS = 200 };
+    pthread_t                   waiters[N_WAITERS];
+    struct multi_waiter_args    wargs[N_WAITERS];
+    struct kevent               kev;
+    sem_t                      *ready;
+    int                         kqfd;
+    int                         pipefd[2];
+    int                         i;
+
+    (void) ctx;
+
+    if (pipe(pipefd) < 0) die("pipe");
+
+    kqfd = kqueue();
+    if (kqfd < 0) die("kqueue");
+    ready = spawn_waiters(kqfd, waiters, wargs, N_WAITERS);
+
+    for (i = 0; i < N_ITERATIONS; i++) {
+        /* Write side starts writable; kernel will fire immediately. */
+        EV_SET(&kev, pipefd[1], EVFILT_WRITE, EV_ADD | EV_CLEAR, 0, 0, NULL);
+        if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0)
+            die("kevent (write add)");
+
+        EV_SET(&kev, pipefd[1], EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
+        if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0)
+            die("kevent (write delete)");
+    }
+
+    stop_waiters(waiters, wargs, N_WAITERS);
+    if (close(kqfd) < 0) die("close kqfd");
+    if (close(pipefd[0]) < 0) die("close pipe[0]");
+    if (close(pipefd[1]) < 0) die("close pipe[1]");
+    sem_close_anon(ready);
+}
+
+/*
+ * Targeted single-delivery checks.
+ *
+ * BSD kqueue's contract is that each ready event is delivered to
+ * exactly one kevent() caller, even with multiple threads concurrently
+ * waiting on the same kq.  These tests pin that semantic for filters
+ * where libkqueue's drain logic could let a single kernel-side event
+ * be dispatched multiple times.
+ *
+ * Shape:
+ *   - spawn N waiter threads on the same kq
+ *   - register a knote
+ *   - cause exactly one kernel-side fire
+ *   - let the waiters drain
+ *   - sum events received across all waiters
+ *   - assert sum == 1
+ *
+ * On macOS native kqueue these pass trivially (kqueue itself enforces
+ * single-delivery).  On Linux libkqueue they pin the consumer-side
+ * drain logic per filter.
+ */
+
+/*
+ * Coordination for the single-delivery tests.
+ *
+ *   ready  - posted once per waiter when it's about to enter its
+ *            kevent() loop.  The driver sem_waits() N times before
+ *            firing the trigger to guarantee every waiter has at
+ *            least started; subsequent sched_yields let the
+ *            waiters drop into epoll_wait.
+ *
+ *   events - posted once per kevent the waiter received.  The
+ *            driver sem_waits() to consume expected events one at
+ *            a time, no timeout.
+ *
+ * On Linux these are anonymous sem_init semaphores; macOS only
+ * supports named semaphores via sem_open, so the tests below open
+ * them with a unique name then sem_unlink immediately to keep them
+ * anonymous-equivalent.
+ */
+struct count_waiter_args {
+    int                  kqfd;
+    sem_t               *ready;
+    sem_t               *events;
+    int                  errors;
+    uintptr_t            stop_ident;  /* shared EVFILT_USER stop sentinel */
+};
+
+static void *
+_count_waiter(void *arg)
+{
+    struct count_waiter_args   *a = arg;
+    struct kevent               ret[8];
+    int                         n;
+
+    if (sem_post(a->ready) != 0) die("sem_post(ready)");
+
+    for (;;) {
+        /*
+         * Block; the caller wakes us either by firing the test event
+         * or by triggering the stop sentinel.  No timeout = no busy
+         * poll, which mattered under helgrind where the previous
+         * 50ms-poll loop produced thousands of empty wakeups per
+         * test class.
+         */
+        n = kevent(a->kqfd, NULL, 0, ret, NUM_ELEMENTS(ret), NULL);
+        if (n < 0) {
+            if (errno == EINTR) continue;
+            a->errors++;
+            break;
+        }
+
+        bool saw_stop = false;
+        for (int i = 0; i < n; i++) {
+            if (ret[i].filter == EVFILT_USER &&
+                (uintptr_t) ret[i].ident == a->stop_ident) {
+                saw_stop = true;
+                continue;
+            }
+            if (sem_post(a->events) != 0) die("sem_post(events)");
+        }
+
+        if (saw_stop) {
+            /*
+             * Pass the baton: re-trigger the sentinel so the next
+             * waiter parked on this kq wakes too.  port_getn (and
+             * any kqueue-shaped wait) hands a single delivery to
+             * whichever waiter the kernel picks; without this
+             * chain, only one of the N waiters would ever exit.
+             *
+             * The last waiter out re-triggers a knote no one is
+             * waiting on; the caller's EV_DELETE in cleanup
+             * discards the pending state.
+             */
+            struct kevent stop_kev;
+            EV_SET(&stop_kev, a->stop_ident, EVFILT_USER, 0,
+                   NOTE_TRIGGER, 0, NULL);
+            if (kevent(a->kqfd, &stop_kev, 1, NULL, 0, NULL) < 0) {
+                a->errors++;
+            }
+            return NULL;
+        }
+    }
+
+    return NULL;
+}
+
+/* Open a uniquely-named POSIX semaphore initialised to 0 and
+ * unlink it immediately so it behaves like an anonymous semaphore
+ * across linux + macOS. */
+static sem_t *
+sem_open_anon(const char *tag)
+{
+    char    name[64];
+    sem_t  *sem;
+
+    snprintf(name, sizeof(name), "/libkqueue-test-%s-%d", tag, (int) getpid());
+    sem = sem_open(name, O_CREAT | O_EXCL, 0600, 0);
+    if (sem == SEM_FAILED) die("sem_open");
+    if (sem_unlink(name) != 0) die("sem_unlink");
+    return sem;
+}
+
+static void
+sem_close_anon(sem_t *sem)
+{
+    if (sem_close(sem) != 0) die("sem_close");
+}
+
+/*
+ * Drive a single-delivery test for an arbitrary trigger.
+ *
+ * Spawns N waiters on the kq, fires the trigger via the supplied
+ * callback, then drains expected_deliveries events from the events
+ * semaphore.  After the drain, attempts one extra sem_trywait to
+ * detect a spurious extra delivery (multi-deliver bug).
+ *
+ * The trigger fires AFTER all N waiters have posted to `ready`, so
+ * we know they've all entered their kevent loop.  No nanosleep
+ * anywhere in the coordination path.
+ */
+static void
+run_single_delivery(int kqfd, int n_waiters, int expected_deliveries,
+                    void (*fire)(void *), void *fire_ctx, const char *label)
+{
+    pthread_t                   waiters[16];
+    struct count_waiter_args    wargs[16];
+    sem_t                      *ready, *events;
+    int                         i;
+
+    struct kevent  stop_kev;
+    /*
+     * One stop sentinel shared by all waiters.  Use the address of
+     * the local wargs array as the EVFILT_USER ident: unique within
+     * the process and distinct from any test-supplied ident.
+     */
+    uintptr_t      stop_ident = (uintptr_t) wargs;
+
+    if (n_waiters > (int) NUM_ELEMENTS(waiters))
+        die("n_waiters=%d exceeds local buffer", n_waiters);
+
+    ready  = sem_open_anon("ready");
+    events = sem_open_anon("events");
+
+    EV_SET(&stop_kev, stop_ident, EVFILT_USER, EV_ADD | EV_CLEAR, 0, 0, NULL);
+    if (kevent(kqfd, &stop_kev, 1, NULL, 0, NULL) < 0)
+        die("kevent (stop sentinel add)");
+
+    for (i = 0; i < n_waiters; i++) {
+        wargs[i].kqfd       = kqfd;
+        wargs[i].ready      = ready;
+        wargs[i].events     = events;
+        wargs[i].errors     = 0;
+        wargs[i].stop_ident = stop_ident;
+        if (pthread_create(&waiters[i], NULL, _count_waiter, &wargs[i]) != 0)
+            die("pthread_create");
+    }
+
+    /* Wait until every waiter is about to enter kevent(). */
+    for (i = 0; i < n_waiters; i++)
+        if (sem_wait(ready) != 0) die("sem_wait(ready)");
+
+    fire(fire_ctx);
+
+    /* Drain the expected number of deliveries. */
+    for (i = 0; i < expected_deliveries; i++)
+        if (sem_wait(events) != 0) die("sem_wait(events)");
+
+    /* Sanity check: any extra delivery now is a multi-deliver bug. */
+    if (sem_trywait(events) == 0)
+        die("%s: spurious extra delivery (expected %d)",
+            label, expected_deliveries);
+
+    /*
+     * Trigger the sentinel once.  The waiter that wakes re-triggers
+     * for the next, chaining through all n_waiters until none are
+     * left.
+     */
+    EV_SET(&stop_kev, stop_ident, EVFILT_USER, 0, NOTE_TRIGGER, 0, NULL);
+    if (kevent(kqfd, &stop_kev, 1, NULL, 0, NULL) < 0)
+        die("kevent (stop sentinel trigger)");
+
+    for (i = 0; i < n_waiters; i++) {
+        if (pthread_join(waiters[i], NULL) != 0) die("pthread_join");
+        if (wargs[i].errors > 0)
+            die("waiter %d reported %d errors", i, wargs[i].errors);
+    }
+
+    /* Tidy: remove the sentinel knote so the caller's kq is unchanged. */
+    EV_SET(&stop_kev, stop_ident, EVFILT_USER, EV_DELETE, 0, 0, NULL);
+    (void) kevent(kqfd, &stop_kev, 1, NULL, 0, NULL);
+
+    sem_close_anon(ready);
+    sem_close_anon(events);
+}
+
+#ifndef _WIN32
+struct signal_single_delivery_fire_ctx { int signum; };
+
+static void
+_signal_single_delivery_fire(void *vctx)
+{
+    struct signal_single_delivery_fire_ctx *fc = vctx;
+    /* kill(getpid(), ...) targets the process so the signal lands in
+     * the process-wide pending set; raise() targets the current thread
+     * which would put it in *this thread's* pending set, where the
+     * waiter threads' signalfd reads might not see it. */
+    /* NetBSD can transiently return EAGAIN from kill() when its
+     * per-process ksiginfo pool is exhausted under the soak's rapid
+     * signal churn; retry rather than treat it as fatal. */
+    while (kill(getpid(), fc->signum) != 0) {
+        if (errno == EINTR || errno == EAGAIN)
+            continue;
+        die("kill");
+    }
+}
+
+static void
+_signal_single_delivery_noop_handler(int sig)
+{
+    (void) sig;
+}
+
+static void
+test_kevent_threading_signal_single_delivery(struct test_context *ctx)
+{
+    struct kevent                            kev;
+    struct sigaction                         sa, prev;
+    struct signal_single_delivery_fire_ctx   fire_ctx = { .signum = SIGUSR1 };
+    int                                      kqfd;
+
+    (void) ctx;
+
+    /*
+     * Install a no-op handler.  SIG_IGN would tell the kernel to
+     * discard the signal entirely - neither signalfd nor BSD's
+     * EVFILT_SIGNAL would see it.  The no-op handler runs to
+     * completion (does nothing) but the kernel still routes the
+     * signal through the EVFILT_SIGNAL machinery.
+     */
+    sa.sa_handler = _signal_single_delivery_noop_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    if (sigaction(SIGUSR1, &sa, &prev) < 0) die("sigaction");
+
+    kqfd = kqueue();
+    if (kqfd < 0) die("kqueue");
+
+    EV_SET(&kev, SIGUSR1, EVFILT_SIGNAL, EV_ADD, 0, 0, NULL);
+    if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0) die("kevent (signal add)");
+
+    run_single_delivery(kqfd, 4, 1, _signal_single_delivery_fire, &fire_ctx, "EVFILT_SIGNAL");
+
+    EV_SET(&kev, SIGUSR1, EVFILT_SIGNAL, EV_DELETE, 0, 0, NULL);
+    (void) kevent(kqfd, &kev, 1, NULL, 0, NULL);
+    if (close(kqfd) < 0) die("close");
+    sigaction(SIGUSR1, &prev, NULL);
+}
+#endif /* !_WIN32 (signal_single_delivery) */
+
+#if defined(EVFILT_PROC) && !defined(_WIN32)
+struct proc_single_delivery_fire_ctx { pid_t pid; };
+
+static void
+_proc_single_delivery_fire(void *vctx)
+{
+    struct proc_single_delivery_fire_ctx *fc = vctx;
+    /*
+     * Just send the signal.  Don't waitpid here - evfilt_proc
+     * copyout calls waitid(WNOWAIT) to read the exit status, and
+     * that fails with ECHILD as soon as the child is reaped.  With
+     * multiple waiters dispatching the same exit, the first reap
+     * would race the rest.  Defer waitpid() until run_single_delivery
+     * has finished draining.
+     */
+    if (kill(fc->pid, SIGTERM) < 0) die("kill");
+}
+
+static void
+test_kevent_threading_proc_single_delivery(struct test_context *ctx)
+{
+    struct kevent                          kev;
+    struct proc_single_delivery_fire_ctx   fire_ctx;
+    int                                    kqfd;
+    pid_t                                  pid;
+
+    (void) ctx;
+
+    /* Child waits in pause() until the parent explicitly kills it.
+     * No timing race between fork and the parent registering the
+     * watcher. */
+    pid = fork();
+    if (pid < 0) die("fork");
+    if (pid == 0) {
+        for (;;) pause();
+    }
+    fire_ctx.pid = pid;
+
+    kqfd = kqueue();
+    if (kqfd < 0) die("kqueue");
+
+    EV_SET(&kev, (uintptr_t) pid, EVFILT_PROC, EV_ADD, NOTE_EXIT, 0, NULL);
+    if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0) die("kevent (proc add)");
+
+    run_single_delivery(kqfd, 4, 1, _proc_single_delivery_fire, &fire_ctx, "EVFILT_PROC");
+
+    /* All dispatch is done; safe to reap. */
+    if (waitpid(pid, NULL, 0) < 0) die("waitpid");
+    if (close(kqfd) < 0) die("close");
+}
+#endif /* EVFILT_PROC && !_WIN32 */
+
+struct user_single_delivery_fire_ctx { int kqfd; uintptr_t ident; };
+
+static void
+_user_single_delivery_fire(void *vctx)
+{
+    struct user_single_delivery_fire_ctx *fc = vctx;
+    struct kevent k;
+    EV_SET(&k, fc->ident, EVFILT_USER, EV_ENABLE, NOTE_TRIGGER, 0, NULL);
+    if (kevent(fc->kqfd, &k, 1, NULL, 0, NULL) < 0) die("kevent (user trigger)");
+}
+
+static void
+test_kevent_threading_user_single_delivery(struct test_context *ctx)
+{
+    struct kevent                          kev;
+    struct user_single_delivery_fire_ctx   fire_ctx;
+    int                                    kqfd;
+
+    (void) ctx;
+
+    kqfd = kqueue();
+    if (kqfd < 0) die("kqueue");
+
+    EV_SET(&kev, 1, EVFILT_USER, EV_ADD | EV_CLEAR, 0, 0, NULL);
+    if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0) die("kevent (user add)");
+
+    fire_ctx.kqfd = kqfd;
+    fire_ctx.ident = 1;
+    run_single_delivery(kqfd, 4, 1, _user_single_delivery_fire, &fire_ctx, "EVFILT_USER");
+
+    if (close(kqfd) < 0) die("close");
+}
+
+struct timer_single_delivery_fire_ctx { int kqfd; uintptr_t ident; };
+
+static void
+_timer_single_delivery_fire(void *vctx)
+{
+    struct timer_single_delivery_fire_ctx *fc = vctx;
+    struct kevent k;
+    /*
+     * EV_ADD with a 1ms one-shot timer.  The fire is the kernel's
+     * arming of the timer plus the 1ms expiry; from the test's
+     * perspective the EV_ADD kevent() returns immediately and the
+     * waiters then race for the single timer expiration event.
+     */
+    EV_SET(&k, fc->ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT, 0, 1, NULL);
+    if (kevent(fc->kqfd, &k, 1, NULL, 0, NULL) < 0) die("kevent (timer add)");
+}
+
+static void
+test_kevent_threading_timer_single_delivery(struct test_context *ctx)
+{
+    struct kevent                           kev;
+    struct timer_single_delivery_fire_ctx   fire_ctx;
+    int                                     kqfd;
+
+    (void) ctx;
+
+    kqfd = kqueue();
+    if (kqfd < 0) die("kqueue");
+
+    fire_ctx.kqfd = kqfd;
+    fire_ctx.ident = 1;
+    run_single_delivery(kqfd, 4, 1, _timer_single_delivery_fire, &fire_ctx, "EVFILT_TIMER");
+
+    /* Clean up - the EV_ONESHOT may have already auto-deleted, so
+     * tolerate ENOENT. */
+    EV_SET(&kev, 1, EVFILT_TIMER, EV_DELETE, 0, 0, NULL);
+    if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0 && errno != ENOENT)
+        die("kevent (timer delete)");
+    if (close(kqfd) < 0) die("close");
+}
+
+#if defined(EVFILT_VNODE)
+struct vnode_single_delivery_fire_ctx { int fd; };
+
+static void
+_vnode_single_delivery_fire(void *vctx)
+{
+    struct vnode_single_delivery_fire_ctx *fc = vctx;
+    if (write(fc->fd, "x", 1) != 1) die("write");
+}
+
+static void
+test_kevent_threading_vnode_single_delivery(struct test_context *ctx)
+{
+    struct kevent                          kev;
+    struct vnode_single_delivery_fire_ctx  fire_ctx;
+    char                                   path[1024];
+    int                                    kqfd, fd;
+
+    (void) ctx;
+
+#ifdef _WIN32
+    if (kq_test_temp_path(path, sizeof(path), "libkqueue-vnode-single") < 0)
+        die("kq_test_temp_path");
+#else
+    snprintf(path, sizeof(path), "%s/libkqueue-vnode-single.%d", test_tmpdir(), (int) getpid());
+#endif
+    fd = open(path, O_RDWR | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0) die("open");
+    fire_ctx.fd = fd;
+
+    kqfd = kqueue();
+    if (kqfd < 0) die("kqueue");
+
+#ifdef NOTE_WRITE
+    EV_SET(&kev, fd, EVFILT_VNODE, EV_ADD | EV_CLEAR, NOTE_WRITE, 0, NULL);
+#else
+    EV_SET(&kev, fd, EVFILT_VNODE, EV_ADD | EV_CLEAR, NOTE_EXTEND, 0, NULL);
+#endif
+    if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0) die("kevent (vnode add)");
+
+    run_single_delivery(kqfd, 4, 1, _vnode_single_delivery_fire, &fire_ctx, "EVFILT_VNODE");
+
+    EV_SET(&kev, fd, EVFILT_VNODE, EV_DELETE, 0, 0, NULL);
+    (void) kevent(kqfd, &kev, 1, NULL, 0, NULL);
+    if (close(kqfd) < 0) die("close kqfd");
+    if (close(fd) < 0) die("close fd");
+    unlink(path);
+}
+#endif /* EVFILT_VNODE */
+
+struct read_single_delivery_fire_ctx { int writefd; };
+
+static void
+_read_single_delivery_fire(void *vctx)
+{
+    struct read_single_delivery_fire_ctx *fc = vctx;
+    if (write(fc->writefd, "x", 1) != 1) die("write");
+}
+
+static void
+test_kevent_threading_read_single_delivery(struct test_context *ctx)
+{
+    struct kevent                          kev;
+    struct read_single_delivery_fire_ctx   fire_ctx;
+    int                                    kqfd, pipefd[2];
+
+    (void) ctx;
+
+    if (pipe(pipefd) < 0) die("pipe");
+    fire_ctx.writefd = pipefd[1];
+
+    kqfd = kqueue();
+    if (kqfd < 0) die("kqueue");
+
+    EV_SET(&kev, pipefd[0], EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, NULL);
+    if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0) die("kevent (read add)");
+
+    run_single_delivery(kqfd, 4, 1, _read_single_delivery_fire, &fire_ctx, "EVFILT_READ");
+
+    EV_SET(&kev, pipefd[0], EVFILT_READ, EV_DELETE, 0, 0, NULL);
+    if (kevent(kqfd, &kev, 1, NULL, 0, NULL) < 0) die("kevent (read delete)");
+    if (close(kqfd) < 0) die("close kqfd");
+    if (close(pipefd[0]) < 0) die("close pipe[0]");
+    if (close(pipefd[1]) < 0) die("close pipe[1]");
+}
+
+struct write_single_delivery_fire_ctx { int kqfd; int writefd; };
+
+static void
+_write_single_delivery_fire(void *vctx)
+{
+    /*
+     * Write side starts writable; the fire is the EV_ADD itself,
+     * which causes the kernel to immediately mark the fd ready.
+     */
+    struct write_single_delivery_fire_ctx *fc = vctx;
+    struct kevent k;
+    EV_SET(&k, fc->writefd, EVFILT_WRITE, EV_ADD | EV_CLEAR, 0, 0, NULL);
+    if (kevent(fc->kqfd, &k, 1, NULL, 0, NULL) < 0) die("kevent (write add)");
+}
+
+static void
+test_kevent_threading_write_single_delivery(struct test_context *ctx)
+{
+    struct kevent                          kev;
+    struct write_single_delivery_fire_ctx  fire_ctx;
+    int                                    kqfd, pipefd[2];
+
+    (void) ctx;
+
+    if (pipe(pipefd) < 0) die("pipe");
+
+    kqfd = kqueue();
+    if (kqfd < 0) die("kqueue");
+
+    fire_ctx.kqfd = kqfd;
+    fire_ctx.writefd = pipefd[1];
+    run_single_delivery(kqfd, 4, 1, _write_single_delivery_fire, &fire_ctx, "EVFILT_WRITE");
+
+    EV_SET(&kev, pipefd[1], EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
+    (void) kevent(kqfd, &kev, 1, NULL, 0, NULL);
+    if (close(kqfd) < 0) die("close kqfd");
+    if (close(pipefd[0]) < 0) die("close pipe[0]");
+    if (close(pipefd[1]) < 0) die("close pipe[1]");
+}
+
+/*
+ * fd-reuse stress: thread A spam-EV_ADDs an EVFILT_READ knote on
+ * a pipe; thread B closes the pipe and reopens, recycling fd
+ * numbers.  Native BSD's knote_fdclose hooks in close(2) keep the
+ * kqueue's view consistent; libkqueue must not deliver stale
+ * events to the new fd or UAF on knote_drop racing close.
+ */
+struct fd_reuse_args {
+    int           kqfd;
+    int           cycles;   /* fixed open/close+register cycles per recycler */
+    atomic_int    active;   /* recyclers still running; 0 => the drain can stop */
+};
+
+static void *
+_fd_reuse_recycler(void *arg)
+{
+    struct fd_reuse_args *a = arg;
+    int i;
+
+    for (i = 0; i < a->cycles; i++) {
+        int p[2];
+        if (pipe(p) < 0) continue;
+        struct kevent kev;
+        EV_SET(&kev, p[0], EVFILT_READ, EV_ADD | EV_ONESHOT, 0, 0, NULL);
+        (void) kevent(a->kqfd, &kev, 1, NULL, 0, NULL);
+        EV_SET(&kev, p[0], EVFILT_READ, EV_DELETE, 0, 0, NULL);
+        (void) kevent(a->kqfd, &kev, 1, NULL, 0, NULL);
+        close(p[0]);
+        close(p[1]);
+    }
+    atomic_fetch_sub(&a->active, 1);
+    return NULL;
+}
+
+static void
+test_kevent_threading_fd_reuse_stress(struct test_context *ctx)
+{
+    enum { N_THREADS = 4, N_CYCLES = 2000 };
+    pthread_t            th[N_THREADS];
+    struct fd_reuse_args args = { .kqfd = ctx->kqfd, .cycles = N_CYCLES };
+    int                  i;
+
+    atomic_init(&args.active, N_THREADS);
+    for (i = 0; i < N_THREADS; i++) {
+        if (pthread_create(&th[i], NULL, _fd_reuse_recycler, &args) != 0)
+            die("pthread_create");
+    }
+
+    /*
+     * Drain concurrently with the recyclers so kevent() runs against the fd
+     * churn (the race under test).  Stop when every recycler has finished its
+     * fixed batch of cycles: a deterministic work bound, not a blind fixed
+     * poll count whose wall time balloons under kqueue lock contention.
+     */
+    while (atomic_load(&args.active) > 0) {
+        struct kevent ret[16];
+        struct timespec poll = { 0, 100 * 1000 };  /* 100us */
+        (void) kevent(ctx->kqfd, NULL, 0, ret, NUM_ELEMENTS(ret), &poll);
+    }
+
+    for (i = 0; i < N_THREADS; i++)
+        pthread_join(th[i], NULL);
+
+    /* Final non-blocking sweep of any residual events. */
+    {
+        struct kevent ret[16];
+        struct timespec poll = { 0, 0 };
+        (void) kevent(ctx->kqfd, NULL, 0, ret, NUM_ELEMENTS(ret), &poll);
+    }
+}
+
+/*
+ * EVFILT_USER NOTE_TRIGGER racing EV_DELETE in a tight loop across
+ * threads.  FreeBSD's filt_userdetach is a no-op (kqueue framework
+ * handles the synchronisation via KN_INFLUX); libkqueue's posix and
+ * linux backends need equivalent guards.  Run under TSan/ASan.
+ */
+struct user_trigger_delete_args {
+    int        kqfd;
+    atomic_int stop;
+};
+
+static void *
+_user_trigger_delete_worker(void *arg)
+{
+    struct user_trigger_delete_args *a = arg;
+    /*
+     * Counter, not rand() (Coverity DC.WEAK_CRYPTO).  Test only
+     * needs varied idents across iterations, not randomness.
+     */
+    unsigned int   counter = 0;
+    while (!atomic_load(&a->stop)) {
+        struct kevent kev;
+        uintptr_t ident = (uintptr_t)((counter++ % 8) + 1);
+        EV_SET(&kev, ident, EVFILT_USER, EV_ADD | EV_CLEAR, 0, 0, NULL);
+        (void) kevent(a->kqfd, &kev, 1, NULL, 0, NULL);
+        EV_SET(&kev, ident, EVFILT_USER, 0, NOTE_TRIGGER, 0, NULL);
+        (void) kevent(a->kqfd, &kev, 1, NULL, 0, NULL);
+        EV_SET(&kev, ident, EVFILT_USER, EV_DELETE, 0, 0, NULL);
+        (void) kevent(a->kqfd, &kev, 1, NULL, 0, NULL);
+    }
+    return NULL;
+}
+
+static void
+test_kevent_threading_user_trigger_delete_race(struct test_context *ctx)
+{
+    enum { N_THREADS = 4, DURATION_MS = 200 };
+    pthread_t                          th[N_THREADS];
+    struct user_trigger_delete_args    args = { .kqfd = ctx->kqfd };
+    int                                i;
+    struct timespec                    deadline;
+
+    atomic_init(&args.stop, 0);
+    for (i = 0; i < N_THREADS; i++) {
+        if (pthread_create(&th[i], NULL, _user_trigger_delete_worker, &args) != 0)
+            die("pthread_create");
+    }
+
+    /* Drain in main thread until deadline. */
+    clock_gettime(CLOCK_MONOTONIC, &deadline);
+    deadline.tv_nsec += DURATION_MS * 1000000L;
+    if (deadline.tv_nsec >= 1000000000L) {
+        deadline.tv_sec++;
+        deadline.tv_nsec -= 1000000000L;
+    }
+    for (;;) {
+        struct timespec now;
+        struct kevent   ret[16];
+        struct timespec poll = { 0, 1000000 };  /* 1ms */
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        if (now.tv_sec > deadline.tv_sec ||
+            (now.tv_sec == deadline.tv_sec && now.tv_nsec >= deadline.tv_nsec))
+            break;
+        (void) kevent(ctx->kqfd, NULL, 0, ret, NUM_ELEMENTS(ret), &poll);
+    }
+
+    atomic_store(&args.stop, 1);
+    for (i = 0; i < N_THREADS; i++) {
+        pthread_join(th[i], NULL);
+    }
+}
+
+/*
+ * Skipped on FreeBSD and on libkqueue's POSIX backend.  Native FreeBSD kqueue
+ * doesn't unblock a kevent() parked on a kq when another thread close()s the
+ * kq; the libkqueue POSIX dispatcher's pselect has no equivalent close-wake
+ * either (the user-facing kq_id is just a self-pipe and closing it from
+ * another thread is undefined select(2) behaviour).  libkqueue's Linux backend
+ * has explicit close-wake plumbing this test exercises; macOS native kqueue
+ * happens to wake parked threads on close.
+ */
+static const struct lkq_test_gate threading_close_gates[] = {
+	GATE(LKQ_PLATFORM_OS_FREEBSD,        "native kqueue doesn't wake parked threads on kq close"),
+	GATE(LKQ_PLATFORM_OS_DRAGONFLY,      "native kqueue doesn't wake parked threads on kq close"),
+	GATE(LKQ_PLATFORM_BACKEND_POSIX,     "POSIX pselect backend has no close-wake plumbing"),
+	{ 0, NULL }
+};
+
+/*
+ * NetBSD: kqueue_scan drops kq_lock during cv_timedwait_sig, so concurrent
+ * registration isn't starved.  The cost is scan-side marker / in-flux relock
+ * churn under heavy concurrent EV_ADD / EV_DELETE on recycled fds, which makes
+ * each bounded (5000-iter * 100us-poll) drain crawl until the watchdog kills
+ * the suite at 120s.  Reproduces against the upstream kernel; not a libkqueue
+ * bug.  Gate until the test is redesigned around a deterministic stop
+ * condition.
+ */
+static const struct lkq_test_gate threading_netbsd_gates[] = {
+	GATE(LKQ_PLATFORM_OS_NETBSD,         "native kqueue scan relock/in-flux churn under concurrent add/delete + fd recycle makes each poll crawl; the bounded drain blows the watchdog"),
+	{ 0, NULL }
+};
+
+/*
+ * The test drives the POSIX kernel signal layer (sigaction/sigwait/raise/kill
+ * + SIGUSR1), none of which Win32 provides; libkqueue's Win32 EVFILT_SIGNAL
+ * bridge uses named events and doesn't interoperate with OS signals.
+ */
+static const struct lkq_test_gate threading_signal_gates[] = {
+	GATE(LKQ_PLATFORM_OS_WINDOWS,        "test uses POSIX signal APIs (sigaction/sigwait/raise) and SIGUSR1, which Win32 lacks; the Win32 EVFILT_SIGNAL bridge uses named events and doesn't interoperate with OS signals"),
+	{ 0, NULL }
+};
+
+const struct lkq_test_case lkq_threading_tests[] = {
+	{
+		.name  = "kevent_threading_close",
+		.desc  = "kq close unblocks a parked kevent() in another thread",
+		.func  = test_kevent_threading_close,
+		.gates = threading_close_gates,
+	},
+	{
+		.name  = "kevent_threading_close_multi",
+		.desc  = "kq close unblocks multiple threads parked in kevent()",
+		.func  = test_kevent_threading_close_multi,
+		.gates = threading_close_gates,
+	},
+	/*
+	 * Requires the backend to drop the kq lock across kevent_wait
+	 * (KEVENT_WAIT_DROP_LOCK).  Backends that hold the lock through the wait
+	 * can't deliver a cross-thread EVFILT_USER trigger until the waiter
+	 * returns for some other reason.
+	 */
+	{
+		.name  = "kevent_threading_user_trigger_cross_thread",
+		.desc  = "EVFILT_USER trigger from another thread wakes kevent()",
+		.func  = TEST_FUNC_NEEDS_DROP_LOCK_WAKE(test_kevent_threading_user_trigger_cross_thread),
+		.gates = TEST_GATES(
+			GATE(TEST_GATE_NEEDS_DROP_LOCK_WAKE, "backend holds the kq lock across kevent_wait (no KEVENT_WAIT_DROP_LOCK)")
+		),
+	},
+	{
+		.name  = "kevent_threading_multi_waiter_delete_race",
+		.desc  = "EV_DELETE while multiple threads are parked in kevent()",
+		.func  = test_kevent_threading_multi_waiter_delete_race,
+	},
+	{
+		.name  = "kevent_threading_multi_waiter_oneshot",
+		.desc  = "EV_ONESHOT delivered to exactly one of several waiters",
+		.func  = test_kevent_threading_multi_waiter_oneshot,
+	},
+	{
+		.name  = "kevent_threading_timer_delete_race",
+		.desc  = "EV_DELETE of a timer knote races with delivery",
+		.func  = test_kevent_threading_timer_delete_race,
+	},
+	{
+		.name  = "kevent_threading_signal_delete_race",
+		.desc  = "EV_DELETE of a signal knote races with delivery",
+		.func  = TEST_FUNC_NEEDS_POSIX(test_kevent_threading_signal_delete_race),
+		.gates = threading_signal_gates,
+	},
+	{
+		.name  = "kevent_threading_vnode_delete_race",
+		.desc  = "EV_DELETE of a vnode knote races with delivery",
+		.func  = TEST_FUNC_NEEDS_EVFILT_VNODE(test_kevent_threading_vnode_delete_race),
+		.gates = TEST_GATES(
+			GATE(TEST_GATE_NEEDS_EVFILT_VNODE, "EVFILT_VNODE undefined in this build's <sys/event.h>"),
+			GATE(LKQ_PLATFORM_OS_SOLARIS, "port_getn holds kq lock; knote refcounting not yet implemented")
+		),
+	},
+	{
+		.name  = "kevent_threading_proc_delete_race",
+		.desc  = "EV_DELETE of a proc knote races with delivery",
+		.func  = TEST_FUNC_NEEDS_EVFILT_PROC(TEST_FUNC_NEEDS_POSIX(test_kevent_threading_proc_delete_race)),
+		.gates = TEST_GATES(
+			GATE(TEST_GATE_NEEDS_EVFILT_PROC, "EVFILT_PROC undefined in this build's <sys/event.h>"),
+			GATE(LKQ_PLATFORM_OS_SOLARIS, "port_getn holds kq lock; knote refcounting not yet implemented"),
+			GATE(LKQ_PLATFORM_OS_WINDOWS, "proc_delete_race uses fork()")
+		),
+	},
+	{
+		.name  = "kevent_threading_read_delete_race",
+		.desc  = "EV_DELETE of a read knote races with delivery",
+		.func  = test_kevent_threading_read_delete_race,
+	},
+	{
+		.name  = "kevent_threading_write_delete_race",
+		.desc  = "EV_DELETE of a write knote races with delivery",
+		.func  = test_kevent_threading_write_delete_race,
+	},
+	{
+		.name  = "kevent_threading_user_single_delivery",
+		.desc  = "EVFILT_USER event delivered exactly once across threads",
+		.func  = test_kevent_threading_user_single_delivery,
+	},
+	{
+		.name  = "kevent_threading_timer_single_delivery",
+		.desc  = "timer event delivered exactly once across threads",
+		.func  = test_kevent_threading_timer_single_delivery,
+	},
+	{
+		.name  = "kevent_threading_signal_single_delivery",
+		.desc  = "signal event delivered exactly once across threads",
+		.func  = TEST_FUNC_NEEDS_POSIX(test_kevent_threading_signal_single_delivery),
+		.gates = threading_signal_gates,
+	},
+	{
+		.name  = "kevent_threading_vnode_single_delivery",
+		.desc  = "vnode event delivered exactly once across threads",
+		.func  = TEST_FUNC_NEEDS_EVFILT_VNODE(test_kevent_threading_vnode_single_delivery),
+		.gates = TEST_GATES(
+			GATE(TEST_GATE_NEEDS_EVFILT_VNODE, "EVFILT_VNODE undefined in this build's <sys/event.h>"),
+			GATE(LKQ_PLATFORM_OS_WINDOWS, "vnode backend timing unreliable with FindFirstChangeNotificationW")
+		),
+	},
+	{
+		.name  = "kevent_threading_proc_single_delivery",
+		.desc  = "proc event delivered exactly once across threads",
+		.func  = TEST_FUNC_NEEDS_EVFILT_PROC(TEST_FUNC_NEEDS_POSIX(test_kevent_threading_proc_single_delivery)),
+		.gates = TEST_GATES(
+			GATE(TEST_GATE_NEEDS_EVFILT_PROC, "EVFILT_PROC undefined in this build's <sys/event.h>"),
+			GATE(LKQ_PLATFORM_OS_WINDOWS, "test uses POSIX signal APIs (sigaction/sigwait/raise) and SIGUSR1, which Win32 lacks; the Win32 EVFILT_SIGNAL bridge uses named events and doesn't interoperate with OS signals")
+		),
+	},
+	{
+		.name  = "kevent_threading_read_single_delivery",
+		.desc  = "read event delivered exactly once across threads",
+		.func  = test_kevent_threading_read_single_delivery,
+	},
+	{
+		.name  = "kevent_threading_write_single_delivery",
+		.desc  = "write event delivered exactly once across threads",
+		.func  = test_kevent_threading_write_single_delivery,
+	},
+	{
+		.name  = "kevent_threading_fd_reuse_stress",
+		.desc  = "fd reuse stress test: rapid open/close while kevent() runs",
+		.func  = test_kevent_threading_fd_reuse_stress,
+		.gates = threading_netbsd_gates,
+	},
+	{
+		.name  = "kevent_threading_user_trigger_delete_race",
+		.desc  = "EVFILT_USER trigger races with EV_DELETE from another thread",
+		.func  = test_kevent_threading_user_trigger_delete_race,
+	},
+	LKQ_SUITE_END
+};
+
+void
+test_threading(struct test_context *ctx)
+{
+	run_test_suite(ctx, lkq_threading_tests);
+}

@@ -1,0 +1,36 @@
+# Copyright (c) 2020-now by the Zeek Project. See LICENSE for details.
+
+on:
+  push:
+    # Push events to matching v*, i.e. v1.0, v20.15.10. We exclude `-dev` tags.
+    tags:
+      - 'v*'
+      - '!v*-dev'
+
+name: Create Release
+
+# In order to create a release we need content write permissions.
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Upload Release Assets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Prepare archive
+        run: |
+          ./scripts/make-tarball.sh
+      - name: Upload Release Assets
+        id: upload-release-assets
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          draft: true
+          files: |
+            spicy*.tar.gz

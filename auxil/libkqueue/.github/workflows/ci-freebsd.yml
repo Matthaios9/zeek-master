@@ -1,0 +1,70 @@
+name: CI tests FreeBSD
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'test/*'
+      - 'tools/test-stack-dump.sh'
+      - '.github/workflows/ci-freebsd.yml'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'test/*'
+      - 'tools/test-stack-dump.sh'
+      - '.github/workflows/ci-freebsd.yml'
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      iterations:
+        description: "Soak iteration count (default 50)"
+        required: false
+        default: "50"
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+
+jobs:
+  freebsd-tests:
+# virtualbox takes a long time to start
+    timeout-minutes: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 60 || 10 }}
+    runs-on: ubuntu-latest
+    name: "FreeBSD tests"
+    env:
+      KQUEUE_DEBUG: yes
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        path: libkqueue
+
+    - name: libkqueue test suite
+      uses: vmactions/freebsd-vm@v1
+      with:
+        usesh: true
+        sync: sshfs
+        prepare: |
+          pkg install -y cmake llvm gdb
+        envs: 'KQUEUE_DEBUG GITHUB_STEP_SUMMARY'
+        run: |
+          freebsd-version
+          cd libkqueue/test
+          cmake .
+          make
+          GATED=$(./libkqueue-test --list-gated=freebsd 2>/dev/null) || true
+          {
+            printf '## Gated on freebsd\n'
+            printf '| Suite | Test | Reason |\n| --- | --- | --- |\n'
+            if [ -n "$GATED" ]; then
+              printf '%s\n' "$GATED" | awk -F'\t' '{gsub(/\|/,"&#124;",$3); print "| "$1" | "$2" | "$3" |"}'
+            else
+              printf '_none_\n'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          ./libkqueue-test \
+            --watchdog-timeout=120 \
+            --watchdog-cmd=../tools/test-stack-dump.sh \
+            -n ${{ github.event_name == 'workflow_dispatch' && inputs.iterations || (github.event_name == 'schedule' && 50 || 1) }}

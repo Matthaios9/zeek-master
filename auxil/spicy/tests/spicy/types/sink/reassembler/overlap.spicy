@@ -1,0 +1,87 @@
+# @TEST-DOC: Check that sink hooks are correctly set up.
+#
+# @TEST-EXEC: zero=/dev/zero; is-windows && zero=NUL; spicy-driver -d -p Mini::Main %INPUT hooks.spicy -f $zero >>output
+#
+# @TEST-EXEC: echo "Without hooks" >>output
+# Running without hooks defined behaves as expected, regression test for #1804.
+# @TEST-EXEC: zero=/dev/zero; is-windows && zero=NUL; spicy-driver -d -p Mini::Main %INPUT -f $zero >>output
+#
+# @TEST-EXEC: btest-diff output
+
+module Mini;
+
+public type Main = unit {
+
+    sink data;
+
+    on %init {
+        self.data.connect(new Sub);
+        self.data.write(b"123", 1);
+        self.data.write(b"AB456", 2);
+        self.data.write(b"789", 7);
+        self.data.write(b"0", 0);
+        self.data.close();
+
+        print "";
+
+        self.data.connect(new Sub);
+        self.data.write(b"123", 1);
+        self.data.write(b"ABC", 1);
+        self.data.write(b"456", 4);
+        self.data.write(b"789", 7);
+        self.data.write(b"0", 0);
+        self.data.close();
+
+        print "";
+
+        self.data.connect(new Sub);
+        self.data.write(b"123", 1);
+        self.data.write(b"ABCD", 1);
+        self.data.write(b"456", 4);
+        self.data.write(b"789", 7);
+        self.data.write(b"0", 0);
+        self.data.close();
+
+        print "";
+
+        self.data.connect(new Sub);
+        self.data.write(b"23", 2);
+        self.data.write(b"12AB", 1);
+        self.data.write(b"56", 5);
+        self.data.write(b"0", 0);
+        self.data.close();
+    }
+};
+
+public type Sub = unit {
+    s: bytes &eod;
+};
+
+# @TEST-START-FILE hooks.spicy
+
+module Hooks;
+
+import Mini;
+
+on Mini::Sub::%done {
+    print self.s;
+}
+
+on Mini::Sub::%gap(seq: uint64, len: uint64) {
+    print "Gap at input position %u, length %u" % (seq, len);
+}
+
+on Mini::Sub::%skipped(seq: uint64) {
+    print "Skipped to position %u" % seq;
+}
+
+on Mini::Sub::%undelivered(seq: uint64, data: bytes) {
+    print "Undelivered data at position %u: %s" % (seq, data);
+}
+
+# Intentionally using custom parameter names here
+on Mini::Sub::%overlap(seq: uint64, b1: bytes, b2: bytes) {
+    print "Overlap at %u: %s vs %s" % (seq, b1, b2);
+}
+
+# @TEST-END-FILE

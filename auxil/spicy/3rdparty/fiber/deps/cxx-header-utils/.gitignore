@@ -1,0 +1,5 @@
+.cquery_cached_index
+build/
+compile_commands
+compile_commands.json
+hu_amalgamated.h

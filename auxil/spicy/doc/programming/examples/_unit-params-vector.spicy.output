@@ -1,0 +1,5 @@
+# Automatically generated; do not edit. -- <HASH> printf '\05\01\02\03' | spicy-driver -d %INPUT/printf '\05\01\02\03' | spicy-driver -d %INPUT/False
+# printf '\05\01\02\03' | spicy-driver -d foo.spicy
+5
+10
+15

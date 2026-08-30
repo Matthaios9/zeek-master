@@ -1,0 +1,47 @@
+// Copyright (c) 2020-now by the Zeek Project. See LICENSE for details.
+
+#include <doctest/doctest.h>
+
+#include <utility>
+
+#include <spicy/rt/global-state.h>
+
+using namespace spicy::rt;
+
+TEST_SUITE_BEGIN("GlobalState");
+
+namespace {
+class TestState {
+public:
+    TestState() { std::swap(_prev, detail::__global_state); }
+
+    ~TestState() {
+        delete detail::__global_state;
+        detail::__global_state = _prev;
+    }
+
+private:
+    detail::GlobalState* _prev{nullptr};
+};
+} // namespace
+
+TEST_CASE("createGlobalState") {
+    TestState _;
+    REQUIRE_EQ(detail::__global_state, nullptr);
+
+    CHECK_NE(detail::createGlobalState(), nullptr);
+}
+
+TEST_CASE("globalState") {
+    TestState _;
+    REQUIRE_EQ(detail::__global_state, nullptr);
+
+    auto* const state1 = detail::globalState();
+    CHECK_NE(state1, nullptr);
+    CHECK_EQ(state1, detail::__global_state);
+
+    auto* const state2 = detail::globalState();
+    CHECK_EQ(state2, state1);
+}
+
+TEST_SUITE_END();

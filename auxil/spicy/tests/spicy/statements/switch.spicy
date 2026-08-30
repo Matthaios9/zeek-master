@@ -1,0 +1,45 @@
+# @TEST-EXEC: ${SPICYC} -j %INPUT >>output 2>&1
+# @TEST-EXEC-FAIL: ${SPICYC} -j fail.spicy >>output 2>&1
+# @TEST-EXEC: btest-diff output
+
+module Foo;
+
+global x: int64 = 0;
+
+switch ( 2 ) {
+    case 1: assert False;
+    case 2: ++x;
+    default: assert False;
+}
+
+switch ( 3 ) {
+    case 1: assert False;
+    case 2: assert False;
+    default: ++x;
+}
+
+assert x == 2;
+
+# Make sure this compiles (regression test)
+const TLSv13_draft = 0x7F00;
+
+type ServerHelloChoice = unit() {
+ var negotiated_version: uint16;
+
+ switch (self.negotiated_version) {
+     TLSv13_draft,
+     0x7F00 -> : void;
+ };
+};
+
+@TEST-START-FILE fail.spicy
+
+module Foo;
+
+
+switch ( 3 ) {
+    case 1: assert False;
+    case 2: assert False;
+}
+
+@TEST-END-FILE

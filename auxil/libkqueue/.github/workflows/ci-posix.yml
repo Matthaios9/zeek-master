@@ -1,0 +1,115 @@
+name: CI POSIX
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'CMakeLists.txt'
+      - 'include/sys/*'
+      - 'src/common/*'
+      - 'src/posix/*'
+      - 'test/*'
+      - 'tools/test-stack-dump.sh'
+      - '.github/workflows/ci-posix.yml'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'CMakeLists.txt'
+      - 'include/sys/*'
+      - 'src/common/*'
+      - 'src/posix/*'
+      - 'test/*'
+      - 'tools/test-stack-dump.sh'
+      - '.github/workflows/ci-posix.yml'
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      iterations:
+        description: "Soak iteration count (default 50)"
+        required: false
+        default: "50"
+
+env:
+  # detect_leaks is Linux-only; setting it on macOS makes ASAN
+  # abort on startup.  Per-job env below appends the leak knob
+  # only when the runner can support it.
+  ASAN_OPTIONS: symbolize=1 detect_stack_use_after_return=1
+  LSAN_OPTIONS: fast_unwind_on_malloc=0:malloc_context_size=50
+
+jobs:
+  posix-build-and-test:
+    timeout-minutes: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && 60 || 15 }}
+    strategy:
+      fail-fast: false
+      matrix:
+        env:
+          # Force the POSIX (select-based) backend on Linux so it
+          # exercises the same source paths as the macOS native build.
+          - { OS: ubuntu-24.04, NAME: linux-release, BUILD_TYPE: Release }
+          - { OS: ubuntu-24.04, NAME: linux-asan,    BUILD_TYPE: Debug, ENABLE_ASAN: YES, ENABLE_LSAN: YES, ENABLE_UBSAN: YES }
+          - { OS: macos-14,     NAME: macos-release, BUILD_TYPE: Release }
+          - { OS: macos-14,     NAME: macos-asan,    BUILD_TYPE: Debug, ENABLE_ASAN: YES, ENABLE_UBSAN: YES }
+
+    runs-on: ${{ matrix.env.OS }}
+    env: ${{ matrix.env }}
+    name: "${{ matrix.env.NAME }}"
+
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Configure
+      run: |
+        cmake . -G "Unix Makefiles" \
+          -DCMAKE_VERBOSE_MAKEFILE:BOOL="ON" \
+          -DLIBKQUEUE_BACKEND=posix \
+          -DENABLE_TESTING="YES" \
+          -DENABLE_ASAN="${ENABLE_ASAN:-NO}" \
+          -DENABLE_LSAN="${ENABLE_LSAN:-NO}" \
+          -DENABLE_UBSAN="${ENABLE_UBSAN:-NO}" \
+          -DCMAKE_BUILD_TYPE="${BUILD_TYPE}"
+
+    - name: Build
+      run: make -j2
+
+    - name: Install watchdog debug tools
+      if: runner.os == 'Linux'
+      continue-on-error: true
+      run: |
+        echo 'Acquire::http::Timeout "5"; Acquire::Retries "2";' | \
+            sudo tee /etc/apt/apt.conf.d/99-ci-timeouts >/dev/null
+        . /etc/lsb-release
+        sudo tee /etc/apt/sources.list.d/ubuntu-canonical.sources >/dev/null <<EOF
+        Types: deb
+        URIs: http://archive.ubuntu.com/ubuntu http://us.archive.ubuntu.com/ubuntu http://mirrors.edge.kernel.org/ubuntu
+        Suites: ${DISTRIB_CODENAME} ${DISTRIB_CODENAME}-updates ${DISTRIB_CODENAME}-security
+        Components: main restricted universe multiverse
+        Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+        EOF
+        sudo apt-get update -qq
+        sudo apt-get install -y elfutils gdb >/dev/null
+
+    - name: Gated tests
+      if: always()
+      run: |
+        GATED=$(test/libkqueue-test --list-gated=linux-posix 2>/dev/null) || true
+        {
+          printf '## Gated on linux-posix\n'
+          printf '| Suite | Test | Reason |\n| --- | --- | --- |\n'
+          if [ -n "$GATED" ]; then
+            printf '%s\n' "$GATED" | awk -F'\t' '{gsub(/\|/,"&#124;",$3); print "| "$1" | "$2" | "$3" |"}'
+          else
+            printf '_none_\n'
+          fi
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Test
+      env:
+        KQUEUE_DEBUG: ${{ matrix.env.BUILD_TYPE == 'Release' && '' || '1' }}
+      run: |
+        test/libkqueue-test \
+          --watchdog-timeout=120 \
+          --watchdog-cmd="${{ github.workspace }}/tools/test-stack-dump.sh" \
+          -n ${{ github.event_name == 'workflow_dispatch' && inputs.iterations || (github.event_name == 'schedule' && 50 || 1) }}

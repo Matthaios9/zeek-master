@@ -1,0 +1,51 @@
+# @TEST-REQUIRES: which FileCheck
+# @TEST-EXEC: spicyc %INPUT -p -o output.hlt -D optimizer >log 2>&1
+# @TEST-EXEC: FileCheck %INPUT < output.hlt
+
+# @TEST-DOC: Tests optimizations performing removal unneeded error push/pop for unused synchronization.
+
+# Basic units without synchronization. We do not expect any updates to `self.$error` here.
+###########################################################################################
+module foo;
+
+# CHECK-NOT: = $error
+# CHECK-NOT: .$error = $error
+
+public type P0 = unit {};
+
+public type P1 = unit {
+    x: uint8;
+};
+
+# @TEST-START-NEXT
+module foo;
+# If a unit has an `%error` hook we push any error before the hook.
+###################################################################
+
+public type P2 = unit {
+    x: uint8;
+    y: uint8 {}
+
+# CHECK: (*self).[[ERROR:.*error.*]] = [[ERROR]]
+# CHECK-NEXT: (*self)
+# CHECK-NEXT: [[ERROR]] = (*self).[[ERROR]]
+    on %error {}
+};
+
+# @TEST-START-NEXT
+module foo;
+# For a unit with a vector field and a hook we would redundantly push/pop the error.
+####################################################################################
+
+public type Datas = unit {
+    : Data[] {}
+};
+
+# CHECK: End parsing{{.*}}Data
+# CHECK-NOT: (*self).$error = $error;
+# CHECK-NOT: $error = $error;
+# Go until next method
+# CHECK: method
+type Data = unit {
+    ty: uint8;
+};

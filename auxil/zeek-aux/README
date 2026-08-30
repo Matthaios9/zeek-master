@@ -1,0 +1,69 @@
+.. -*- mode: rst; -*-
+..
+.. Version number is filled in automatically.
+.. |version| replace:: 0.50-240
+
+=======================
+Zeek Auxiliary Programs
+=======================
+
+.. contents::
+
+:Version: |version|
+
+Handy auxiliary programs related to the use of the Zeek Network Security
+Monitor (https://www.zeek.org).
+
+Installation
+============
+
+Installation is simple and standard::
+
+    ./configure
+    make
+    make install
+
+adtrace
+=======
+
+The "adtrace" utility is used to compute the
+network address that compose the internal and extern nets that Zeek
+is monitoring. This program just reads a pcap
+(tcpdump) file and writes out the src MAC, dst MAC, src IP, dst
+IP for each packet seen in the file.
+
+zeek-archiver
+=============
+
+This is a modern replacement for Zeek's historical log-archival process. For
+details, please refer to its dedicated README in the zeek-archiver subdirectory.
+
+devel-tools
+===========
+
+A set of scripts used commonly for Zeek development. Note that none of
+these scripts are installed by 'make install'.
+
+extract-conn-by-uid
+    Extracts a connection from a trace file based
+    on its UID found in Zeek's conn.log
+
+gen-mozilla-ca-list.rb
+    Generates list of Mozilla SSL root certificates in
+    a format readable by Zeek.
+
+update-changes
+    A script to maintain the CHANGES and VERSION files.
+
+git-show-fastpath
+    Show commits to the fastpath branch not yet merged into master.
+
+cpu-bench-with-trace
+    Run a number of Zeek benchmarks on a trace file.
+
+
+rst
+===
+
+The "rst" utility can be invoked by a Zeek script to terminate an
+established TCP connection by forging RST tear-down packets.

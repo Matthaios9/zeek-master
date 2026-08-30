@@ -1,0 +1,8 @@
+*.html
+*.pyc
+.tmp
+build
+dist
+MANIFEST
+.idea
+sphinx/btest.egg-info/
