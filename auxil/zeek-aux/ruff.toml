@@ -1,4 +1,0 @@
-target-version = "py310"
-
-[lint]
-select = ["C4", "F", "I", "ISC", "UP"]

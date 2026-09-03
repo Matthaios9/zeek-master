@@ -1,4 +1,0 @@
-# Automatically generated; do not edit. -- <HASH> printf '\01\02' | spicy-driver -d %INPUT/printf '\01\02' | spicy-driver -d %INPUT/False
-# printf '\01\02' | spicy-driver -d foo.spicy
-Spicy: 1
-[$y=[$x=1]]

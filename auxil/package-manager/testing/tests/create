@@ -1,3 +1,0 @@
-# @TEST-DOC: Test creating a default package.
-#
-# @TEST-EXEC: echo name | zkg create --packagedir packagedir

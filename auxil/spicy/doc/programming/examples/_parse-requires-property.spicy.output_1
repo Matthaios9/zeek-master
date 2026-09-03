@@ -1,3 +1,0 @@
-# Automatically generated; do not edit. -- <HASH> printf '\001' | spicy-driver -d %INPUT/printf '\001' | spicy-driver -d %INPUT/False
-# printf '\001' | spicy-driver -d foo.spicy
-[$x=1]

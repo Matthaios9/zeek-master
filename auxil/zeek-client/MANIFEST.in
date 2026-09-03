@@ -1,2 +1,0 @@
-# setup.py needs the VERSION file for the build
-include VERSION

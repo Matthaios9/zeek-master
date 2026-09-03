@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-
-# Exposes a `printf` with bash extensions.
-
-# shellcheck disable=SC2059
-printf "$@"

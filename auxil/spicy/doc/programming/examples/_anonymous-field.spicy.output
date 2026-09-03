@@ -1,4 +1,0 @@
-# Automatically generated; do not edit. -- <HASH> printf '\01\02\03' | spicy-driver -d %INPUT/printf '\01\02\03' | spicy-driver -d %INPUT/False
-# printf '\01\02\03' | spicy-driver -d foo.spicy
-2
-[$x=1, $y=3]

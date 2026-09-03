@@ -1,3 +1,0 @@
-# Automatically generated; do not edit. -- <HASH> printf '\01\02\03EOD\04' | spicy-driver -d %INPUT/printf '\01\02\03EOD\04' | spicy-driver -d %INPUT/False
-# printf '\01\02\03EOD\04' | spicy-driver -d foo.spicy
-[$data=[1, 2, 3], $x=4]

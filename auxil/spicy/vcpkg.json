@@ -1,7 +1,0 @@
-{
-  "name": "spicy",
-  "version-string": "latest",
-  "dependencies": [
-    "zlib"
-  ]
-}
